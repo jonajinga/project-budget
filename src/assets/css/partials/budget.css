@@ -657,18 +657,33 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   font-weight: 600;
   margin: var(--space-sm) 0 var(--space-2xs);
 }
-.cal__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cal__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+/* Each row is a bordered card with proper padding so posted/scheduled
+   entries read as discrete items — matches the Day view's row card
+   pattern. Color-coded left accent (green inflow, red outflow). */
 .cal__row {
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas:
     "payee  amount"
     "meta   amount";
-  gap: 0.1rem var(--space-sm);
-  padding: var(--space-2xs) 0;
-  border-bottom: 1px solid var(--border-soft);
+  gap: 0.15rem var(--space-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
   font-size: var(--fs-sm);
+  transition: background var(--t-fast), border-color var(--t-fast);
 }
+.cal__row.cal__row--in  { border-left: 3px solid var(--ok); }
+.cal__row.cal__row--out { border-left: 3px solid var(--danger); }
 .cal__row-payee { grid-area: payee; font-weight: 600; }
 .cal__row-meta { grid-area: meta; color: var(--fg-muted); font-size: var(--fs-xs); }
 .cal__row-amount {
@@ -682,16 +697,13 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
    becomes interactive without losing the grid layout. */
 .cal__row--clickable {
   width: 100%;
-  background: transparent;
-  border: 0;
-  text-align: inherit;
-  font: inherit;
-  color: inherit;
   cursor: pointer;
   text-decoration: none;
-  transition: background var(--t-fast);
 }
-.cal__row--clickable:hover { background: var(--bg-alt); }
+.cal__row--clickable:hover {
+  background: var(--bg-alt);
+  border-color: var(--border);
+}
 .cal__row--clickable:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
