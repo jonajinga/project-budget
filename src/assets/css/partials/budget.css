@@ -242,6 +242,15 @@
   font-size: var(--fs-md);
 }
 
+/* Available column alignment fix: category rows render the value inside
+   .available-pill (which has 0.65rem internal right padding), so plain
+   spans in the group header and total row need a matching right inset
+   for their digits to right-align with the pill digits above/below. */
+.budget__group-header > .num:last-child,
+.budget__total-row    > .num:last-child {
+  padding-right: 0.65rem;
+}
+
 /* ---- Credit card payment-pool cards ------------------------------- */
 .pool-grid { display: flex; flex-direction: column; gap: var(--space-sm); }
 .pool-grid__title {
