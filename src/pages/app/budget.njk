@@ -6,15 +6,33 @@ permalink: /app/budget/
 eleventyExcludeFromCollections: true
 ---
 <div class="app-page" x-data="budgetView()" x-init="init()">
-  <header class="app-page__header">
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.goPrevMonth()">&larr;</button>
-      <input class="input" type="month" aria-label="Budget month" :value="$store.budget.currentMonth" @change="$store.budget.setMonth($event.target.value)" style="width: auto;">
-      <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.goNextMonth()">&rarr;</button>
-      <button class="btn btn--secondary btn--sm" type="button" @click="$store.budget.jumpToThisMonth()">This month</button>
+
+  {# Year strip with prev/next year + the 12-month tab row #}
+  <div class="month-strip" role="tablist" aria-label="Budget month">
+    <button type="button" class="month-strip__year"
+            @click="$store.budget.setMonth(prevYearMonth())"
+            aria-label="Previous year">
+      <span aria-hidden="true">&larr;</span>
+      <span x-text="prevYearLabel()"></span>
+    </button>
+    <div class="month-strip__tabs" role="presentation">
+      <template x-for="m in monthsOfYear()" :key="m.value">
+        <button type="button"
+                role="tab"
+                class="month-strip__tab"
+                :class="{ 'is-active': m.value === $store.budget.currentMonth, 'is-current': m.value === thisMonthValue() }"
+                :aria-selected="(m.value === $store.budget.currentMonth).toString()"
+                @click="$store.budget.setMonth(m.value)"
+                x-text="m.label"></button>
+      </template>
     </div>
-    <a class="btn btn--secondary btn--sm" href="/app/categories/">Manage categories</a>
-  </header>
+    <button type="button" class="month-strip__year"
+            @click="$store.budget.setMonth(nextYearMonth())"
+            aria-label="Next year">
+      <span x-text="nextYearLabel()"></span>
+      <span aria-hidden="true">&rarr;</span>
+    </button>
+  </div>
 
   <div class="rta" :class="rtaCents() < 0 ? 'rta--negative' : ''">
     <p class="rta__label" data-tip="Money received but not yet given a job. See the glossary for the full definition.">Ready to assign</p>
@@ -30,7 +48,13 @@ eleventyExcludeFromCollections: true
 
   <section class="budget" x-show="hasCategories" x-cloak>
     <div class="budget__toolbar">
-      <p style="margin: 0; color: var(--fg-muted); font-size: var(--fs-sm);">
+      <div class="cluster" style="gap: var(--space-2xs);">
+        <button type="button" class="btn btn--ghost btn--sm"
+                @click="$store.budget.jumpToThisMonth()"
+                data-tip="Jump to the current calendar month.">This month</button>
+        <a class="btn btn--ghost btn--sm" href="/app/categories/">Manage categories</a>
+      </div>
+      <p class="budget__total-readout">
         Total assigned this month:
         <strong x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></strong>
       </p>
@@ -39,8 +63,8 @@ eleventyExcludeFromCollections: true
     <div class="budget__group-header">
       <span>Category</span>
       <span class="num" data-tip="Dollars you committed to this category this month.">Assigned</span>
-      <span class="num" data-tip="Outflows from this category this month. Inflows show as positive.">Activity</span>
-      <span class="num" data-tip="Carry-in + assigned + activity. Green: funded. Red: overspent — that gap will reduce next month's Ready to Assign.">Available</span>
+      <span class="num" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
+      <span class="num" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
     </div>
 
     <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
@@ -48,9 +72,9 @@ eleventyExcludeFromCollections: true
         <div class="budget__group-header" style="background: var(--bg-elevated);">
           <button type="button" class="group-toggle"
                   @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
-                  :aria-expanded="group.group && !group.group.collapsed ? 'true' : 'false'"
+                  :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
                   :disabled="!group.group">
-            <span class="group-toggle__chevron" :class="group.group && group.group.collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+            <span class="group-toggle__chevron" :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
             <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
           </button>
           <span class="num" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
@@ -58,11 +82,7 @@ eleventyExcludeFromCollections: true
           <span class="num" x-text="formatCents(groupTotalAvailable(group.categories))"></span>
         </div>
 
-        {# x-show (not x-if) so the toggle is a CSS flip — Alpine's nested
-           x-for-inside-x-if can defeat reactivity on the wrapper group
-           object since categoryGroupsView() returns fresh wrappers each
-           render. x-show toggles display only, which is robust. #}
-        <div x-show="!(group.group && group.group.collapsed)" x-cloak>
+        <div x-show="!(group.group && $store.budget.isCatGroupCollapsed(group.group.id))" x-cloak>
           <template x-for="c in group.categories" :key="c.id">
             <div class="budget__row">
               <div class="budget__category">
@@ -84,9 +104,10 @@ eleventyExcludeFromCollections: true
                        @keydown.enter="$event.target.blur()">
               </div>
               <div class="budget__activity" x-text="formatCents($store.budget.activityFor(c.id))"></div>
-              <div class="budget__available"
-                   :class="availableClass(c.id)"
-                   x-text="formatCents(categoryAvailable(c.id))"></div>
+              <div class="budget__available">
+                <span class="available-pill" :class="availablePillClass(c.id)"
+                      x-text="formatCents(categoryAvailable(c.id))"></span>
+              </div>
             </div>
           </template>
 
@@ -96,6 +117,51 @@ eleventyExcludeFromCollections: true
         </div>
       </div>
     </template>
+
+    {# Total budget — bottom summary row matching the columns above. #}
+    <div class="budget__group-header budget__total-row" aria-label="Totals for this month">
+      <strong>Total Budget</strong>
+      <span class="num" x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></span>
+      <span class="num" x-text="formatCents(monthlyOutflowTotal())"></span>
+      <span class="num" x-text="formatCents(monthlyAvailableTotal())"></span>
+    </div>
+  </section>
+
+  {# Credit-card payment-pool cards. Show one card per credit account with
+     a pill of the dollars currently assigned for paying it down vs. the
+     amount of debt currently owed. Surfaces the at-a-glance "do I have
+     enough set aside to cover this card" answer. #}
+  <section class="pool-grid" x-show="hasCategories && paymentPools().length" x-cloak>
+    <header class="pool-grid__header">
+      <h2 class="pool-grid__title">Credit Card Payment Pools</h2>
+      <p class="pool-grid__sub">How much you've set aside in each card's payment category vs. the balance owed.</p>
+    </header>
+    <div class="pool-grid__cards">
+      <template x-for="p in paymentPools()" :key="p.accountId">
+        <article class="pool-card" :class="poolCardClass(p)">
+          <header class="pool-card__head">
+            <h3 class="pool-card__name" x-text="p.accountName"></h3>
+            <p class="pool-card__role">Payment Pool</p>
+          </header>
+          <div class="pool-card__amount">
+            <span class="available-pill"
+                  :class="poolPillClass(p)"
+                  x-text="formatCents(p.pool)"></span>
+          </div>
+          <div class="pool-card__progress" :title="poolCoverageLabel(p)">
+            <div class="pool-card__progress-bar"
+                 :class="poolBarClass(p)"
+                 :style="'width: ' + Math.min(100, p.coveragePct) + '%;'"
+                 role="progressbar"
+                 :aria-valuenow="p.coveragePct"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 :aria-label="poolCoverageLabel(p)"></div>
+          </div>
+          <p class="pool-card__hint" x-text="poolCoverageLabel(p)"></p>
+        </article>
+      </template>
+    </div>
   </section>
 </div>
 
@@ -154,6 +220,24 @@ function budgetView() {
       return "budget__available--red";
     },
 
+    /* Pill color for the Available column:
+       - red    : overspent (v < 0)
+       - zero   : muted gray (v === 0)
+       - green  : funded toward a goal (goal exists and met)
+       - blue   : positive but no goal threshold (default funded)
+    */
+    availablePillClass(catId) {
+      var v = this.categoryAvailable(catId);
+      if (v < 0) return "available-pill--red";
+      if (v === 0) return "available-pill--zero";
+      var goal = this.$store.budget.findGoal(catId);
+      if (goal) {
+        var status = this.$store.budget.goalStatus(catId);
+        if (status === "funded" || status === "over") return "available-pill--green";
+      }
+      return "available-pill--blue";
+    },
+
     groupTotalAssigned(cats) {
       var self = this;
       return cats.reduce(function (sum, c) { return sum + self.$store.budget.assignedFor(c.id); }, 0);
@@ -169,10 +253,113 @@ function budgetView() {
       return cats.reduce(function (sum, c) { return sum + self.$store.budget.categoryRow(c.id).available; }, 0);
     },
 
+    /* Month-wide totals for the bottom summary row. */
+    monthlyOutflowTotal() {
+      var p = this.$store.budget.profile;
+      if (!p) return 0;
+      var self = this;
+      return p.categories.reduce(function (sum, c) { return sum + self.$store.budget.activityFor(c.id); }, 0);
+    },
+    monthlyAvailableTotal() {
+      var p = this.$store.budget.profile;
+      if (!p) return 0;
+      var self = this;
+      return p.categories.reduce(function (sum, c) { return sum + self.$store.budget.categoryRow(c.id).available; }, 0);
+    },
+
     goalLabel(catId) {
       var n = this.$store.budget.goalNeeded(catId);
       if (n === 0) return "Funded";
       return "Need " + this.formatCents(n);
+    },
+
+    /* ---- Month strip helpers ----------------------------------------
+       The strip shows the 12 months of the year currently being viewed.
+       Year arrows shift the view a year forward / back, keeping the same
+       month-of-year if possible. */
+    currentYear() {
+      var parts = (this.$store.budget.currentMonth || "").split("-");
+      return parseInt(parts[0], 10) || new Date().getFullYear();
+    },
+    currentMonthNumber() {
+      var parts = (this.$store.budget.currentMonth || "").split("-");
+      return parseInt(parts[1], 10) || (new Date().getMonth() + 1);
+    },
+    monthsOfYear() {
+      var year = this.currentYear();
+      var labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return labels.map(function (label, i) {
+        var mm = String(i + 1).padStart(2, "0");
+        return { value: year + "-" + mm, label: label };
+      });
+    },
+    thisMonthValue() {
+      var d = new Date();
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    },
+    prevYearMonth() {
+      var y = this.currentYear() - 1;
+      var m = String(this.currentMonthNumber()).padStart(2, "0");
+      return y + "-" + m;
+    },
+    nextYearMonth() {
+      var y = this.currentYear() + 1;
+      var m = String(this.currentMonthNumber()).padStart(2, "0");
+      return y + "-" + m;
+    },
+    prevYearLabel() { return String(this.currentYear() - 1); },
+    nextYearLabel() { return String(this.currentYear() + 1); },
+
+    /* ---- Credit card payment pools ----------------------------------
+       For each credit account, find its paired payment category, read
+       the available amount (the pool), and compare to the absolute
+       negative balance (the debt). */
+    paymentPools() {
+      var store = this.$store.budget;
+      var p = store.profile;
+      if (!p) return [];
+      var self = this;
+      var creditAccts = (p.accounts || []).filter(function (a) {
+        return a.type === "credit" && !a.closedAt;
+      });
+      return creditAccts.map(function (a) {
+        var balance = store.accountBalance(a.id);
+        var debt = balance < 0 ? -balance : 0;
+        var map = (p.settings && p.settings.creditCardPaymentMap) || {};
+        var payCatId = map[a.id] || null;
+        var pool = payCatId ? store.categoryRow(payCatId).available : 0;
+        var coveragePct = debt > 0 ? Math.round((Math.max(pool, 0) / debt) * 100) : 100;
+        return {
+          accountId: a.id,
+          accountName: a.name,
+          payCatId: payCatId,
+          pool: pool,
+          debt: debt,
+          coveragePct: coveragePct,
+        };
+      });
+    },
+    poolCardClass(p) {
+      if (p.debt === 0) return "pool-card--clear";
+      if (p.coveragePct >= 100) return "pool-card--covered";
+      return "pool-card--short";
+    },
+    poolPillClass(p) {
+      if (p.pool < 0) return "available-pill--red";
+      if (p.debt === 0) return "available-pill--green";
+      if (p.coveragePct >= 100) return "available-pill--green";
+      return "available-pill--blue";
+    },
+    poolBarClass(p) {
+      if (p.coveragePct >= 100) return "pool-card__progress-bar--full";
+      if (p.coveragePct >= 50)  return "pool-card__progress-bar--mid";
+      return "pool-card__progress-bar--low";
+    },
+    poolCoverageLabel(p) {
+      if (p.debt === 0) return "Balance paid off.";
+      if (p.coveragePct >= 100) return "100% of your debt is covered.";
+      var remaining = p.debt - Math.max(p.pool, 0);
+      return this.formatCents(remaining) + " of debt is remaining.";
     },
   };
 }

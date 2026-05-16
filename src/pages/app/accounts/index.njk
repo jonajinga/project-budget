@@ -90,9 +90,9 @@ eleventyExcludeFromCollections: true
       <header style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-sm);">
         <button type="button" class="group-toggle"
                 @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
-                :aria-expanded="group.group && !group.group.collapsed ? 'true' : 'false'"
+                :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
                 :disabled="!group.group">
-          <span class="group-toggle__chevron" :class="group.group && group.group.collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+          <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
           <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
         </button>
         <div class="cluster">
@@ -105,7 +105,7 @@ eleventyExcludeFromCollections: true
         </div>
       </header>
 
-      <table class="table" x-show="!(group.group && group.group.collapsed)" x-cloak>
+      <table class="table" x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak>
         <thead>
           <tr>
             <th scope="col">Name</th>

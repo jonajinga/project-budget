@@ -27,12 +27,12 @@
       <div class="acct-group">
         <button type="button" class="acct-group__head"
                 @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
-                :aria-expanded="group.group && !group.group.collapsed ? 'true' : 'false'"
+                :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
                 :disabled="!group.group">
-          <span class="group-toggle__chevron" :class="group.group && group.group.collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+          <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
           <span x-text="group.group ? group.group.name : 'Other'"></span>
         </button>
-        <ul class="acct-group__list" x-show="!(group.group && group.group.collapsed)" x-cloak>
+        <ul class="acct-group__list" x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak>
           <template x-for="a in group.accounts" :key="a.id">
             <li>
               <a class="acct-link" :href="'/app/register/?account=' + a.id">

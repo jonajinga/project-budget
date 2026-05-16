@@ -1,0 +1,223 @@
+---
+layout: layouts/app.njk
+title: "Calendar"
+description: "Month grid view of posted transactions and upcoming scheduled entries."
+permalink: /app/calendar/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="calendarView()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title" x-text="monthLabel()"></h1>
+      <p class="app-page__lead">Posted transactions sit on their post date; upcoming recurring templates show on their next due date.</p>
+    </div>
+    <div class="cluster">
+      <button class="btn btn--ghost btn--sm" type="button" @click="step(-1)" aria-label="Previous month">&larr;</button>
+      <button class="btn btn--secondary btn--sm" type="button" @click="jumpToday()">Today</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="step(1)" aria-label="Next month">&rarr;</button>
+    </div>
+  </header>
+
+  <p class="app-page__lead" x-show="!$store.budget.profile" x-cloak>
+    Load or create a profile to see its calendar.
+  </p>
+
+  <section class="cal" x-show="$store.budget.profile" x-cloak>
+    {# Weekday headings — Sun-first, matches the grid below. Hidden on
+       very narrow screens (the day cells already carry the date). #}
+    <ol class="cal__weekdays" aria-hidden="true">
+      <li>Sun</li><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li>
+    </ol>
+
+    <ol class="cal__grid" role="grid" :aria-label="'Calendar for ' + monthLabel()">
+      <template x-for="cell in monthCells()" :key="cell.iso || ('blank-' + cell.idx)">
+        <li class="cal__cell"
+            :class="{
+              'cal__cell--blank':   cell.blank,
+              'cal__cell--today':   cell.isToday,
+              'cal__cell--selected': cell.iso === selectedISO,
+              'cal__cell--has':     !cell.blank && (cell.posted.length + cell.scheduled.length) > 0
+            }">
+          <template x-if="!cell.blank">
+            <button type="button"
+                    class="cal__cell-btn"
+                    @click="selectedISO = cell.iso"
+                    :aria-label="'Open ' + cell.iso">
+              <span class="cal__day-num" x-text="cell.day"></span>
+              <span class="cal__totals" x-show="cell.totalInflow !== 0 || cell.totalOutflow !== 0">
+                <span class="cal__delta cal__delta--in"  x-show="cell.totalInflow > 0"  x-text="formatCents(cell.totalInflow)"></span>
+                <span class="cal__delta cal__delta--out" x-show="cell.totalOutflow < 0" x-text="formatCents(cell.totalOutflow)"></span>
+              </span>
+              <span class="cal__dots" x-show="cell.posted.length + cell.scheduled.length > 0">
+                <template x-for="n in Math.min(cell.posted.length, 5)" :key="'p' + n">
+                  <span class="cal__dot cal__dot--posted" aria-hidden="true"></span>
+                </template>
+                <template x-for="n in Math.min(cell.scheduled.length, 5)" :key="'s' + n">
+                  <span class="cal__dot cal__dot--scheduled" aria-hidden="true"></span>
+                </template>
+                <span class="cal__count" x-show="(cell.posted.length + cell.scheduled.length) > 5"
+                      x-text="'+' + ((cell.posted.length + cell.scheduled.length) - 5)"></span>
+              </span>
+            </button>
+          </template>
+        </li>
+      </template>
+    </ol>
+
+    {# Detail panel — shows the entries for the selected day. Scrolls
+       independently from the grid on tablet+; stacks below on phones. #}
+    <aside class="cal__detail" x-show="selectedISO" x-cloak aria-live="polite">
+      <header class="cal__detail-head">
+        <h2 x-text="selectedLabel()"></h2>
+        <button class="btn btn--ghost btn--sm" type="button" @click="selectedISO = null" aria-label="Close day details">&times;</button>
+      </header>
+
+      <p x-show="!selectedHasAnything()" x-cloak style="color: var(--fg-muted); padding: var(--space-sm) 0;">
+        Nothing posted or scheduled on this day.
+      </p>
+
+      <section x-show="selectedPosted().length" x-cloak>
+        <h3 class="cal__detail-section">Posted</h3>
+        <ul class="cal__list">
+          <template x-for="t in selectedPosted()" :key="t.id">
+            <li class="cal__row" :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
+              <span class="cal__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+              <span class="cal__row-meta">
+                <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+              </span>
+              <span class="cal__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(t.amount)"></span>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <section x-show="selectedScheduled().length" x-cloak>
+        <h3 class="cal__detail-section">Upcoming (scheduled)</h3>
+        <ul class="cal__list">
+          <template x-for="s in selectedScheduled()" :key="s.id">
+            <li class="cal__row" :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
+              <span class="cal__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+              <span class="cal__row-meta">
+                <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                <span x-text="' · ' + ($store.budget.FREQUENCIES.find(f => f.value === s.frequency)?.label || s.frequency)"></span>
+              </span>
+              <span class="cal__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(s.template.amount)"></span>
+            </li>
+          </template>
+        </ul>
+      </section>
+    </aside>
+  </section>
+</div>
+
+<script>
+function calendarView() {
+  return {
+    /* Anchor month (YYYY-MM) — independent of the budget store's
+       currentMonth so navigating here doesn't shift the budget view. */
+    viewMonth: "",
+    selectedISO: null,
+
+    init() {
+      this.viewMonth = this.$store.budget.currentMonth || this._isoMonth(new Date());
+    },
+
+    _isoMonth(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); },
+    _isoDay(d)   { return d.toISOString().slice(0, 10); },
+
+    monthLabel() {
+      var parts = this.viewMonth.split("-");
+      var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+      return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    },
+
+    jumpToday() {
+      var d = new Date();
+      this.viewMonth = this._isoMonth(d);
+      this.selectedISO = this._isoDay(d);
+    },
+
+    step(delta) {
+      var parts = this.viewMonth.split("-");
+      var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1 + delta, 1);
+      this.viewMonth = this._isoMonth(d);
+      this.selectedISO = null;
+    },
+
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    /* Returns the grid cells for the visible month: leading blanks so
+       the first row aligns to the right weekday, then days 1..N.
+       Each non-blank cell carries pre-bucketed posted + scheduled
+       transactions so the template stays lean. */
+    monthCells() {
+      var parts = this.viewMonth.split("-");
+      var year = parseInt(parts[0], 10);
+      var month = parseInt(parts[1], 10);
+      var firstDay = new Date(year, month - 1, 1).getDay(); // 0=Sun
+      var daysInMonth = new Date(year, month, 0).getDate();
+      var today = this._isoDay(new Date());
+      var profile = this.$store.budget.profile;
+      var postedByDay = {};
+      var schedByDay = {};
+      if (profile) {
+        (profile.transactions || []).forEach(function (t) {
+          if (!t.date) return;
+          var d = t.date.slice(0, 10);
+          if (d.indexOf(year + "-" + String(month).padStart(2, "0")) !== 0) return;
+          (postedByDay[d] = postedByDay[d] || []).push(t);
+        });
+        (profile.scheduled || []).forEach(function (s) {
+          if (!s.nextDate) return;
+          var d = s.nextDate.slice(0, 10);
+          if (d.indexOf(year + "-" + String(month).padStart(2, "0")) !== 0) return;
+          (schedByDay[d] = schedByDay[d] || []).push(s);
+        });
+      }
+      var cells = [];
+      for (var i = 0; i < firstDay; i++) cells.push({ blank: true, idx: i });
+      for (var day = 1; day <= daysInMonth; day++) {
+        var iso = year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+        var posted = postedByDay[iso] || [];
+        var scheduled = schedByDay[iso] || [];
+        var inflow = posted.reduce(function (s, t) { return s + (t.amount > 0 ? t.amount : 0); }, 0);
+        var outflow = posted.reduce(function (s, t) { return s + (t.amount < 0 ? t.amount : 0); }, 0);
+        cells.push({
+          blank: false,
+          iso: iso,
+          day: day,
+          isToday: iso === today,
+          posted: posted,
+          scheduled: scheduled,
+          totalInflow: inflow,
+          totalOutflow: outflow,
+        });
+      }
+      return cells;
+    },
+
+    /* Detail panel helpers — read the selected day from monthCells. */
+    _selectedCell() {
+      if (!this.selectedISO) return null;
+      return this.monthCells().find((c) => c.iso === this.selectedISO) || null;
+    },
+    selectedPosted()    { var c = this._selectedCell(); return c ? c.posted : []; },
+    selectedScheduled() { var c = this._selectedCell(); return c ? c.scheduled : []; },
+    selectedHasAnything() {
+      var c = this._selectedCell();
+      return !!(c && (c.posted.length + c.scheduled.length) > 0);
+    },
+    selectedLabel() {
+      if (!this.selectedISO) return "";
+      var parts = this.selectedISO.split("-");
+      var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    },
+  };
+}
+</script>

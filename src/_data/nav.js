@@ -11,6 +11,7 @@ export default {
     { label: "Dashboard", url: "/app/" },
     { label: "Budget", url: "/app/budget/" },
     { label: "Register", url: "/app/register/" },
+    { label: "Calendar", url: "/app/calendar/" },
     { label: "Accounts", url: "/app/accounts/" },
     { label: "Categories", url: "/app/categories/" },
     { label: "Recurring", url: "/app/scheduled/" },

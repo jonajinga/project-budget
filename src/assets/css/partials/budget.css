@@ -97,3 +97,377 @@
 .goal-badge--needed  { background: rgba(168, 52, 31, 0.12); color: var(--danger); }
 .goal-badge--over    { background: var(--accent-soft); color: var(--accent); }
 
+/* ---- Month strip --------------------------------------------------
+   Tab row showing the 12 months of the currently-viewed year, flanked
+   by year arrows. The active month gets a filled pill; the current
+   real-world month gets a subtle dot under the label so users see
+   where "today" is relative to whatever they're viewing. */
+.month-strip {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+.month-strip__year {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: 0.5rem 0.7rem;
+  background: transparent;
+  border: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius);
+  white-space: nowrap;
+  min-height: 36px;
+}
+.month-strip__year:hover { color: var(--accent); background: var(--bg-alt); }
+.month-strip__year:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.month-strip__tabs {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+}
+.month-strip__tab {
+  position: relative;
+  padding: 0.55rem 0.4rem;
+  background: transparent;
+  border: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  min-height: 36px;
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+.month-strip__tab:hover { background: var(--bg-alt); color: var(--fg); }
+.month-strip__tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.month-strip__tab.is-current::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+.month-strip__tab.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+.month-strip__tab.is-active.is-current::after { background: #fff; }
+
+/* Mobile: stack the year arrows above the strip, make the tabs an
+   evenly-distributed grid that fits the viewport (no horizontal
+   scrolling). Below 360px we shrink padding further. */
+@media (max-width: 599px) {
+  .month-strip {
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-2xs);
+  }
+  .month-strip__year { justify-content: center; }
+  .month-strip__tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .month-strip__tab { font-size: var(--fs-xs); padding: 0.5rem 0.2rem; }
+}
+
+/* Toolbar row above the budget grid. */
+.budget__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.budget__total-readout {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Available pill -----------------------------------------------
+   Rounded chip used in the Available column and the credit-card
+   payment-pool cards. Four color states map to budget health. */
+.available-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 5rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+.available-pill--green {
+  background: rgba(47, 110, 77, 0.16);
+  color: var(--ok);
+}
+.available-pill--blue {
+  background: rgba(44, 95, 138, 0.16);
+  color: var(--link);
+}
+.available-pill--zero {
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+}
+.available-pill--red {
+  background: rgba(192, 57, 43, 0.18);
+  color: var(--danger);
+}
+
+/* Total budget row — like a group header but sits at the bottom. */
+.budget__total-row {
+  background: var(--bg-alt);
+  border-top: 2px solid var(--border);
+  font-size: var(--fs-md);
+}
+
+/* ---- Credit card payment-pool cards ------------------------------- */
+.pool-grid { display: flex; flex-direction: column; gap: var(--space-sm); }
+.pool-grid__title {
+  font-size: var(--fs-xl);
+  margin: 0;
+}
+.pool-grid__sub {
+  margin: var(--space-3xs) 0 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+.pool-grid__cards {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px)  { .pool-grid__cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .pool-grid__cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.pool-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  padding: var(--space-md);
+  display: grid;
+  gap: var(--space-2xs);
+}
+.pool-card--short  { border-left: 4px solid var(--warn); }
+.pool-card--covered { border-left: 4px solid var(--ok); }
+.pool-card--clear  { border-left: 4px solid var(--accent); }
+
+.pool-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+.pool-card__name { font-size: var(--fs-md); margin: 0; }
+.pool-card__role {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.pool-card__amount { display: flex; justify-content: flex-end; }
+.pool-card__progress {
+  background: var(--bg-alt);
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pool-card__progress-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--t-base);
+}
+.pool-card__progress-bar--low  { background: var(--danger); }
+.pool-card__progress-bar--mid  { background: var(--warn); }
+.pool-card__progress-bar--full { background: var(--ok); }
+.pool-card__hint {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+
+/* ---- Calendar page -----------------------------------------------
+   Month grid (7-col Sun-Sat) on the left + day-detail side panel on
+   tablets and up; below 1024px the panel collapses below the grid. */
+.cal {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1024px) {
+  .cal { grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr); }
+}
+
+.cal__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  font-weight: 600;
+}
+.cal__weekdays li { padding: 0.25rem 0.5rem; text-align: left; }
+@media (max-width: 599px) {
+  .cal__weekdays li { font-size: 0.6875rem; padding: 0.2rem 0.25rem; }
+}
+
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+}
+.cal__cell {
+  background: var(--bg-elevated);
+  min-height: 5.5rem;
+  position: relative;
+}
+.cal__cell--blank { background: var(--bg-alt); }
+.cal__cell-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  padding: 0.4rem 0.5rem;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  gap: 0.15rem;
+  min-height: 44px;
+}
+.cal__cell-btn:hover { background: var(--bg-alt); }
+.cal__cell-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cal__cell--today .cal__day-num {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cal__cell--selected { box-shadow: inset 0 0 0 2px var(--accent); }
+.cal__day-num {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+}
+.cal__totals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  margin-top: auto;
+}
+.cal__delta--in  { color: var(--accent); }
+.cal__delta--out { color: var(--danger); }
+.cal__dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+.cal__dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.cal__dot--posted    { background: var(--accent); }
+.cal__dot--scheduled { background: var(--warn); }
+.cal__count { font-size: var(--fs-xs); color: var(--fg-muted); margin-left: 2px; }
+
+@media (max-width: 599px) {
+  .cal__cell { min-height: 3.2rem; }
+  .cal__totals { display: none; }
+  .cal__cell-btn { padding: 0.25rem 0.3rem; gap: 0.1rem; }
+}
+
+.cal__detail {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  padding: var(--space-md);
+  align-self: start;
+  position: sticky;
+  top: calc(4rem + var(--space-sm));
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+}
+@media (max-width: 1023px) {
+  .cal__detail { position: static; max-height: none; }
+}
+.cal__detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+.cal__detail-head h2 { font-size: var(--fs-lg); margin: 0; }
+.cal__detail-section {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  font-weight: 600;
+  margin: var(--space-sm) 0 var(--space-2xs);
+}
+.cal__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cal__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "payee  amount"
+    "meta   amount";
+  gap: 0.1rem var(--space-sm);
+  padding: var(--space-2xs) 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-sm);
+}
+.cal__row-payee { grid-area: payee; font-weight: 600; }
+.cal__row-meta { grid-area: meta; color: var(--fg-muted); font-size: var(--fs-xs); }
+.cal__row-amount {
+  grid-area: amount;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+

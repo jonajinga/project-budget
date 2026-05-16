@@ -83,6 +83,14 @@ export function createStore() {
     toasts: [],
     privateBrowsing: false,
 
+    /* Collapsed-state maps live directly on the Alpine store (not on the
+       profile schema) so reactivity is rock-solid: x-for/x-show bindings
+       read $store.budget.collapsedCatGroups[id] and the store's own
+       Proxy fires setters on assignment. Persisted to profile.<type>Groups
+       on save so the choice survives reloads. */
+    collapsedCatGroups: {},
+    collapsedAcctGroups: {},
+
     /* Expose domain constants for templates. */
     ACCOUNT_TYPES: ACCOUNT_TYPES,
     FREQUENCIES: FREQUENCIES,
@@ -233,6 +241,7 @@ export function createStore() {
       this.active = id;
       setActiveId(id);
       this._mirrorActive(id);
+      this._hydrateCollapsed();
       var snapKey = snapshotIfStale(p);
       if (snapKey) {
         /* snapKey is the localStorage key; mirror the same backup into
@@ -241,6 +250,15 @@ export function createStore() {
         this._mirrorBackup(parts[2], parts[3], p);
       }
       this._bumpLists();
+    },
+
+    _hydrateCollapsed() {
+      var cat = {};
+      var acct = {};
+      (this.profile.categoryGroups || []).forEach(function (g) { if (g.collapsed) cat[g.id] = true; });
+      (this.profile.accountGroups  || []).forEach(function (g) { if (g.collapsed) acct[g.id] = true; });
+      this.collapsedCatGroups = cat;
+      this.collapsedAcctGroups = acct;
     },
 
     _save() {
@@ -357,6 +375,7 @@ export function createStore() {
       if (!p) return;
       this.profile = p;
       this.active = id;
+      this._hydrateCollapsed();
       this.refreshProfiles();
       snapshotIfStale(p);
     },
@@ -427,6 +446,7 @@ export function createStore() {
         return false;
       }
       this.profile = restored;
+      this._hydrateCollapsed();
       this.refreshProfiles();
       this._bumpLists();
       this.pushToast("Restored snapshot from " + day + ".");
@@ -481,6 +501,7 @@ export function createStore() {
         return false;
       }
       this.profile = restored;
+      this._hydrateCollapsed();
       this.refreshProfiles();
       this._bumpLists();
       this.pushToast("Snapshot restored.");
@@ -507,20 +528,29 @@ export function createStore() {
     },
 
     toggleAccountGroupCollapsed(id) {
-      if (!this.profile) return;
+      if (!this.profile || !id) return;
+      var next = !this.collapsedAcctGroups[id];
+      /* Replace the map so the store's Proxy sees a property change at
+         the top level — guarantees x-show / x-for re-evaluate. */
+      var m = Object.assign({}, this.collapsedAcctGroups);
+      if (next) m[id] = true; else delete m[id];
+      this.collapsedAcctGroups = m;
       var g = this.profile.accountGroups.find(function (x) { return x.id === id; });
-      if (!g) return;
-      g.collapsed = !g.collapsed;
-      this._save();
+      if (g) { g.collapsed = next; this._save(); }
     },
 
     toggleCategoryGroupCollapsed(id) {
-      if (!this.profile) return;
+      if (!this.profile || !id) return;
+      var next = !this.collapsedCatGroups[id];
+      var m = Object.assign({}, this.collapsedCatGroups);
+      if (next) m[id] = true; else delete m[id];
+      this.collapsedCatGroups = m;
       var g = this.profile.categoryGroups.find(function (x) { return x.id === id; });
-      if (!g) return;
-      g.collapsed = !g.collapsed;
-      this._save();
+      if (g) { g.collapsed = next; this._save(); }
     },
+
+    isAcctGroupCollapsed(id) { return !!(id && this.collapsedAcctGroups[id]); },
+    isCatGroupCollapsed(id)  { return !!(id && this.collapsedCatGroups[id]); },
 
     renameAccountGroup(id, name) {
       if (!this.profile) return;
@@ -1027,6 +1057,7 @@ export function createStore() {
       var replaced = importReplacing(parsed, this.profile.id);
       _writeJSON(_profileKey(replaced.id), replaced);
       this.profile = replaced;
+      this._hydrateCollapsed();
       this.refreshProfiles();
       this.pushToast("Active profile replaced with imported data.");
       return true;
