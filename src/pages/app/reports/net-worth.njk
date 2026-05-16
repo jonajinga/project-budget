@@ -5,7 +5,12 @@ description: "Sum of all account balances at month-end."
 permalink: /app/reports/net-worth/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data>
+<div class="app-page" x-data="reportTable(
+  () => ($store.budget.reportNetWorth() || []),
+  { keys: [
+      { key: 'month', label: 'Month-end' },
+      { key: 'value', label: 'Net worth', numeric: true },
+    ], defaultSort: { key: 'month', dir: 'asc' } })">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Net worth over time</h1>
@@ -17,15 +22,35 @@ eleventyExcludeFromCollections: true
   <section class="report">
     <div class="chart" id="chart-nw" style="min-height: 320px;"></div>
 
-    <table class="table" style="margin-top: var(--space-md);">
-      <thead><tr><th>Month-end</th><th class="num">Net worth</th></tr></thead>
-      <tbody x-data>
-        <template x-for="r in $store.budget.reportNetWorth()" :key="r.month">
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="nw-search">Search</label>
+        <input class="input" id="nw-search" type="search" x-model="query" placeholder="Filter by month…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="visibleCount"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="is-sortable"><button type="button" @click="sortBy('month')">Month-end <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('value')">Net worth <span class="sort-ind" x-text="sortIndicator('value')"></span></button></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in rows" :key="r.month">
           <tr>
             <td x-text="r.month"></td>
             <td class="num" :class="r.value < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.value / 100).toFixed(2)"></td>
           </tr>
         </template>
+        <tr x-show="!rows.length" x-cloak>
+          <td colspan="2" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
+        </tr>
       </tbody>
     </table>
   </section>

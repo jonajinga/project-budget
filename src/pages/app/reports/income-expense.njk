@@ -5,7 +5,14 @@ description: "Paired income and expense bars per month, last twelve months."
 permalink: /app/reports/income-expense/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data>
+<div class="app-page" x-data="reportTable(
+  () => ($store.budget.reportIncomeVsExpense() || []),
+  { keys: [
+      { key: 'month',   label: 'Month' },
+      { key: 'income',  label: 'Income',  numeric: true },
+      { key: 'expense', label: 'Expense', numeric: true },
+      { key: 'net',     label: 'Net',     numeric: true },
+    ], defaultSort: { key: 'month', dir: 'asc' } })">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Income vs expense</h1>
@@ -17,10 +24,29 @@ eleventyExcludeFromCollections: true
   <section class="report">
     <div class="chart" id="chart-ie" style="min-height: 320px;"></div>
 
-    <table class="table" style="margin-top: var(--space-md);">
-      <thead><tr><th>Month</th><th class="num">Income</th><th class="num">Expense</th><th class="num">Net</th></tr></thead>
-      <tbody x-data>
-        <template x-for="r in $store.budget.reportIncomeVsExpense()" :key="r.month">
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="ie-search">Search</label>
+        <input class="input" id="ie-search" type="search" x-model="query" placeholder="Filter by month…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="visibleCount"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('income')">Income <span class="sort-ind" x-text="sortIndicator('income')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('expense')">Expense <span class="sort-ind" x-text="sortIndicator('expense')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('net')">Net <span class="sort-ind" x-text="sortIndicator('net')"></span></button></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in rows" :key="r.month">
           <tr>
             <td x-text="r.month"></td>
             <td class="num amount--inflow" x-text="'$' + (r.income / 100).toFixed(2)"></td>
@@ -28,6 +54,9 @@ eleventyExcludeFromCollections: true
             <td class="num" :class="r.net < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.net / 100).toFixed(2)"></td>
           </tr>
         </template>
+        <tr x-show="!rows.length" x-cloak>
+          <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
+        </tr>
       </tbody>
     </table>
   </section>

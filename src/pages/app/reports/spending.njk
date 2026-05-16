@@ -5,29 +5,7 @@ description: "Treemap of category activity over a chosen window."
 permalink: /app/reports/spending/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="{
-  from: new Date().toISOString().slice(0, 7),
-  to: new Date().toISOString().slice(0, 7),
-  init() {
-    var to = this.$store.budget.currentMonth;
-    var p = to.split('-').map(Number);
-    var d = new Date(p[0], p[1] - 3, 1);
-    this.from = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    this.to = to;
-    var self = this;
-    var boot = function () {
-      var store = Alpine.store('budget');
-      var inst = window.pbMountChart('#chart-spending', window.pbRenderSpending, function () {
-        return store.reportSpending(self.from, self.to);
-      });
-      Alpine.effect(function () { self.from; self.to; store.profile; inst.redraw(); });
-    };
-    var ready = function () { return window.Alpine && window.Alpine.store && window.Alpine.store('budget') && window.pbMountChart; };
-    var tries = 0;
-    var poll = function () { if (ready()) boot(); else if (++tries < 50) setTimeout(poll, 50); };
-    poll();
-  },
-}">
+<div class="app-page" x-data="spendingView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Spending by category</h1>
@@ -50,16 +28,37 @@ eleventyExcludeFromCollections: true
 
     <div class="chart" id="chart-spending" style="min-height: 360px;"></div>
 
-    <table class="table" style="margin-top: var(--space-md);">
-      <thead><tr><th>Group</th><th>Category</th><th class="num">Spent</th></tr></thead>
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="sp-search">Search</label>
+        <input class="input" id="sp-search" type="search" x-model="query" placeholder="Filter by group or category…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="visibleCount"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="is-sortable"><button type="button" @click="sortBy('group')">Group <span class="sort-ind" x-text="sortIndicator('group')"></span></button></th>
+          <th class="is-sortable"><button type="button" @click="sortBy('category')">Category <span class="sort-ind" x-text="sortIndicator('category')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('value')">Spent <span class="sort-ind" x-text="sortIndicator('value')"></span></button></th>
+        </tr>
+      </thead>
       <tbody>
-        <template x-for="r in $store.budget.reportSpending(from, to)" :key="r.categoryId">
+        <template x-for="r in rows" :key="r.categoryId">
           <tr>
             <td x-text="r.group"></td>
             <td x-text="r.category"></td>
             <td class="num amount--outflow" x-text="'$' + (r.value / 100).toFixed(2)"></td>
           </tr>
         </template>
+        <tr x-show="!rows.length" x-cloak>
+          <td colspan="3" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
+        </tr>
       </tbody>
     </table>
   </section>
@@ -70,4 +69,46 @@ eleventyExcludeFromCollections: true
   import { render } from "/assets/js/charts/spending-category.js";
   window.pbMountChart = mountChart;
   window.pbRenderSpending = render;
+</script>
+
+<script>
+function spendingView() {
+  var rt = window.reportTable(function () {
+    return Alpine.store("budget").reportSpending(this.from, this.to);
+  }, {
+    keys: [
+      { key: "group",    label: "Group" },
+      { key: "category", label: "Category" },
+      { key: "value",    label: "Spent", numeric: true },
+    ],
+    defaultSort: { key: "value", dir: "desc" },
+  });
+  /* Date-window state for this report. */
+  var d = new Date();
+  rt.to   = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  var from = new Date(d.getFullYear(), d.getMonth() - 2, 1);
+  rt.from = from.getFullYear() + "-" + String(from.getMonth() + 1).padStart(2, "0");
+
+  rt.init = function () {
+    var self = this;
+    var store0 = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+    if (store0 && store0.currentMonth) {
+      self.to = store0.currentMonth;
+      var parts = store0.currentMonth.split("-").map(Number);
+      var fd = new Date(parts[0], parts[1] - 3, 1);
+      self.from = fd.getFullYear() + "-" + String(fd.getMonth() + 1).padStart(2, "0");
+    }
+    var ready = function () { return window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart; };
+    var tries = 0;
+    var poll = function () {
+      if (ready()) {
+        var store = Alpine.store("budget");
+        var inst = window.pbMountChart("#chart-spending", window.pbRenderSpending, function () { return store.reportSpending(self.from, self.to); });
+        Alpine.effect(function () { self.from; self.to; store.profile; inst.redraw(); });
+      } else if (++tries < 50) setTimeout(poll, 50);
+    };
+    poll();
+  };
+  return rt;
+}
 </script>

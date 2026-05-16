@@ -37,16 +37,24 @@ export function render(el, data) {
   g.append("g").attr("class", "axis")
     .call(d3.axisLeft(y).ticks(5).tickFormat(function (v) { return "$" + Math.round(v / 100); }));
 
+  function fmt(cents) {
+    return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  }
+
   data.forEach(function (d) {
     var group = g.append("g").attr("transform", "translate(" + x0(d.month) + ",0)");
+    /* data-tip attributes are auto-bound by Tippy via the
+       MutationObserver in app.js, so each bar pops a tooltip on hover. */
     group.append("rect")
       .attr("x", x1("income")).attr("y", y(d.income))
       .attr("width", x1.bandwidth()).attr("height", innerH - y(d.income))
-      .attr("fill", c["chart-1"]);
+      .attr("fill", c["chart-1"])
+      .attr("data-tip", d.month + " · Income " + fmt(d.income));
     group.append("rect")
       .attr("x", x1("expense")).attr("y", y(d.expense))
       .attr("width", x1.bandwidth()).attr("height", innerH - y(d.expense))
-      .attr("fill", c["chart-5"]);
+      .attr("fill", c["chart-5"])
+      .attr("data-tip", d.month + " · Expense " + fmt(d.expense));
   });
 
   /* Legend */

@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Monthly trends</h1>
       <p class="app-page__lead">Sparklines for the top 12 categories over the last twelve months. Each card shows the total spent across the window.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster">
+      <button class="btn btn--ghost btn--sm" type="button" onclick="window.print()"
+              data-tip="Open the browser print dialog.">Print</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   <section class="report">

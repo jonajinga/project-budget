@@ -5,7 +5,15 @@ description: "Balances and payoff projections for every credit and liability acc
 permalink: /app/reports/debt/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data>
+<div class="app-page" x-data="reportTable(
+  () => ($store.budget.reportDebt() || []),
+  { keys: [
+      { key: 'account',        label: 'Account' },
+      { key: 'type',           label: 'Type' },
+      { key: 'balance',        label: 'Balance',         numeric: true },
+      { key: 'avgPayment',     label: 'Avg payment',     numeric: true },
+      { key: 'monthsToPayoff', label: 'Months to payoff', numeric: true },
+    ], defaultSort: { key: 'balance', dir: 'asc' } })">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Debt overview</h1>
@@ -17,10 +25,30 @@ eleventyExcludeFromCollections: true
   <section class="report">
     <div class="chart" id="chart-debt" style="min-height: 120px;"></div>
 
-    <table class="table" style="margin-top: var(--space-md);">
-      <thead><tr><th>Account</th><th>Type</th><th class="num">Balance</th><th class="num">Avg payment (3 mo)</th><th class="num">Payoff at this pace</th></tr></thead>
-      <tbody x-data>
-        <template x-for="r in $store.budget.reportDebt()" :key="r.accountId">
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="debt-search">Search</label>
+        <input class="input" id="debt-search" type="search" x-model="query" placeholder="Filter by account…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="visibleCount"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="is-sortable"><button type="button" @click="sortBy('account')">Account <span class="sort-ind" x-text="sortIndicator('account')"></span></button></th>
+          <th class="is-sortable"><button type="button" @click="sortBy('type')">Type <span class="sort-ind" x-text="sortIndicator('type')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('balance')">Balance <span class="sort-ind" x-text="sortIndicator('balance')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('avgPayment')">Avg payment (3 mo) <span class="sort-ind" x-text="sortIndicator('avgPayment')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('monthsToPayoff')">Payoff <span class="sort-ind" x-text="sortIndicator('monthsToPayoff')"></span></button></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in rows" :key="r.accountId">
           <tr>
             <td x-text="r.account"></td>
             <td x-text="r.type === 'credit' ? 'Credit card' : 'Tracking liability'"></td>
@@ -29,7 +57,7 @@ eleventyExcludeFromCollections: true
             <td class="num" x-text="r.monthsToPayoff ? (r.monthsToPayoff + ' months') : 'No recent payments'"></td>
           </tr>
         </template>
-        <tr x-show="!$store.budget.reportDebt().length" x-cloak>
+        <tr x-show="!rows.length" x-cloak>
           <td colspan="5" style="color: var(--fg-muted); text-align: center; padding: var(--space-lg);">No debt accounts.</td>
         </tr>
       </tbody>
