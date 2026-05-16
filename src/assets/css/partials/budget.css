@@ -876,13 +876,19 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   }
 }
 .cal-week__day:last-child { border-right: 0; }
-/* Today's column — stronger tint + top accent bar so it actually
-   stands out against the rest of the week strip (accent-soft alone
-   was barely visible). */
+/* Today's column — strong tint + full 2px accent border so the
+   column reads as the "active" one even against a tinted page
+   background. The previous oklab 14% mix was too close to the
+   page bg-alt and blended in. */
 .cal-week__day.is-today {
-  background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
-  box-shadow: inset 0 3px 0 0 var(--accent);
+  background: color-mix(in oklab, var(--accent) 22%, var(--bg-elevated));
+  box-shadow:
+    inset 0 0 0 2px var(--accent),
+    0 4px 12px -4px color-mix(in oklab, var(--accent) 45%, transparent);
+  position: relative;
+  z-index: 1;
 }
+.cal-week__day.is-today .cal-week__weekday { color: var(--accent); font-weight: 700; }
 .cal-week__day.is-today .cal-week__date-btn { color: var(--accent); }
 .cal-week__head { display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--border-soft); padding-bottom: var(--space-2xs); }
 .cal-week__weekday {
