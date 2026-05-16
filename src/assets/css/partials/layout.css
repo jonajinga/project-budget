@@ -72,8 +72,18 @@
   justify-content: space-between;
   margin-bottom: var(--space-lg);
 }
-.app-page__title { font-size: var(--fs-2xl); }
-.app-page__lead { color: var(--fg-muted); }
+.app-page__title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  letter-spacing: -0.01em;
+  line-height: var(--lh-tight);
+}
+.app-page__lead { color: var(--fg-muted); max-width: 70ch; }
+
+/* Apple/Linear breathing room between major sections on tablet+. */
+@media (min-width: 768px) {
+  .app-page { gap: var(--space-section); }
+  .app-page__header { margin-bottom: var(--space-md); }
+}
 
 /* Mobile tighten — reduce vertical chrome on phones so primary content
    sits higher in the viewport. */

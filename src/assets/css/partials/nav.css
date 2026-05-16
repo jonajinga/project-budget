@@ -300,6 +300,38 @@
   background: var(--bg-alt);
 }
 .search-modal__results { list-style: none; padding: 0; margin: 0; }
+.search-modal__section { border-top: 1px solid var(--border-soft); }
+.search-modal__section:first-of-type { border-top: 0; }
+.search-modal__section-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  font-weight: 600;
+  margin: 0;
+  padding: var(--space-2xs) var(--space-md) 0;
+}
+.search-modal__loading {
+  list-style: none;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+/* Action result button shares .search-result look but is a <button>. */
+button.search-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  color: inherit;
+  font: inherit;
+  border-bottom: 1px solid var(--border-soft);
+}
+button.search-result:hover,
+button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
 .search-result {
   display: block;
   padding: var(--space-sm) var(--space-md);

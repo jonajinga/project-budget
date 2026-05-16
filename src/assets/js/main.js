@@ -101,30 +101,54 @@
     });
   }
 
-  async function runSearch(query) {
+  function docsSection()    { return document.getElementById("search-docs-section"); }
+  function actionsSection() { return document.getElementById("search-actions-section"); }
+
+  /* Command-palette upgrade: query goes through both the action registry
+     (handled in command-palette.js) and Pagefind docs search. A leading
+     "?" or "/" skips actions entirely (search-only). Empty query shows
+     the top actions so users discover what's possible. */
+  async function runSearch(rawQuery) {
     var hint = searchHint();
     var list = searchResults();
+    var docs = docsSection();
+    var actions = actionsSection();
     if (!list || !hint) return;
-    if (!query || query.length < 2) {
-      list.innerHTML = ""; list.hidden = true;
-      hint.textContent = "Start typing to search the site.";
-      hint.hidden = false;
+    var query = (rawQuery || "").trim();
+    var docsQuery = (query.charAt(0) === "?" || query.charAt(0) === "/") ? query.slice(1).trim() : query;
+
+    /* Render actions first (synchronous, fast). */
+    var actionHits = (window.ProjectBudget && window.ProjectBudget.paletteRender)
+      ? window.ProjectBudget.paletteRender(query)
+      : [];
+
+    /* Empty query: show actions hint + the top-action defaults, hide docs. */
+    if (!query) {
+      list.innerHTML = ""; list.hidden = true; if (docs) docs.hidden = true;
+      hint.hidden = !(actions && actions.hidden); /* hide hint only if actions shown */
+      hint.textContent = "Type a command, page, or search term. Press “?” then a query to search the docs only.";
       return;
     }
-    hint.textContent = "Searching…";
-    hint.hidden = false;
-    list.hidden = true;
-    var pf = await ensurePagefind();
-    var out = await pf.search(query);
-    var hits = await Promise.all((out.results || []).slice(0, 10).map(function (r) { return r.data(); }));
-    if (!hits.length) {
-      hint.textContent = "No matches for “" + query + "”.";
-      hint.hidden = false;
-      list.hidden = true;
+
+    /* Below threshold for docs query → show actions only. */
+    if (!docsQuery || docsQuery.length < 2) {
+      list.innerHTML = ""; list.hidden = true; if (docs) docs.hidden = true;
+      hint.hidden = actionHits.length > 0;
+      hint.textContent = actionHits.length ? "" : "Keep typing to search.";
       return;
     }
+
     hint.hidden = true;
+    if (docs) docs.hidden = false;
     list.hidden = false;
+    list.innerHTML = "<li class='search-modal__loading'>Searching docs…</li>";
+    var pf = await ensurePagefind();
+    var out = await pf.search(docsQuery);
+    var hits = await Promise.all((out.results || []).slice(0, 8).map(function (r) { return r.data(); }));
+    if (!hits.length) {
+      list.innerHTML = "<li class='search-modal__loading'>No matches for “" + escapeHTML(docsQuery) + "”.</li>";
+      return;
+    }
     list.innerHTML = hits.map(function (h) {
       var title = (h.meta && h.meta.title) || h.url;
       return "<li>"
@@ -257,12 +281,25 @@
       b.addEventListener("click", closeSiteMenu);
     });
 
-    /* Search modal close handlers + input */
+    /* Search / command-palette modal close handlers + input */
     document.querySelectorAll("[data-search-close]").forEach(function (el) {
       el.addEventListener("click", closeSearch);
     });
     var input = searchInput();
-    if (input) input.addEventListener("input", debounce(function () { runSearch(input.value); }, 200));
+    if (input) {
+      input.addEventListener("input", debounce(function () { runSearch(input.value); }, 200));
+      /* Enter runs the top action (no query → first listed). Falls
+         through to default if no actions to run. */
+      input.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter") return;
+        if (window.ProjectBudget && window.ProjectBudget.paletteRunTop && window.ProjectBudget.paletteRunTop()) {
+          e.preventDefault();
+        }
+      });
+      /* When the modal opens with no query, prime the actions list so
+         users see what's available immediately. */
+      input.addEventListener("focus", function () { runSearch(input.value); });
+    }
 
     /* Global keybinds */
     document.addEventListener("keydown", function (e) {

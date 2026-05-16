@@ -1,0 +1,33 @@
+/* Goal progress bar — slim horizontal indicator on category rows in
+   the budget grid. Driven by inline --pct (0..100) set in the template.
+   Color shifts: <50% muted, 50-99% accent, >=100% ok. */
+.goal-bar {
+  --pct: 0;
+  /* Color picked by combinator below based on --pct band. */
+  --bar-fill: var(--fg-muted);
+  display: block;
+  width: 100%;
+  max-width: 12rem;
+  height: 4px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+.goal-bar__fill {
+  display: block;
+  height: 100%;
+  width: calc(var(--pct, 0) * 1%);
+  background: var(--bar-fill);
+  transition: width var(--t-base);
+  border-radius: inherit;
+}
+/* Color bands. Custom-prop tricks aren't queryable, so use a CSS class
+   set by the Alpine binding in the template alongside --pct. */
+.goal-bar--funded   { --bar-fill: var(--ok); }
+.goal-bar--accent   { --bar-fill: var(--accent); }
+.goal-bar--muted    { --bar-fill: var(--fg-subtle); }
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-bar__fill { transition: none; }
+}

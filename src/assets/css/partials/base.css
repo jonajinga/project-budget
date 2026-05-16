@@ -20,13 +20,25 @@ body.layout-app h2,
 body.layout-app h3,
 body.layout-app h4 { font-family: var(--font-display); }
 
-h1 { font-size: var(--fs-3xl); }
-h2 { font-size: var(--fs-2xl); }
+h1 { font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: var(--lh-tight); }
+h2 { font-size: var(--fs-2xl); line-height: var(--lh-tight); }
 h3 { font-size: var(--fs-xl); }
 h4 { font-size: var(--fs-lg); }
 h5, h6 { font-size: var(--fs-md); }
 
 p { max-width: 70ch; }
+
+/* Apple/Linear-style eyebrow label — small caps, restrained, sits
+   above page titles or as a section kicker. */
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  line-height: 1;
+}
 
 a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { color: var(--link-hover); text-decoration-thickness: 2px; }

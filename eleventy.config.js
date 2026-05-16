@@ -24,6 +24,8 @@ const CSS_PARTIAL_ORDER = [
   "reports.css",
   "docs.css",
   "forms.css",
+  "fab.css",
+  "goal-progress.css",
   "style-guide.css",
   "print.css",
 ];

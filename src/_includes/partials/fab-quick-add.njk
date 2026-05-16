@@ -1,0 +1,161 @@
+<div class="fab-quick-add" x-data="quickAddFab()" x-init="init()">
+  <button type="button" class="fab-quick-add__btn"
+          @click="open = true"
+          x-show="$store.budget.profile"
+          x-cloak
+          data-touch="compact"
+          aria-label="Quick-add transaction"
+          data-tip="Add a transaction (Cmd/Ctrl + K → Add transaction)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/>
+      <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  </button>
+
+  <div class="modal-backdrop" x-show="open" x-cloak @keydown.escape.window="open = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fab-quick-add-title"
+         @click.outside="open = false">
+      <button class="modal__close" type="button" @click="open = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="fab-quick-add-title">Add transaction</h3>
+      <form @submit.prevent="submit()">
+        <div class="form-stack">
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="qa-account">Account</label>
+              <select class="select" id="qa-account" x-model="form.accountId" required>
+                <option value="">Select account</option>
+                <template x-for="a in openAccounts()" :key="a.id">
+                  <option :value="a.id" x-text="a.name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="qa-date">Date</label>
+              <input class="input" id="qa-date" type="date" x-model="form.date" required>
+            </div>
+          </div>
+          <div class="field" style="position: relative;">
+            <label class="field__label" for="qa-payee">Payee</label>
+            <input class="input" id="qa-payee" type="text" x-model="form.payeeName"
+                   @input="refreshSuggestions()" @focus="refreshSuggestions()"
+                   @blur="setTimeout(() => payeeSuggestions = [], 150)"
+                   autocomplete="off" placeholder="Trader Joe's, Acme Industries, …">
+            <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
+              <template x-for="p in payeeSuggestions" :key="p.id">
+                <li>
+                  <button type="button" @mousedown.prevent="pickPayee(p)"
+                          x-text="p.name + ' (' + p.useCount + ')'"></button>
+                </li>
+              </template>
+            </ul>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="qa-amount">Amount</label>
+              <input class="input" id="qa-amount" type="text" x-model="form.amount"
+                     placeholder="-12.34" inputmode="decimal" required>
+              <p class="field__hint">Negative = outflow.</p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="qa-category">Category</label>
+              <select class="select" id="qa-category" x-model="form.categoryId">
+                <option value="">(uncategorized)</option>
+                <template x-for="c in selectableCategories()" :key="c.id">
+                  <option :value="c.id" x-text="c.name"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="qa-memo">Memo (optional)</label>
+            <input class="input" id="qa-memo" type="text" x-model="form.memo">
+          </div>
+          <label class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted);">
+            <input type="checkbox" x-model="form.cleared"> Cleared
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Add transaction</button>
+          <button class="btn btn--ghost" type="button" @click="open = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function quickAddFab() {
+  return {
+    open: false,
+    form: { accountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false, date: "" },
+    payeeSuggestions: [],
+
+    init() {
+      this.form.date = new Date().toISOString().slice(0, 10);
+      var self = this;
+      /* Command-palette + future external triggers can open the FAB. */
+      document.addEventListener("pb:quick-add-open", function () {
+        self.open = true;
+        self.$nextTick(function () {
+          var input = document.getElementById("qa-amount");
+          if (input) input.focus();
+        });
+      });
+    },
+
+    openAccounts() {
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      return p.accounts.filter(function (a) { return !a.closedAt; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+    },
+    selectableCategories() {
+      var s = this.$store.budget;
+      if (!s.profile) return [];
+      return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
+    },
+    refreshSuggestions() {
+      this.payeeSuggestions = this.$store.budget.suggestPayees(this.form.payeeName, 6);
+      var match = this.payeeSuggestions.find(function (p) {
+        return p.name.toLowerCase() === (this.form.payeeName || "").toLowerCase();
+      }.bind(this));
+      if (match && match.lastCategoryId && !this.form.categoryId) {
+        this.form.categoryId = match.lastCategoryId;
+      }
+    },
+    pickPayee(p) {
+      this.form.payeeName = p.name;
+      if (p.lastCategoryId && !this.form.categoryId) this.form.categoryId = p.lastCategoryId;
+      this.payeeSuggestions = [];
+    },
+    parseDollars(s) {
+      if (!s && s !== 0) return 0;
+      var clean = String(s).replace(/[$,\s]/g, "").trim();
+      if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
+      var n = Number(clean);
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+    submit() {
+      if (!this.form.accountId) return;
+      this.$store.budget.addTransaction({
+        accountId: this.form.accountId,
+        date: this.form.date,
+        payeeName: this.form.payeeName,
+        categoryId: this.form.categoryId || null,
+        amount: this.parseDollars(this.form.amount),
+        memo: this.form.memo,
+        cleared: this.form.cleared,
+      });
+      this.$store.budget.pushToast("Transaction added.");
+      var keepAccount = this.form.accountId;
+      this.form = {
+        accountId: keepAccount, payeeName: "", amount: "",
+        categoryId: "", memo: "", cleared: false,
+        date: new Date().toISOString().slice(0, 10),
+      };
+      this.payeeSuggestions = [];
+      this.open = false;
+    },
+  };
+}
+</script>

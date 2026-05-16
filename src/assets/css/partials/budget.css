@@ -57,6 +57,12 @@
 .budget__category {
   font-weight: 500;
   display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.budget__category-row {
+  display: flex;
   align-items: center;
   gap: var(--space-2xs);
   min-width: 0;
@@ -328,11 +334,14 @@
   color: var(--fg-muted);
 }
 
-/* ---- Drag-and-drop handles + drop indicators ----------------------
-   Used on /app/categories/ and (later) /app/accounts/. The handle is
-   a grab-cursor span; the row/section it belongs to is the drop
-   target. drop indicator is a 2px accent line on the appropriate
-   edge based on cursor midpoint (set in JS as 'before' or 'after'). */
+/* ---- Drag-and-drop handles + Sortable state classes ---------------
+   Drag is powered by SortableJS via /assets/js/ui/sortable-bind.js.
+   The library applies these state classes during a drag:
+     .is-ghost     - the placeholder where the dragged item will land
+     .is-chosen    - the originating item under the cursor
+     .is-dragging  - the floating drag image (mirror)
+   .dnd-handle is the grab cursor + uses Sortable's `handle:` selector
+   so the rest of the row stays clickable / editable. */
 .dnd-handle {
   display: inline-flex;
   align-items: center;
@@ -345,6 +354,7 @@
   user-select: none;
   font-size: 1.1em;
   line-height: 1;
+  touch-action: none;
 }
 .dnd-handle:hover  { background: var(--bg-alt); color: var(--fg); }
 .dnd-handle:active { cursor: grabbing; }
@@ -368,39 +378,20 @@
   flex-shrink: 0;
 }
 
-/* Drop targets — rows + group cards. */
-.cat-row,
-.cat-group {
-  position: relative;
-  transition: background var(--t-fast);
+/* SortableJS-applied state classes. */
+.is-ghost {
+  opacity: 0.35;
+  background: var(--accent-soft) !important;
 }
-.cat-row.is-drag-source,
-.cat-group.is-drag-source {
-  opacity: 0.4;
+.is-chosen {
+  background: var(--bg-alt);
 }
-.cat-row.is-drop-target-before::before,
-.cat-row.is-drop-target-after::after,
-.cat-group.is-drop-target-before::before,
-.cat-group.is-drop-target-after::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--accent);
-  pointer-events: none;
-  z-index: 2;
+.is-dragging {
+  cursor: grabbing;
+  box-shadow: var(--shadow-md);
 }
-.cat-row.is-drop-target-before::before,
-.cat-group.is-drop-target-before::before { top: -1px; }
-.cat-row.is-drop-target-after::after,
-.cat-group.is-drop-target-after::after { bottom: -1px; }
-
-/* Subtle "drop area available" hint on the group card body when a
-   category is being dragged with no row hit. */
-.cat-group.is-drop-target-after:not(.is-drag-source) {
-  box-shadow: 0 0 0 1px var(--accent);
-}
+/* During any active drag, force the cursor across the whole document. */
+body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 
 /* ---- Calendar page -----------------------------------------------
    Day / Week / Month / Year views share the same toolbar and one
@@ -475,6 +466,8 @@
   gap: var(--space-md);
   grid-template-columns: 1fr;
   margin-top: var(--space-md);
+  overflow-x: hidden;
+  min-width: 0;
 }
 @media (min-width: 1024px) {
   .cal { grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr); }
@@ -513,7 +506,10 @@
   position: relative;
 }
 .cal__cell--blank { background: var(--bg-alt); }
-.cal__cell--other-month { opacity: 0.55; }
+/* Days from the previous/next month shown as dim context. */
+.cal__cell--other-month .cal__day-num { color: var(--fg-subtle); font-weight: 500; }
+.cal__cell--other-month .cal__cell-btn { opacity: 0.55; }
+.cal__cell--other-month:hover .cal__cell-btn { opacity: 1; }
 .cal__cell-btn {
   display: flex;
   flex-direction: column;
@@ -646,6 +642,8 @@
   gap: var(--space-md);
   grid-template-columns: 1fr;
   margin-top: var(--space-md);
+  overflow-x: hidden;
+  min-width: 0;
 }
 @media (min-width: 600px)  { .cal-year { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1024px) { .cal-year { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -707,6 +705,10 @@
 }
 .cal-mini__cell--blank { background: transparent; }
 .cal-mini__cell--has { background: var(--accent-soft); }
+/* Heatmap shade driven by --intensity (0..100) from the JS. */
+.cal-mini__cell[style*="--intensity"] {
+  background: color-mix(in oklab, var(--accent) calc(var(--intensity, 0) * 1%), var(--bg-alt));
+}
 .cal-mini__cell--today { background: var(--accent); }
 .cal-mini__cell--today .cal-mini__day { color: #fff; }
 .cal-mini__day {
@@ -728,16 +730,19 @@
   outline-offset: 1px;
 }
 
-/* ---- Week view ---- */
+/* ---- Week view ----
+   Scroll-free: at every viewport the 7-day strip fits the available
+   width. Below 600px we collapse to a vertical stack so each day-card
+   is full-width and readable. */
 .cal-week {
   margin-top: var(--space-md);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 .cal-week__strip {
   display: grid;
-  grid-template-columns: repeat(7, minmax(11rem, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   list-style: none;
   margin: 0;
   padding: 0;
@@ -749,6 +754,15 @@
   flex-direction: column;
   gap: var(--space-2xs);
   min-height: 18rem;
+  min-width: 0;
+}
+@media (max-width: 599px) {
+  .cal-week__strip { grid-template-columns: 1fr; }
+  .cal-week__day {
+    border-right: 0;
+    border-bottom: 1px solid var(--border-soft);
+    min-height: 0;
+  }
 }
 .cal-week__day:last-child { border-right: 0; }
 .cal-week__day.is-today { background: var(--accent-soft); }
@@ -804,6 +818,8 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   padding: var(--space-md);
+  overflow-x: hidden;
+  min-width: 0;
 }
 .cal-day__head {
   display: flex;

@@ -67,87 +67,80 @@ eleventyExcludeFromCollections: true
       <span class="num" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
     </div>
 
-    <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
-      <div class="budget__group cat-group"
-           :class="{
-             'is-drag-source': dragKind === 'catgroup' && dragId === (group.group?.id),
-             'is-drop-target-before': dragKind === 'catgroup' && dropTargetGroupId === (group.group?.id) && dropPos === 'before',
-             'is-drop-target-after':  dragKind === 'catgroup' && dropTargetGroupId === (group.group?.id) && dropPos === 'after'
-           }"
-           @dragover.prevent="onGroupDragOver($event, group.group?.id)"
-           @drop.prevent="onGroupDrop($event, group.group?.id)">
-        <div class="budget__group-header" style="background: var(--bg-elevated);">
-          <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
-            <span class="dnd-handle dnd-handle--sm"
-                  draggable="true"
-                  role="button"
-                  tabindex="0"
-                  :aria-label="'Drag to reorder group ' + (group.group?.name || '')"
-                  @dragstart="onGroupDragStart($event, group.group?.id)"
-                  @dragend="endDrag()"
-                  x-show="group.group">&#9776;</span>
-            <button type="button" class="group-toggle"
-                    @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
-                    :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
-                    :disabled="!group.group">
-              <span class="group-toggle__chevron" :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
-              <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
-            </button>
-          </div>
-          <span class="num" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
-          <span class="num" x-text="formatCents(groupTotalActivity(group.categories))"></span>
-          <span class="num" x-text="formatCents(groupTotalAvailable(group.categories))"></span>
-        </div>
-
-        <div x-show="!(group.group && $store.budget.isCatGroupCollapsed(group.group.id))" x-cloak>
-          <template x-for="c in group.categories" :key="c.id">
-            <div class="budget__row cat-row"
-                 :class="{
-                   'is-drag-source': dragKind === 'cat' && dragId === c.id,
-                   'is-drop-target-before': dragKind === 'cat' && dropTargetCatId === c.id && dropPos === 'before',
-                   'is-drop-target-after':  dragKind === 'cat' && dropTargetCatId === c.id && dropPos === 'after'
-                 }"
-                 @dragover.prevent="onCatDragOver($event, c.id)"
-                 @drop.prevent="onCatDrop($event, c.id, group.group?.id)">
-              <div class="budget__category">
-                <span class="dnd-handle dnd-handle--sm"
-                      draggable="true"
-                      role="button"
-                      tabindex="0"
-                      :aria-label="'Drag to reorder ' + c.name"
-                      @dragstart="onCatDragStart($event, c.id, group.group?.id)"
-                      @dragend="endDrag()">&#9776;</span>
-                <span x-text="c.name"></span>
-                <span class="goal-badge"
-                      x-show="$store.budget.findGoal(c.id)"
-                      x-cloak
-                      :class="'goal-badge--' + ($store.budget.goalStatus(c.id) || 'needed')"
-                      :title="'Goal needs ' + formatCents($store.budget.goalNeeded(c.id)) + ' this month'"
-                      x-text="goalLabel(c.id)"></span>
-              </div>
-              <div class="budget__assigned">
-                <input type="text" inputmode="decimal"
-                       data-touch="compact"
-                       :aria-label="'Assigned for ' + c.name"
-                       :value="formatAssigned($store.budget.assignedFor(c.id))"
-                       @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id))"
-                       @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
-                       @keydown.enter="$event.target.blur()">
-              </div>
-              <div class="budget__activity" x-text="formatCents($store.budget.activityFor(c.id))"></div>
-              <div class="budget__available">
-                <span class="available-pill" :class="availablePillClass(c.id)"
-                      x-text="formatCents(categoryAvailable(c.id))"></span>
-              </div>
+    <div data-sortable-list data-sortable-kind="cat-group">
+      <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+        <div class="budget__group cat-group" :data-sortable-id="group.group?.id">
+          <div class="budget__group-header" style="background: var(--bg-elevated);">
+            <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
+              <span class="dnd-handle dnd-handle--sm"
+                    :aria-label="'Drag to reorder group ' + (group.group?.name || '')"
+                    x-show="group.group">&#9776;</span>
+              <button type="button" class="group-toggle"
+                      @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
+                      :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
+                      :disabled="!group.group">
+                <span class="group-toggle__chevron" :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+                <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
+              </button>
             </div>
-          </template>
+            <span class="num" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
+            <span class="num" x-text="formatCents(groupTotalActivity(group.categories))"></span>
+            <span class="num" x-text="formatCents(groupTotalAvailable(group.categories))"></span>
+          </div>
 
-          <p x-show="!group.categories.length" x-cloak style="padding: var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm);">
-            No categories in this group yet. Drag one here from another group, or visit the <a href="/app/categories/">categories page</a>.
-          </p>
+          <div x-show="!(group.group && $store.budget.isCatGroupCollapsed(group.group.id))" x-cloak>
+            <div data-sortable-list data-sortable-kind="budget" :data-sortable-group-id="group.group?.id || ''">
+              <template x-for="c in group.categories" :key="c.id">
+                <div class="budget__row cat-row" :data-sortable-id="c.id">
+                  <div class="budget__category">
+                    <div class="budget__category-row">
+                      <span class="dnd-handle dnd-handle--sm"
+                            :aria-label="'Drag to reorder ' + c.name">&#9776;</span>
+                      <span x-text="c.name"></span>
+                      <span class="goal-badge"
+                            x-show="$store.budget.findGoal(c.id)"
+                            x-cloak
+                            :class="'goal-badge--' + ($store.budget.goalStatus(c.id) || 'needed')"
+                            :title="'Goal needs ' + formatCents($store.budget.goalNeeded(c.id)) + ' this month'"
+                            x-text="goalLabel(c.id)"></span>
+                    </div>
+                    <div class="goal-bar"
+                         x-show="$store.budget.findGoal(c.id)"
+                         x-cloak
+                         :class="goalBarClass(c.id)"
+                         :style="'--pct:' + goalPercent(c.id)"
+                         :title="goalPercent(c.id) + '% of goal funded this month'"
+                         role="progressbar"
+                         :aria-valuenow="goalPercent(c.id)"
+                         aria-valuemin="0" aria-valuemax="100">
+                      <span class="goal-bar__fill"></span>
+                    </div>
+                  </div>
+                  <div class="budget__assigned">
+                    <input type="text" inputmode="decimal"
+                           data-touch="compact"
+                           :aria-label="'Assigned for ' + c.name"
+                           :value="formatAssigned($store.budget.assignedFor(c.id))"
+                           @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id))"
+                           @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
+                           @keydown.enter="$event.target.blur()">
+                  </div>
+                  <div class="budget__activity" x-text="formatCents($store.budget.activityFor(c.id))"></div>
+                  <div class="budget__available">
+                    <span class="available-pill" :class="availablePillClass(c.id)"
+                          x-text="formatCents(categoryAvailable(c.id))"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <p x-show="!group.categories.length" x-cloak style="padding: var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm);">
+              No categories in this group yet. Drag one here from another group, or visit the <a href="/app/categories/">categories page</a>.
+            </p>
+          </div>
         </div>
-      </div>
-    </template>
+      </template>
+    </div>
 
     {# Total budget — bottom summary row matching the columns above. #}
     <div class="budget__group-header budget__total-row" aria-label="Totals for this month">
@@ -201,102 +194,8 @@ function budgetView() {
   return {
     init() {},
 
-    /* ---- Drag & drop ------------------------------------------------ */
-    dragKind: null,        // 'cat' | 'catgroup'
-    dragId: null,
-    dragFromGroupId: null,
-    dropTargetCatId: null,
-    dropTargetGroupId: null,
-    dropPos: null,
-
-    onCatDragStart(e, id, fromGroupId) {
-      this.dragKind = "cat";
-      this.dragId = id;
-      this.dragFromGroupId = fromGroupId || null;
-      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "cat:" + id); } catch (_e) {}
-      e.stopPropagation();
-    },
-    onGroupDragStart(e, groupId) {
-      if (!groupId) return;
-      this.dragKind = "catgroup";
-      this.dragId = groupId;
-      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "catgroup:" + groupId); } catch (_e) {}
-      e.stopPropagation();
-    },
-    onCatDragOver(e, overId) {
-      if (this.dragKind !== "cat" || !this.dragId) return;
-      var rect = e.currentTarget.getBoundingClientRect();
-      var midY = rect.top + rect.height / 2;
-      this.dropTargetCatId = overId;
-      this.dropTargetGroupId = null;
-      this.dropPos = e.clientY < midY ? "before" : "after";
-      try { e.dataTransfer.dropEffect = "move"; } catch (_e) {}
-    },
-    onGroupDragOver(e, overGroupId) {
-      if (!this.dragId) return;
-      if (this.dragKind === "cat") {
-        if (e.target === e.currentTarget) {
-          this.dropTargetGroupId = overGroupId || null;
-          this.dropTargetCatId = null;
-          this.dropPos = "after";
-        }
-      } else if (this.dragKind === "catgroup" && overGroupId && overGroupId !== this.dragId) {
-        var rect = e.currentTarget.getBoundingClientRect();
-        var midY = rect.top + rect.height / 2;
-        this.dropTargetGroupId = overGroupId;
-        this.dropTargetCatId = null;
-        this.dropPos = e.clientY < midY ? "before" : "after";
-      }
-      try { e.dataTransfer.dropEffect = "move"; } catch (_e) {}
-    },
-    onCatDrop(e, targetCatId, targetGroupId) {
-      if (this.dragKind !== "cat" || !this.dragId) return this.endDrag();
-      if (this.dragId === targetCatId) return this.endDrag();
-      var p = this.$store.budget.profile;
-      if (!p) return this.endDrag();
-      var sourceId = this.dragId;
-      var siblings = p.categories
-        .filter(function (c) { return c.groupId === targetGroupId && c.id !== sourceId; })
-        .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
-      var idx = siblings.findIndex(function (c) { return c.id === targetCatId; });
-      if (idx < 0) idx = siblings.length;
-      if (this.dropPos === "after") idx += 1;
-      this.$store.budget.moveCategory(sourceId, targetGroupId || null, idx);
-      e.stopPropagation();
-      this.endDrag();
-    },
-    onGroupDrop(e, targetGroupId) {
-      if (!this.dragId) return this.endDrag();
-      if (this.dragKind === "catgroup") {
-        if (!targetGroupId || targetGroupId === this.dragId) return this.endDrag();
-        var sourceId = this.dragId;
-        var groups = this.$store.budget.profile.categoryGroups
-          .slice()
-          .filter(function (g) { return g.id !== sourceId; })
-          .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
-        var idx = groups.findIndex(function (g) { return g.id === targetGroupId; });
-        if (idx < 0) idx = groups.length;
-        if (this.dropPos === "after") idx += 1;
-        this.$store.budget.moveCategoryGroup(sourceId, idx);
-      } else if (this.dragKind === "cat") {
-        var p = this.$store.budget.profile;
-        if (!p) return this.endDrag();
-        var sourceId = this.dragId;
-        var siblings = p.categories.filter(function (c) {
-          return c.groupId === targetGroupId && c.id !== sourceId;
-        });
-        this.$store.budget.moveCategory(sourceId, targetGroupId || null, siblings.length);
-      }
-      this.endDrag();
-    },
-    endDrag() {
-      this.dragKind = null;
-      this.dragId = null;
-      this.dragFromGroupId = null;
-      this.dropTargetCatId = null;
-      this.dropTargetGroupId = null;
-      this.dropPos = null;
-    },
+    /* Drag/drop handled by SortableJS via
+       /assets/js/ui/sortable-bind.js. Markup carries data-sortable-*. */
 
     get hasCategories() {
       return !!(this.$store.budget.profile && this.$store.budget.profile.categories.length);
@@ -409,6 +308,25 @@ function budgetView() {
       var n = this.$store.budget.goalNeeded(catId);
       if (n === 0) return "Funded";
       return "Need " + this.formatCents(n);
+    },
+
+    /* Goal progress bar — % of the goal target funded this month.
+       Uses assigned (not available) so the bar reflects what the user
+       committed *this period*, not carry-over from prior months. */
+    goalPercent(catId) {
+      void this.$store.budget._listVersion;
+      var g = this.$store.budget.findGoal(catId);
+      if (!g || !g.target) return 0;
+      var assigned = this.$store.budget.assignedFor(catId);
+      var pct = (assigned / g.target) * 100;
+      if (!isFinite(pct) || pct < 0) pct = 0;
+      return Math.round(Math.min(100, pct));
+    },
+    goalBarClass(catId) {
+      var pct = this.goalPercent(catId);
+      if (pct >= 100) return "goal-bar--funded";
+      if (pct >= 50)  return "goal-bar--accent";
+      return "goal-bar--muted";
     },
 
     /* ---- Month strip helpers ----------------------------------------

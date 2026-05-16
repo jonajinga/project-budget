@@ -111,6 +111,25 @@ export function postScheduled(profile, scheduledId, overrides) {
   return t;
 }
 
+/* Walk a schedule forward from its nextDate and return every occurrence
+   (as YYYY-MM-DD strings) that falls within [startISO, endISO] inclusive.
+   Used by the calendar to project recurring transactions into future
+   months without modifying the schedule. The 400-iteration guard caps
+   runaway loops if a malformed schedule advances by less than a day. */
+export function occurrencesIn(sched, startISO, endISO) {
+  var out = [];
+  if (!sched || !sched.nextDate) return out;
+  var cur = sched.nextDate.slice(0, 10);
+  var guard = 400;
+  while (cur && cur <= endISO && guard-- > 0) {
+    if (cur >= startISO) out.push(cur);
+    var nxt = advance(cur, sched);
+    if (!nxt || nxt === cur) break;
+    cur = nxt;
+  }
+  return out;
+}
+
 /* Skip the next occurrence — advance nextDate without posting. */
 export function skipScheduled(profile, scheduledId) {
   var s = profile.scheduled.find(function (x) { return x.id === scheduledId; });

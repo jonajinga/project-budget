@@ -92,7 +92,8 @@ eleventyExcludeFromCollections: true
                   'cal-mini__cell--blank': cell.blank,
                   'cal-mini__cell--today': cell.isToday,
                   'cal-mini__cell--has':   !cell.blank && cell.count > 0
-                }">
+                }"
+                :style="!cell.blank && cell.intensity > 0 ? ('--intensity: ' + cell.intensity) : ''">
               <button type="button"
                       x-show="!cell.blank"
                       class="cal-mini__day"
@@ -128,13 +129,14 @@ eleventyExcludeFromCollections: true
                     class="cal__cell-btn"
                     @click="selectedISO = cell.iso"
                     @dblclick="view = 'day'; anchorISO = cell.iso"
+                    :title="cellTooltip(cell)"
                     :aria-label="'Open ' + cell.iso">
               <span class="cal__day-num-wrap">
                 <span class="cal__day-num" x-text="cell.day"></span>
               </span>
               <span class="cal__totals" x-show="cell.totalInflow !== 0 || cell.totalOutflow !== 0">
-                <span class="cal__delta cal__delta--in"  x-show="cell.totalInflow > 0"  x-text="formatCents(cell.totalInflow)"></span>
-                <span class="cal__delta cal__delta--out" x-show="cell.totalOutflow < 0" x-text="formatCents(cell.totalOutflow)"></span>
+                <span class="cal__delta cal__delta--in"  x-show="cell.totalInflow > 0"  x-text="fmtCompact(cell.totalInflow)"></span>
+                <span class="cal__delta cal__delta--out" x-show="cell.totalOutflow < 0" x-text="fmtCompact(cell.totalOutflow)"></span>
               </span>
               <span class="cal__dots" x-show="cell.posted.length + cell.scheduled.length > 0">
                 <template x-for="n in Math.min(cell.posted.length, 4)" :key="'p' + n">
@@ -346,6 +348,37 @@ function calendarView() {
       copy.setDate(copy.getDate() - copy.getDay()); // Sun = 0
       return copy;
     },
+    _addDaysISO(iso, n) {
+      var d = this._parseISO(iso);
+      d.setDate(d.getDate() + n);
+      return this._isoDay(d);
+    },
+
+    /* Projection window: any visible day inside [today - 365d, today + 90d]
+       gets its recurring entries inferred via occurrencesIn(). Past beyond
+       a year is rare; future beyond 90d is intentionally not projected
+       because that's where users should manually post or skip the queue. */
+    _projectionEnd() { return this._addDaysISO(this._isoDay(new Date()), 90); },
+
+    /* Build a { iso: [scheduledTpl...] } map for all schedules over the
+       projection window. Read _listVersion as the reactivity tripwire so
+       the calendar re-renders whenever a schedule is added/posted/skipped. */
+    _scheduledByISO() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      var out = {};
+      if (!p || !p.scheduled || !p.scheduled.length) return out;
+      var endISO = this._projectionEnd();
+      var occurrencesIn = this.$store.budget.occurrencesIn;
+      p.scheduled.forEach(function (s) {
+        if (!s || !s.nextDate) return;
+        var occ = occurrencesIn(s, "1970-01-01", endISO);
+        occ.forEach(function (iso) {
+          (out[iso] = out[iso] || []).push(s);
+        });
+      });
+      return out;
+    },
 
     anchorMonthISO() { return this._isoMonth(this._parseISO(this.anchorISO)); },
     anchorYear()     { return this._parseISO(this.anchorISO).getFullYear(); },
@@ -399,6 +432,27 @@ function calendarView() {
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
+    /* Compact dollar string for the tight month-grid cells:
+       12345 -> "$123", 123456 -> "$1.2k", 1234567 -> "$12k". */
+    fmtCompact(cents) {
+      var n = (cents || 0) / 100;
+      var sign = n < 0 ? "-" : "";
+      var abs = Math.abs(n);
+      var out;
+      if (abs >= 1000000)      out = (abs / 1000000).toFixed(abs >= 10000000 ? 0 : 1) + "M";
+      else if (abs >= 1000)    out = (abs / 1000).toFixed(abs >= 10000 ? 0 : 1) + "k";
+      else                     out = Math.round(abs).toString();
+      return sign + "$" + out;
+    },
+    cellTooltip(cell) {
+      if (!cell || cell.blank) return "";
+      var n = cell.posted.length + cell.scheduled.length;
+      if (!n) return "";
+      var parts = [];
+      if (cell.posted.length)    parts.push(cell.posted.length + " posted");
+      if (cell.scheduled.length) parts.push(cell.scheduled.length + " scheduled");
+      return parts.join(" · ");
+    },
 
     openAccounts() {
       var p = this.$store.budget.profile;
@@ -436,7 +490,9 @@ function calendarView() {
       return hay.indexOf(q) !== -1;
     },
 
-    /* Returns { posted, scheduled, totalInflow, totalOutflow, count }. */
+    /* Returns { posted, scheduled, totalInflow, totalOutflow, count }.
+       Scheduled entries come from the projection map so recurring
+       templates surface on every future occurrence within the window. */
     dayData(iso) {
       var p = this.$store.budget.profile;
       var out = { posted: [], scheduled: [], totalInflow: 0, totalOutflow: 0, count: 0 };
@@ -450,8 +506,8 @@ function calendarView() {
         if (t.amount > 0) out.totalInflow  += t.amount;
         if (t.amount < 0) out.totalOutflow += t.amount;
       });
-      (p.scheduled || []).forEach(function (s) {
-        if ((s.nextDate || "").slice(0, 10) !== prefix) return;
+      var projected = (this._cachedProjected || this._scheduledByISO())[iso] || [];
+      projected.forEach(function (s) {
         if (!self._matchSched(s)) return;
         out.scheduled.push(s);
       });
@@ -473,38 +529,45 @@ function calendarView() {
       return sum;
     },
 
-    /* ---------- grid builders ---------- */
+    /* ---------- grid builders ----------
+       Each builder caches the schedule projection map once on entry so
+       the per-cell dayData() lookups don't rebuild it for every day. */
     monthCells() {
+      this._cachedProjected = this._scheduledByISO();
       var anchor = this._parseISO(this.anchorISO);
       var year = anchor.getFullYear();
-      var month = anchor.getMonth() + 1;
-      var firstDay = new Date(year, month - 1, 1).getDay();
-      var daysInMonth = new Date(year, month, 0).getDate();
+      var monthIdx = anchor.getMonth(); /* 0..11 */
+      var firstDayWeekday = new Date(year, monthIdx, 1).getDay();
       var today = this._isoDay(new Date());
       var cells = [];
-      for (var i = 0; i < firstDay; i++) cells.push({ blank: true, key: "blank-" + i });
-      for (var day = 1; day <= daysInMonth; day++) {
-        var iso = year + "-" + this._pad(month) + "-" + this._pad(day);
+      /* Start cell #0 at the Sunday of (or before) the 1st of the month. */
+      var gridStart = new Date(year, monthIdx, 1 - firstDayWeekday);
+      /* Always render six full weeks = 42 cells so the grid height never
+         jumps when months have different numbers of weeks. */
+      for (var i = 0; i < 42; i++) {
+        var cur = new Date(gridStart);
+        cur.setDate(gridStart.getDate() + i);
+        var iso = this._isoDay(cur);
         var d = this.dayData(iso);
         cells.push({
           blank: false,
           key: iso,
           iso: iso,
-          day: day,
+          day: cur.getDate(),
           isToday: iso === today,
+          otherMonth: cur.getMonth() !== monthIdx,
           posted: d.posted,
           scheduled: d.scheduled,
           totalInflow: d.totalInflow,
           totalOutflow: d.totalOutflow,
         });
       }
-      /* Trailing blanks to fill the last row to a multiple of 7. */
-      var trailing = (7 - (cells.length % 7)) % 7;
-      for (var j = 0; j < trailing; j++) cells.push({ blank: true, key: "blank-end-" + j });
+      this._cachedProjected = null;
       return cells;
     },
 
     weekCells() {
+      this._cachedProjected = this._scheduledByISO();
       var start = this._startOfWeek(this._parseISO(this.anchorISO));
       var today = this._isoDay(new Date());
       var cells = [];
@@ -523,6 +586,7 @@ function calendarView() {
           totalOutflow: data.totalOutflow,
         });
       }
+      this._cachedProjected = null;
       return cells;
     },
 
@@ -537,8 +601,8 @@ function calendarView() {
       });
     },
 
-    /* Mini-grid cells for one month in the year view (no totals,
-       no scheduled, just a "has data" hint). */
+    /* Mini-grid cells for one month in the year view. Counts posted +
+       projected scheduled entries per day to drive the heatmap shade. */
     miniCells(monthISO) {
       var parts = monthISO.split("-");
       var year = parseInt(parts[0], 10);
@@ -548,6 +612,7 @@ function calendarView() {
       var today = this._isoDay(new Date());
       var p = this.$store.budget.profile;
       var hits = {};
+      var projected = this._scheduledByISO();
       if (p) {
         var monthPrefix = monthISO + "-";
         var self = this;
@@ -557,24 +622,29 @@ function calendarView() {
           var k = t.date.slice(0, 10);
           hits[k] = (hits[k] || 0) + 1;
         });
-        (p.scheduled || []).forEach(function (s) {
-          if ((s.nextDate || "").indexOf(monthPrefix) !== 0) return;
-          if (!self._matchSched(s)) return;
-          var k = s.nextDate.slice(0, 10);
-          hits[k] = (hits[k] || 0) + 1;
+        Object.keys(projected).forEach(function (iso) {
+          if (iso.indexOf(monthPrefix) !== 0) return;
+          var matched = projected[iso].filter(function (s) { return self._matchSched(s); });
+          if (matched.length) hits[iso] = (hits[iso] || 0) + matched.length;
         });
       }
+      /* Determine max count for intensity normalization. */
+      var maxCount = 0;
+      Object.keys(hits).forEach(function (k) { if (hits[k] > maxCount) maxCount = hits[k]; });
       var cells = [];
       for (var i = 0; i < firstDay; i++) cells.push({ blank: true, key: monthISO + "-blank-" + i });
       for (var day = 1; day <= daysInMonth; day++) {
         var iso = year + "-" + this._pad(month) + "-" + this._pad(day);
+        var c = hits[iso] || 0;
         cells.push({
           blank: false,
           key: iso,
           iso: iso,
           day: day,
           isToday: iso === today,
-          count: hits[iso] || 0,
+          count: c,
+          /* 0..100 scale for the CSS color-mix shade. */
+          intensity: maxCount > 0 ? Math.round((c / maxCount) * 100) : 0,
         });
       }
       return cells;

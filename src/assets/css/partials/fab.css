@@ -1,0 +1,49 @@
+/* Quick-add floating action button.
+   Sits bottom-right above the toast stack. Round (the only square-corner
+   exception in the app) and small enough that it doesn't dominate. */
+.fab-quick-add { /* container only; modal is portal-style siblings */ }
+
+.fab-quick-add__btn {
+  position: fixed;
+  right: var(--space-md);
+  /* sit above the toast stack (z-index: 50) */
+  z-index: 55;
+  /* default desktop placement: bottom edge with safe gap */
+  bottom: var(--space-md);
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+}
+.fab-quick-add__btn:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-lg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fab-quick-add__btn:hover { transform: translateY(-1px); }
+}
+.fab-quick-add__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.fab-quick-add__btn:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* On phones we lift the FAB a bit higher to clear the home-bar safe
+   area on iOS Safari. */
+@media (max-width: 599px) {
+  .fab-quick-add__btn {
+    right: var(--space-sm);
+    bottom: max(var(--space-sm), env(safe-area-inset-bottom, 0));
+  }
+}

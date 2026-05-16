@@ -13,6 +13,7 @@
     {{ content | safe }}
   </section>
 </div>
+{% include "partials/fab-quick-add.njk" %}
 {% include "partials/toast.njk" %}
 {% endblock %}
 
@@ -27,5 +28,8 @@
   <script src="/assets/js/vendor/papaparse.min.js" defer></script>
   <script src="/assets/js/vendor/popper.min.js" defer></script>
   <script src="/assets/js/vendor/tippy-bundle.min.js" defer></script>
+  <script src="/assets/js/vendor/sortable.min.js" defer></script>
   <script src="/assets/js/vendor/alpine.min.js" defer></script>
+  <script src="/assets/js/ui/sortable-bind.js?v={{ build.hash }}" defer></script>
+  <script src="/assets/js/ui/command-palette.js?v={{ build.hash }}" defer></script>
 {% endblock %}

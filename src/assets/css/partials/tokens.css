@@ -42,6 +42,13 @@
   --space-xl:  3rem;
   --space-2xl: 4.5rem;
   --space-3xl: 6rem;
+  /* Apple/Linear-style page rhythm: more air between large sections on
+     wider viewports, tighter on phones. Use for page headers + the
+     gap between major sections of an app page. */
+  --space-section: clamp(2rem, 4vw, 4rem);
+
+  /* Cards/inputs stay square (--radius: 0); pills/chips get this. */
+  --radius-pill: 999px;
 
   --max-width:        1180px;
   --max-width-narrow: 720px;

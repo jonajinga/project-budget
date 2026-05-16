@@ -194,6 +194,13 @@
   border-left: 4px solid var(--accent);
   box-shadow: var(--shadow-md);
 }
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: toast-in 180ms ease-out both; }
+  @keyframes toast-in {
+    from { transform: translateY(8px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+}
 .toast--warn { border-left-color: var(--warn); }
 .toast--danger { border-left-color: var(--danger); }
 .toast__body { margin: 0; font-size: var(--fs-sm); flex: 1; }
