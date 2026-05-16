@@ -94,6 +94,10 @@ export function newScheduledTxn(opts) {
     id: newId(),
     template: opts.template,
     frequency: opts.frequency || "monthly",
+    /* Used only when frequency === "custom". customInterval is the
+       integer count, customUnit is "days" | "weeks" | "months" | "years". */
+    customInterval: opts.customInterval || null,
+    customUnit: opts.customUnit || null,
     nextDate: opts.nextDate,
     lastRun: null,
   };

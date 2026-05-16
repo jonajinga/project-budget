@@ -1,7 +1,7 @@
 ---
 layout: layouts/app.njk
 title: "Categories"
-description: "Category groups, categories, and goals."
+description: "Category groups, categories, and goals. Drag to reorder, drop into another group to move."
 permalink: /app/categories/
 eleventyExcludeFromCollections: true
 ---
@@ -17,15 +17,49 @@ eleventyExcludeFromCollections: true
     Categories live inside groups (for example: Immediate Obligations, True Expenses, Quality of Life). Add a goal to any category to track how much you should assign each month.
   </p>
 
+  <p class="app-page__lead">
+    <strong>Reorder:</strong> grab the <span class="dnd-handle dnd-handle--inline" aria-hidden="true">&#9776;</span> handle to drag a row or group, drop it where you want it. On touch devices use the up / down buttons in the row.
+  </p>
+
   <p class="app-page__lead" x-show="!hasGroups" x-cloak>
     Start by creating a group, then add categories inside it.
   </p>
 
-  <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
-    <section class="card" style="margin-bottom: var(--space-md);">
-      <header style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-sm);">
-        <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Ungrouped'"></h2>
+  <template x-for="(group, gIdx) in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+    <section class="card cat-group"
+             :class="{
+               'is-drag-source': dragKind === 'catgroup' && dragId === (group.group?.id),
+               'is-drop-target-before': dragKind === 'catgroup' && dropTargetGroupId === (group.group?.id) && dropPos === 'before',
+               'is-drop-target-after':  dragKind === 'catgroup' && dropTargetGroupId === (group.group?.id) && dropPos === 'after'
+             }"
+             style="margin-bottom: var(--space-md);"
+             @dragover.prevent="onGroupDragOver($event, group.group?.id)"
+             @drop.prevent="onGroupDrop($event, group.group?.id)">
+      <header class="cat-group__head" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm); gap: var(--space-sm);">
+        <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
+          <span class="dnd-handle"
+                draggable="true"
+                role="button"
+                tabindex="0"
+                :aria-label="'Drag to reorder group ' + (group.group?.name || '')"
+                aria-grabbed="false"
+                @dragstart="onGroupDragStart($event, group.group?.id)"
+                @dragend="endDrag()"
+                x-show="group.group">&#9776;</span>
+          <h2 class="card__title" style="margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis;"
+              x-text="group.group ? group.group.name : 'Ungrouped'"></h2>
+        </div>
         <div class="cluster">
+          <button class="btn btn--ghost btn--sm" type="button"
+                  x-show="group.group"
+                  :disabled="gIdx === 0"
+                  @click="$store.budget.moveCategoryGroup(group.group.id, Math.max(0, gIdx - 1))"
+                  data-tip="Move this group up.">&uarr;</button>
+          <button class="btn btn--ghost btn--sm" type="button"
+                  x-show="group.group"
+                  :disabled="gIdx >= ($store.budget.profile.categoryGroups.length - 1)"
+                  @click="$store.budget.moveCategoryGroup(group.group.id, gIdx + 1)"
+                  data-tip="Move this group down.">&darr;</button>
           <button class="btn btn--secondary btn--sm" type="button"
                   @click="addCatGroupId = group.group ? group.group.id : ''; addCatName = ''; showCat = true;"
                   :disabled="!group.group">Add category</button>
@@ -41,6 +75,7 @@ eleventyExcludeFromCollections: true
       <table class="table">
         <thead>
           <tr>
+            <th style="width: 2.5rem;" aria-label="Drag handle"></th>
             <th>Category</th>
             <th>Goal</th>
             <th class="num">Target</th>
@@ -48,8 +83,24 @@ eleventyExcludeFromCollections: true
           </tr>
         </thead>
         <tbody>
-          <template x-for="c in group.categories" :key="c.id">
-            <tr>
+          <template x-for="(c, cIdx) in group.categories" :key="c.id">
+            <tr class="cat-row"
+                :class="{
+                  'is-drag-source': dragKind === 'cat' && dragId === c.id,
+                  'is-drop-target-before': dragKind === 'cat' && dropTargetCatId === c.id && dropPos === 'before',
+                  'is-drop-target-after':  dragKind === 'cat' && dropTargetCatId === c.id && dropPos === 'after'
+                }"
+                @dragover.prevent="onCatDragOver($event, c.id)"
+                @drop.prevent="onCatDrop($event, c.id, group.group?.id)">
+              <td>
+                <span class="dnd-handle"
+                      draggable="true"
+                      role="button"
+                      tabindex="0"
+                      :aria-label="'Drag to reorder ' + c.name"
+                      @dragstart="onCatDragStart($event, c.id, group.group?.id)"
+                      @dragend="endDrag()">&#9776;</span>
+              </td>
               <td>
                 <span x-text="c.name"></span>
                 <span x-show="$store.budget.isPaymentCategory(c.id)" class="badge" style="margin-left: var(--space-2xs);">card payment</span>
@@ -58,6 +109,14 @@ eleventyExcludeFromCollections: true
               <td class="num" x-text="goalTargetLabel(c.id)"></td>
               <td class="num">
                 <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--ghost btn--sm" type="button"
+                          :disabled="cIdx === 0"
+                          @click="$store.budget.moveCategory(c.id, group.group?.id, Math.max(0, cIdx - 1))"
+                          data-tip="Move up within this group.">&uarr;</button>
+                  <button class="btn btn--ghost btn--sm" type="button"
+                          :disabled="cIdx >= (group.categories.length - 1)"
+                          @click="$store.budget.moveCategory(c.id, group.group?.id, cIdx + 1)"
+                          data-tip="Move down within this group.">&darr;</button>
                   <button class="btn btn--ghost btn--sm" type="button" @click="openGoal(c)">Goal</button>
                   <button class="btn btn--ghost btn--sm" type="button"
                           @click="(() => { const n = prompt('Rename category', c.name); if (n) $store.budget.renameCategory(c.id, n); })()">Rename</button>
@@ -69,7 +128,9 @@ eleventyExcludeFromCollections: true
             </tr>
           </template>
           <tr x-show="!group.categories.length" x-cloak>
-            <td colspan="4" style="color: var(--fg-muted); padding: var(--space-sm);">No categories yet.</td>
+            <td colspan="5" style="color: var(--fg-muted); padding: var(--space-sm);">
+              No categories yet. Drag one here from another group, or click <em>Add category</em>.
+            </td>
           </tr>
         </tbody>
       </table>
@@ -164,6 +225,126 @@ function categoriesView() {
     newGroupName: "",
     goalCatId: null,
     goalForm: { type: "monthlyFixed", target: "", byDate: "" },
+
+    /* ---- Drag & drop state -------------------------------------------
+       dragKind = 'cat' | 'catgroup'.  dropPos = 'before' | 'after' is set
+       in dragover based on cursor's vertical position relative to the
+       target's midpoint. The render uses these to draw a 2px accent
+       line above or below the target. */
+    dragKind: null,
+    dragId: null,
+    dragFromGroupId: null,
+    dropTargetCatId: null,
+    dropTargetGroupId: null,
+    dropPos: null,
+
+    onCatDragStart(e, id, fromGroupId) {
+      this.dragKind = "cat";
+      this.dragId = id;
+      this.dragFromGroupId = fromGroupId || null;
+      try {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", "cat:" + id);
+      } catch (_e) {}
+    },
+
+    onGroupDragStart(e, groupId) {
+      if (!groupId) return;
+      this.dragKind = "catgroup";
+      this.dragId = groupId;
+      try {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", "catgroup:" + groupId);
+      } catch (_e) {}
+      /* Don't bubble into the parent .card's drop logic. */
+      e.stopPropagation();
+    },
+
+    onCatDragOver(e, overCatId) {
+      if (this.dragKind !== "cat" || !this.dragId) return;
+      var rect = e.currentTarget.getBoundingClientRect();
+      var midY = rect.top + rect.height / 2;
+      this.dropTargetCatId = overCatId;
+      this.dropTargetGroupId = null;
+      this.dropPos = e.clientY < midY ? "before" : "after";
+      try { e.dataTransfer.dropEffect = "move"; } catch (_e) {}
+    },
+
+    onGroupDragOver(e, overGroupId) {
+      if (!this.dragId) return;
+      /* Dragging a category over a group container with no row hit:
+         show end-of-group insertion. Dragging a group: show before/
+         after based on midpoint. */
+      if (this.dragKind === "cat") {
+        /* Don't override if we're hovering a row inside (row sets
+           dropTargetCatId). Only set group target when no cat target
+           is set this tick. We approximate by clearing on any cat
+           dragover; otherwise mark group as drop target. */
+        if (!e.currentTarget.contains(e.target) || e.target === e.currentTarget) {
+          this.dropTargetGroupId = overGroupId || null;
+          this.dropTargetCatId = null;
+          this.dropPos = "after";
+        }
+      } else if (this.dragKind === "catgroup" && overGroupId && overGroupId !== this.dragId) {
+        var rect = e.currentTarget.getBoundingClientRect();
+        var midY = rect.top + rect.height / 2;
+        this.dropTargetGroupId = overGroupId;
+        this.dropTargetCatId = null;
+        this.dropPos = e.clientY < midY ? "before" : "after";
+      }
+      try { e.dataTransfer.dropEffect = "move"; } catch (_e) {}
+    },
+
+    onCatDrop(e, targetCatId, targetGroupId) {
+      if (this.dragKind !== "cat" || !this.dragId) return this.endDrag();
+      var sourceId = this.dragId;
+      if (sourceId === targetCatId) return this.endDrag();
+      var p = this.$store.budget.profile;
+      if (!p) return this.endDrag();
+      var siblings = p.categories
+        .filter(function (c) { return c.groupId === targetGroupId && c.id !== sourceId; })
+        .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
+      var idx = siblings.findIndex(function (c) { return c.id === targetCatId; });
+      if (idx < 0) idx = siblings.length;
+      if (this.dropPos === "after") idx += 1;
+      this.$store.budget.moveCategory(sourceId, targetGroupId || null, idx);
+      e.stopPropagation();
+      this.endDrag();
+    },
+
+    onGroupDrop(e, targetGroupId) {
+      if (!this.dragId) return this.endDrag();
+      if (this.dragKind === "catgroup") {
+        if (!targetGroupId || targetGroupId === this.dragId) return this.endDrag();
+        var groups = this.$store.budget.profile.categoryGroups
+          .slice()
+          .filter(function (g) { return g.id !== this.dragId; }, this)
+          .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
+        var idx = groups.findIndex(function (g) { return g.id === targetGroupId; });
+        if (idx < 0) idx = groups.length;
+        if (this.dropPos === "after") idx += 1;
+        this.$store.budget.moveCategoryGroup(this.dragId, idx);
+      } else if (this.dragKind === "cat") {
+        /* Drop on the group's empty space — move category to end of
+           target group. */
+        var p = this.$store.budget.profile;
+        if (!p) return this.endDrag();
+        var siblings = p.categories.filter(function (c) {
+          return c.groupId === targetGroupId && c.id !== this.dragId;
+        }, this);
+        this.$store.budget.moveCategory(this.dragId, targetGroupId || null, siblings.length);
+      }
+      this.endDrag();
+    },
+
+    endDrag() {
+      this.dragKind = null;
+      this.dragId = null;
+      this.dragFromGroupId = null;
+      this.dropTargetCatId = null;
+      this.dropTargetGroupId = null;
+      this.dropPos = null;
+    },
 
     get hasGroups() {
       return !!(this.$store.budget.profile && this.$store.budget.profile.categoryGroups.length);

@@ -5,69 +5,7 @@ description: "Cash, checking, savings, credit cards, and off-budget tracking acc
 permalink: /app/accounts/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="{
-  showAccount: false,
-  showGroup: false,
-  editId: null,
-  editForm: { name: '', type: 'checking', groupId: '', openingBalance: '' },
-  deleteAccountId: null,
-  deleteAccountValue: '',
-  newAccount: { name: '', type: 'checking', groupId: '', openingBalance: '' },
-  newGroup: { name: '' },
-  resetNewAccount() { this.newAccount = { name: '', type: 'checking', groupId: '', openingBalance: '' }; },
-  resetNewGroup() { this.newGroup = { name: '' }; },
-  parseDollars(s) {
-    if (!s) return 0;
-    var clean = String(s).replace(/[$,\s]/g, '').trim();
-    if (/^\(.*\)$/.test(clean)) clean = '-' + clean.slice(1, -1);
-    var n = Number(clean);
-    return isFinite(n) ? Math.round(n * 100) : 0;
-  },
-  formatCents(c) {
-    return ((c || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-  },
-  submitAccount() {
-    $store.budget.addAccount({
-      name: this.newAccount.name,
-      type: this.newAccount.type,
-      groupId: this.newAccount.groupId || null,
-      openingBalance: this.parseDollars(this.newAccount.openingBalance),
-    });
-    this.resetNewAccount();
-    this.showAccount = false;
-  },
-  submitGroup() {
-    $store.budget.addAccountGroup(this.newGroup.name);
-    this.resetNewGroup();
-    this.showGroup = false;
-  },
-  openEdit(a) {
-    this.editId = a.id;
-    this.editForm = {
-      name: a.name,
-      type: a.type,
-      groupId: a.groupId || '',
-      openingBalance: ((a.openingBalance || 0) / 100).toFixed(2),
-    };
-  },
-  saveEdit() {
-    if (!this.editId) return;
-    $store.budget.updateAccount(this.editId, {
-      name: this.editForm.name,
-      type: this.editForm.type,
-      groupId: this.editForm.groupId || null,
-      openingBalance: this.parseDollars(this.editForm.openingBalance),
-    });
-    this.editId = null;
-  },
-  startDelete(a) { this.deleteAccountId = a.id; this.deleteAccountValue = ''; },
-  doDelete() {
-    if (!this.deleteAccountId) return;
-    if ($store.budget.deleteAccount(this.deleteAccountId, this.deleteAccountValue)) {
-      this.deleteAccountId = null;
-    }
-  },
-}">
+<div class="app-page" x-data="accountsView()">
   <header class="app-page__header">
     <h1 class="app-page__title">Accounts</h1>
     <div class="cluster">
@@ -85,17 +23,49 @@ eleventyExcludeFromCollections: true
     No accounts yet. Start with your everyday checking account, then add savings, credit cards, and any tracking accounts for investments or loans.
   </p>
 
-  <template x-for="group in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
-    <section class="card" style="margin-bottom: var(--space-md);">
+  <p class="app-page__lead" x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+    <strong>Reorder:</strong> grab the <span class="dnd-handle dnd-handle--inline" aria-hidden="true">&#9776;</span> handle to drag a row or group, drop it where you want it. On touch devices use the up / down buttons in the row.
+  </p>
+
+  <template x-for="(group, gIdx) in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+    <section class="card cat-group"
+             :class="{
+               'is-drag-source': dragKind === 'acctgroup' && dragId === (group.group?.id),
+               'is-drop-target-before': dragKind === 'acctgroup' && dropTargetGroupId === (group.group?.id) && dropPos === 'before',
+               'is-drop-target-after':  dragKind === 'acctgroup' && dropTargetGroupId === (group.group?.id) && dropPos === 'after'
+             }"
+             style="margin-bottom: var(--space-md);"
+             @dragover.prevent="onGroupDragOver($event, group.group?.id)"
+             @drop.prevent="onGroupDrop($event, group.group?.id)">
       <header style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-sm);">
-        <button type="button" class="group-toggle"
-                @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
-                :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
-                :disabled="!group.group">
-          <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
-          <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
-        </button>
+        <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
+          <span class="dnd-handle"
+                draggable="true"
+                role="button"
+                tabindex="0"
+                :aria-label="'Drag to reorder group ' + (group.group?.name || '')"
+                @dragstart="onGroupDragStart($event, group.group?.id)"
+                @dragend="endDrag()"
+                x-show="group.group">&#9776;</span>
+          <button type="button" class="group-toggle"
+                  @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
+                  :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
+                  :disabled="!group.group">
+            <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+            <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
+          </button>
+        </div>
         <div class="cluster">
+          <button class="btn btn--ghost btn--sm" type="button"
+                  x-show="group.group"
+                  :disabled="gIdx === 0"
+                  @click="$store.budget.moveAccountGroup(group.group.id, Math.max(0, gIdx - 1))"
+                  data-tip="Move this group up.">&uarr;</button>
+          <button class="btn btn--ghost btn--sm" type="button"
+                  x-show="group.group"
+                  :disabled="gIdx >= ($store.budget.profile.accountGroups.length - 1)"
+                  @click="$store.budget.moveAccountGroup(group.group.id, gIdx + 1)"
+                  data-tip="Move this group down.">&darr;</button>
           <button class="btn btn--ghost btn--sm" type="button"
                   x-show="group.group"
                   @click="(() => { const n = prompt('Rename group', group.group.name); if (n) $store.budget.renameAccountGroup(group.group.id, n); })()">Rename</button>
@@ -108,6 +78,7 @@ eleventyExcludeFromCollections: true
       <table class="table" x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak>
         <thead>
           <tr>
+            <th style="width: 2.5rem;" aria-label="Drag handle"></th>
             <th scope="col">Name</th>
             <th scope="col">Type</th>
             <th scope="col" class="num">Balance</th>
@@ -115,8 +86,24 @@ eleventyExcludeFromCollections: true
           </tr>
         </thead>
         <tbody>
-          <template x-for="a in group.accounts" :key="a.id">
-            <tr>
+          <template x-for="(a, aIdx) in group.accounts" :key="a.id">
+            <tr class="cat-row"
+                :class="{
+                  'is-drag-source': dragKind === 'acct' && dragId === a.id,
+                  'is-drop-target-before': dragKind === 'acct' && dropTargetAcctId === a.id && dropPos === 'before',
+                  'is-drop-target-after':  dragKind === 'acct' && dropTargetAcctId === a.id && dropPos === 'after'
+                }"
+                @dragover.prevent="onAcctDragOver($event, a.id)"
+                @drop.prevent="onAcctDrop($event, a.id, group.group?.id)">
+              <td>
+                <span class="dnd-handle"
+                      draggable="true"
+                      role="button"
+                      tabindex="0"
+                      :aria-label="'Drag to reorder ' + a.name"
+                      @dragstart="onAcctDragStart($event, a.id, group.group?.id)"
+                      @dragend="endDrag()">&#9776;</span>
+              </td>
               <td>
                 <a :href="'/app/register/?account=' + a.id" x-text="a.name"></a>
               </td>
@@ -125,6 +112,14 @@ eleventyExcludeFromCollections: true
                   x-text="formatCents($store.budget.accountBalance(a.id))"></td>
               <td class="num">
                 <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--ghost btn--sm" type="button"
+                          :disabled="aIdx === 0"
+                          @click="$store.budget.moveAccount(a.id, group.group?.id, Math.max(0, aIdx - 1))"
+                          data-tip="Move up within this group.">&uarr;</button>
+                  <button class="btn btn--ghost btn--sm" type="button"
+                          :disabled="aIdx >= (group.accounts.length - 1)"
+                          @click="$store.budget.moveAccount(a.id, group.group?.id, aIdx + 1)"
+                          data-tip="Move down within this group.">&darr;</button>
                   <button class="btn btn--ghost btn--sm" type="button" @click="openEdit(a)"
                           data-tip="Change the account's name, type, or group.">Edit</button>
                   <button class="btn btn--danger btn--sm" type="button" @click="startDelete(a)">Delete</button>
@@ -276,3 +271,171 @@ eleventyExcludeFromCollections: true
     </div>
   </div>
 </div>
+
+<script>
+function accountsView() {
+  return {
+    showAccount: false,
+    showGroup: false,
+    editId: null,
+    editForm: { name: "", type: "checking", groupId: "", openingBalance: "" },
+    deleteAccountId: null,
+    deleteAccountValue: "",
+    newAccount: { name: "", type: "checking", groupId: "", openingBalance: "" },
+    newGroup: { name: "" },
+
+    /* Drag & drop state — mirrors the /app/categories/ pattern. */
+    dragKind: null,        // 'acct' | 'acctgroup'
+    dragId: null,
+    dragFromGroupId: null,
+    dropTargetAcctId: null,
+    dropTargetGroupId: null,
+    dropPos: null,
+
+    resetNewAccount() { this.newAccount = { name: "", type: "checking", groupId: "", openingBalance: "" }; },
+    resetNewGroup()   { this.newGroup   = { name: "" }; },
+
+    parseDollars(s) {
+      if (!s) return 0;
+      var clean = String(s).replace(/[$,\s]/g, "").trim();
+      if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
+      var n = Number(clean);
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    submitAccount() {
+      this.$store.budget.addAccount({
+        name: this.newAccount.name,
+        type: this.newAccount.type,
+        groupId: this.newAccount.groupId || null,
+        openingBalance: this.parseDollars(this.newAccount.openingBalance),
+      });
+      this.resetNewAccount();
+      this.showAccount = false;
+    },
+    submitGroup() {
+      this.$store.budget.addAccountGroup(this.newGroup.name);
+      this.resetNewGroup();
+      this.showGroup = false;
+    },
+    openEdit(a) {
+      this.editId = a.id;
+      this.editForm = {
+        name: a.name,
+        type: a.type,
+        groupId: a.groupId || "",
+        openingBalance: ((a.openingBalance || 0) / 100).toFixed(2),
+      };
+    },
+    saveEdit() {
+      if (!this.editId) return;
+      this.$store.budget.updateAccount(this.editId, {
+        name: this.editForm.name,
+        type: this.editForm.type,
+        groupId: this.editForm.groupId || null,
+        openingBalance: this.parseDollars(this.editForm.openingBalance),
+      });
+      this.editId = null;
+    },
+    startDelete(a) { this.deleteAccountId = a.id; this.deleteAccountValue = ""; },
+    doDelete() {
+      if (!this.deleteAccountId) return;
+      if (this.$store.budget.deleteAccount(this.deleteAccountId, this.deleteAccountValue)) {
+        this.deleteAccountId = null;
+      }
+    },
+
+    /* ---- Drag & drop handlers ---- */
+    onAcctDragStart(e, id, fromGroupId) {
+      this.dragKind = "acct";
+      this.dragId = id;
+      this.dragFromGroupId = fromGroupId || null;
+      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "acct:" + id); } catch (_e) {}
+    },
+    onGroupDragStart(e, groupId) {
+      if (!groupId) return;
+      this.dragKind = "acctgroup";
+      this.dragId = groupId;
+      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "acctgroup:" + groupId); } catch (_e) {}
+      e.stopPropagation();
+    },
+    onAcctDragOver(e, overId) {
+      if (this.dragKind !== "acct" || !this.dragId) return;
+      var rect = e.currentTarget.getBoundingClientRect();
+      var midY = rect.top + rect.height / 2;
+      this.dropTargetAcctId = overId;
+      this.dropTargetGroupId = null;
+      this.dropPos = e.clientY < midY ? "before" : "after";
+      try { e.dataTransfer.dropEffect = "move"; } catch (_e) {}
+    },
+    onGroupDragOver(e, overGroupId) {
+      if (!this.dragId) return;
+      if (this.dragKind === "acct") {
+        if (e.target === e.currentTarget) {
+          this.dropTargetGroupId = overGroupId || null;
+          this.dropTargetAcctId = null;
+          this.dropPos = "after";
+        }
+      } else if (this.dragKind === "acctgroup" && overGroupId && overGroupId !== this.dragId) {
+        var rect = e.currentTarget.getBoundingClientRect();
+        var midY = rect.top + rect.height / 2;
+        this.dropTargetGroupId = overGroupId;
+        this.dropTargetAcctId = null;
+        this.dropPos = e.clientY < midY ? "before" : "after";
+      }
+      try { e.dataTransfer.dropEffect = "move"; } catch (_e) {}
+    },
+    onAcctDrop(e, targetId, targetGroupId) {
+      if (this.dragKind !== "acct" || !this.dragId) return this.endDrag();
+      if (this.dragId === targetId) return this.endDrag();
+      var p = this.$store.budget.profile;
+      if (!p) return this.endDrag();
+      var sourceId = this.dragId;
+      var siblings = p.accounts
+        .filter(function (a) { return a.groupId === targetGroupId && a.id !== sourceId; })
+        .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
+      var idx = siblings.findIndex(function (a) { return a.id === targetId; });
+      if (idx < 0) idx = siblings.length;
+      if (this.dropPos === "after") idx += 1;
+      this.$store.budget.moveAccount(sourceId, targetGroupId || null, idx);
+      e.stopPropagation();
+      this.endDrag();
+    },
+    onGroupDrop(e, targetGroupId) {
+      if (!this.dragId) return this.endDrag();
+      if (this.dragKind === "acctgroup") {
+        if (!targetGroupId || targetGroupId === this.dragId) return this.endDrag();
+        var sourceId = this.dragId;
+        var groups = this.$store.budget.profile.accountGroups
+          .slice()
+          .filter(function (g) { return g.id !== sourceId; })
+          .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
+        var idx = groups.findIndex(function (g) { return g.id === targetGroupId; });
+        if (idx < 0) idx = groups.length;
+        if (this.dropPos === "after") idx += 1;
+        this.$store.budget.moveAccountGroup(sourceId, idx);
+      } else if (this.dragKind === "acct") {
+        var p = this.$store.budget.profile;
+        if (!p) return this.endDrag();
+        var sourceId = this.dragId;
+        var siblings = p.accounts.filter(function (a) {
+          return a.groupId === targetGroupId && a.id !== sourceId;
+        });
+        this.$store.budget.moveAccount(sourceId, targetGroupId || null, siblings.length);
+      }
+      this.endDrag();
+    },
+    endDrag() {
+      this.dragKind = null;
+      this.dragId = null;
+      this.dragFromGroupId = null;
+      this.dropTargetAcctId = null;
+      this.dropTargetGroupId = null;
+      this.dropPos = null;
+    },
+  };
+}
+</script>

@@ -34,7 +34,7 @@ import {
 } from "../domain/transactions.js";
 import { upsertPayee, suggestPayees, findPayee, findPayeeByName } from "../domain/payees.js";
 import {
-  addSchedule, removeSchedule, dueTransactions, postScheduled, skipScheduled, FREQUENCIES,
+  addSchedule, removeSchedule, dueTransactions, postScheduled, skipScheduled, FREQUENCIES, CUSTOM_UNITS, frequencyLabel,
 } from "../domain/scheduled.js";
 import {
   reconciliationStatus, applyReconcile, addAdjustment, unlockReconciled,
@@ -94,7 +94,9 @@ export function createStore() {
     /* Expose domain constants for templates. */
     ACCOUNT_TYPES: ACCOUNT_TYPES,
     FREQUENCIES: FREQUENCIES,
+    CUSTOM_UNITS: CUSTOM_UNITS,
     GOAL_TYPES: GOAL_TYPES,
+    frequencyLabel: frequencyLabel,
 
     /* Active budget month — what the budget UI is currently viewing. */
     currentMonth: thisMonth(),

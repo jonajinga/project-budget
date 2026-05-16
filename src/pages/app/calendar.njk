@@ -101,7 +101,7 @@ eleventyExcludeFromCollections: true
               <span class="cal__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
               <span class="cal__row-meta">
                 <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
-                <span x-text="' · ' + ($store.budget.FREQUENCIES.find(f => f.value === s.frequency)?.label || s.frequency)"></span>
+                <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
               </span>
               <span class="cal__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
                     x-text="formatCents(s.template.amount)"></span>

@@ -7,19 +7,12 @@ eleventyExcludeFromCollections: true
 ---
 <div class="app-page" x-data="{
   show: false,
-  form: { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', nextDate: '' },
+  form: { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', customInterval: 2, customUnit: 'weeks', nextDate: '' },
   parseDollars(s) { if (!s && s !== 0) return 0; var c = String(s).replace(/[$,\s]/g, '').trim(); if (/^\(.*\)$/.test(c)) c = '-' + c.slice(1, -1); var n = Number(c); return isFinite(n) ? Math.round(n * 100) : 0; },
   formatCents(c) { return ((c || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); },
   submit() {
     if (!this.form.accountId || !this.form.nextDate) return;
-    var payeeId = null;
-    if (this.form.payeeName) {
-      var pp = $store.budget.suggestPayees(this.form.payeeName, 1);
-      // upsert via addTransaction would create a real txn; we want only the payee
-      // simplest: call store directly through the payees module is not exposed,
-      // so we accept that the first post will create the payee. Store name verbatim
-      // in template for first post.
-    }
+    var isCustom = this.form.frequency === 'custom';
     $store.budget.addSchedule({
       template: {
         accountId: this.form.accountId,
@@ -30,9 +23,11 @@ eleventyExcludeFromCollections: true
         categoryId: null,
       },
       frequency: this.form.frequency,
+      customInterval: isCustom ? Math.max(1, Math.round(Number(this.form.customInterval) || 1)) : null,
+      customUnit: isCustom ? this.form.customUnit : null,
       nextDate: this.form.nextDate,
     });
-    this.form = { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', nextDate: '' };
+    this.form = { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', customInterval: 2, customUnit: 'weeks', nextDate: '' };
     this.show = false;
   },
 }">
@@ -63,7 +58,7 @@ eleventyExcludeFromCollections: true
         <template x-for="s in $store.budget.profile?.scheduled || []" :key="s.id">
           <tr>
             <td x-text="s.nextDate"></td>
-            <td x-text="$store.budget.FREQUENCIES.find(f => f.value === s.frequency)?.label || s.frequency"></td>
+            <td x-text="$store.budget.frequencyLabel(s)"></td>
             <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
             <td x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></td>
             <td class="num" x-text="formatCents(s.template.amount)"></td>
@@ -106,6 +101,24 @@ eleventyExcludeFromCollections: true
                   <option :value="f.value" x-text="f.label"></option>
                 </template>
               </select>
+            </div>
+          </div>
+          <div class="form-row" x-show="form.frequency === 'custom'" x-cloak>
+            <div class="field">
+              <label class="field__label" for="rc-custom-interval">Every</label>
+              <input class="input" id="rc-custom-interval" type="number" min="1" step="1"
+                     x-model.number="form.customInterval" inputmode="numeric"
+                     :required="form.frequency === 'custom'">
+            </div>
+            <div class="field">
+              <label class="field__label" for="rc-custom-unit">Unit</label>
+              <select class="select" id="rc-custom-unit" x-model="form.customUnit">
+                <template x-for="u in $store.budget.CUSTOM_UNITS" :key="u.value">
+                  <option :value="u.value" x-text="u.label"></option>
+                </template>
+              </select>
+              <p class="field__hint" x-show="form.customInterval && form.customUnit"
+                 x-text="'Reads as: every ' + form.customInterval + ' ' + form.customUnit + '.'"></p>
             </div>
           </div>
           <div class="form-row">
