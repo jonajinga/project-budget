@@ -1,50 +1,32 @@
-feat: Dexie/IndexedDB persistence + budget alignment fix
+feat: site search (Pagefind) + register fuzzy search (Fuse.js)
 
-Storage: add Dexie.js as a second persistence backend that mirrors
-every localStorage write. The live profile, snapshots, daily backups,
-and active-profile id all flow to both stores. Reads stay sync from
-localStorage to keep the reactive store sync; Dexie is the durable
-backup that survives a localStorage wipe.
+Pagefind — static-site search for marketing pages
+- pagefind added to devDependencies; eleventy.after hook builds the
+  index against the written _site/**/*.html, outputs to _site/pagefind/
+- Marketing pages mark their <main> with data-pagefind-body via the
+  base layout so the indexer skips /app/* automatically (the attribute
+  is omitted under the app tree)
+- New /partials/search-modal.njk with a lazy-loaded UI: Pagefind's
+  pagefind.js only loads on first open
+- Header button + Ctrl/Cmd+K open the modal from anywhere
+- Search modal works on marketing pages WITHOUT Alpine (vanilla JS in
+  main.js); main.js is the only script the marketing pages need
 
-Versioning is split into two independent surfaces so upgrades don't
-break users:
-- Dexie schema version (db.version(N).stores(...).upgrade()) governs
-  table shapes + indexes in IndexedDB.
-- Profile schema version (SCHEMA_VERSION + MIGRATIONS in schema.js)
-  governs the bundle shape. A single Dexie table can hold profiles at
-  v1, v2, v3 simultaneously; the loader normalizes on read.
+Fuse.js — fuzzy register search
+- 23 KB vendored bundle, loaded only in the app layout
+- Register search input now matches via Fuse when available:
+  payee (weight 3), category (weight 1.5), memo (1), amount (0.5)
+- Verified end-to-end: "wf" matches Whole Foods, "rentl" (typo)
+  matches Rent / Landlord, "groceries" matches by category
+- Falls back to the previous substring filter if Fuse failed to load
 
-Boot flow:
-1. _bootDexie opens the DB; sets storageBackend = "mirrored" or stays
-   "localStorage" if Dexie is unavailable (private browsing, very old
-   browser).
-2. One-time migrateLocalStorageIfNeeded copies any existing
-   localStorage keys (profile, snapshot, backup, active) into Dexie.
-   Idempotent via a meta flag.
-3. Reverse-restore: if localStorage is empty but Dexie has profiles
-   (user wiped site data, IndexedDB persisted), copy them back so the
-   sync-reading store sees them. Toast notifies.
-4. Normal in-memory boot.
-
-Mirror writes use a JSON round-trip unwrap() helper. Alpine's reactive
-Proxy can't be passed to IndexedDB.put() — structured-clone throws
-DataCloneError on the Proxy traps. Strip it first.
-
-Storage backend shown on /app/settings/ Data card.
-New docs page: /docs/profiles-backups/how-storage-works/.
-
-Budget table alignment (user-reported via screenshot):
-- Editable amount inputs were inset 0.5rem from the cell edge while
-  the read-only group totals sat flush — visible misalignment.
-- Input padding: 0.3rem 0 (was 0.5rem horizontal). Focus state pulls
-  the padding back in so the visible border doesn't crowd the digits.
-- Reformat input value with Intl.NumberFormat thousands grouping
-  ("1,450.00" not "1450.00") to match the group totals' formatting.
-
-Library survey responses (asked in conversation, none added):
-- dinero.js: skip. We model money as integer cents already.
-- date-fns: skip. Our date math fits in <100 lines of Intl + parse.
-- Intl.NumberFormat/DateTimeFormat: already using.
-- imask.js: defer. parseDollars already accepts permissive input.
+Header refactor
+- Hamburger menu + theme toggle moved to vanilla JS in main.js so
+  the marketing layout doesn't have to ship Alpine just to flip the
+  menu (the app layout still uses Alpine for the rest of the app)
+- main.js now exposes: toggleTheme, openSearch, closeSearch,
+  toggleSiteMenu on window.ProjectBudget
+- Search modal uses [hidden] attribute with a [hidden] !important
+  guard to keep CSS from leaking display:flex over the attribute
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

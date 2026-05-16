@@ -12,3 +12,4 @@ version and the date the file was fetched.
 | papaparse.min.js | 5.4.1 | 2026-05-15 | 20 KB | jsdelivr.net/npm/papaparse |
 | instantpage.min.js | 5.2.0 | 2026-05-15 | 12 KB | jsdelivr.net/npm/instant.page |
 | dexie.min.js | 4.0.10 | 2026-05-16 | 92 KB | jsdelivr.net/npm/dexie |
+| fuse.min.js | 7.0.0 | 2026-05-16 | 23 KB | jsdelivr.net/npm/fuse.js |

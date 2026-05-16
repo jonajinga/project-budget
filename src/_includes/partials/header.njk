@@ -1,16 +1,14 @@
 {% set isApp = page.url and page.url.startsWith("/app/") %}
 
-<header class="site-header {{ 'site-header--app' if isApp else 'site-header--marketing' }}" role="banner"
-        x-data="{ siteMenuOpen: false }">
+<header class="site-header {{ 'site-header--app' if isApp else 'site-header--marketing' }}" role="banner">
 
   {% if isApp %}
     {# ---- App-mode header: hamburger | profile | theme toggle ---- #}
     <div class="container site-header__inner site-header__inner--app">
       <button type="button"
               class="site-header__hamburger"
-              @click="siteMenuOpen = !siteMenuOpen"
-              :aria-expanded="siteMenuOpen.toString()"
               aria-controls="site-menu"
+              aria-expanded="false"
               aria-label="Open menu"
               data-tip="Open the main menu — site links, documentation, and settings.">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -29,6 +27,13 @@
       </a>
 
       <div class="site-header__actions">
+        <button type="button"
+                class="site-header__search"
+                aria-label="Search the site"
+                data-tip="Search docs, blog, glossary (Ctrl+K / Cmd+K)."
+                onclick="window.ProjectBudget && window.ProjectBudget.openSearch && window.ProjectBudget.openSearch()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
         <button type="button"
                 class="theme-toggle"
                 aria-label="Toggle color theme"
@@ -62,10 +67,15 @@
 
       <div class="site-header__actions">
         <button type="button"
+                class="site-header__search"
+                aria-label="Search the site"
+                onclick="window.ProjectBudget && window.ProjectBudget.openSearch && window.ProjectBudget.openSearch()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <button type="button"
                 class="site-header__hamburger site-header__hamburger--mobile"
-                @click="siteMenuOpen = !siteMenuOpen"
-                :aria-expanded="siteMenuOpen.toString()"
                 aria-controls="site-menu"
+                aria-expanded="false"
                 aria-label="Open menu">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
             <line x1="3" y1="6"  x2="21" y2="6"/>
@@ -84,38 +94,39 @@
     </div>
   {% endif %}
 
-  {# ---- Slide-out menu (shared) ---- #}
-  <div class="site-menu-backdrop" x-show="siteMenuOpen" x-cloak @click="siteMenuOpen = false"></div>
+  {# ---- Slide-out menu (vanilla JS via main.js) ---- #}
+  <div class="site-menu-backdrop" hidden></div>
 
-  <aside class="site-menu" id="site-menu" :class="{ 'is-open': siteMenuOpen }" aria-label="Site menu" x-cloak
-         @keydown.escape.window="siteMenuOpen = false">
+  <aside class="site-menu" id="site-menu" aria-label="Site menu">
     <div class="site-menu__head">
       <p class="site-menu__brand">{{ site.title }}</p>
-      <button type="button" class="site-menu__close" @click="siteMenuOpen = false" aria-label="Close menu">&times;</button>
+      <button type="button" class="site-menu__close" aria-label="Close menu">&times;</button>
     </div>
 
     {% if isApp %}
       <p class="site-menu__group-label">In this app</p>
       <ul class="site-menu__list">
         {% for item in nav.app %}
-          <li><a href="{{ item.url }}" class="site-menu__link" @click="siteMenuOpen = false">{{ item.label }}</a></li>
+          <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
         {% endfor %}
       </ul>
     {% endif %}
 
     <p class="site-menu__group-label">Project Budget</p>
     <ul class="site-menu__list">
-      <li><a href="/" class="site-menu__link" @click="siteMenuOpen = false">Home</a></li>
+      <li><a href="/" class="site-menu__link">Home</a></li>
       {% for item in nav.main %}
-        <li><a href="{{ item.url }}" class="site-menu__link" @click="siteMenuOpen = false">{{ item.label }}</a></li>
+        <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
       {% endfor %}
     </ul>
 
     <p class="site-menu__group-label">More</p>
     <ul class="site-menu__list">
       {% for item in nav.footer %}
-        <li><a href="{{ item.url }}" class="site-menu__link" @click="siteMenuOpen = false">{{ item.label }}</a></li>
+        <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
       {% endfor %}
     </ul>
   </aside>
+
+  {% include "partials/search-modal.njk" %}
 </header>

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import eleventyImg from "@11ty/eleventy-img";
 import tinyHTML from "@sardine/eleventy-plugin-tinyhtml";
+import * as pagefind from "pagefind";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -173,6 +174,25 @@ export default function (eleventyConfig) {
   eleventyConfig.addCollection("posts", (api) =>
     api.getFilteredByGlob("src/blog/posts/*.md").sort((a, b) => b.date - a.date)
   );
+
+  // ---- Pagefind index ----------------------------------------------------
+  // Build the search index after the site is written. Indexes only the
+  // marketing surface (docs, blog, glossary, accessibility, changelog,
+  // open-source, terms, privacy). The /app/ tree is intentionally
+  // excluded — it's all dynamic + behind a robots.txt Disallow.
+  eleventyConfig.on("eleventy.after", async () => {
+    try {
+      const { index } = await pagefind.createIndex({
+        forceLanguage: "en",
+        verbose: false,
+      });
+      const siteDir = resolve(__dirname, "_site");
+      await index.addDirectory({ path: siteDir, glob: "**/*.html" });
+      await index.writeFiles({ outputPath: resolve(siteDir, "pagefind") });
+    } catch (e) {
+      console.warn("Pagefind index build failed:", e.message);
+    }
+  });
 
   return {
     dir: {

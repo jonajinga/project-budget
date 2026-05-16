@@ -32,7 +32,12 @@
   {% include "partials/skip-link.njk" %}
   {% include "partials/header.njk" %}
 
-  <main id="main" tabindex="-1">
+  {# Pagefind indexes only marketing pages. The presence of
+     data-pagefind-body anywhere on the site tells Pagefind to ignore
+     pages without it — so /app/* (which omits the attribute) is
+     excluded automatically without a separate exclude pattern. #}
+  <main id="main" tabindex="-1"
+        {% if not (page.url and page.url.startsWith("/app/")) %}data-pagefind-body{% endif %}>
     {% block content %}{{ content | safe }}{% endblock %}
   </main>
 

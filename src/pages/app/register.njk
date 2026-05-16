@@ -446,16 +446,47 @@ function registerView() {
     visibleTransactions() {
       var p = this.$store.budget.profile;
       if (!p) return [];
-      var q = (this.search || "").toLowerCase().trim();
+      var q = (this.search || "").trim();
       var self = this;
-      return p.transactions
-        .filter(t => !self.filterAccountId || t.accountId === self.filterAccountId)
-        .filter(t => {
-          if (!q) return true;
-          var payee = (self.$store.budget.payeeName(t.payeeId) || "").toLowerCase();
-          return payee.indexOf(q) !== -1 || (t.memo || "").toLowerCase().indexOf(q) !== -1;
-        })
-        .sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+      var pool = p.transactions
+        .filter(t => !self.filterAccountId || t.accountId === self.filterAccountId);
+      if (!q) {
+        return pool.sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+      }
+      /* Fuzzy search via Fuse.js when available; falls back to a plain
+         substring match (same behavior as before) for any environment
+         where Fuse failed to load. Index is rebuilt per call because the
+         caller (Alpine x-for) already does so on every store mutation;
+         building Fuse on ~5k rows costs <5ms. */
+      if (typeof window.Fuse === "function") {
+        var docs = pool.map(t => ({
+          t: t,
+          payee: self.$store.budget.payeeName(t.payeeId) || "",
+          category: self.$store.budget.categoryName(t.categoryId) || "",
+          memo: t.memo || "",
+          amount: ((t.amount || 0) / 100).toFixed(2),
+        }));
+        var fuse = new window.Fuse(docs, {
+          includeScore: true,
+          threshold: 0.35,
+          ignoreLocation: true,
+          minMatchCharLength: 2,
+          keys: [
+            { name: "payee",    weight: 3 },
+            { name: "category", weight: 1.5 },
+            { name: "memo",     weight: 1 },
+            { name: "amount",   weight: 0.5 },
+          ],
+        });
+        return fuse.search(q).map(r => r.item.t)
+          .sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+      }
+      /* Fallback: substring on payee + memo (legacy behavior). */
+      var ql = q.toLowerCase();
+      return pool.filter(t => {
+        var payee = (self.$store.budget.payeeName(t.payeeId) || "").toLowerCase();
+        return payee.indexOf(ql) !== -1 || (t.memo || "").toLowerCase().indexOf(ql) !== -1;
+      }).sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
     },
 
     otherSide(t) {

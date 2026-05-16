@@ -187,6 +187,129 @@
 }
 .site-menu__link:hover { background: var(--bg-alt); color: var(--accent); border-left-color: var(--accent); }
 
+/* Header search button — same footprint as the hamburger / theme toggle. */
+.site-header__search {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: 0;
+  color: var(--fg);
+  cursor: pointer;
+  border-radius: var(--radius-input);
+}
+.site-header__search:hover { background: var(--bg-alt); color: var(--accent); }
+
+/* Search modal — lazy Pagefind UI. The [hidden] attribute is the source
+   of truth; the layout rules only apply when not hidden so the modal
+   doesn't intercept clicks while collapsed. */
+.search-modal[hidden] { display: none !important; }
+.search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8vh;
+}
+.search-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 18, 15, 0.55);
+}
+.search-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(640px, 92vw);
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.search-modal__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-soft);
+}
+.search-modal__icon { color: var(--fg-muted); flex-shrink: 0; }
+.search-modal__input {
+  flex: 1;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--fs-md);
+  color: var(--fg);
+  outline: none;
+  padding: 0.4rem 0;
+}
+.search-modal__close {
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+.search-modal__body {
+  overflow-y: auto;
+  padding: var(--space-sm) 0;
+}
+.search-modal__hint {
+  padding: var(--space-md);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+.search-modal__hint kbd {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  background: var(--bg-alt);
+}
+.search-modal__results { list-style: none; padding: 0; margin: 0; }
+.search-result {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  text-decoration: none;
+  color: var(--fg);
+  border-bottom: 1px solid var(--border-soft);
+}
+.search-result:hover { background: var(--bg-alt); }
+.search-result__title {
+  font-family: var(--font-headline);
+  font-weight: 600;
+  font-size: var(--fs-md);
+  margin: 0 0 var(--space-3xs);
+  color: var(--fg);
+}
+.search-result__excerpt {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  margin: 0 0 var(--space-3xs);
+}
+.search-result__excerpt mark {
+  background: rgba(184, 134, 44, 0.25);
+  color: inherit;
+  padding: 0 2px;
+}
+.search-result__url {
+  font-size: var(--fs-xs);
+  color: var(--fg-subtle);
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
 /* Footer */
 .site-footer {
   background: var(--bg-alt);
