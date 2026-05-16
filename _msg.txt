@@ -1,63 +1,18 @@
-feat+fix: mobile-first audit, manual snapshots, bundle export, Data card
+fix: load PapaParse + reactive list updates
 
-Audit findings (run via scripts/audit-viewports.mjs at 360/414/768/1024/1280):
+PapaParse was vendored to disk and import-csv.js used window.Papa when
+available, but no layout actually loaded the script tag — same class of
+bug as the missing D3 fix earlier. CSV imports were silently going
+through the small fallback parser. Add it to layouts/app.njk alongside
+D3/Popper/Tippy.
 
-Critical fixes:
-- Horizontal scroll on /app/register/ (+431px at 360px), accounts,
-  categories, scheduled, profiles, spending, projection. Root cause:
-  flex children in .app-page defaulted to min-width: auto, which
-  preserved intrinsic min-content and defeated overflow-x: auto on
-  containers. Now force min-width: 0 on .app-page > * plus
-  overflow-x: hidden on .app-main.
-- Wrap wide app tables in scrollable containers (.register has its own
-  overflow-x: auto + min-width: 720px on the inner table).
-- JS errors on accounts + categories pages — Alpine couldn't parse
-  inline @click handlers that used `var n = prompt(...)`. Alpine
-  compiles attribute expressions as AsyncFunctions where `var` outside
-  a function scope is a SyntaxError. Wrapped in IIFE with `const`.
-
-Mobile-first CSS:
-- Converted budget__group-header from max-width: 600px (anti-pattern)
-  to mobile-first: 3 cols default, 4 cols at min-width: 600px.
-  (Pre-fix the mobile rule also hid the Available column instead of
-  the Activity column, which was a real bug — Available is the most
-  important number on the page.)
-- Converted .docs-layout__toc from max-width: 1023px hide to
-  display: none + min-width: 1024px reveal.
-- KPI grid: 1 col on phones, 2 on bigger phones, 4 on tablet+ with
-  minmax(0, 1fr) so long currency strings don't push columns wider.
-- KPI value font now clamps from 1.5rem to 2rem so it fits at 360px.
-- RTA value font clamps similarly.
-
-Touch targets:
-- Marked the per-category budget assign input as data-touch="compact"
-  (acceptable inline-edit per CLAUDE.md convention). Other compact
-  controls (TOC links, sitemap rows) meet WCAG 2.5.8 AA (24x24)
-  even when below the 44x44 aspirational target.
-
-New features:
-
-Manual snapshots:
-- Take a named snapshot at any time via /app/settings/
-- Stored under projectbudget:snapshot:<profileId>:<snapshotId>,
-  separate keyspace from the rolling 14-day daily backups
-- Cap 20 per profile, oldest auto-evicted on overflow
-- Optional label, restore requires typed-name confirm
-- store.js: listSnapshots, takeSnapshot, deleteSnapshot, restoreSnapshot
-
-Export all profiles as bundle:
-- New export shape: { kind: "bundle", schemaVersion, exportedAt, profiles: [] }
-- Filename: projectbudget-all-<date>.json
-- Import side detects bundle and offers "Import all as new"
-- Single-profile and bundle imports share the same parseFile entry
-- store.js: exportAllProfilesJSON, importJSONAsNew handles bundles
-
-Data summary card on /app/settings/:
-- Counts at a glance: profiles, transactions, accounts, categories,
-  daily backups, manual snapshots, last-saved time
-- Inline jump links to /app/profiles/, /app/register/, /app/accounts/,
-  /app/categories/, plus Export / Import / Export-all-profiles buttons
-- Keeps the dedicated workflow pages intact (Settings doesn't try to
-  replace them, just summarizes and links)
+Manual-snapshot UI required a page refresh to show new entries because
+listSnapshots() reads localStorage directly and Alpine's fine-grained
+reactivity only tracks reads of reactive store props. Add a
+_listVersion counter on the store; listSnapshots() and listBackups()
+"void this._listVersion" to register a dependency; takeSnapshot,
+deleteSnapshot, restoreSnapshot, restoreBackup, and _load all call
+_bumpLists() to invalidate. Verified end-to-end in headless Chromium:
+adding a snapshot now causes the table to grow without reload.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

@@ -83,6 +83,14 @@ export function createStore() {
     /* Active budget month — what the budget UI is currently viewing. */
     currentMonth: thisMonth(),
 
+    /* Reactivity bridge for list functions that read localStorage. Alpine's
+       fine-grained reactivity only tracks reads of reactive store props,
+       so list functions that walk localStorage need to read this counter
+       to register a dependency. Mutators bump the counter so x-for / x-show
+       bindings re-evaluate on next tick. */
+    _listVersion: 0,
+    _bumpLists() { this._listVersion += 1; },
+
     init() {
       this.privateBrowsing = isPrivateBrowsing();
       if (this.privateBrowsing) {
@@ -154,6 +162,7 @@ export function createStore() {
       this.active = id;
       setActiveId(id);
       snapshotIfStale(p);
+      this._bumpLists();
     },
 
     _save() {
@@ -241,6 +250,8 @@ export function createStore() {
 
     /* ---- Backups ---- */
     listBackups() {
+      /* Touch the version counter so Alpine re-runs this when bumped. */
+      void this._listVersion;
       if (!this.profile) return [];
       return listBackups(this.profile.id);
     },
@@ -258,12 +269,14 @@ export function createStore() {
       }
       this.profile = restored;
       this.refreshProfiles();
+      this._bumpLists();
       this.pushToast("Restored snapshot from " + day + ".");
       return true;
     },
 
     /* ---- Manual snapshots ---- */
     listSnapshots() {
+      void this._listVersion;
       if (!this.profile) return [];
       return listSnapshots(this.profile.id);
     },
@@ -272,6 +285,7 @@ export function createStore() {
       if (!this.profile) return null;
       var rec = takeSnapshot(this.profile, label);
       if (rec) {
+        this._bumpLists();
         this.pushToast("Snapshot saved" + (rec.label ? ": '" + rec.label + "'" : "") + ".");
       }
       return rec;
@@ -280,6 +294,7 @@ export function createStore() {
     deleteSnapshot(id) {
       if (!this.profile) return;
       deleteSnapshot(this.profile.id, id);
+      this._bumpLists();
       this.pushToast("Snapshot removed.");
     },
 
@@ -296,6 +311,7 @@ export function createStore() {
       }
       this.profile = restored;
       this.refreshProfiles();
+      this._bumpLists();
       this.pushToast("Snapshot restored.");
       return true;
     },

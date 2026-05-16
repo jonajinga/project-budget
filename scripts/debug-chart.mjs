@@ -1,3 +1,6 @@
+/* Verify manual-snapshot UI updates without a page refresh, and that
+   PapaParse is now loaded in the app layout. */
+
 import { chromium } from "playwright";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -22,17 +25,27 @@ await context.addInitScript(({ profile }) => {
 }, { profile });
 
 const page = await context.newPage();
-const errs = [];
-page.on("console", msg => { if (msg.type() === "error") errs.push("console: " + msg.text()); });
-page.on("pageerror", err => errs.push("pageerror: " + err.message + "\n" + (err.stack || "").split("\n").slice(0, 4).join("\n")));
+page.on("pageerror", e => console.log("PAGEERR", e.message));
 
-for (const path of ["/app/accounts/", "/app/categories/"]) {
-  errs.length = 0;
-  await page.goto("http://localhost:8080" + path, { waitUntil: "networkidle" });
-  await page.waitForTimeout(800);
-  console.log("\n=== " + path + " ===");
-  if (errs.length === 0) console.log("(no errors)");
-  else errs.forEach(e => console.log(e));
-}
+await page.goto("http://localhost:8080/app/settings/", { waitUntil: "networkidle" });
+await page.waitForTimeout(800);
+
+console.log("--- PapaParse load check ---");
+const papa = await page.evaluate(() => typeof window.Papa);
+console.log("typeof window.Papa:", papa, "(expect 'object')");
+
+console.log("\n--- Snapshot reactivity check ---");
+const beforeRowCount = await page.locator("table tbody tr").count();
+console.log("Snapshot rows before:", beforeRowCount);
+
+await page.fill("#snap-label", "audit-test");
+await page.click("button:has-text('Take snapshot now')");
+await page.waitForTimeout(600);
+
+const afterRowCount = await page.locator("table tbody tr").count();
+console.log("Snapshot rows after:", afterRowCount);
+const labelInTable = await page.locator("table tbody tr:has-text('audit-test')").count();
+console.log("Found 'audit-test' label in table:", labelInTable);
 
 await browser.close();
+console.log("\nDONE");
