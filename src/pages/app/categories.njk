@@ -78,7 +78,7 @@ eleventyExcludeFromCollections: true
 
   {# New group modal #}
   <div class="modal-backdrop" x-show="showGroup" x-cloak @keydown.escape.window="showGroup = false">
-    <div class="modal" @click.outside="showGroup = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showGroup = false">
       <button class="modal__close" type="button" @click="showGroup = false" aria-label="Close">&times;</button>
       <h3 class="modal__title">New category group</h3>
       <form @submit.prevent="$store.budget.addCategoryGroup(newGroupName); newGroupName = ''; showGroup = false;">
@@ -96,7 +96,7 @@ eleventyExcludeFromCollections: true
 
   {# New category modal #}
   <div class="modal-backdrop" x-show="showCat" x-cloak @keydown.escape.window="showCat = false">
-    <div class="modal" @click.outside="showCat = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showCat = false">
       <button class="modal__close" type="button" @click="showCat = false" aria-label="Close">&times;</button>
       <h3 class="modal__title">New category</h3>
       <form @submit.prevent="$store.budget.addCategory({ groupId: addCatGroupId, name: addCatName }); showCat = false;">
@@ -119,7 +119,7 @@ eleventyExcludeFromCollections: true
 
   {# Goal modal #}
   <div class="modal-backdrop" x-show="goalCatId" x-cloak @keydown.escape.window="goalCatId = null">
-    <div class="modal" @click.outside="goalCatId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="goalCatId = null">
       <button class="modal__close" type="button" @click="goalCatId = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Goal for <span x-text="$store.budget.categoryName(goalCatId)"></span></h3>
       <form @submit.prevent="saveGoal()">

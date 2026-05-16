@@ -1,0 +1,168 @@
+/* Style guide page — lives at /style-guide/. Styles are scoped under
+   .style-guide so they don't leak into the rest of the marketing CSS. */
+
+.style-guide { padding-block: var(--space-xl); display: flex; flex-direction: column; gap: var(--space-xl); }
+.style-guide__toc {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  padding: var(--space-md);
+}
+.style-guide__toc ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.style-guide__toc a { color: var(--link); }
+.style-guide__toc a:hover { color: var(--link-hover); }
+
+.style-guide__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  scroll-margin-top: 6rem;
+}
+.style-guide__section h2 {
+  font-size: var(--fs-2xl);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2xs);
+}
+.style-guide__section h3 {
+  font-size: var(--fs-md);
+  color: var(--fg-muted);
+  margin-bottom: var(--space-2xs);
+}
+
+.example {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  padding: var(--space-md);
+}
+.example__title {
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  font-weight: 600;
+}
+.example__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+/* Color swatches — 1fr cards with a strong color top half, label below. */
+.swatch-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-md) var(--space-sm) var(--space-sm);
+  border: 1px solid var(--border-soft);
+  font-size: var(--fs-sm);
+  min-height: 110px;
+  justify-content: flex-end;
+}
+.swatch code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 5px;
+  align-self: flex-start;
+}
+[data-theme="dark"] .swatch code { background: rgba(255, 255, 255, 0.10); }
+.swatch__hint { color: var(--fg-muted); font-size: var(--fs-xs); }
+.swatch--bg          { background: var(--bg); }
+.swatch--bg-elevated { background: var(--bg-elevated); }
+.swatch--bg-alt      { background: var(--bg-alt); }
+.swatch--fg          { background: var(--fg); color: var(--bg); }
+.swatch--fg-muted    { background: var(--fg-muted); color: var(--bg); }
+.swatch--fg-subtle   { background: var(--fg-subtle); color: var(--bg); }
+.swatch--accent      { background: var(--accent); color: #fff; }
+.swatch--link        { background: var(--link); color: #fff; }
+.swatch--ok          { background: var(--ok); color: #fff; }
+.swatch--warn        { background: var(--warn); color: var(--ink); }
+.swatch--danger      { background: var(--danger); color: #fff; }
+.swatch--fg code,
+.swatch--fg-muted code,
+.swatch--fg-subtle code,
+.swatch--accent code,
+.swatch--link code,
+.swatch--ok code,
+.swatch--danger code { background: rgba(0, 0, 0, 0.25); color: inherit; }
+
+/* Typography specimens — label / sample columns. */
+.type-spec {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: var(--space-md);
+  align-items: baseline;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.type-spec__label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  font-weight: 600;
+}
+@media (max-width: 599px) {
+  .type-spec { grid-template-columns: 1fr; gap: var(--space-2xs); }
+}
+
+/* Spacing scale — bar grows with each step. */
+.space-spec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.space-spec li {
+  display: grid;
+  grid-template-columns: 8rem 1fr 5rem;
+  gap: var(--space-sm);
+  align-items: center;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+}
+.space-spec code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.space-spec__bar {
+  display: inline-block;
+  height: 14px;
+  background: var(--accent);
+}
+
+.modal-preview {
+  background: var(--bg-alt);
+  display: flex;
+  justify-content: center;
+}
+
+.a11y-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.a11y-checklist li {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent);
+}

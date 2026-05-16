@@ -74,3 +74,12 @@
 }
 .app-page__title { font-size: var(--fs-2xl); }
 .app-page__lead { color: var(--fg-muted); }
+
+/* Mobile tighten — reduce vertical chrome on phones so primary content
+   sits higher in the viewport. */
+@media (max-width: 599px) {
+  .app-main { padding: var(--space-md) var(--container-pad); }
+  .app-page { gap: var(--space-md); }
+  .app-page__header { margin-bottom: var(--space-sm); gap: var(--space-2xs); }
+  .app-page__title { font-size: var(--fs-xl); }
+}

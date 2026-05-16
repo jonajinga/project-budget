@@ -1,7 +1,7 @@
 /* Daily local backups — one snapshot per profile per calendar day, rolling
    14-day window. Runs once on app boot for the active profile. */
 
-import { backupKey, snapshotKey, readJSON, writeJSON, removeKey, profileKey } from "./persist.js";
+import { backupKey, backupNoteKey, snapshotKey, readJSON, writeJSON, removeKey, readRaw, writeRaw, profileKey } from "./persist.js";
 import { migrate, newId } from "./schema.js";
 
 const RETENTION_DAYS = 14;
@@ -25,7 +25,8 @@ export function snapshotIfStale(profile) {
   return key;
 }
 
-/* List backups for a profile, newest first. Each item is { day, key, size }. */
+/* List backups for a profile, newest first.
+   Each item is { day, key, size, note }. */
 export function listBackups(profileId) {
   var out = [];
   try {
@@ -36,11 +37,34 @@ export function listBackups(profileId) {
       if (!k || k.indexOf(prefix) !== 0) continue;
       var day = k.slice(prefix.length);
       var raw = s.getItem(k) || "";
-      out.push({ day: day, key: k, size: raw.length * 2 });
+      out.push({
+        day: day,
+        key: k,
+        size: raw.length * 2,
+        note: getBackupNote(profileId, day),
+      });
     }
   } catch (_e) {}
   out.sort(function (a, b) { return a.day < b.day ? 1 : -1; });
   return out;
+}
+
+/* Notes are stored in a sidecar key so the backup payload itself stays a
+   raw profile bundle that restoreBackup() can migrate directly. Notes are
+   localStorage-only — Dexie mirror doesn't track them; surviving an LS
+   wipe is a future enhancement, not a hard requirement. */
+export function getBackupNote(profileId, day) {
+  return readRaw(backupNoteKey(profileId, day)) || "";
+}
+
+export function setBackupNote(profileId, day, note) {
+  var trimmed = (note || "").trim();
+  if (!trimmed) {
+    removeKey(backupNoteKey(profileId, day));
+  } else {
+    writeRaw(backupNoteKey(profileId, day), trimmed);
+  }
+  return trimmed;
 }
 
 function pruneOld(profileId) {
@@ -51,7 +75,10 @@ function pruneOld(profileId) {
     d.setDate(d.getDate() - 1);
   }
   listBackups(profileId).forEach(function (b) {
-    if (!keep.has(b.day)) removeKey(b.key);
+    if (!keep.has(b.day)) {
+      removeKey(b.key);
+      removeKey(backupNoteKey(profileId, b.day));
+    }
   });
 }
 
@@ -112,6 +139,15 @@ export function takeSnapshot(profile, label) {
 
 export function deleteSnapshot(profileId, snapshotId) {
   removeKey(snapshotKey(profileId, snapshotId));
+}
+
+export function renameSnapshot(profileId, snapshotId, newLabel) {
+  var key = snapshotKey(profileId, snapshotId);
+  var rec = readJSON(key);
+  if (!rec) return null;
+  rec.label = (newLabel || "").trim();
+  writeJSON(key, rec);
+  return rec;
 }
 
 export function restoreSnapshot(profileId, snapshotId) {

@@ -1,10 +1,13 @@
-/* Buttons */
+/* Buttons — every variant meets WCAG 2.2 AAA target size (44×44 CSS px)
+   for the default size, and AA (24×24) for the small variant used inside
+   dense table rows. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2xs);
   padding: 0.7rem 1.25rem;
+  min-height: 44px;
   font-weight: 600;
   font-size: var(--fs-base);
   line-height: 1.2;
@@ -12,10 +15,21 @@
   border: 1px solid transparent;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
   white-space: nowrap;
 }
 .btn:hover { color: #fff; text-decoration: none; }
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .btn--primary { background: var(--accent); color: #fff; }
 .btn--primary:hover { background: var(--accent-hover); color: #fff; }
@@ -29,7 +43,40 @@
 .btn--danger { background: var(--danger); color: #fff; }
 .btn--danger:hover { background: var(--danger); color: #fff; opacity: 0.9; }
 
-.btn--sm { padding: 0.45rem 0.85rem; font-size: var(--fs-sm); }
+.btn--sm {
+  padding: 0.45rem 0.85rem;
+  font-size: var(--fs-sm);
+  min-height: 36px;
+}
+
+/* Inline-edit trigger — looks like text in a table cell but clickable to
+   enter rename / annotate mode. Reused by snapshot labels and daily-backup
+   notes on the Settings page. */
+.inline-edit-trigger,
+.snap-label-edit {
+  display: inline-block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0.25rem 0.4rem;
+  margin: -0.25rem -0.4rem;
+  color: inherit;
+  font: inherit;
+  cursor: text;
+  border-radius: var(--radius);
+  min-height: 1.5em;
+}
+.inline-edit-trigger:hover,
+.snap-label-edit:hover {
+  background: var(--bg-alt);
+}
+.inline-edit-trigger:focus-visible,
+.snap-label-edit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.inline-edit-trigger--placeholder { color: var(--fg-muted); font-style: italic; }
 
 /* Card */
 .card {
@@ -143,7 +190,27 @@
   font-size: 1.25rem;
   line-height: 1;
   color: var(--fg-muted);
-  padding: 0.1rem 0.35rem;
+  padding: 0;
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--radius-input);
+  position: relative;
+}
+.toast__close::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+.toast__close:hover { color: var(--fg); background: var(--bg-alt); }
+.toast__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Group collapse/expand toggle — chevron rotates to indicate state. */

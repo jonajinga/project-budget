@@ -84,7 +84,7 @@ eleventyExcludeFromCollections: true
 
   {# Add recurring modal #}
   <div class="modal-backdrop" x-show="show" x-cloak @keydown.escape.window="show = false">
-    <div class="modal" @click.outside="show = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="show = false">
       <button class="modal__close" type="button" @click="show = false" aria-label="Close">&times;</button>
       <h3 class="modal__title">Add recurring transaction</h3>
       <form @submit.prevent="submit()">

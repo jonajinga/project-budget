@@ -103,6 +103,41 @@ export function restoreFromTrash(id) {
   return p;
 }
 
+export function permanentlyDeleteFromTrash(id) {
+  return removeKey(trashKey(id));
+}
+
+/* Walks projectbudget:trash:* keys and returns lightweight records for
+   the UI: { id, name, deletedAt, daysLeft, key }. Doesn't load the full
+   bundle. */
+export function listTrash() {
+  var out = [];
+  var s;
+  try { s = localStorage; } catch (_e) { return out; }
+  var now = Date.now();
+  var TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  for (var i = 0; i < s.length; i++) {
+    var k = s.key(i);
+    if (!k || k.indexOf("projectbudget:trash:") !== 0) continue;
+    try {
+      var rec = JSON.parse(s.getItem(k));
+      if (!rec || !rec.profile) continue;
+      var msLeft = TTL_MS - (now - (rec.deletedAt || 0));
+      out.push({
+        id: rec.profile.id,
+        key: k,
+        name: rec.profile.name,
+        deletedAt: rec.deletedAt,
+        daysLeft: Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000))),
+        accounts: (rec.profile.accounts || []).length,
+        transactions: (rec.profile.transactions || []).length,
+      });
+    } catch (_e) {}
+  }
+  out.sort(function (a, b) { return b.deletedAt - a.deletedAt; });
+  return out;
+}
+
 export function pruneTrash() {
   /* Walk all trash:* keys and purge anything older than TRASH_TTL_MS. */
   try {

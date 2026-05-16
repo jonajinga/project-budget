@@ -98,7 +98,7 @@ eleventyExcludeFromCollections: true
 
   {# Rename modal #}
   <div class="modal-backdrop" x-show="renameId" x-cloak @keydown.escape.window="renameId = null">
-    <div class="modal" @click.outside="renameId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="renameId = null">
       <button class="modal__close" type="button" @click="renameId = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Rename profile</h3>
       <form @submit.prevent="doRename()">
@@ -116,7 +116,7 @@ eleventyExcludeFromCollections: true
 
   {# Delete confirm modal — typed-name confirm #}
   <div class="modal-backdrop" x-show="deleteId" x-cloak @keydown.escape.window="deleteId = null">
-    <div class="modal" @click.outside="deleteId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="deleteId = null">
       <button class="modal__close" type="button" @click="deleteId = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Delete profile</h3>
       <p style="color: var(--fg-muted);">

@@ -63,7 +63,7 @@ eleventyExcludeFromCollections: true
   <section class="card" x-show="hasAccounts" x-cloak>
     <h2 class="card__title">Add transaction</h2>
     <form @submit.prevent="submitAdd()">
-      <div class="form-row" style="grid-template-columns: 1fr 2fr 1.2fr 1fr 1fr; gap: var(--space-sm);">
+      <div class="form-row register__add-grid">
         <div class="field">
           <label class="field__label" for="t-date">Date</label>
           <input class="input" id="t-date" type="date" x-model="form.date" required>
@@ -129,14 +129,14 @@ eleventyExcludeFromCollections: true
             </template>
           </select>
         </label>
-        <input class="input" type="search" aria-label="Search payee or memo" x-model="search" placeholder="Search payee or memo" style="min-width: 220px;">
+        <input class="input register__search" type="search" aria-label="Search payee or memo" x-model="search" placeholder="Search payee or memo">
       </div>
       <p style="color: var(--fg-muted); font-size: var(--fs-sm); margin: 0;">
         <span x-text="visibleTransactions().length"></span> shown
       </p>
     </div>
 
-    <table class="register__table">
+    <table class="register__table" x-show="!isMobile" x-cloak>
       <thead>
         <tr>
           <th scope="col">Date</th>
@@ -255,11 +255,111 @@ eleventyExcludeFromCollections: true
         </tr>
       </tbody>
     </table>
+
+    {# Mobile card list — replaces the 8-column table under 600px wide. #}
+    <ul class="register__cards" x-show="isMobile" x-cloak>
+      <template x-for="t in visibleTransactions()" :key="t.id">
+        <li class="register__card"
+            :class="{ 'is-expanded': expandedTxnId === t.id, 'is-reconciled': t.reconciled, 'is-editing': editingId === t.id }">
+          {# Compact summary — tap to expand. Becomes a heading button so it
+             is keyboard reachable; the inner card form (when expanded) is
+             still tab-navigable normally. #}
+          <button type="button" class="register__card-summary"
+                  x-show="editingId !== t.id"
+                  @click="expandedTxnId = (expandedTxnId === t.id ? null : t.id)"
+                  :aria-expanded="(expandedTxnId === t.id).toString()">
+            <span class="register__card-date" x-text="t.date"></span>
+            <span class="register__card-payee"
+                  x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '(no payee)')"></span>
+            <span class="register__card-amount"
+                  :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(t.amount)"></span>
+            <span class="register__card-meta">
+              <span x-show="!t.splits" x-cloak x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? 'Transfer' : 'Uncategorized')"></span>
+              <span x-show="t.splits" x-cloak class="badge">split (<span x-text="t.splits?.length"></span>)</span>
+              <span x-show="t.cleared" x-cloak class="register__card-cleared-flag" aria-label="Cleared">&#10003; cleared</span>
+            </span>
+          </button>
+
+          {# Expanded details — appear only when this card is the active one
+             and not in edit mode. #}
+          <div class="register__card-details" x-show="expandedTxnId === t.id && editingId !== t.id" x-cloak>
+            <dl class="register__card-dl">
+              <div><dt>Account</dt><dd x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></dd></div>
+              <div x-show="t.memo" x-cloak><dt>Memo</dt><dd x-text="t.memo"></dd></div>
+            </dl>
+            <div class="cluster" style="flex-wrap: wrap;">
+              <button type="button" class="cleared-toggle"
+                      :aria-pressed="t.cleared.toString()"
+                      :data-locked="t.reconciled.toString()"
+                      @click="toggleCleared(t)"
+                      title="Toggle cleared">
+                <span x-show="t.cleared">&#10003;</span>
+              </button>
+              <button class="btn btn--ghost btn--sm" type="button" @click="startEdit(t)" x-show="!t.reconciled && !t.transferTxnId">Edit</button>
+              <button class="btn btn--ghost btn--sm" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId">Split</button>
+              <button class="btn btn--ghost btn--sm" type="button" @click="unlock(t)" x-show="t.reconciled">Unlock</button>
+              <button class="btn btn--danger btn--sm" type="button" @click="del(t)" x-show="!t.reconciled">Delete</button>
+            </div>
+          </div>
+
+          {# Inline edit form for mobile — stacked vertically since
+             cell-by-cell edit doesn't fit in 360px. #}
+          <div class="register__card-edit" x-show="editingId === t.id" x-cloak>
+            <div class="field">
+              <label class="field__label">Date</label>
+              <input class="input" type="date" x-model="edit.date">
+            </div>
+            <div class="field">
+              <label class="field__label">Account</label>
+              <select class="select" x-model="edit.accountId">
+                <template x-for="a in openAccounts" :key="a.id">
+                  <option :value="a.id" x-text="a.name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label">Payee</label>
+              <input class="input" type="text" x-model="edit.payeeName">
+            </div>
+            <div class="field">
+              <label class="field__label">Category</label>
+              <select class="select" x-model="edit.categoryId">
+                <option value="">(uncategorized)</option>
+                <template x-for="c in selectableCategories" :key="c.id">
+                  <option :value="c.id" x-text="c.name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label">Amount</label>
+              <input class="input" type="text" x-model="edit.amount" inputmode="decimal" style="text-align: right;">
+            </div>
+            <div class="field">
+              <label class="field__label">Memo</label>
+              <input class="input" type="text" x-model="edit.memo">
+            </div>
+            <label class="cluster" style="gap: var(--space-2xs);">
+              <input type="checkbox" x-model="edit.cleared">
+              <span>Cleared</span>
+            </label>
+            <div class="form-actions">
+              <button class="btn btn--primary btn--sm" type="button" @click="saveEdit()">Save</button>
+              <button class="btn btn--ghost btn--sm" type="button" @click="cancelEdit()">Cancel</button>
+            </div>
+          </div>
+        </li>
+      </template>
+
+      <li class="register__card-empty" x-show="!visibleTransactions().length" x-cloak>
+        No transactions match the current filter.
+      </li>
+    </ul>
   </section>
 
   {# Transfer modal #}
   <div class="modal-backdrop" x-show="showTransfer" x-cloak @keydown.escape.window="showTransfer = false">
-    <div class="modal" @click.outside="showTransfer = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showTransfer = false">
       <button class="modal__close" type="button" @click="showTransfer = false" aria-label="Close">&times;</button>
       <h3 class="modal__title">Transfer between accounts</h3>
       <form @submit.prevent="submitTransfer()">
@@ -305,7 +405,7 @@ eleventyExcludeFromCollections: true
 
   {# Reconcile modal #}
   <div class="modal-backdrop" x-show="showReconcile" x-cloak @keydown.escape.window="showReconcile = false">
-    <div class="modal" @click.outside="showReconcile = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showReconcile = false">
       <button class="modal__close" type="button" @click="showReconcile = false" aria-label="Close">&times;</button>
       <h3 class="modal__title">Reconcile account</h3>
       <p style="color: var(--fg-muted);">
@@ -345,7 +445,7 @@ eleventyExcludeFromCollections: true
 
   {# Split editor modal #}
   <div class="modal-backdrop" x-show="splitTxnId" x-cloak @keydown.escape.window="splitTxnId = null">
-    <div class="modal" @click.outside="splitTxnId = null" style="max-width: 720px;">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="splitTxnId = null" style="max-width: 720px;">
       <button class="modal__close" type="button" @click="splitTxnId = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Split transaction</h3>
       <p style="color: var(--fg-muted);">
@@ -406,6 +506,8 @@ function registerView() {
     due: [],
     splitTxnId: null,
     splitForm: [],
+    isMobile: false,
+    expandedTxnId: null,
 
     form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false },
     edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false },
@@ -421,6 +523,14 @@ function registerView() {
       this.transferForm.date = today;
       this.form.accountId = this.filterAccountId || (this.openAccounts[0]?.id || "");
       this.refreshDue();
+      /* Mobile/desktop split — below 600px the table is unusable
+         (8 columns at 360px). Render compact cards instead. */
+      var self = this;
+      var mq = window.matchMedia("(max-width: 599px)");
+      this.isMobile = mq.matches;
+      var onChange = function (e) { self.isMobile = e.matches; };
+      if (mq.addEventListener) mq.addEventListener("change", onChange);
+      else if (mq.addListener) mq.addListener(onChange);
     },
 
     get hasAccounts() {
@@ -444,6 +554,12 @@ function registerView() {
     postNow(id) { this.$store.budget.postScheduled(id); this.refreshDue(); },
 
     visibleTransactions() {
+      /* Touch the list-version counter so Alpine re-runs this when a
+         transaction is updated/added/deleted. Without this read, row-level
+         x-if fragments that branched between display/edit modes can hold
+         stale bindings (e.g. cleared toggle still showing the old state
+         after Save). */
+      void this.$store.budget._listVersion;
       var p = this.$store.budget.profile;
       if (!p) return [];
       var q = (this.search || "").trim();

@@ -70,7 +70,10 @@
   --bg-alt:       var(--paper-sunken);
   --fg:           var(--ink);
   --fg-muted:     var(--muted);
-  --fg-subtle:    #6b6457;
+  /* --fg-subtle bumped from #6b6457 (~4.1:1 on --paper) to #524b43
+     (~5.9:1) so field hints, eyebrow labels, and footer fine-print
+     all clear WCAG 2.2 AA (4.5:1) for normal text. */
+  --fg-subtle:    #524b43;
   --border:       rgba(26, 26, 26, 0.16);
   --border-soft:  rgba(26, 26, 26, 0.08);
   --accent:       var(--vermillion);

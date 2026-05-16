@@ -26,6 +26,7 @@ export default {
     { label: "Open source", url: "/open-source/" },
     { label: "Changelog", url: "/changelog/" },
     { label: "Accessibility", url: "/accessibility/" },
+    { label: "Style guide", url: "/style-guide/" },
     { label: "Sitemap", url: "/sitemap/" },
     { label: "Privacy", url: "/privacy/" },
     { label: "Terms", url: "/terms/" },

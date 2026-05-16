@@ -6,11 +6,11 @@
 import {
   listProfiles, getActiveId, setActiveId, loadProfile,
   createProfile, renameProfile, duplicateProfile, deleteProfile,
-  restoreFromTrash, pruneTrash, switchTo,
+  restoreFromTrash, permanentlyDeleteFromTrash, listTrash, pruneTrash, switchTo,
   freshStart, trimHistory,
 } from "./profile.js";
 import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES } from "./persist.js";
-import { snapshotIfStale, listBackups, restoreBackup, listSnapshots, takeSnapshot, deleteSnapshot, restoreSnapshot } from "./backup.js";
+import { snapshotIfStale, listBackups, restoreBackup, listSnapshots, takeSnapshot, deleteSnapshot, restoreSnapshot, renameSnapshot, getBackupNote, setBackupNote } from "./backup.js";
 import * as dexie from "./db.js";
 
 /* JSON round-trip clone: strips Alpine reactive Proxies so the result
@@ -361,12 +361,58 @@ export function createStore() {
       snapshotIfStale(p);
     },
 
+    /* ---- Trash ---- */
+    listTrashedProfiles() {
+      void this._listVersion;
+      return listTrash();
+    },
+
+    restoreTrashedProfile(id) {
+      var p = restoreFromTrash(id);
+      if (!p) {
+        this.pushToast("Could not restore profile.", "danger");
+        return null;
+      }
+      /* Re-mirror to Dexie so the two backends match again. */
+      if (this.storageBackend === "mirrored") {
+        dexie.putProfile(unwrap(p)).catch(function (e) { console.warn("Dexie putProfile failed:", e); });
+      }
+      this.refreshProfiles();
+      this._bumpLists();
+      this.pushToast("Profile '" + p.name + "' restored.");
+      return p;
+    },
+
+    permanentlyDeleteTrashed(id, confirmedName) {
+      var entry = listTrash().find(function (e) { return e.id === id; });
+      if (!entry) return false;
+      if (confirmedName !== entry.name) {
+        this.pushToast("Permanent delete cancelled — typed name did not match.", "warn");
+        return false;
+      }
+      permanentlyDeleteFromTrash(id);
+      this._bumpLists();
+      this.pushToast("Profile '" + entry.name + "' permanently deleted.");
+      return true;
+    },
+
     /* ---- Backups ---- */
     listBackups() {
       /* Touch the version counter so Alpine re-runs this when bumped. */
       void this._listVersion;
       if (!this.profile) return [];
       return listBackups(this.profile.id);
+    },
+
+    setBackupNote(day, note) {
+      if (!this.profile) return;
+      setBackupNote(this.profile.id, day, note);
+      this._bumpLists();
+    },
+
+    getBackupNote(day) {
+      if (!this.profile) return "";
+      return getBackupNote(this.profile.id, day);
     },
 
     restoreBackup(day, confirmedName) {
@@ -412,6 +458,15 @@ export function createStore() {
       this._mirrorSnapshotDelete(pid, id);
       this._bumpLists();
       this.pushToast("Snapshot removed.");
+    },
+
+    renameSnapshot(id, label) {
+      if (!this.profile) return null;
+      var rec = renameSnapshot(this.profile.id, id, label);
+      if (!rec) return null;
+      this._mirrorSnapshot(this.profile.id, rec);
+      this._bumpLists();
+      return rec;
     },
 
     restoreSnapshot(id, confirmedName) {
@@ -522,8 +577,9 @@ export function createStore() {
       this._save();
     },
 
-    /* Single-call update for name / type / groupId. Handles the credit-card
-       payment-category bookkeeping when type changes to or from credit. */
+    /* Single-call update for name / type / groupId / openingBalance.
+       Handles the credit-card payment-category bookkeeping when type
+       changes to or from credit. Opening balance is stored as cents. */
     updateAccount(id, patch) {
       if (!this.profile) return null;
       var a = findAccount(this.profile, id);
@@ -532,6 +588,9 @@ export function createStore() {
       var oldName = a.name;
       if (patch.name !== undefined) a.name = (patch.name || "").trim() || a.name;
       if (patch.groupId !== undefined) a.groupId = patch.groupId || null;
+      if (patch.openingBalance !== undefined) {
+        a.openingBalance = Math.round(Number(patch.openingBalance) || 0);
+      }
       if (patch.type !== undefined && patch.type !== oldType) {
         a.type = patch.type;
         var isTracking = patch.type === "tracking-asset" || patch.type === "tracking-liability";
@@ -629,6 +688,12 @@ export function createStore() {
       var result = editTxnImpl(this.profile, id, patch);
       /* If it's part of a transfer pair, mirror the change. */
       if (result && result.transferTxnId) syncTransferPair(this.profile, id);
+      /* Force consumers (visibleTransactions in the register, ledger views,
+         charts) to re-evaluate. Direct-property mutation through the
+         Alpine proxy is reactive in theory, but x-for rows that branched
+         through an x-if (display vs edit mode) sometimes hold stale
+         bindings until the next array re-read. */
+      this._bumpLists();
       this._save();
       return result;
     },

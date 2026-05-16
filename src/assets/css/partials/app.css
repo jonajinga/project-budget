@@ -90,6 +90,18 @@
   flex-wrap: wrap;
 }
 
+/* Mobile tighten — banner is informational, not the focal point. Trim
+   padding, body size, and stack the buttons under a shorter message. */
+@media (max-width: 599px) {
+  .sample-banner {
+    padding: var(--space-2xs) var(--space-sm);
+    margin-bottom: var(--space-sm);
+    border-left-width: 3px;
+  }
+  .sample-banner__inner { gap: var(--space-2xs); }
+  .sample-banner__body { font-size: var(--fs-xs); line-height: 1.4; }
+}
+
 /* Data summary on /app/settings/ */
 .data-summary { display: flex; flex-direction: column; gap: var(--space-2xs); margin: 0; }
 .data-summary__row {

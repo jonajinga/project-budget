@@ -9,7 +9,7 @@ eleventyExcludeFromCollections: true
   showAccount: false,
   showGroup: false,
   editId: null,
-  editForm: { name: '', type: 'checking', groupId: '' },
+  editForm: { name: '', type: 'checking', groupId: '', openingBalance: '' },
   deleteAccountId: null,
   deleteAccountValue: '',
   newAccount: { name: '', type: 'checking', groupId: '', openingBalance: '' },
@@ -43,7 +43,12 @@ eleventyExcludeFromCollections: true
   },
   openEdit(a) {
     this.editId = a.id;
-    this.editForm = { name: a.name, type: a.type, groupId: a.groupId || '' };
+    this.editForm = {
+      name: a.name,
+      type: a.type,
+      groupId: a.groupId || '',
+      openingBalance: ((a.openingBalance || 0) / 100).toFixed(2),
+    };
   },
   saveEdit() {
     if (!this.editId) return;
@@ -51,6 +56,7 @@ eleventyExcludeFromCollections: true
       name: this.editForm.name,
       type: this.editForm.type,
       groupId: this.editForm.groupId || null,
+      openingBalance: this.parseDollars(this.editForm.openingBalance),
     });
     this.editId = null;
   },
@@ -133,7 +139,7 @@ eleventyExcludeFromCollections: true
 
   {# Add-account modal #}
   <div class="modal-backdrop" x-show="showAccount" x-cloak @keydown.escape.window="showAccount = false">
-    <div class="modal" @click.outside="showAccount = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showAccount = false">
       <button class="modal__close" type="button" @click="showAccount = false" aria-label="Close">&times;</button>
       <h3 class="modal__title">Add account</h3>
       <form @submit.prevent="submitAccount()">
@@ -179,7 +185,7 @@ eleventyExcludeFromCollections: true
 
   {# Edit-account modal #}
   <div class="modal-backdrop" x-show="editId" x-cloak @keydown.escape.window="editId = null">
-    <div class="modal" @click.outside="editId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="editId = null">
       <button class="modal__close" type="button" @click="editId = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Edit account</h3>
       <form @submit.prevent="saveEdit()">
@@ -209,6 +215,13 @@ eleventyExcludeFromCollections: true
               </select>
             </div>
           </div>
+          <div class="field">
+            <label class="field__label" for="edit-opening">Opening balance</label>
+            <input class="input" id="edit-opening" type="text" x-model="editForm.openingBalance"
+                   placeholder="0.00" inputmode="decimal"
+                   data-tip="Changing the opening balance shifts every running balance from day one onward by the same amount. Use this to correct a miskeyed starting figure.">
+            <p class="field__hint">Changing this shifts every historical and current balance by the difference. Take a manual snapshot first if you're not sure.</p>
+          </div>
         </div>
         <div class="form-actions">
           <button class="btn btn--primary" type="submit">Save changes</button>
@@ -220,7 +233,7 @@ eleventyExcludeFromCollections: true
 
   {# Add-group modal #}
   <div class="modal-backdrop" x-show="showGroup" x-cloak @keydown.escape.window="showGroup = false">
-    <div class="modal" @click.outside="showGroup = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showGroup = false">
       <button class="modal__close" type="button" @click="showGroup = false" aria-label="Close">&times;</button>
       <h3 class="modal__title">New account group</h3>
       <p style="color: var(--fg-muted);">
@@ -241,7 +254,7 @@ eleventyExcludeFromCollections: true
 
   {# Delete account confirm #}
   <div class="modal-backdrop" x-show="deleteAccountId" x-cloak @keydown.escape.window="deleteAccountId = null">
-    <div class="modal" @click.outside="deleteAccountId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="deleteAccountId = null">
       <button class="modal__close" type="button" @click="deleteAccountId = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Delete account</h3>
       <p style="color: var(--fg-muted);">

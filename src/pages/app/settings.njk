@@ -58,6 +58,12 @@ eleventyExcludeFromCollections: true
         </dd>
       </div>
       <div class="data-summary__row">
+        <dt>Trashed profiles (recoverable for 7 days)</dt>
+        <dd>
+          <strong x-text="$store.budget.listTrashedProfiles()?.length || 0"></strong>
+        </dd>
+      </div>
+      <div class="data-summary__row">
         <dt>Last saved</dt>
         <dd><strong x-text="$store.budget.lastSavedLabel"></strong></dd>
       </div>
@@ -146,7 +152,25 @@ eleventyExcludeFromCollections: true
         <tbody>
           <template x-for="s in $store.budget.listSnapshots()" :key="s.id">
             <tr>
-              <td x-text="s.label || '(unlabeled)'"></td>
+              <td>
+                <template x-if="editingSnapId !== s.id">
+                  <button class="snap-label-edit" type="button"
+                          @click="editingSnapId = s.id; editingSnapLabel = s.label || ''; $nextTick(() => $refs['snapLabel_' + s.id]?.focus())"
+                          data-tip="Click to rename this snapshot.">
+                    <span x-text="s.label || '(unlabeled)'"></span>
+                  </button>
+                </template>
+                <template x-if="editingSnapId === s.id">
+                  <form @submit.prevent="saveSnapLabel(s.id)" class="cluster" style="gap: var(--space-2xs);">
+                    <input class="input" type="text"
+                           style="padding: 0.35rem 0.5rem; font-size: var(--fs-sm);"
+                           :ref="'snapLabel_' + s.id"
+                           x-model="editingSnapLabel"
+                           @keydown.escape.prevent="editingSnapId = null"
+                           @blur="saveSnapLabel(s.id)">
+                  </form>
+                </template>
+              </td>
               <td x-text="new Date(s.createdAt).toLocaleString()"></td>
               <td class="num" x-text="(s.size / 1024).toFixed(1) + ' KB'"></td>
               <td class="num">
@@ -182,16 +206,88 @@ eleventyExcludeFromCollections: true
 
       <table class="table" x-show="$store.budget.profile && $store.budget.listBackups().length" x-cloak>
         <thead>
-          <tr><th scope="col">Day</th><th scope="col" class="num">Size</th><th scope="col" class="num">Actions</th></tr>
+          <tr>
+            <th scope="col">Day</th>
+            <th scope="col">Note</th>
+            <th scope="col" class="num">Size</th>
+            <th scope="col" class="num">Actions</th>
+          </tr>
         </thead>
         <tbody>
           <template x-for="b in $store.budget.listBackups()" :key="b.key">
             <tr>
               <td x-text="b.day"></td>
+              <td>
+                <template x-if="editingNoteDay !== b.day">
+                  <button class="inline-edit-trigger"
+                          :class="{ 'inline-edit-trigger--placeholder': !b.note }"
+                          type="button"
+                          @click="editingNoteDay = b.day; editingNoteText = b.note || ''; $nextTick(() => $refs['noteInput_' + b.day]?.focus())"
+                          data-tip="Click to add or edit a note for this day's backup.">
+                    <span x-text="b.note || 'Add a note'"></span>
+                  </button>
+                </template>
+                <template x-if="editingNoteDay === b.day">
+                  <form @submit.prevent="saveNote(b.day)" class="cluster" style="gap: var(--space-2xs);">
+                    <input class="input" type="text"
+                           style="padding: 0.35rem 0.5rem; font-size: var(--fs-sm);"
+                           placeholder="e.g. after import, before category cleanup"
+                           :ref="'noteInput_' + b.day"
+                           x-model="editingNoteText"
+                           @keydown.escape.prevent="editingNoteDay = null"
+                           @blur="saveNote(b.day)">
+                  </form>
+                </template>
+              </td>
               <td class="num" x-text="(b.size / 1024).toFixed(1) + ' KB'"></td>
               <td class="num">
                 <button class="btn btn--secondary btn--sm" type="button"
                         @click="restoreDay = b.day; restoreValue = ''">Restore</button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2 class="card__title">Trash</h2>
+      <p class="card__body" style="margin-bottom: var(--space-sm);">
+        Soft-deleted profiles are kept here for 7 days before they're purged. Restore brings the profile back to the active list; permanent delete removes it immediately and cannot be undone.
+      </p>
+
+      <p x-show="!$store.budget.listTrashedProfiles().length" x-cloak style="color: var(--fg-muted);">
+        Trash is empty.
+      </p>
+
+      <table class="table" x-show="$store.budget.listTrashedProfiles().length" x-cloak>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col" class="num">Accounts</th>
+            <th scope="col" class="num">Transactions</th>
+            <th scope="col">Deleted</th>
+            <th scope="col" class="num">Days left</th>
+            <th scope="col" class="num">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="t in $store.budget.listTrashedProfiles()" :key="t.id">
+            <tr>
+              <td x-text="t.name"></td>
+              <td class="num" x-text="t.accounts"></td>
+              <td class="num" x-text="t.transactions"></td>
+              <td x-text="t.deletedAt ? new Date(t.deletedAt).toLocaleString() : ''"></td>
+              <td class="num" x-text="t.daysLeft"></td>
+              <td class="num">
+                <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--secondary btn--sm" type="button"
+                          @click="$store.budget.restoreTrashedProfile(t.id)"
+                          data-tip="Restore this profile to the active list.">Restore</button>
+                  <button class="btn btn--danger btn--sm" type="button"
+                          @click="purgeId = t.id; purgeName = t.name; purgeValue = ''"
+                          data-tip="Permanently delete. Cannot be undone.">Delete forever</button>
+                </div>
               </td>
             </tr>
           </template>
@@ -209,7 +305,7 @@ eleventyExcludeFromCollections: true
 
   {# Backup restore confirm modal #}
   <div class="modal-backdrop" x-show="restoreDay" x-cloak @keydown.escape.window="restoreDay = null">
-    <div class="modal" @click.outside="restoreDay = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="restoreDay = null">
       <button class="modal__close" type="button" @click="restoreDay = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Restore daily backup</h3>
       <p style="color: var(--fg-muted);">
@@ -230,9 +326,32 @@ eleventyExcludeFromCollections: true
     </div>
   </div>
 
+  {# Permanently delete trashed profile confirm modal #}
+  <div class="modal-backdrop" x-show="purgeId" x-cloak @keydown.escape.window="purgeId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="purgeId = null">
+      <button class="modal__close" type="button" @click="purgeId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Delete forever</h3>
+      <p style="color: var(--fg-muted);">
+        This permanently deletes <strong x-text="purgeName"></strong> and all of its history. It cannot be undone or restored. Export first if you might need it later.
+      </p>
+      <p style="margin-top: var(--space-sm);">
+        To confirm, type the profile name exactly: <strong x-text="purgeName"></strong>
+      </p>
+      <form @submit.prevent="doPurge()">
+        <div class="field" style="margin-top: var(--space-sm);">
+          <input class="input" type="text" x-model="purgeValue" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="submit">Delete forever</button>
+          <button class="btn btn--ghost" type="button" @click="purgeId = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   {# Manual snapshot restore confirm modal #}
   <div class="modal-backdrop" x-show="restoreSnapId" x-cloak @keydown.escape.window="restoreSnapId = null">
-    <div class="modal" @click.outside="restoreSnapId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="restoreSnapId = null">
       <button class="modal__close" type="button" @click="restoreSnapId = null" aria-label="Close">&times;</button>
       <h3 class="modal__title">Restore snapshot</h3>
       <p style="color: var(--fg-muted);">
@@ -262,6 +381,25 @@ function settingsView() {
     restoreValue: "",
     restoreSnapId: null,
     restoreSnapValue: "",
+    purgeId: null,
+    purgeName: "",
+    purgeValue: "",
+    editingSnapId: null,
+    editingSnapLabel: "",
+    editingNoteDay: null,
+    editingNoteText: "",
+    saveSnapLabel(id) {
+      if (this.editingSnapId !== id) return;
+      this.$store.budget.renameSnapshot(id, this.editingSnapLabel);
+      this.editingSnapId = null;
+      this.editingSnapLabel = "";
+    },
+    saveNote(day) {
+      if (this.editingNoteDay !== day) return;
+      this.$store.budget.setBackupNote(day, this.editingNoteText);
+      this.editingNoteDay = null;
+      this.editingNoteText = "";
+    },
     snap() {
       this.$store.budget.takeSnapshot(this.snapLabel);
       this.snapLabel = "";
@@ -271,6 +409,13 @@ function settingsView() {
     },
     doRestoreSnapshot() {
       if (this.$store.budget.restoreSnapshot(this.restoreSnapId, this.restoreSnapValue)) this.restoreSnapId = null;
+    },
+    doPurge() {
+      if (this.$store.budget.permanentlyDeleteTrashed(this.purgeId, this.purgeValue)) {
+        this.purgeId = null;
+        this.purgeName = "";
+        this.purgeValue = "";
+      }
     },
   };
 }

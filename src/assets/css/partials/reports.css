@@ -2,6 +2,13 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   padding: var(--space-md);
+  /* Tables and SVG charts inside should never push the page wider than
+     the viewport on phones; let them scroll horizontally instead. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 599px) {
+  .report { padding: var(--space-sm); }
 }
 .report__title { font-size: var(--fs-xl); margin-bottom: var(--space-2xs); }
 .report__lead { color: var(--fg-muted); margin-bottom: var(--space-md); font-size: var(--fs-sm); }
