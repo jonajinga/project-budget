@@ -549,14 +549,25 @@ function calendarView() {
       if (cell.scheduled.length) parts.push(cell.scheduled.length + " scheduled");
       return parts.join(" · ");
     },
-    /* Year-view mini cell tooltip. Counts both posted + projected
-       scheduled entries, prefixed with the date so the popover reads
-       well over a tiny square. */
+    /* Year-view mini cell tooltip. Lists actual payees + amounts so
+       the user gets useful context on hover — the date is already
+       visible on the cell. Caps at 5 entries with a "+N more" tail
+       so the tooltip stays compact. */
     miniTooltip(cell) {
-      if (!cell || cell.blank) return "";
-      if (!cell.count) return cell.iso;
-      var label = cell.count === 1 ? "entry" : "entries";
-      return cell.iso + " · " + cell.count + " " + label;
+      if (!cell || cell.blank || !cell.count) return "";
+      var self = this;
+      var lines = [];
+      (cell.posted || []).slice(0, 5).forEach(function (t) {
+        var name = self.$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? "Transfer" : "—");
+        lines.push(name + "  " + self.formatCents(t.amount));
+      });
+      (cell.scheduled || []).slice(0, Math.max(0, 5 - lines.length)).forEach(function (s) {
+        var name = self.$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || "—";
+        lines.push(name + "  " + self.formatCents(s.template.amount) + " (scheduled)");
+      });
+      var extra = cell.count - lines.length;
+      if (extra > 0) lines.push("+ " + extra + " more");
+      return lines.join(" • ");
     },
 
     openAccounts() {
@@ -764,8 +775,9 @@ function calendarView() {
       });
     },
 
-    /* Mini-grid cells for one month in the year view. Counts posted +
-       projected scheduled entries per day to drive the heatmap shade. */
+    /* Mini-grid cells for one month in the year view. Calls dayData
+       per day so the tooltip can list the actual posted + scheduled
+       entries (caching the projection map for the duration). */
     miniCells(monthISO) {
       var parts = monthISO.split("-");
       var year = parseInt(parts[0], 10);
@@ -773,43 +785,37 @@ function calendarView() {
       var firstDay = new Date(year, month - 1, 1).getDay();
       var daysInMonth = new Date(year, month, 0).getDate();
       var today = this._isoDay(new Date());
-      var p = this.$store.budget.profile;
-      var hits = {};
-      var projected = this._scheduledByISO();
-      if (p) {
-        var monthPrefix = monthISO + "-";
-        var self = this;
-        (p.transactions || []).forEach(function (t) {
-          if ((t.date || "").indexOf(monthPrefix) !== 0) return;
-          if (!self._matchTxn(t)) return;
-          var k = t.date.slice(0, 10);
-          hits[k] = (hits[k] || 0) + 1;
-        });
-        Object.keys(projected).forEach(function (iso) {
-          if (iso.indexOf(monthPrefix) !== 0) return;
-          var matched = projected[iso].filter(function (s) { return self._matchSched(s); });
-          if (matched.length) hits[iso] = (hits[iso] || 0) + matched.length;
-        });
-      }
-      /* Determine max count for intensity normalization. */
-      var maxCount = 0;
-      Object.keys(hits).forEach(function (k) { if (hits[k] > maxCount) maxCount = hits[k]; });
+
+      this._cachedProjected = this._scheduledByISO();
       var cells = [];
       for (var i = 0; i < firstDay; i++) cells.push({ blank: true, key: monthISO + "-blank-" + i });
+
+      /* Build the cells first so we know maxCount for heatmap shading. */
+      var dayCells = [];
+      var maxCount = 0;
       for (var day = 1; day <= daysInMonth; day++) {
         var iso = year + "-" + this._pad(month) + "-" + this._pad(day);
-        var c = hits[iso] || 0;
-        cells.push({
+        var d = this.dayData(iso);
+        var count = d.posted.length + d.scheduled.length;
+        if (count > maxCount) maxCount = count;
+        dayCells.push({
           blank: false,
           key: iso,
           iso: iso,
           day: day,
           isToday: iso === today,
-          count: c,
-          /* 0..100 scale for the CSS color-mix shade. */
-          intensity: maxCount > 0 ? Math.round((c / maxCount) * 100) : 0,
+          count: count,
+          posted: d.posted,
+          scheduled: d.scheduled,
+          totalInflow: d.totalInflow,
+          totalOutflow: d.totalOutflow,
         });
       }
+      dayCells.forEach(function (c) {
+        c.intensity = maxCount > 0 ? Math.round((c.count / maxCount) * 100) : 0;
+        cells.push(c);
+      });
+      this._cachedProjected = null;
       return cells;
     },
 
