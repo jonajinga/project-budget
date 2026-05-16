@@ -1,0 +1,140 @@
+---
+layout: layouts/app.njk
+title: "Profiles"
+description: "Create, switch, rename, duplicate, and delete budget profiles."
+permalink: /app/profiles/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="{
+  newName: '',
+  renameId: null,
+  renameValue: '',
+  deleteId: null,
+  deleteValue: '',
+  startRename(p) { this.renameId = p.id; this.renameValue = p.name; },
+  doRename() {
+    if (!this.renameId) return;
+    $store.budget.renameProfile(this.renameId, this.renameValue);
+    this.renameId = null;
+  },
+  startDelete(p) { this.deleteId = p.id; this.deleteValue = ''; },
+  doDelete() {
+    if (!this.deleteId) return;
+    var entry = $store.budget.profiles.find(p => p.id === this.deleteId);
+    if (!entry) return;
+    if ($store.budget.deleteProfile(this.deleteId, this.deleteValue)) {
+      this.deleteId = null;
+    }
+  },
+  doCreate() {
+    if (!this.newName.trim()) return;
+    $store.budget.createProfile(this.newName);
+    this.newName = '';
+  },
+}">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Profiles</h1>
+  </header>
+
+  <p class="app-page__lead">
+    Each profile is a complete budget — its own accounts, categories, transactions, and goals. Profiles are isolated and live in your browser's localStorage.
+  </p>
+
+  <section class="card">
+    <h2 class="card__title">Create a profile</h2>
+    <form class="form-stack" @submit.prevent="doCreate()">
+      <div class="field">
+        <label class="field__label" for="profile-name">Profile name</label>
+        <input class="input" id="profile-name" type="text" x-model="newName"
+               placeholder="Household, Personal, Side business..." required>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Create profile</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" style="margin-top: var(--space-md);">
+    <h2 class="card__title">Existing profiles</h2>
+
+    <p x-show="!$store.budget.profiles.length" x-cloak style="color: var(--fg-muted);">
+      No profiles yet. Create your first profile above.
+    </p>
+
+    <table class="table" x-show="$store.budget.profiles.length" x-cloak>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Last opened</th>
+          <th class="num">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="p in $store.budget.profiles" :key="p.id">
+          <tr>
+            <td>
+              <strong x-text="p.name"></strong>
+              <span x-show="p.id === $store.budget.active" class="badge" style="margin-left: var(--space-2xs);">active</span>
+            </td>
+            <td x-text="p.lastOpenedAt ? new Date(p.lastOpenedAt).toLocaleString() : '—'"></td>
+            <td class="num">
+              <div class="cluster" style="justify-content: flex-end;">
+                <button class="btn btn--secondary btn--sm" type="button"
+                        @click="$store.budget.switchTo(p.id)"
+                        x-show="p.id !== $store.budget.active">Switch</button>
+                <button class="btn btn--ghost btn--sm" type="button"
+                        @click="startRename(p)">Rename</button>
+                <button class="btn btn--ghost btn--sm" type="button"
+                        @click="$store.budget.duplicateProfile(p.id)">Duplicate</button>
+                <button class="btn btn--danger btn--sm" type="button"
+                        @click="startDelete(p)">Delete</button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  {# Rename modal #}
+  <div class="modal-backdrop" x-show="renameId" x-cloak @keydown.escape.window="renameId = null">
+    <div class="modal" @click.outside="renameId = null">
+      <button class="modal__close" type="button" @click="renameId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Rename profile</h3>
+      <form @submit.prevent="doRename()">
+        <div class="field">
+          <label class="field__label" for="rename-input">New name</label>
+          <input class="input" id="rename-input" type="text" x-model="renameValue" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Save</button>
+          <button class="btn btn--ghost" type="button" @click="renameId = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Delete confirm modal — typed-name confirm #}
+  <div class="modal-backdrop" x-show="deleteId" x-cloak @keydown.escape.window="deleteId = null">
+    <div class="modal" @click.outside="deleteId = null">
+      <button class="modal__close" type="button" @click="deleteId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Delete profile</h3>
+      <p style="color: var(--fg-muted);">
+        Deleting moves the profile to trash for 7 days. You can restore it from Settings during that window. After 7 days it is permanently removed.
+      </p>
+      <p style="margin-top: var(--space-sm);">
+        To confirm, type the profile name exactly:
+        <strong x-text="$store.budget.profiles.find(p => p.id === deleteId)?.name"></strong>
+      </p>
+      <form @submit.prevent="doDelete()">
+        <div class="field" style="margin-top: var(--space-sm);">
+          <input class="input" type="text" x-model="deleteValue" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="submit">Delete profile</button>
+          <button class="btn btn--ghost" type="button" @click="deleteId = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

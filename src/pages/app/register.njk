@@ -1,0 +1,629 @@
+---
+layout: layouts/app.njk
+title: "Register"
+description: "All transactions across all accounts."
+permalink: /app/register/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="registerView()" x-init="init()">
+
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">
+        <span x-text="filterAccountId ? ($store.budget.findAccount(filterAccountId)?.name || 'Register') : 'All accounts'"></span>
+      </h1>
+      <p class="app-page__lead" x-show="filterAccountId" x-cloak>
+        Balance:
+        <strong x-text="formatCents($store.budget.accountBalance(filterAccountId))"></strong>
+        &middot; cleared
+        <span x-text="formatCents($store.budget.accountClearedBalance(filterAccountId))"></span>
+      </p>
+    </div>
+    <div class="cluster">
+      <button class="btn btn--secondary" type="button" @click="showTransfer = true" :disabled="!hasAccounts">Transfer</button>
+      <button class="btn btn--secondary" type="button" @click="showReconcile = true" x-show="filterAccountId" x-cloak>Reconcile</button>
+    </div>
+  </header>
+
+  <p class="app-page__lead" x-show="!hasAccounts" x-cloak>
+    Add an account before entering transactions.
+    <a href="/app/accounts/">Go to accounts</a>.
+  </p>
+
+  {# Due scheduled queue #}
+  <section class="card" x-show="hasAccounts && due.length" x-cloak style="border-left: 4px solid var(--warn);">
+    <h2 class="card__title">Recurring transactions due</h2>
+    <p class="card__body" style="margin-bottom: var(--space-sm);">
+      Review each one before it posts. You can skip an occurrence to push the next date forward without recording it.
+    </p>
+    <table class="table">
+      <thead><tr><th>Date</th><th>Account</th><th>Payee</th><th class="num">Amount</th><th class="num">Actions</th></tr></thead>
+      <tbody>
+        <template x-for="s in due" :key="s.id">
+          <tr>
+            <td x-text="s.nextDate"></td>
+            <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
+            <td x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></td>
+            <td class="num" x-text="formatCents(s.template.amount)"></td>
+            <td class="num">
+              <div class="cluster" style="justify-content: flex-end;">
+                <button class="btn btn--primary btn--sm" type="button" @click="postNow(s.id)">Post</button>
+                <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.skipScheduled(s.id); refreshDue();">Skip</button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  {# Add transaction #}
+  <section class="card" x-show="hasAccounts" x-cloak>
+    <h2 class="card__title">Add transaction</h2>
+    <form @submit.prevent="submitAdd()">
+      <div class="form-row" style="grid-template-columns: 1fr 2fr 1.2fr 1fr 1fr; gap: var(--space-sm);">
+        <div class="field">
+          <label class="field__label" for="t-date">Date</label>
+          <input class="input" id="t-date" type="date" x-model="form.date" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="t-payee">Payee</label>
+          <input class="input" id="t-payee" type="text" x-model="form.payeeName"
+                 @input="updatePayeeSuggestions()" @focus="updatePayeeSuggestions()" @blur="setTimeout(() => payeeSuggestions = [], 150)"
+                 autocomplete="off">
+          <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
+            <template x-for="p in payeeSuggestions" :key="p.id">
+              <li>
+                <button type="button" @mousedown.prevent="pickPayee(p)" x-text="p.name + ' (' + p.useCount + ')'"></button>
+              </li>
+            </template>
+          </ul>
+        </div>
+        <div class="field">
+          <label class="field__label" for="t-cat">Category</label>
+          <select class="select" id="t-cat" x-model="form.categoryId">
+            <option value="">(uncategorized)</option>
+            <template x-for="c in selectableCategories" :key="c.id">
+              <option :value="c.id" x-text="c.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="t-amount">Amount</label>
+          <input class="input" id="t-amount" type="text" x-model="form.amount" placeholder="-12.34" inputmode="decimal" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="t-account">Account</label>
+          <select class="select" id="t-account" x-model="form.accountId" required>
+            <template x-for="a in openAccounts" :key="a.id">
+              <option :value="a.id" x-text="a.name"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top: var(--space-sm);">
+        <label class="field__label" for="t-memo">Memo (optional)</label>
+        <input class="input" id="t-memo" type="text" x-model="form.memo">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add transaction</button>
+        <label class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted);">
+          <input type="checkbox" x-model="form.cleared"> Cleared
+        </label>
+      </div>
+    </form>
+  </section>
+
+  {# Register table #}
+  <section class="register" x-show="hasAccounts" x-cloak>
+    <div class="register__toolbar">
+      <div class="cluster">
+        <label class="cluster" style="gap: var(--space-2xs);">
+          <span style="color: var(--fg-muted); font-size: var(--fs-sm);">Filter</span>
+          <select class="select" x-model="filterAccountId" @change="updateUrl()">
+            <option value="">All accounts</option>
+            <template x-for="a in openAccounts" :key="a.id">
+              <option :value="a.id" x-text="a.name"></option>
+            </template>
+          </select>
+        </label>
+        <input class="input" type="search" x-model="search" placeholder="Search payee or memo" style="min-width: 220px;">
+      </div>
+      <p style="color: var(--fg-muted); font-size: var(--fs-sm); margin: 0;">
+        <span x-text="visibleTransactions().length"></span> shown
+      </p>
+    </div>
+
+    <table class="register__table">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Account</th>
+          <th scope="col">Payee</th>
+          <th scope="col">Category</th>
+          <th scope="col">Memo</th>
+          <th scope="col" class="num">Amount</th>
+          <th scope="col" class="col-cleared" data-tip="Cleared means the transaction has posted at your bank. Reconciled (R) means it's locked.">
+            <span aria-label="Cleared">C</span>
+          </th>
+          <th scope="col" class="num">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="t in visibleTransactions()" :key="t.id">
+          <tr :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id }">
+            {# Display mode #}
+            <template x-if="editingId !== t.id">
+              <td x-text="t.date"></td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '')"></td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td>
+                <span x-show="!t.splits" x-cloak x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? '' : '—')"></span>
+                <span x-show="t.splits" x-cloak class="badge">split (<span x-text="t.splits?.length"></span>)</span>
+              </td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td x-text="t.memo"></td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(t.amount)"></td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td class="col-cleared">
+                <button type="button"
+                        class="cleared-toggle"
+                        :aria-pressed="t.cleared.toString()"
+                        :data-locked="t.reconciled.toString()"
+                        @click="toggleCleared(t)"
+                        title="Cleared">
+                  <span x-show="t.cleared">&#10003;</span>
+                </button>
+              </td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td class="num">
+                <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--ghost btn--sm" type="button" @click="startEdit(t)" x-show="!t.reconciled && !t.transferTxnId">Edit</button>
+                  <button class="btn btn--ghost btn--sm" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId">Split</button>
+                  <button class="btn btn--ghost btn--sm" type="button" @click="unlock(t)" x-show="t.reconciled">Unlock</button>
+                  <button class="btn btn--danger btn--sm" type="button" @click="del(t)" x-show="!t.reconciled">Delete</button>
+                </div>
+              </td>
+            </template>
+
+            {# Edit mode #}
+            <template x-if="editingId === t.id">
+              <td><input class="input" type="date" x-model="edit.date" aria-label="Date" @keydown.escape="cancelEdit()"></td>
+            </template>
+            <template x-if="editingId === t.id">
+              <td>
+                <select class="select" x-model="edit.accountId" aria-label="Account">
+                  <template x-for="a in openAccounts" :key="a.id">
+                    <option :value="a.id" x-text="a.name"></option>
+                  </template>
+                </select>
+              </td>
+            </template>
+            <template x-if="editingId === t.id">
+              <td><input class="input" type="text" x-model="edit.payeeName" aria-label="Payee"></td>
+            </template>
+            <template x-if="editingId === t.id">
+              <td>
+                <select class="select" x-model="edit.categoryId" aria-label="Category">
+                  <option value="">(uncategorized)</option>
+                  <template x-for="c in selectableCategories" :key="c.id">
+                    <option :value="c.id" x-text="c.name"></option>
+                  </template>
+                </select>
+              </td>
+            </template>
+            <template x-if="editingId === t.id">
+              <td><input class="input" type="text" x-model="edit.memo" aria-label="Memo"></td>
+            </template>
+            <template x-if="editingId === t.id">
+              <td class="num"><input class="input" type="text" x-model="edit.amount" inputmode="decimal" aria-label="Amount" style="text-align: right;"></td>
+            </template>
+            <template x-if="editingId === t.id">
+              <td class="col-cleared">
+                <input type="checkbox" x-model="edit.cleared" aria-label="Cleared">
+              </td>
+            </template>
+            <template x-if="editingId === t.id">
+              <td class="num">
+                <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--primary btn--sm" type="button" @click="saveEdit()">Save</button>
+                  <button class="btn btn--ghost btn--sm" type="button" @click="cancelEdit()">Cancel</button>
+                </div>
+              </td>
+            </template>
+          </tr>
+        </template>
+
+        <tr x-show="!visibleTransactions().length" x-cloak>
+          <td colspan="8" style="text-align: center; padding: var(--space-lg); color: var(--fg-muted);">
+            No transactions match the current filter.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  {# Transfer modal #}
+  <div class="modal-backdrop" x-show="showTransfer" x-cloak @keydown.escape.window="showTransfer = false">
+    <div class="modal" @click.outside="showTransfer = false">
+      <button class="modal__close" type="button" @click="showTransfer = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Transfer between accounts</h3>
+      <form @submit.prevent="submitTransfer()">
+        <div class="form-stack">
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="tr-from">From</label>
+              <select class="select" id="tr-from" x-model="transferForm.fromAccountId" required>
+                <option value="">Select account</option>
+                <template x-for="a in openAccounts" :key="a.id"><option :value="a.id" x-text="a.name"></option></template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="tr-to">To</label>
+              <select class="select" id="tr-to" x-model="transferForm.toAccountId" required>
+                <option value="">Select account</option>
+                <template x-for="a in openAccounts" :key="a.id"><option :value="a.id" x-text="a.name"></option></template>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="tr-amount">Amount</label>
+              <input class="input" id="tr-amount" type="text" x-model="transferForm.amount" inputmode="decimal" placeholder="0.00" required>
+            </div>
+            <div class="field">
+              <label class="field__label" for="tr-date">Date</label>
+              <input class="input" id="tr-date" type="date" x-model="transferForm.date" required>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="tr-memo">Memo (optional)</label>
+            <input class="input" id="tr-memo" type="text" x-model="transferForm.memo">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Transfer</button>
+          <button class="btn btn--ghost" type="button" @click="showTransfer = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Reconcile modal #}
+  <div class="modal-backdrop" x-show="showReconcile" x-cloak @keydown.escape.window="showReconcile = false">
+    <div class="modal" @click.outside="showReconcile = false">
+      <button class="modal__close" type="button" @click="showReconcile = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Reconcile account</h3>
+      <p style="color: var(--fg-muted);">
+        Enter the ending balance from your latest statement. Project Budget will compare it with the cleared balance for the account.
+      </p>
+      <form @submit.prevent="checkReconcile()">
+        <div class="form-row" style="margin-top: var(--space-sm);">
+          <div class="field">
+            <label class="field__label" for="rc-balance">Statement ending balance</label>
+            <input class="input" id="rc-balance" type="text" x-model="reconcileForm.statementBalance" inputmode="decimal" required>
+          </div>
+          <div class="field">
+            <label class="field__label">Cleared in Project Budget</label>
+            <p class="input" style="background: var(--bg-alt); margin: 0;" x-text="formatCents($store.budget.accountClearedBalance(filterAccountId))"></p>
+          </div>
+        </div>
+
+        <div x-show="reconcileForm.checked" x-cloak style="margin-top: var(--space-sm);">
+          <p x-show="reconcileForm.diff === 0" style="color: var(--ok);">
+            Balances match. You are ready to reconcile.
+          </p>
+          <p x-show="reconcileForm.diff !== 0" style="color: var(--warn);">
+            Difference: <strong x-text="formatCents(reconcileForm.diff)"></strong>.
+            You can add an adjustment transaction to close the gap before reconciling.
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn--secondary" type="submit" x-show="!reconcileForm.checked">Check</button>
+          <button class="btn btn--primary" type="button" x-show="reconcileForm.checked && reconcileForm.diff === 0" @click="finishReconcile()">Mark cleared as reconciled</button>
+          <button class="btn btn--secondary" type="button" x-show="reconcileForm.checked && reconcileForm.diff !== 0" @click="addAdjustmentAndReconcile()">Add adjustment and reconcile</button>
+          <button class="btn btn--ghost" type="button" @click="showReconcile = false">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Split editor modal #}
+  <div class="modal-backdrop" x-show="splitTxnId" x-cloak @keydown.escape.window="splitTxnId = null">
+    <div class="modal" @click.outside="splitTxnId = null" style="max-width: 720px;">
+      <button class="modal__close" type="button" @click="splitTxnId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Split transaction</h3>
+      <p style="color: var(--fg-muted);">
+        Divide this transaction across multiple categories. The sum of the splits becomes the transaction's amount.
+      </p>
+      <p style="margin-top: var(--space-sm);">
+        Current total:
+        <strong x-text="formatCents(splitSum())"></strong>
+      </p>
+
+      <table class="table" style="margin-top: var(--space-sm);">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Memo</th>
+            <th class="num">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(s, i) in splitForm" :key="i">
+            <tr>
+              <td>
+                <select class="select" x-model="s.categoryId">
+                  <option value="">(uncategorized)</option>
+                  <template x-for="c in selectableCategories" :key="c.id">
+                    <option :value="c.id" x-text="c.name"></option>
+                  </template>
+                </select>
+              </td>
+              <td><input class="input" type="text" x-model="s.memo"></td>
+              <td class="num"><input class="input" type="text" x-model="s.amount" inputmode="decimal" style="text-align: right;"></td>
+              <td><button class="btn btn--ghost btn--sm" type="button" @click="splitForm.splice(i, 1)">&times;</button></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
+      <div class="form-actions">
+        <button class="btn btn--secondary btn--sm" type="button" @click="splitForm.push({ categoryId: '', memo: '', amount: '' })">Add split row</button>
+        <button class="btn btn--primary" type="button" @click="saveSplits()">Save splits</button>
+        <button class="btn btn--ghost" type="button" @click="$store.budget.setSplits(splitTxnId, null); splitTxnId = null;">Clear splits</button>
+        <button class="btn btn--ghost" type="button" @click="splitTxnId = null">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function registerView() {
+  return {
+    filterAccountId: "",
+    search: "",
+    showTransfer: false,
+    showReconcile: false,
+    editingId: null,
+    payeeSuggestions: [],
+    due: [],
+    splitTxnId: null,
+    splitForm: [],
+
+    form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false },
+    edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false },
+    transferForm: { fromAccountId: "", toAccountId: "", amount: "", date: "", memo: "" },
+    reconcileForm: { statementBalance: "", checked: false, diff: 0 },
+
+    init() {
+      var params = new URL(window.location.href).searchParams;
+      var acct = params.get("account");
+      if (acct) this.filterAccountId = acct;
+      var today = new Date().toISOString().slice(0, 10);
+      this.form.date = today;
+      this.transferForm.date = today;
+      this.form.accountId = this.filterAccountId || (this.openAccounts[0]?.id || "");
+      this.refreshDue();
+    },
+
+    get hasAccounts() {
+      return !!(this.$store.budget.profile && this.$store.budget.profile.accounts.some(a => !a.closedAt));
+    },
+
+    get openAccounts() {
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      return p.accounts.filter(a => !a.closedAt).sort((a, b) => a.name.localeCompare(b.name));
+    },
+
+    /* Hide payment categories from the dropdown — they're derived, not
+       directly selectable. */
+    get selectableCategories() {
+      var self = this;
+      return this.$store.budget.categoriesFlat().filter(c => !self.$store.budget.isPaymentCategory(c.id));
+    },
+
+    refreshDue() { this.due = this.$store.budget.dueScheduled(); },
+    postNow(id) { this.$store.budget.postScheduled(id); this.refreshDue(); },
+
+    visibleTransactions() {
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      var q = (this.search || "").toLowerCase().trim();
+      var self = this;
+      return p.transactions
+        .filter(t => !self.filterAccountId || t.accountId === self.filterAccountId)
+        .filter(t => {
+          if (!q) return true;
+          var payee = (self.$store.budget.payeeName(t.payeeId) || "").toLowerCase();
+          return payee.indexOf(q) !== -1 || (t.memo || "").toLowerCase().indexOf(q) !== -1;
+        })
+        .sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+    },
+
+    otherSide(t) {
+      if (!t.transferTxnId) return t;
+      return this.$store.budget.profile.transactions.find(x => x.id === t.transferTxnId) || t;
+    },
+
+    formatCents(c) { return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
+
+    parseDollars(s) {
+      if (!s && s !== 0) return 0;
+      var clean = String(s).replace(/[$,\s]/g, "").trim();
+      if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
+      var n = Number(clean);
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+
+    updateUrl() {
+      var base = window.location.pathname;
+      var qs = this.filterAccountId ? ("?account=" + this.filterAccountId) : "";
+      history.replaceState(null, "", base + qs);
+    },
+
+    submitAdd() {
+      if (!this.form.accountId) return;
+      this.$store.budget.addTransaction({
+        accountId: this.form.accountId,
+        date: this.form.date,
+        payeeName: this.form.payeeName,
+        categoryId: this.form.categoryId || null,
+        amount: this.parseDollars(this.form.amount),
+        memo: this.form.memo,
+        cleared: this.form.cleared,
+      });
+      var keepAccount = this.form.accountId;
+      var today = new Date().toISOString().slice(0, 10);
+      this.form = { date: today, payeeName: "", amount: "", accountId: keepAccount, categoryId: "", memo: "", cleared: false };
+      this.payeeSuggestions = [];
+    },
+
+    updatePayeeSuggestions() {
+      this.payeeSuggestions = this.$store.budget.suggestPayees(this.form.payeeName, 6);
+      /* If a known payee, pre-fill category from its last assignment. */
+      var match = this.payeeSuggestions.find(p => p.name.toLowerCase() === (this.form.payeeName || "").toLowerCase());
+      if (match && match.lastCategoryId && !this.form.categoryId) {
+        this.form.categoryId = match.lastCategoryId;
+      }
+    },
+
+    pickPayee(p) {
+      this.form.payeeName = p.name;
+      if (p.lastCategoryId && !this.form.categoryId) this.form.categoryId = p.lastCategoryId;
+      this.payeeSuggestions = [];
+    },
+
+    startEdit(t) {
+      this.editingId = t.id;
+      this.edit = {
+        date: t.date,
+        accountId: t.accountId,
+        payeeName: this.$store.budget.payeeName(t.payeeId),
+        categoryId: t.categoryId || "",
+        memo: t.memo,
+        amount: ((t.amount || 0) / 100).toFixed(2),
+        cleared: t.cleared,
+      };
+    },
+
+    saveEdit() {
+      if (!this.editingId) return;
+      this.$store.budget.updateTransaction(this.editingId, {
+        date: this.edit.date,
+        accountId: this.edit.accountId,
+        payeeName: this.edit.payeeName,
+        categoryId: this.edit.categoryId || null,
+        memo: this.edit.memo,
+        amount: this.parseDollars(this.edit.amount),
+        cleared: this.edit.cleared,
+      });
+      this.editingId = null;
+    },
+
+    cancelEdit() { this.editingId = null; },
+
+    toggleCleared(t) {
+      if (t.reconciled) return;
+      this.$store.budget.updateTransaction(t.id, { cleared: !t.cleared });
+    },
+
+    unlock(t) {
+      if (!confirm("Unlock this reconciled transaction? You will need to reconcile the account again to lock it.")) return;
+      this.$store.budget.unlockReconciled(t.id);
+    },
+
+    del(t) {
+      if (!confirm("Delete this transaction?")) return;
+      this.$store.budget.deleteTransaction(t.id);
+    },
+
+    /* ---- Splits ---- */
+    openSplits(t) {
+      this.splitTxnId = t.id;
+      if (t.splits && t.splits.length) {
+        this.splitForm = t.splits.map(s => ({
+          categoryId: s.categoryId || "",
+          memo: s.memo || "",
+          amount: ((s.amount || 0) / 100).toFixed(2),
+        }));
+      } else {
+        this.splitForm = [
+          { categoryId: t.categoryId || "", memo: "", amount: ((t.amount || 0) / 100).toFixed(2) },
+          { categoryId: "", memo: "", amount: "0.00" },
+        ];
+      }
+    },
+
+    splitSum() {
+      var self = this;
+      return this.splitForm.reduce(function (sum, s) { return sum + self.parseDollars(s.amount); }, 0);
+    },
+
+    saveSplits() {
+      if (!this.splitTxnId) return;
+      var self = this;
+      var splits = this.splitForm
+        .filter(s => self.parseDollars(s.amount) !== 0)
+        .map(s => ({ categoryId: s.categoryId || null, amount: self.parseDollars(s.amount), memo: s.memo || "" }));
+      this.$store.budget.setSplits(this.splitTxnId, splits.length >= 2 ? splits : null);
+      this.splitTxnId = null;
+    },
+
+    /* ---- Transfer ---- */
+    submitTransfer() {
+      var f = this.transferForm;
+      if (!f.fromAccountId || !f.toAccountId || f.fromAccountId === f.toAccountId) return;
+      this.$store.budget.transfer({
+        fromAccountId: f.fromAccountId,
+        toAccountId: f.toAccountId,
+        amount: this.parseDollars(f.amount),
+        date: f.date,
+        memo: f.memo,
+      });
+      this.transferForm = { fromAccountId: "", toAccountId: "", amount: "", date: new Date().toISOString().slice(0, 10), memo: "" };
+      this.showTransfer = false;
+    },
+
+    /* ---- Reconciliation ---- */
+    checkReconcile() {
+      var cents = this.parseDollars(this.reconcileForm.statementBalance);
+      var status = this.$store.budget.reconcileStatus(this.filterAccountId, cents);
+      this.reconcileForm.diff = status.diff;
+      this.reconcileForm.checked = true;
+    },
+
+    finishReconcile() {
+      this.$store.budget.applyReconcile(this.filterAccountId);
+      this.reconcileForm = { statementBalance: "", checked: false, diff: 0 };
+      this.showReconcile = false;
+    },
+
+    addAdjustmentAndReconcile() {
+      this.$store.budget.addAdjustment(
+        this.filterAccountId,
+        this.reconcileForm.diff,
+        new Date().toISOString().slice(0, 10),
+        "Reconciliation adjustment"
+      );
+      this.$store.budget.applyReconcile(this.filterAccountId);
+      this.reconcileForm = { statementBalance: "", checked: false, diff: 0 };
+      this.showReconcile = false;
+    },
+  };
+}
+</script>

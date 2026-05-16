@@ -1,0 +1,27 @@
+{
+  "name": "project-budget",
+  "version": "0.1.0",
+  "description": "Project Budget — a free, open-source budgeting web app. Data lives in your browser.",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "homepage": "https://projectbudget.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jonajinga/project-budget.git"
+  },
+  "scripts": {
+    "start": "npx @11ty/eleventy --serve --port=8080",
+    "dev": "npx @11ty/eleventy --serve --port=8080",
+    "build": "npx @11ty/eleventy",
+    "clean": "npx rimraf _site"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.0.0",
+    "@11ty/eleventy-img": "^5.0.0",
+    "@sardine/eleventy-plugin-tinyhtml": "^0.2.0",
+    "luxon": "^3.5.0",
+    "rimraf": "^5.0.10",
+    "sharp": "^0.33.5"
+  }
+}

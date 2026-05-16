@@ -1,0 +1,108 @@
+/* Project Budget design tokens.
+   Canonical breakpoints (do not introduce ad-hoc values):
+     360 / 480 / 600 / 768 / 820 / 1024 / 1180 / 1280
+   CSS custom properties cannot be used inside @media queries — the scale
+   above is the contract for every responsive rule in the project.
+*/
+
+:root {
+  /* Typography */
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Source Serif Pro", "Source Serif 4", Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --fs-xs:   0.8125rem;
+  --fs-sm:   0.9375rem;
+  --fs-base: 1rem;
+  --fs-md:   1.125rem;
+  --fs-lg:   1.25rem;
+  --fs-xl:   1.5rem;
+  --fs-2xl:  2rem;
+  --fs-3xl:  2.625rem;
+  --fs-4xl:  3.25rem;
+
+  --lh-tight: 1.2;
+  --lh-base:  1.55;
+  --lh-loose: 1.75;
+
+  /* Spacing */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs:  0.75rem;
+  --space-sm:  1rem;
+  --space-md:  1.5rem;
+  --space-lg:  2rem;
+  --space-xl:  3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 6rem;
+
+  /* Layout */
+  --max-width:        1180px;
+  --max-width-narrow: 720px;
+  --container-pad:    clamp(1rem, 3vw, 2rem);
+
+  /* Radius — squared by default per CLAUDE.md */
+  --radius: 0;
+  --radius-input: 4px;
+
+  /* Light theme palette */
+  --bg:           #f7f5f0;
+  --bg-elevated:  #ffffff;
+  --bg-alt:       #efece4;
+  --fg:           #14120f;
+  --fg-muted:     #5b574e;
+  --fg-subtle:    #847e72;
+  --border:       #d9d3c5;
+  --border-soft:  #e7e2d4;
+  --accent:       #1f5f49;
+  --accent-hover: #163f31;
+  --accent-soft:  rgba(31, 95, 73, 0.10);
+  --danger:       #a8341f;
+  --warn:         #a86b14;
+  --ok:           #1f5f49;
+
+  /* Chart palette — read by charts/theme-colors.js */
+  --chart-1: #1f5f49;
+  --chart-2: #2d6e8c;
+  --chart-3: #a86b14;
+  --chart-4: #6a4b8a;
+  --chart-5: #a8341f;
+  --chart-6: #4a544d;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(20, 18, 15, 0.06);
+  --shadow-md: 0 2px 6px rgba(20, 18, 15, 0.08), 0 8px 16px rgba(20, 18, 15, 0.06);
+  --shadow-lg: 0 4px 12px rgba(20, 18, 15, 0.10), 0 16px 32px rgba(20, 18, 15, 0.10);
+
+  /* Motion */
+  --t-fast: 120ms ease;
+  --t-base: 200ms ease;
+}
+
+[data-theme="dark"] {
+  --bg:           #14120f;
+  --bg-elevated:  #1d1b16;
+  --bg-alt:       #1a1814;
+  --fg:           #f5f0e4;
+  --fg-muted:     #b9b2a2;
+  --fg-subtle:    #807868;
+  --border:       #2e2a23;
+  --border-soft:  #25221c;
+  --accent:       #4ea986;
+  --accent-hover: #6fc1a0;
+  --accent-soft:  rgba(78, 169, 134, 0.16);
+  --danger:       #d56a55;
+  --warn:         #d4a45a;
+  --ok:           #4ea986;
+
+  --chart-1: #4ea986;
+  --chart-2: #62a8c9;
+  --chart-3: #d4a45a;
+  --chart-4: #b39ad1;
+  --chart-5: #d56a55;
+  --chart-6: #9aa49e;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.55), 0 16px 32px rgba(0, 0, 0, 0.4);
+}

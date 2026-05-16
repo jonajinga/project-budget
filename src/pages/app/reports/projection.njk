@@ -1,0 +1,63 @@
+---
+layout: layouts/app.njk
+title: "Cashflow projection"
+description: "Forward 3, 6, and 12 month projection from on-budget balance + recurring + goals."
+permalink: /app/reports/projection/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="{
+  horizon: 12,
+  init() {
+    var self = this;
+    this.$nextTick(function () {
+      window.pbInitProj = function () {
+        var store = Alpine.store('budget');
+        var inst = window.pbMountChart('#chart-proj', window.pbRenderProj, function () {
+          return store.reportProjection(self.horizon);
+        });
+        Alpine.effect(function () { self.horizon; store.profile; inst.redraw(); });
+      };
+      window.pbInitProj();
+    });
+  },
+}">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Cashflow projection</h1>
+      <p class="app-page__lead">
+        Starts from the current sum of on-budget account balances. Each future month subtracts net scheduled outflows and goal funding requirements. The shaded band shows the low estimate (after goal funding) and the high estimate (scheduled only).
+      </p>
+    </div>
+    <div class="cluster">
+      <button class="btn btn--secondary btn--sm" type="button" @click="horizon = 3" :class="horizon === 3 ? 'is-active' : ''">3 mo</button>
+      <button class="btn btn--secondary btn--sm" type="button" @click="horizon = 6" :class="horizon === 6 ? 'is-active' : ''">6 mo</button>
+      <button class="btn btn--secondary btn--sm" type="button" @click="horizon = 12" :class="horizon === 12 ? 'is-active' : ''">12 mo</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
+  </header>
+
+  <section class="report">
+    <div class="chart" id="chart-proj" style="min-height: 320px;"></div>
+
+    <table class="table" style="margin-top: var(--space-md);">
+      <thead><tr><th>Month</th><th class="num">Low estimate</th><th class="num">Expected</th><th class="num">High estimate</th></tr></thead>
+      <tbody>
+        <template x-for="r in $store.budget.reportProjection(horizon)" :key="r.month">
+          <tr>
+            <td x-text="r.month"></td>
+            <td class="num" x-text="'$' + (r.low / 100).toFixed(2)"></td>
+            <td class="num" x-text="'$' + (r.expected / 100).toFixed(2)"></td>
+            <td class="num" x-text="'$' + (r.high / 100).toFixed(2)"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/projection.js";
+  window.pbMountChart = mountChart;
+  window.pbRenderProj = render;
+</script>

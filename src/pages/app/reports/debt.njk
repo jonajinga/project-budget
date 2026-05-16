@@ -1,0 +1,48 @@
+---
+layout: layouts/app.njk
+title: "Debt overview"
+description: "Balances and payoff projections for every credit and liability account."
+permalink: /app/reports/debt/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data x-init="$nextTick(() => window.pbInitDebt && window.pbInitDebt())">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Debt overview</h1>
+      <p class="app-page__lead">Balances on every credit card and tracking liability. Payoff months estimate based on the average payment over the last three months.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <section class="report">
+    <div class="chart" id="chart-debt" style="min-height: 120px;"></div>
+
+    <table class="table" style="margin-top: var(--space-md);">
+      <thead><tr><th>Account</th><th>Type</th><th class="num">Balance</th><th class="num">Avg payment (3 mo)</th><th class="num">Payoff at this pace</th></tr></thead>
+      <tbody x-data>
+        <template x-for="r in $store.budget.reportDebt()" :key="r.accountId">
+          <tr>
+            <td x-text="r.account"></td>
+            <td x-text="r.type === 'credit' ? 'Credit card' : 'Tracking liability'"></td>
+            <td class="num amount--outflow" x-text="'$' + (r.balance / 100).toFixed(2)"></td>
+            <td class="num" x-text="'$' + (r.avgPayment / 100).toFixed(2)"></td>
+            <td class="num" x-text="r.monthsToPayoff ? (r.monthsToPayoff + ' months') : 'No recent payments'"></td>
+          </tr>
+        </template>
+        <tr x-show="!$store.budget.reportDebt().length" x-cloak>
+          <td colspan="5" style="color: var(--fg-muted); text-align: center; padding: var(--space-lg);">No debt accounts.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/debt.js";
+  window.pbInitDebt = function () {
+    var store = Alpine.store("budget");
+    var inst = mountChart("#chart-debt", render, function () { return store.reportDebt(); });
+    Alpine.effect(function () { store.profile; inst.redraw(); });
+  };
+</script>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ site.language }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  {% include "partials/theme-script.njk" %}
+
+  {# Bunny Fonts — preconnect + stylesheet. font-display=swap is baked in. #}
+  <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+  <link rel="stylesheet" href="https://fonts.bunny.net/css?family=inter:400,500,600,700|source-serif-pro:600,700&display=swap">
+
+  {% include "partials/head-meta.njk" %}
+  {% include "partials/structured-data.njk" %}
+
+  <link rel="stylesheet" href="/assets/css/global.css?v={{ build.hash }}">
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="{{ site.themeColor }}">
+
+  {% if site.umamiWebsiteId %}
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="{{ site.umamiWebsiteId }}"></script>
+  {% endif %}
+
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block bodyClass %}{% endblock %}">
+  {% include "partials/skip-link.njk" %}
+  {% include "partials/header.njk" %}
+
+  <main id="main" tabindex="-1">
+    {% block content %}{{ content | safe }}{% endblock %}
+  </main>
+
+  {% include "partials/footer.njk" %}
+
+  <script src="/assets/js/main.js?v={{ build.hash }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

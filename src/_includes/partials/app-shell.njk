@@ -1,0 +1,64 @@
+<aside class="app-sidebar" :class="{ 'is-open': sidebarOpen }" aria-label="App navigation">
+  <button class="app-sidebar__close"
+          type="button"
+          @click="sidebarOpen = false"
+          aria-label="Close app menu">&times;</button>
+
+  {% include "partials/profile-switcher.njk" %}
+
+  <nav class="app-nav" aria-label="App sections">
+    <ul class="app-nav__list">
+      {% for item in nav.app %}
+        <li>
+          <a href="{{ item.url }}"
+             class="app-nav__link"
+             {% if page.url == item.url %}aria-current="page"{% endif %}>
+            {{ item.label }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </nav>
+
+  {# Account groups + balances. Renders only when a profile is active and has accounts. #}
+  <div class="app-sidebar__accounts" x-data x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+    <p class="app-sidebar__heading">Accounts</p>
+    <template x-for="group in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+      <div class="acct-group">
+        <p class="acct-group__name" x-text="group.group ? group.group.name : 'Other'"></p>
+        <ul class="acct-group__list">
+          <template x-for="a in group.accounts" :key="a.id">
+            <li>
+              <a class="acct-link" :href="'/app/register/?account=' + a.id">
+                <span class="acct-link__name" x-text="a.name"></span>
+                <span class="acct-link__balance"
+                      :class="{ 'is-negative': $store.budget.accountBalance(a.id) < 0 }"
+                      x-text="(($store.budget.accountBalance(a.id) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span>
+              </a>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </template>
+    <div class="acct-totals">
+      <p><span>On-budget</span><span x-text="(($store.budget.onBudgetTotal() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
+      <p><span>Net worth</span><span x-text="(($store.budget.netWorth() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
+    </div>
+  </div>
+
+  <div class="app-sidebar__footer">
+    <p class="last-saved" aria-live="polite">
+      <span x-text="$store.budget && $store.budget.lastSavedLabel ? $store.budget.lastSavedLabel : 'Ready'"></span>
+    </p>
+    <a class="app-sidebar__exit" href="/">Back to site</a>
+  </div>
+</aside>
+
+<button class="app-sidebar-toggle"
+        type="button"
+        @click="sidebarOpen = !sidebarOpen"
+        :aria-expanded="sidebarOpen.toString()"
+        aria-controls="app-sidebar"
+        aria-label="Open app menu">
+  Menu
+</button>

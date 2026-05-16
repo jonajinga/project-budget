@@ -1,0 +1,16 @@
+---
+layout: layouts/page.njk
+title: "Glossary"
+description: "Definitions for the budgeting terms used in Project Budget."
+permalink: /glossary/
+---
+<p>
+  Envelope budgeting borrows vocabulary from YNAB, Actual, and traditional household finance. Here is what each term means in Project Budget.
+</p>
+
+<dl class="glossary">
+  {% for entry in glossary %}
+    <dt id="{{ entry.key }}">{{ entry.term }}</dt>
+    <dd>{{ entry.body }}</dd>
+  {% endfor %}
+</dl>

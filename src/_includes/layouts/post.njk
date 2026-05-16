@@ -1,0 +1,15 @@
+---
+layout: layouts/marketing.njk
+---
+<article class="container container--narrow post">
+  <header class="post__header">
+    <p class="post__meta">
+      <time datetime="{{ page.date | htmlDateString }}">{{ page.date | readableDate }}</time>
+    </p>
+    <h1>{{ title }}</h1>
+    {% if description %}<p class="post__subtitle">{{ description }}</p>{% endif %}
+  </header>
+  <div class="prose">
+    {{ content | safe }}
+  </div>
+</article>

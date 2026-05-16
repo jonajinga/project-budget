@@ -1,0 +1,55 @@
+---
+layout: layouts/marketing.njk
+title: ""
+description: "Free, open-source envelope budgeting that lives in your browser. No accounts, no servers, no bank connections."
+---
+<section class="hero">
+  <div class="container">
+    <p class="hero__eyebrow">Free and open source</p>
+    <h1 class="hero__title">Envelope budgeting that stays on your device.</h1>
+    <p class="hero__lead">
+      {{ site.title }} is a budgeting web app modeled on the workflow popularized by YNAB and Actual Budget. It runs in your browser using <code>localStorage</code>. There is no account to create, no subscription to pay, and no third party that can see your finances.
+    </p>
+    <div class="hero__actions">
+      <a class="btn btn--primary" href="/app/">Open the app</a>
+      <a class="btn btn--secondary" href="/docs/">Read the docs</a>
+      <a class="btn btn--ghost" href="{{ site.repo }}" rel="noopener">View source on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" id="features">
+  <div class="container">
+    <header style="margin-bottom: var(--space-lg);">
+      <h2>Features</h2>
+      <p class="section__lead">Everything the envelope method needs, with no backend in sight.</p>
+    </header>
+    <div class="feature-list">
+      {% for f in features %}
+      <article class="feature">
+        <h3 class="feature__title">{{ f.title }}</h3>
+        <p class="feature__body">{{ f.body }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="grid grid--2">
+      <div>
+        <h2>Your data stays on your device.</h2>
+        <p>
+          Project Budget writes to your browser's <code>localStorage</code>. Nothing leaves the page. There is no analytics pixel touching your transactions and no opt-in cloud sync. If you want a copy of your data, export the JSON file yourself; if you want to wipe it, clear your browser data.
+        </p>
+      </div>
+      <div>
+        <h2>No bank connections.</h2>
+        <p>
+          Bank-connection services like Plaid and SimpleFIN require a server and a paid relationship. Project Budget supports import from the file formats banks already provide — CSV, OFX, QFX, QIF — so you stay in control of what gets imported and when.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

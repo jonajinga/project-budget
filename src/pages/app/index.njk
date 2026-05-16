@@ -1,0 +1,64 @@
+---
+layout: layouts/app.njk
+title: "Dashboard"
+description: "Your active budget at a glance."
+permalink: /app/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data>
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Dashboard</h1>
+      <p class="app-page__lead">
+        <span x-show="$store.budget.profile" x-text="$store.budget.profile?.name"></span>
+        <span x-show="!$store.budget.profile" x-cloak>No active profile.</span>
+      </p>
+    </div>
+  </header>
+
+  <div class="empty-state" x-show="!$store.budget.profile" x-cloak>
+    <h2 class="empty-state__title">Create your first profile</h2>
+    <p class="empty-state__body">
+      A profile is a complete budget — its own accounts, categories, transactions, and goals. Create as many as you need and switch between them whenever you like. Profiles are stored only in this browser.
+    </p>
+    <div class="empty-state__actions">
+      <a class="btn btn--primary" href="/app/profiles/">Create a profile</a>
+      <a class="btn btn--secondary" href="/app/import/">Import a JSON export</a>
+    </div>
+  </div>
+
+  <div x-show="$store.budget.profile" x-cloak>
+    <div class="kpi-grid">
+      <article class="kpi">
+        <p class="kpi__label">Ready to assign</p>
+        <p class="kpi__value"
+           x-text="((($store.budget.readyToAssign()) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></p>
+        <p class="kpi__hint">For <span x-text="$store.budget.currentMonth"></span>.</p>
+      </article>
+      <article class="kpi">
+        <p class="kpi__label">Net worth</p>
+        <p class="kpi__value"
+           x-text="((($store.budget.netWorth()) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></p>
+        <p class="kpi__hint">On-budget plus tracking assets minus liabilities.</p>
+      </article>
+      <article class="kpi">
+        <p class="kpi__label">Accounts</p>
+        <p class="kpi__value" x-text="$store.budget.profile?.accounts.length ?? 0"></p>
+      </article>
+      <article class="kpi">
+        <p class="kpi__label">Transactions</p>
+        <p class="kpi__value" x-text="$store.budget.profile?.transactions.length ?? 0"></p>
+      </article>
+    </div>
+
+    <section class="card" style="margin-top: var(--space-lg);">
+      <h2 class="card__title">Quick actions</h2>
+      <div class="cluster">
+        <a class="btn btn--primary btn--sm" href="/app/budget/">Open budget</a>
+        <a class="btn btn--secondary btn--sm" href="/app/register/">Enter transactions</a>
+        <a class="btn btn--secondary btn--sm" href="/app/categories/">Manage categories</a>
+        <a class="btn btn--ghost btn--sm" href="/app/settings/">Settings</a>
+      </div>
+    </section>
+  </div>
+</div>

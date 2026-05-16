@@ -1,0 +1,8 @@
+{% extends "layouts/base.njk" %}
+
+{% block bodyClass %}layout-marketing{% endblock %}
+
+{% block scripts %}
+  {# instant.page prefetches links on hover/touch. Marketing only. #}
+  <script src="/assets/js/vendor/instantpage.min.js" type="module" defer></script>
+{% endblock %}

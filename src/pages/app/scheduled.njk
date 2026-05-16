@@ -1,0 +1,140 @@
+---
+layout: layouts/app.njk
+title: "Recurring"
+description: "Manage recurring transactions and the due queue."
+permalink: /app/scheduled/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="{
+  show: false,
+  form: { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', nextDate: '' },
+  parseDollars(s) { if (!s && s !== 0) return 0; var c = String(s).replace(/[$,\s]/g, '').trim(); if (/^\(.*\)$/.test(c)) c = '-' + c.slice(1, -1); var n = Number(c); return isFinite(n) ? Math.round(n * 100) : 0; },
+  formatCents(c) { return ((c || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); },
+  submit() {
+    if (!this.form.accountId || !this.form.nextDate) return;
+    var payeeId = null;
+    if (this.form.payeeName) {
+      var pp = $store.budget.suggestPayees(this.form.payeeName, 1);
+      // upsert via addTransaction would create a real txn; we want only the payee
+      // simplest: call store directly through the payees module is not exposed,
+      // so we accept that the first post will create the payee. Store name verbatim
+      // in template for first post.
+    }
+    $store.budget.addSchedule({
+      template: {
+        accountId: this.form.accountId,
+        payeeId: null,
+        payeeName: this.form.payeeName,
+        amount: this.parseDollars(this.form.amount),
+        memo: this.form.memo,
+        categoryId: null,
+      },
+      frequency: this.form.frequency,
+      nextDate: this.form.nextDate,
+    });
+    this.form = { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', nextDate: '' };
+    this.show = false;
+  },
+}">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Recurring transactions</h1>
+    <button class="btn btn--primary" type="button" @click="show = true" :disabled="!$store.budget.profile">Add recurring</button>
+  </header>
+
+  <p class="app-page__lead">
+    Recurring transactions sit in a queue. When the due date arrives, the entry shows up at the top of the
+    <a href="/app/register/">register</a> for you to approve or skip — it never posts automatically.
+  </p>
+
+  <section class="card">
+    <h2 class="card__title">All recurring templates</h2>
+    <table class="table" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
+      <thead>
+        <tr>
+          <th>Next date</th>
+          <th>Frequency</th>
+          <th>Account</th>
+          <th>Payee</th>
+          <th class="num">Amount</th>
+          <th class="num">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="s in $store.budget.profile?.scheduled || []" :key="s.id">
+          <tr>
+            <td x-text="s.nextDate"></td>
+            <td x-text="$store.budget.FREQUENCIES.find(f => f.value === s.frequency)?.label || s.frequency"></td>
+            <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
+            <td x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></td>
+            <td class="num" x-text="formatCents(s.template.amount)"></td>
+            <td class="num">
+              <div class="cluster" style="justify-content: flex-end;">
+                <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.skipScheduled(s.id)">Skip next</button>
+                <button class="btn btn--danger btn--sm" type="button" @click="if (confirm('Remove this recurring template?')) $store.budget.removeSchedule(s.id)">Remove</button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <p x-show="!$store.budget.profile || !$store.budget.profile.scheduled.length" x-cloak style="color: var(--fg-muted);">
+      No recurring transactions yet.
+    </p>
+  </section>
+
+  {# Add recurring modal #}
+  <div class="modal-backdrop" x-show="show" x-cloak @keydown.escape.window="show = false">
+    <div class="modal" @click.outside="show = false">
+      <button class="modal__close" type="button" @click="show = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Add recurring transaction</h3>
+      <form @submit.prevent="submit()">
+        <div class="form-stack">
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="rc-account">Account</label>
+              <select class="select" id="rc-account" x-model="form.accountId" required>
+                <option value="">Select account</option>
+                <template x-for="a in $store.budget.profile?.accounts.filter(a => !a.closedAt) || []" :key="a.id">
+                  <option :value="a.id" x-text="a.name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="rc-freq">Frequency</label>
+              <select class="select" id="rc-freq" x-model="form.frequency">
+                <template x-for="f in $store.budget.FREQUENCIES" :key="f.value">
+                  <option :value="f.value" x-text="f.label"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="rc-payee">Payee</label>
+              <input class="input" id="rc-payee" type="text" x-model="form.payeeName">
+            </div>
+            <div class="field">
+              <label class="field__label" for="rc-amount">Amount</label>
+              <input class="input" id="rc-amount" type="text" x-model="form.amount" inputmode="decimal" placeholder="-50.00" required>
+              <p class="field__hint">Negative = outflow.</p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="rc-next">First due date</label>
+              <input class="input" id="rc-next" type="date" x-model="form.nextDate" required>
+            </div>
+            <div class="field">
+              <label class="field__label" for="rc-memo">Memo (optional)</label>
+              <input class="input" id="rc-memo" type="text" x-model="form.memo">
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Save recurring</button>
+          <button class="btn btn--ghost" type="button" @click="show = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

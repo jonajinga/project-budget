@@ -1,0 +1,44 @@
+---
+layout: layouts/app.njk
+title: "Income vs expense"
+description: "Paired income and expense bars per month, last twelve months."
+permalink: /app/reports/income-expense/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data x-init="$nextTick(() => window.pbInitIncExp && window.pbInitIncExp())">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Income vs expense</h1>
+      <p class="app-page__lead">Last twelve months. Inflows include every positive transaction; outflows include every negative transaction.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <section class="report">
+    <div class="chart" id="chart-ie" style="min-height: 320px;"></div>
+
+    <table class="table" style="margin-top: var(--space-md);">
+      <thead><tr><th>Month</th><th class="num">Income</th><th class="num">Expense</th><th class="num">Net</th></tr></thead>
+      <tbody x-data>
+        <template x-for="r in $store.budget.reportIncomeVsExpense()" :key="r.month">
+          <tr>
+            <td x-text="r.month"></td>
+            <td class="num amount--inflow" x-text="'$' + (r.income / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="'$' + (r.expense / 100).toFixed(2)"></td>
+            <td class="num" :class="r.net < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.net / 100).toFixed(2)"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/income-expense.js";
+  window.pbInitIncExp = function () {
+    var store = Alpine.store("budget");
+    var inst = mountChart("#chart-ie", render, function () { return store.reportIncomeVsExpense(); });
+    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
+  };
+</script>

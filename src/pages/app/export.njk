@@ -1,0 +1,44 @@
+---
+layout: layouts/app.njk
+title: "Export"
+description: "Download the active profile as a JSON file."
+permalink: /app/export/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data>
+  <header class="app-page__header">
+    <h1 class="app-page__title">Export</h1>
+  </header>
+
+  <p class="app-page__lead">
+    Download the active profile as one JSON file. It contains every account, transaction, category, payee, schedule, and goal. Round-trips losslessly through import.
+  </p>
+
+  <p class="app-page__lead" x-show="!$store.budget.profile" x-cloak>
+    Create or switch to a profile before exporting.
+  </p>
+
+  <section class="card" x-show="$store.budget.profile" x-cloak>
+    <h2 class="card__title">Active profile</h2>
+    <p class="card__body">
+      <strong x-text="$store.budget.profile?.name"></strong>
+      &middot; <span x-text="$store.budget.profile?.accounts?.length ?? 0"></span> accounts
+      &middot; <span x-text="$store.budget.profile?.transactions?.length ?? 0"></span> transactions
+      &middot; <span x-text="$store.budget.profile?.categories?.length ?? 0"></span> categories
+    </p>
+    <p class="form-help" style="margin-top: var(--space-sm);">
+      File will be named <code x-text="$store.budget.exportFilename()"></code>.
+      No encryption in v1 — protect the file the way you would protect any sensitive document.
+    </p>
+    <div class="form-actions">
+      <button class="btn btn--primary" type="button" @click="$store.budget.exportActiveJSON()">Download JSON</button>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top: var(--space-md);">
+    <h2 class="card__title">Make exporting a habit</h2>
+    <p class="card__body">
+      Project Budget writes daily backups inside your browser, but they go with the browser if you wipe your cache or switch devices. A JSON export is your portable copy. Save it somewhere durable — a personal drive, a synced folder, or alongside other financial records.
+    </p>
+  </section>
+</div>

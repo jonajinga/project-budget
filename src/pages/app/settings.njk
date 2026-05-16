@@ -1,0 +1,113 @@
+---
+layout: layouts/app.njk
+title: "Settings"
+description: "Storage usage, backups, theme preference."
+permalink: /app/settings/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="{
+  restoreDay: null,
+  restoreValue: '',
+  doRestore() {
+    if (!this.restoreDay) return;
+    if ($store.budget.restoreBackup(this.restoreDay, this.restoreValue)) {
+      this.restoreDay = null;
+    }
+  },
+}">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Settings</h1>
+  </header>
+
+  <div class="grid grid--2">
+    <section class="card">
+      <h2 class="card__title">Storage</h2>
+      <p class="card__body" style="margin-bottom: var(--space-sm);">
+        Profile data is held in your browser's localStorage. Typical browser quota is 5&ndash;10 MB. Export to JSON if you are nearing the cap.
+      </p>
+      <p style="margin-bottom: var(--space-2xs); font-variant-numeric: tabular-nums;">
+        <span x-text="(($store.budget.storageStats().used / 1024).toFixed(1))"></span> KB used
+        of <span x-text="(($store.budget.storageStats().quota / 1024 / 1024).toFixed(0))"></span> MB
+        (<span x-text="$store.budget.storageStats().pct"></span>%)
+      </p>
+      <div style="background: var(--bg-alt); height: 10px; border: 1px solid var(--border-soft);">
+        <div :style="'background: var(--accent); height: 100%; width: ' + $store.budget.storageStats().pct + '%;'"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card__title">Theme</h2>
+      <p class="card__body">
+        Toggle from the header. Your preference is stored under <code>projectbudget-theme</code> and respected immediately on every load.
+      </p>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2 class="card__title">Daily backups</h2>
+      <p class="card__body" style="margin-bottom: var(--space-sm);">
+        One snapshot per calendar day for the active profile. The last 14 days are kept. Restoring overwrites the current profile.
+      </p>
+
+      <p x-show="!$store.budget.profile" x-cloak style="color: var(--fg-muted);">
+        No active profile.
+      </p>
+
+      <p x-show="$store.budget.profile && !$store.budget.listBackups().length" x-cloak style="color: var(--fg-muted);">
+        No snapshots yet. One is created automatically the next time you load the app.
+      </p>
+
+      <table class="table" x-show="$store.budget.profile && $store.budget.listBackups().length" x-cloak>
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th class="num">Size</th>
+            <th class="num">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="b in $store.budget.listBackups()" :key="b.key">
+            <tr>
+              <td x-text="b.day"></td>
+              <td class="num" x-text="(b.size / 1024).toFixed(1) + ' KB'"></td>
+              <td class="num">
+                <button class="btn btn--secondary btn--sm" type="button"
+                        @click="restoreDay = b.day; restoreValue = ''">Restore</button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2 class="card__title">About</h2>
+      <p class="card__body">
+        Project Budget version 0.1.0. Source on <a href="{{ site.repo }}" rel="noopener">GitHub</a>. MIT licensed.
+      </p>
+    </section>
+  </div>
+
+  {# Backup restore confirm modal #}
+  <div class="modal-backdrop" x-show="restoreDay" x-cloak @keydown.escape.window="restoreDay = null">
+    <div class="modal" @click.outside="restoreDay = null">
+      <button class="modal__close" type="button" @click="restoreDay = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Restore snapshot</h3>
+      <p style="color: var(--fg-muted);">
+        Restoring overwrites the active profile with the snapshot from <strong x-text="restoreDay"></strong>. The current state will be replaced. Today's automatic backup remains intact.
+      </p>
+      <p style="margin-top: var(--space-sm);">
+        To confirm, type the profile name exactly:
+        <strong x-text="$store.budget.profile?.name"></strong>
+      </p>
+      <form @submit.prevent="doRestore()">
+        <div class="field" style="margin-top: var(--space-sm);">
+          <input class="input" type="text" x-model="restoreValue" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Restore snapshot</button>
+          <button class="btn btn--ghost" type="button" @click="restoreDay = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

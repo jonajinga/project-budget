@@ -1,0 +1,22 @@
+<footer class="site-footer" role="contentinfo">
+  <div class="container site-footer__inner">
+    <div class="site-footer__brand">
+      <p class="site-footer__name">{{ site.title }}</p>
+      <p class="site-footer__tagline">{{ site.tagline }}</p>
+    </div>
+
+    <nav class="site-footer__nav" aria-label="Footer">
+      <ul>
+        {% for item in nav.footer %}
+          <li><a href="{{ item.url }}">{{ item.label }}</a></li>
+        {% endfor %}
+        <li><a href="{{ site.repo }}" rel="noopener">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <p class="site-footer__copy">
+      &copy; {% currentYear %} {{ site.author }}. {{ site.license }} licensed.
+      Website by <a href="https://pikespeakwebdesigns.com" rel="noopener">Pikes Peak Web Designs</a>.
+    </p>
+  </div>
+</footer>

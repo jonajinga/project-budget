@@ -1,0 +1,293 @@
+---
+layout: layouts/app.njk
+title: "Import"
+description: "Import a JSON profile, or CSV / OFX / QFX / QIF / GoCardless transactions."
+permalink: /app/import/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="importView()">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Import</h1>
+  </header>
+
+  <p class="app-page__lead">
+    Two flavors: a JSON profile from a previous Project Budget export, or a transaction file from your bank. Files are parsed locally — nothing is uploaded.
+  </p>
+
+  <section class="card">
+    <h2 class="card__title">Choose a file</h2>
+    <div class="form-stack">
+      <div class="field">
+        <label class="field__label" for="imp-file">File</label>
+        <input class="input" id="imp-file" type="file" accept=".json,.csv,.ofx,.qfx,.qif" @change="onPick($event)">
+        <p class="field__hint">Accepted: .json (Project Budget profile), .csv (Chase/Capital One/Discover/Mint/Actual/GoCardless), .ofx, .qfx, .qif</p>
+      </div>
+    </div>
+  </section>
+
+  {# JSON import flow #}
+  <section class="card" x-show="mode === 'json'" x-cloak style="margin-top: var(--space-md);">
+    <h2 class="card__title">JSON profile detected</h2>
+    <p class="card__body" x-show="jsonParsed.ok" x-cloak>
+      Schema version <span x-text="jsonParsed.profile?.schemaVersion"></span>.
+      Counts: <span x-text="jsonParsed.counts?.accounts"></span> accounts &middot;
+      <span x-text="jsonParsed.counts?.transactions"></span> transactions &middot;
+      <span x-text="jsonParsed.counts?.categories"></span> categories.
+    </p>
+    <p style="color: var(--danger);" x-show="!jsonParsed.ok" x-cloak x-text="jsonParsed.error"></p>
+
+    <div class="form-actions" x-show="jsonParsed.ok" x-cloak>
+      <button class="btn btn--primary" type="button" @click="$store.budget.importJSONAsNew(jsonParsed); reset();">Import as new profile</button>
+      <button class="btn btn--secondary" type="button"
+              :disabled="!$store.budget.profile"
+              @click="replaceMode = true">Replace active profile</button>
+    </div>
+
+    {# Replace confirm #}
+    <div x-show="replaceMode" x-cloak class="form-help" style="margin-top: var(--space-sm);">
+      <p>To replace the active profile <strong x-text="$store.budget.profile?.name"></strong>, type the name exactly:</p>
+      <div class="form-row" style="margin-top: var(--space-sm);">
+        <div class="field">
+          <input class="input" type="text" x-model="replaceConfirm">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="button" @click="if ($store.budget.importJSONReplacing(jsonParsed, replaceConfirm)) reset();">Replace</button>
+          <button class="btn btn--ghost" type="button" @click="replaceMode = false">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# Transaction import flow (CSV/OFX/QFX/QIF/GoCardless) #}
+  <section class="card" x-show="mode === 'txn'" x-cloak style="margin-top: var(--space-md);">
+    <h2 class="card__title">
+      <span x-text="txnFormatLabel"></span> detected
+    </h2>
+
+    <p class="card__body" x-show="txnRows.length === 0 && txnError" x-cloak style="color: var(--danger);" x-text="txnError"></p>
+
+    <div class="form-stack" x-show="txnRows.length > 0" x-cloak>
+      <div class="field">
+        <label class="field__label" for="imp-account">Import into account</label>
+        <select class="select" id="imp-account" x-model="accountId" required>
+          <option value="">Select account</option>
+          <template x-for="a in openAccounts" :key="a.id"><option :value="a.id" x-text="a.name"></option></template>
+        </select>
+      </div>
+
+      {# CSV-only column mapping. OFX/QIF/GoCardless are auto-mapped. #}
+      <div x-show="mode === 'txn' && txnFormat === 'csv'" x-cloak>
+        <p style="color: var(--fg-muted); font-size: var(--fs-sm);">
+          Detected shape: <strong x-text="csvDetection.label"></strong>
+          (<span x-text="Math.round((csvDetection.confidence || 0) * 100) + '%'"></span> confidence).
+          Adjust the column mapping below before previewing.
+        </p>
+        <div class="form-row">
+          <div class="field">
+            <label class="field__label">Date column</label>
+            <select class="select" x-model="columnMap.date">
+              <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Payee column</label>
+            <select class="select" x-model="columnMap.payee">
+              <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label class="field__label">Amount column (signed)</label>
+            <select class="select" x-model="columnMap.amount">
+              <option value="">(use debit/credit below)</option>
+              <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Debit column</label>
+            <select class="select" x-model="columnMap.debit" :disabled="!!columnMap.amount">
+              <option value="">(none)</option>
+              <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Credit column</label>
+            <select class="select" x-model="columnMap.credit" :disabled="!!columnMap.amount">
+              <option value="">(none)</option>
+              <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label class="field__label">Category column (optional)</label>
+            <select class="select" x-model="columnMap.category">
+              <option value="">(none)</option>
+              <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Memo column (optional)</label>
+            <select class="select" x-model="columnMap.memo">
+              <option value="">(none)</option>
+              <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="runDryRun()" :disabled="!accountId">Preview import</button>
+      </div>
+    </div>
+
+    {# Dry-run preview table #}
+    <div x-show="previewRows.length" x-cloak style="margin-top: var(--space-md);">
+      <h3 class="card__title" style="font-size: var(--fs-md);">Preview</h3>
+      <p style="color: var(--fg-muted); font-size: var(--fs-sm);">
+        <strong x-text="previewRows.filter(r => !r.duplicate).length"></strong> to add,
+        <strong x-text="previewRows.filter(r => r.duplicate).length"></strong> already in this account.
+      </p>
+      <table class="table">
+        <thead><tr><th>Date</th><th>Payee</th><th>Category</th><th class="num">Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          <template x-for="(r, i) in previewRows.slice(0, 50)" :key="i">
+            <tr>
+              <td x-text="r.date"></td>
+              <td x-text="r.payee"></td>
+              <td x-text="r.category || ''"></td>
+              <td class="num" :class="r.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="((r.amount || 0) / 100).toFixed(2)"></td>
+              <td><span class="badge" :class="r.duplicate ? 'badge--warn' : ''"
+                        x-text="r.duplicate ? 'duplicate' : 'new'"></span></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <p x-show="previewRows.length > 50" style="color: var(--fg-muted); font-size: var(--fs-sm);">
+        Showing first 50 of <span x-text="previewRows.length"></span>.
+      </p>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="commit()">Commit import</button>
+        <button class="btn btn--ghost" type="button" @click="reset()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="form-help" style="margin-top: var(--space-md);">
+    All imports run in your browser. The file you select never leaves this page.
+  </p>
+</div>
+
+<script>
+function importView() {
+  return {
+    mode: null,                  // 'json' | 'txn' | null
+    jsonParsed: { ok: false },
+    replaceMode: false,
+    replaceConfirm: "",
+
+    txnFormat: null,             // 'csv' | 'ofx' | 'qif' | 'gocardless'
+    txnFormatLabel: "",
+    txnError: "",
+    txnRows: [],                 // raw mapped rows (pre-dry-run)
+    csvHeaders: [],
+    csvDetection: { confidence: 0, label: "", columnMap: {} },
+    columnMap: {},
+    accountId: "",
+    previewRows: [],
+
+    get openAccounts() {
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      return p.accounts.filter(a => !a.closedAt).sort((a, b) => a.name.localeCompare(b.name));
+    },
+
+    reset() {
+      this.mode = null;
+      this.jsonParsed = { ok: false };
+      this.replaceMode = false;
+      this.replaceConfirm = "";
+      this.txnFormat = null;
+      this.txnFormatLabel = "";
+      this.txnError = "";
+      this.txnRows = [];
+      this.csvHeaders = [];
+      this.csvDetection = { confidence: 0, label: "", columnMap: {} };
+      this.columnMap = {};
+      this.accountId = "";
+      this.previewRows = [];
+      var input = document.getElementById("imp-file");
+      if (input) input.value = "";
+    },
+
+    async onPick(ev) {
+      this.reset();
+      var file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      var ext = (file.name.split(".").pop() || "").toLowerCase();
+      var text = await file.text();
+
+      if (ext === "json") {
+        this.mode = "json";
+        this.jsonParsed = this.$store.budget.parseImportJSON(text);
+        return;
+      }
+
+      this.mode = "txn";
+      if (ext === "ofx" || ext === "qfx") {
+        this.txnFormat = "ofx";
+        this.txnFormatLabel = ext.toUpperCase() + " statement";
+        var parsed = this.$store.budget.parseOFXText(text);
+        this.txnRows = parsed.rows;
+        if (!this.txnRows.length) this.txnError = "No transactions found in the file.";
+        return;
+      }
+      if (ext === "qif") {
+        this.txnFormat = "qif";
+        this.txnFormatLabel = "QIF statement";
+        var parsedQ = this.$store.budget.parseQIFText(text);
+        this.txnRows = parsedQ.rows;
+        if (!this.txnRows.length) this.txnError = "No transactions found in the file.";
+        return;
+      }
+      /* CSV path. Try GoCardless first since it has a very specific shape. */
+      var gc = this.$store.budget.parseGoCardlessText(text);
+      if (gc.ok) {
+        this.txnFormat = "gocardless";
+        this.txnFormatLabel = "GoCardless export";
+        this.txnRows = gc.rows;
+        return;
+      }
+      this.txnFormat = "csv";
+      this.txnFormatLabel = "CSV";
+      var p = this.$store.budget.parseCSVText(text);
+      this.csvHeaders = p.headers;
+      this.csvDetection = p.detection;
+      this.columnMap = Object.assign({ date: "", payee: "", amount: "", debit: "", credit: "", category: "", memo: "" }, p.detection.columnMap);
+      this.txnRows = p.rows;
+    },
+
+    runDryRun() {
+      if (!this.accountId || !this.txnRows.length) return;
+      var rows = this.txnRows;
+      if (this.txnFormat === "csv") {
+        rows = this.$store.budget.applyCSVMapping(this.txnRows, this.columnMap);
+      }
+      var fn = this.txnFormat === "ofx" ? "dryRunOFX"
+             : this.txnFormat === "qif" ? "dryRunQIF"
+             : this.txnFormat === "gocardless" ? "dryRunGoCardless"
+             : "dryRunCSV";
+      this.previewRows = this.$store.budget[fn](this.accountId, rows);
+    },
+
+    commit() {
+      if (!this.previewRows.length) return;
+      this.$store.budget.commitImport(this.accountId, this.previewRows);
+      this.reset();
+    },
+  };
+}
+</script>

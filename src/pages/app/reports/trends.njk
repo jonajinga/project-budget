@@ -1,0 +1,30 @@
+---
+layout: layouts/app.njk
+title: "Monthly trends"
+description: "Mini sparkline per top category over the last twelve months."
+permalink: /app/reports/trends/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data x-init="$nextTick(() => window.pbInitTrends && window.pbInitTrends())">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Monthly trends</h1>
+      <p class="app-page__lead">Sparklines for the top 12 categories over the last twelve months. Each card shows the total spent across the window.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <section class="report">
+    <div id="chart-trends" style="min-height: 120px;"></div>
+  </section>
+</div>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/monthly-trends.js";
+  window.pbInitTrends = function () {
+    var store = Alpine.store("budget");
+    var inst = mountChart("#chart-trends", render, function () { return store.reportTrends(); });
+    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
+  };
+</script>

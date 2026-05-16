@@ -1,0 +1,47 @@
+---
+layout: layouts/app.njk
+title: "Reports"
+description: "Net worth, spending, debt, projections."
+permalink: /app/reports/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Reports</h1>
+  </header>
+
+  <p class="app-page__lead">
+    Every report reads directly from the active profile. Print stylesheets are tuned for each one.
+  </p>
+
+  <div class="report-tiles">
+    <a class="report report--link" href="/app/reports/income-expense/">
+      <h2 class="report__title">Income vs expense</h2>
+      <p class="report__lead">Paired bars per month, last twelve months.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/net-worth/">
+      <h2 class="report__title">Net worth over time</h2>
+      <p class="report__lead">All accounts, month-end balances.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/spending/">
+      <h2 class="report__title">Spending by category</h2>
+      <p class="report__lead">Treemap of category activity.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/trends/">
+      <h2 class="report__title">Monthly trends</h2>
+      <p class="report__lead">Small multiples per top category.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/debt/">
+      <h2 class="report__title">Debt overview</h2>
+      <p class="report__lead">Balances, payoff projections.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/assignment-history/">
+      <h2 class="report__title">Assignment history</h2>
+      <p class="report__lead">Assigned vs spent, per category.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/projection/">
+      <h2 class="report__title">Cashflow projection</h2>
+      <p class="report__lead">3, 6, and 12 months forward.</p>
+    </a>
+  </div>
+</div>

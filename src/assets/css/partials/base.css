@@ -1,0 +1,97 @@
+html { font-family: var(--font-body); }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+h1 { font-size: var(--fs-3xl); }
+h2 { font-size: var(--fs-2xl); }
+h3 { font-size: var(--fs-xl); }
+h4 { font-size: var(--fs-lg); }
+h5, h6 { font-size: var(--fs-md); }
+
+p { max-width: 70ch; }
+
+a { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+
+/* WCAG 2.2 AA — every interactive element renders at >= 44x44 CSS pixels.
+   Components that intentionally pack smaller controls opt out via
+   [data-touch="compact"]. */
+button:not([data-touch="compact"]),
+input[type="submit"]:not([data-touch="compact"]),
+input[type="button"]:not([data-touch="compact"]),
+a.btn:not([data-touch="compact"]) {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* <sup> inside flex containers — see CLAUDE.md mistake #6 */
+sup {
+  font-size: 0.55em;
+  vertical-align: super;
+  line-height: 0;
+  font-weight: inherit;
+  display: inline;
+  position: relative;
+  top: -0.3em;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-sm);
+  top: -100px;
+  z-index: 9999;
+  background: var(--accent);
+  color: #fff;
+  padding: var(--space-2xs) var(--space-sm);
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: var(--radius-input);
+  transition: top var(--t-fast);
+}
+.skip-link:focus { top: var(--space-sm); }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.prose > * + * { margin-top: var(--space-md); }
+.prose h2 { margin-top: var(--space-xl); }
+.prose h3 { margin-top: var(--space-lg); }
+.prose ul, .prose ol { padding-left: 1.5em; }
+.prose li + li { margin-top: var(--space-2xs); }
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-alt);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-input);
+}
+.prose pre {
+  background: var(--bg-alt);
+  padding: var(--space-sm);
+  border-radius: var(--radius-input);
+  overflow-x: auto;
+}
+.prose pre code { background: none; padding: 0; }
+
+.changelog-entry { margin-top: var(--space-xl); }
+.changelog-entry__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: var(--space-2xs);
+  margin-bottom: var(--space-sm);
+}
+.changelog-entry__header h2 { font-size: var(--fs-xl); margin: 0; }
+.changelog-entry__date { color: var(--fg-muted); font-size: var(--fs-sm); margin: 0; font-variant-numeric: tabular-nums; }

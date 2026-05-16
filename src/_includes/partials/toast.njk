@@ -1,0 +1,16 @@
+<div class="toast-stack"
+     aria-live="polite"
+     aria-atomic="true"
+     x-data
+     x-show="$store.budget && $store.budget.toasts && $store.budget.toasts.length"
+     x-cloak>
+  <template x-for="t in ($store.budget ? $store.budget.toasts : [])" :key="t.id">
+    <div class="toast" :class="'toast--' + t.kind" role="status">
+      <p class="toast__body" x-text="t.message"></p>
+      <button class="toast__close"
+              type="button"
+              @click="$store.budget.dismissToast(t.id)"
+              aria-label="Dismiss">&times;</button>
+    </div>
+  </template>
+</div>

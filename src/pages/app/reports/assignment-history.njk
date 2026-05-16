@@ -1,0 +1,30 @@
+---
+layout: layouts/app.njk
+title: "Assignment history"
+description: "Per-category assigned vs spent over the last twelve months."
+permalink: /app/reports/assignment-history/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data x-init="$nextTick(() => window.pbInitAH && window.pbInitAH())">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Assignment history</h1>
+      <p class="app-page__lead">Paired bars per month — what you assigned (green) vs what you spent (red). One card per top category, last twelve months.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <section class="report">
+    <div id="chart-ah" style="min-height: 140px;"></div>
+  </section>
+</div>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/assignment-history.js";
+  window.pbInitAH = function () {
+    var store = Alpine.store("budget");
+    var inst = mountChart("#chart-ah", render, function () { return store.reportAssignmentHistory(); });
+    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
+  };
+</script>

@@ -1,0 +1,199 @@
+---
+layout: layouts/app.njk
+title: "Accounts"
+description: "Cash, checking, savings, credit cards, and off-budget tracking accounts."
+permalink: /app/accounts/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="{
+  showAccount: false,
+  showGroup: false,
+  editAccountId: null,
+  deleteAccountId: null,
+  deleteAccountValue: '',
+  newAccount: { name: '', type: 'checking', groupId: '', openingBalance: '' },
+  newGroup: { name: '' },
+  resetNewAccount() { this.newAccount = { name: '', type: 'checking', groupId: '', openingBalance: '' }; },
+  resetNewGroup() { this.newGroup = { name: '' }; },
+  parseDollars(s) {
+    if (!s) return 0;
+    var clean = String(s).replace(/[$,\s]/g, '').trim();
+    if (/^\(.*\)$/.test(clean)) clean = '-' + clean.slice(1, -1);
+    var n = Number(clean);
+    return isFinite(n) ? Math.round(n * 100) : 0;
+  },
+  formatCents(c) {
+    return ((c || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  },
+  submitAccount() {
+    $store.budget.addAccount({
+      name: this.newAccount.name,
+      type: this.newAccount.type,
+      groupId: this.newAccount.groupId || null,
+      openingBalance: this.parseDollars(this.newAccount.openingBalance),
+    });
+    this.resetNewAccount();
+    this.showAccount = false;
+  },
+  submitGroup() {
+    $store.budget.addAccountGroup(this.newGroup.name);
+    this.resetNewGroup();
+    this.showGroup = false;
+  },
+  startDelete(a) { this.deleteAccountId = a.id; this.deleteAccountValue = ''; },
+  doDelete() {
+    if (!this.deleteAccountId) return;
+    if ($store.budget.deleteAccount(this.deleteAccountId, this.deleteAccountValue)) {
+      this.deleteAccountId = null;
+    }
+  },
+}">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Accounts</h1>
+    <div class="cluster">
+      <button class="btn btn--secondary" type="button" @click="showGroup = true">New group</button>
+      <button class="btn btn--primary" type="button" @click="showAccount = true">Add account</button>
+    </div>
+  </header>
+
+  <p class="app-page__lead" x-show="!$store.budget.profile" x-cloak>
+    Create or switch to a profile before adding accounts.
+  </p>
+
+  <p class="app-page__lead" x-show="$store.budget.profile && !$store.budget.profile.accounts.length" x-cloak>
+    No accounts yet. Start with your everyday checking account, then add savings, credit cards, and any tracking accounts for investments or loans.
+  </p>
+
+  <template x-for="group in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+    <section class="card" style="margin-bottom: var(--space-md);">
+      <header style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-sm);">
+        <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
+        <button class="btn btn--ghost btn--sm" type="button"
+                x-show="group.group"
+                @click="if (confirm('Remove this group? Accounts will be unassigned but kept.')) $store.budget.deleteAccountGroup(group.group.id)">
+          Remove group
+        </button>
+      </header>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th class="num">Balance</th>
+            <th class="num">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="a in group.accounts" :key="a.id">
+            <tr>
+              <td>
+                <a :href="'/app/register/?account=' + a.id" x-text="a.name"></a>
+              </td>
+              <td x-text="$store.budget.ACCOUNT_TYPES.find(t => t.value === a.type)?.label || a.type"></td>
+              <td class="num" :class="$store.budget.accountBalance(a.id) < 0 ? 'amount--outflow' : ''"
+                  x-text="formatCents($store.budget.accountBalance(a.id))"></td>
+              <td class="num">
+                <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--ghost btn--sm" type="button"
+                          @click="var n = prompt('Rename account', a.name); if (n) $store.budget.renameAccount(a.id, n);">Rename</button>
+                  <button class="btn btn--danger btn--sm" type="button" @click="startDelete(a)">Delete</button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </section>
+  </template>
+
+  {# Add-account modal #}
+  <div class="modal-backdrop" x-show="showAccount" x-cloak @keydown.escape.window="showAccount = false">
+    <div class="modal" @click.outside="showAccount = false">
+      <button class="modal__close" type="button" @click="showAccount = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Add account</h3>
+      <form @submit.prevent="submitAccount()">
+        <div class="form-stack">
+          <div class="field">
+            <label class="field__label" for="acct-name">Account name</label>
+            <input class="input" id="acct-name" type="text" x-model="newAccount.name" required autofocus>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="acct-type">Type</label>
+              <select class="select" id="acct-type" x-model="newAccount.type">
+                <template x-for="t in $store.budget.ACCOUNT_TYPES" :key="t.value">
+                  <option :value="t.value" x-text="t.label"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="acct-group">Group</label>
+              <select class="select" id="acct-group" x-model="newAccount.groupId">
+                <option value="">(no group)</option>
+                <template x-for="g in $store.budget.profile?.accountGroups || []" :key="g.id">
+                  <option :value="g.id" x-text="g.name"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="acct-opening">Opening balance</label>
+            <input class="input" id="acct-opening" type="text" x-model="newAccount.openingBalance"
+                   placeholder="0.00" inputmode="decimal">
+            <p class="field__hint">For credit cards and loans, enter the current balance you owe as a negative number (e.g. -1234.56).</p>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Create account</button>
+          <button class="btn btn--ghost" type="button" @click="showAccount = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Add-group modal #}
+  <div class="modal-backdrop" x-show="showGroup" x-cloak @keydown.escape.window="showGroup = false">
+    <div class="modal" @click.outside="showGroup = false">
+      <button class="modal__close" type="button" @click="showGroup = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title">New account group</h3>
+      <p style="color: var(--fg-muted);">
+        Groups organize accounts in the sidebar — for example, Daily, Reserves, Debts, Investments.
+      </p>
+      <form @submit.prevent="submitGroup()">
+        <div class="field" style="margin-top: var(--space-sm);">
+          <label class="field__label" for="grp-name">Group name</label>
+          <input class="input" id="grp-name" type="text" x-model="newGroup.name" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Create group</button>
+          <button class="btn btn--ghost" type="button" @click="showGroup = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Delete account confirm #}
+  <div class="modal-backdrop" x-show="deleteAccountId" x-cloak @keydown.escape.window="deleteAccountId = null">
+    <div class="modal" @click.outside="deleteAccountId = null">
+      <button class="modal__close" type="button" @click="deleteAccountId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Delete account</h3>
+      <p style="color: var(--fg-muted);">
+        Deleting an account also removes every transaction in it. There is no undo for account deletion (profile-level backups still cover this, though).
+      </p>
+      <p style="margin-top: var(--space-sm);">
+        To confirm, type the account name exactly:
+        <strong x-text="$store.budget.findAccount(deleteAccountId)?.name"></strong>
+      </p>
+      <form @submit.prevent="doDelete()">
+        <div class="field" style="margin-top: var(--space-sm);">
+          <input class="input" type="text" x-model="deleteAccountValue" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="submit">Delete account</button>
+          <button class="btn btn--ghost" type="button" @click="deleteAccountId = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

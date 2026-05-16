@@ -1,0 +1,27 @@
+<div class="profile-switcher" x-data="{ open: false }">
+  <button class="profile-switcher__current"
+          type="button"
+          @click="open = !open"
+          :aria-expanded="open.toString()">
+    <span class="profile-switcher__label">Profile</span>
+    <span class="profile-switcher__name"
+          x-text="$store.budget && $store.budget.profile ? $store.budget.profile.name : 'No profile yet'"></span>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+
+  <ul class="profile-switcher__menu" x-show="open" @click.outside="open = false" x-cloak>
+    <template x-for="p in ($store.budget ? $store.budget.profiles : [])" :key="p.id">
+      <li>
+        <button type="button"
+                class="profile-switcher__item"
+                @click="$store.budget.switchTo(p.id); open = false">
+          <span x-text="p.name"></span>
+        </button>
+      </li>
+    </template>
+    <li class="profile-switcher__divider" role="separator"></li>
+    <li>
+      <a class="profile-switcher__item" href="/app/profiles/">Manage profiles</a>
+    </li>
+  </ul>
+</div>

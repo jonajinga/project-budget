@@ -1,0 +1,29 @@
+export default {
+  main: [
+    { label: "Open the app", url: "/app/", cta: true },
+    { label: "Features", url: "/#features" },
+    { label: "Docs", url: "/docs/" },
+    { label: "Glossary", url: "/glossary/" },
+    { label: "Open source", url: "/open-source/" },
+  ],
+  app: [
+    { label: "Dashboard", url: "/app/" },
+    { label: "Budget", url: "/app/budget/" },
+    { label: "Register", url: "/app/register/" },
+    { label: "Accounts", url: "/app/accounts/" },
+    { label: "Categories", url: "/app/categories/" },
+    { label: "Recurring", url: "/app/scheduled/" },
+    { label: "Reports", url: "/app/reports/" },
+    { label: "Import", url: "/app/import/" },
+    { label: "Export", url: "/app/export/" },
+    { label: "Profiles", url: "/app/profiles/" },
+    { label: "Settings", url: "/app/settings/" },
+  ],
+  footer: [
+    { label: "Docs", url: "/docs/" },
+    { label: "Open source", url: "/open-source/" },
+    { label: "Changelog", url: "/changelog/" },
+    { label: "Privacy", url: "/privacy/" },
+    { label: "Terms", url: "/terms/" },
+  ],
+};

@@ -1,0 +1,236 @@
+---
+layout: layouts/app.njk
+title: "Categories"
+description: "Category groups, categories, and goals."
+permalink: /app/categories/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="categoriesView()">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Categories</h1>
+    <div class="cluster">
+      <button class="btn btn--secondary" type="button" @click="showGroup = true">New group</button>
+    </div>
+  </header>
+
+  <p class="app-page__lead">
+    Categories live inside groups (for example: Immediate Obligations, True Expenses, Quality of Life). Add a goal to any category to track how much you should assign each month.
+  </p>
+
+  <p class="app-page__lead" x-show="!hasGroups" x-cloak>
+    Start by creating a group, then add categories inside it.
+  </p>
+
+  <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+    <section class="card" style="margin-bottom: var(--space-md);">
+      <header style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-sm);">
+        <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Ungrouped'"></h2>
+        <div class="cluster">
+          <button class="btn btn--secondary btn--sm" type="button"
+                  @click="addCatGroupId = group.group ? group.group.id : ''; addCatName = ''; showCat = true;"
+                  :disabled="!group.group">Add category</button>
+          <button class="btn btn--ghost btn--sm" type="button"
+                  x-show="group.group"
+                  @click="var n = prompt('Rename group', group.group.name); if (n) $store.budget.renameCategoryGroup(group.group.id, n);">Rename</button>
+          <button class="btn btn--danger btn--sm" type="button"
+                  x-show="group.group"
+                  @click="if (confirm('Remove this group? Categories will be unassigned but kept.')) $store.budget.deleteCategoryGroup(group.group.id);">Remove</button>
+        </div>
+      </header>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Goal</th>
+            <th class="num">Target</th>
+            <th class="num">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="c in group.categories" :key="c.id">
+            <tr>
+              <td>
+                <span x-text="c.name"></span>
+                <span x-show="$store.budget.isPaymentCategory(c.id)" class="badge" style="margin-left: var(--space-2xs);">card payment</span>
+              </td>
+              <td x-text="goalLabel(c.id)" style="color: var(--fg-muted);"></td>
+              <td class="num" x-text="goalTargetLabel(c.id)"></td>
+              <td class="num">
+                <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--ghost btn--sm" type="button" @click="openGoal(c)">Goal</button>
+                  <button class="btn btn--ghost btn--sm" type="button"
+                          @click="var n = prompt('Rename category', c.name); if (n) $store.budget.renameCategory(c.id, n);">Rename</button>
+                  <button class="btn btn--danger btn--sm" type="button"
+                          x-show="!$store.budget.isPaymentCategory(c.id)"
+                          @click="if (confirm('Delete category? Activity becomes uncategorized.')) $store.budget.deleteCategory(c.id);">Delete</button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="!group.categories.length" x-cloak>
+            <td colspan="4" style="color: var(--fg-muted); padding: var(--space-sm);">No categories yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </template>
+
+  {# New group modal #}
+  <div class="modal-backdrop" x-show="showGroup" x-cloak @keydown.escape.window="showGroup = false">
+    <div class="modal" @click.outside="showGroup = false">
+      <button class="modal__close" type="button" @click="showGroup = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title">New category group</h3>
+      <form @submit.prevent="$store.budget.addCategoryGroup(newGroupName); newGroupName = ''; showGroup = false;">
+        <div class="field">
+          <label class="field__label" for="cg-name">Group name</label>
+          <input class="input" id="cg-name" type="text" x-model="newGroupName" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Create group</button>
+          <button class="btn btn--ghost" type="button" @click="showGroup = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# New category modal #}
+  <div class="modal-backdrop" x-show="showCat" x-cloak @keydown.escape.window="showCat = false">
+    <div class="modal" @click.outside="showCat = false">
+      <button class="modal__close" type="button" @click="showCat = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title">New category</h3>
+      <form @submit.prevent="$store.budget.addCategory({ groupId: addCatGroupId, name: addCatName }); showCat = false;">
+        <div class="field">
+          <label class="field__label">Group</label>
+          <p class="input" style="background: var(--bg-alt); margin: 0;"
+             x-text="$store.budget.findCategoryGroup(addCatGroupId)?.name || ''"></p>
+        </div>
+        <div class="field" style="margin-top: var(--space-sm);">
+          <label class="field__label" for="cat-name">Category name</label>
+          <input class="input" id="cat-name" type="text" x-model="addCatName" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Create category</button>
+          <button class="btn btn--ghost" type="button" @click="showCat = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Goal modal #}
+  <div class="modal-backdrop" x-show="goalCatId" x-cloak @keydown.escape.window="goalCatId = null">
+    <div class="modal" @click.outside="goalCatId = null">
+      <button class="modal__close" type="button" @click="goalCatId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Goal for <span x-text="$store.budget.categoryName(goalCatId)"></span></h3>
+      <form @submit.prevent="saveGoal()">
+        <div class="form-stack">
+          <div class="field">
+            <label class="field__label" for="g-type">Goal type</label>
+            <select class="select" id="g-type" x-model="goalForm.type">
+              <template x-for="t in $store.budget.GOAL_TYPES" :key="t.value">
+                <option :value="t.value" x-text="t.label"></option>
+              </template>
+            </select>
+            <p class="field__hint" x-text="goalTypeHint()"></p>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="g-target">Target amount</label>
+              <input class="input" id="g-target" type="text" x-model="goalForm.target" inputmode="decimal" placeholder="0.00" required>
+            </div>
+            <div class="field" x-show="goalForm.type === 'targetByDate'" x-cloak>
+              <label class="field__label" for="g-date">By date</label>
+              <input class="input" id="g-date" type="date" x-model="goalForm.byDate">
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Save goal</button>
+          <button class="btn btn--ghost" type="button" @click="removeGoal()" x-show="$store.budget.findGoal(goalCatId)">Remove goal</button>
+          <button class="btn btn--ghost" type="button" @click="goalCatId = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function categoriesView() {
+  return {
+    showGroup: false,
+    showCat: false,
+    addCatGroupId: "",
+    addCatName: "",
+    newGroupName: "",
+    goalCatId: null,
+    goalForm: { type: "monthlyFixed", target: "", byDate: "" },
+
+    get hasGroups() {
+      return !!(this.$store.budget.profile && this.$store.budget.profile.categoryGroups.length);
+    },
+
+    parseDollars(s) {
+      if (!s && s !== 0) return 0;
+      var clean = String(s).replace(/[$,\s]/g, "").trim();
+      if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
+      var n = Number(clean);
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    goalLabel(catId) {
+      var g = this.$store.budget.findGoal(catId);
+      if (!g) return "—";
+      var def = this.$store.budget.GOAL_TYPES.find(t => t.value === g.type);
+      return def ? def.label : g.type;
+    },
+
+    goalTargetLabel(catId) {
+      var g = this.$store.budget.findGoal(catId);
+      return g ? this.formatCents(g.target) : "";
+    },
+
+    goalTypeHint() {
+      switch (this.goalForm.type) {
+        case "monthlyFixed": return "Assign at least this amount every month.";
+        case "monthlyTopUp": return "Add this amount on top of whatever rolled over from last month.";
+        case "refillUpTo":   return "After spending, top the category balance back up to this number.";
+        case "targetByDate": return "Save up to this number by the chosen date.";
+      }
+      return "";
+    },
+
+    openGoal(c) {
+      this.goalCatId = c.id;
+      var g = this.$store.budget.findGoal(c.id);
+      if (g) {
+        this.goalForm = {
+          type: g.type,
+          target: ((g.target || 0) / 100).toFixed(2),
+          byDate: g.byDate || "",
+        };
+      } else {
+        this.goalForm = { type: "monthlyFixed", target: "", byDate: "" };
+      }
+    },
+
+    saveGoal() {
+      this.$store.budget.addGoal({
+        categoryId: this.goalCatId,
+        type: this.goalForm.type,
+        target: this.parseDollars(this.goalForm.target),
+        byDate: this.goalForm.byDate || null,
+      });
+      this.goalCatId = null;
+    },
+
+    removeGoal() {
+      this.$store.budget.removeGoal(this.goalCatId);
+      this.goalCatId = null;
+    },
+  };
+}
+</script>

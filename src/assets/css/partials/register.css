@@ -1,0 +1,80 @@
+.register {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+}
+.register__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--border-soft);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.register__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.register__table th,
+.register__table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+}
+.register__table th {
+  font-weight: 600;
+  color: var(--fg-muted);
+  background: var(--bg-alt);
+  position: sticky;
+  top: 0;
+}
+.register__table .num,
+.register__table .col-amount,
+.register__table .col-balance {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.register__table .col-cleared { width: 36px; text-align: center; }
+.register__row--reconciled { background: rgba(31, 95, 73, 0.04); }
+.register__row--reconciled td { color: var(--fg-muted); }
+.register__row--editing { background: var(--accent-soft); }
+
+.cleared-toggle {
+  width: 24px; height: 24px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-input);
+}
+.cleared-toggle[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.cleared-toggle[data-locked="true"] { opacity: 0.6; cursor: not-allowed; }
+
+.amount--outflow { color: var(--danger); }
+.amount--inflow  { color: var(--accent); }
+
+/* Payee auto-suggest dropdown — sits under the payee input in the add form */
+.payee-suggest {
+  position: absolute;
+  z-index: 5;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--space-3xs) 0;
+}
+.payee-suggest li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.7rem;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+}
+.payee-suggest li button:hover { background: var(--bg-alt); }
+.field { position: relative; }

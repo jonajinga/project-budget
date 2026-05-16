@@ -1,0 +1,10 @@
+<script>
+  (function () {
+    try {
+      var key = "{{ site.storage.themeKey }}";
+      var stored = localStorage.getItem(key);
+      var theme = stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) { /* private browsing — theme stays default */ }
+  })();
+</script>

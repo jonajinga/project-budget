@@ -1,0 +1,42 @@
+---
+layout: layouts/app.njk
+title: "Net worth over time"
+description: "Sum of all account balances at month-end."
+permalink: /app/reports/net-worth/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data x-init="$nextTick(() => window.pbInitNW && window.pbInitNW())">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Net worth over time</h1>
+      <p class="app-page__lead">All accounts — on-budget plus tracking assets minus liabilities — totaled at the end of each month.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <section class="report">
+    <div class="chart" id="chart-nw" style="min-height: 320px;"></div>
+
+    <table class="table" style="margin-top: var(--space-md);">
+      <thead><tr><th>Month-end</th><th class="num">Net worth</th></tr></thead>
+      <tbody x-data>
+        <template x-for="r in $store.budget.reportNetWorth()" :key="r.month">
+          <tr>
+            <td x-text="r.month"></td>
+            <td class="num" :class="r.value < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.value / 100).toFixed(2)"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/net-worth.js";
+  window.pbInitNW = function () {
+    var store = Alpine.store("budget");
+    var inst = mountChart("#chart-nw", render, function () { return store.reportNetWorth(); });
+    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
+  };
+</script>

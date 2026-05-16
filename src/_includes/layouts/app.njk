@@ -1,0 +1,23 @@
+{% extends "layouts/base.njk" %}
+
+{% block bodyClass %}layout-app{% endblock %}
+
+{% block content %}
+<div class="app-shell" x-data="{ sidebarOpen: false }">
+  {% include "partials/app-shell.njk" %}
+  <section class="app-main">
+    {{ content | safe }}
+  </section>
+</div>
+{% include "partials/toast.njk" %}
+{% endblock %}
+
+{% block scripts %}
+  {# Order matters: app.js registers the alpine:init listener BEFORE Alpine
+     boots, so the store is set up by the time x-data binds. Popper must
+     load before tippy. #}
+  <script src="/assets/js/app.js?v={{ build.hash }}" type="module"></script>
+  <script src="/assets/js/vendor/popper.min.js" defer></script>
+  <script src="/assets/js/vendor/tippy-bundle.min.js" defer></script>
+  <script src="/assets/js/vendor/alpine.min.js" defer></script>
+{% endblock %}

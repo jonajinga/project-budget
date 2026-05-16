@@ -1,0 +1,7 @@
+/* Project Budget entry point.
+   Real CSS is concatenated at build time from src/assets/css/partials/ in the
+   order declared in eleventy.config.js. Never use @import — it creates a
+   request waterfall in the browser. Add new partials by:
+     1. dropping the file into partials/
+     2. listing it in CSS_PARTIAL_ORDER in eleventy.config.js
+*/

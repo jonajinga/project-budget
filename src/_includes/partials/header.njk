@@ -1,0 +1,32 @@
+<header class="site-header" role="banner">
+  <div class="container site-header__inner">
+    <a href="/" class="site-header__brand" aria-label="{{ site.title }} home">
+      <span class="brand__mark">Project Budget</span>
+      <span class="brand__full">{{ site.title }}</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary">
+      <ul class="site-nav__list">
+        {% for item in nav.main %}
+          <li>
+            <a href="{{ item.url }}"
+               class="site-nav__link{% if item.cta %} site-nav__link--cta{% endif %}"
+               {% if page.url == item.url %}aria-current="page"{% endif %}>
+              {{ item.label }}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <div class="site-header__actions">
+      <button type="button"
+              class="theme-toggle"
+              aria-label="Toggle color theme"
+              onclick="window.ProjectBudget && window.ProjectBudget.toggleTheme && window.ProjectBudget.toggleTheme()">
+        <svg class="theme-toggle__sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="theme-toggle__moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
