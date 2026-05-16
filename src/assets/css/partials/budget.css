@@ -28,24 +28,31 @@
 .budget__group {
   border-bottom: 1px solid var(--border-soft);
 }
-.budget__group-header {
-  display: grid;
-  grid-template-columns: 1fr 7rem 7rem 7rem;
-  gap: var(--space-sm);
-  align-items: center;
-  padding: 0.55rem var(--space-sm);
-  background: var(--bg-alt);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-}
+/* Mobile-first: 3 columns (category / assigned / available). Activity
+   column is hidden below 600px to fit. From 600px up, show all 4. */
+.budget__group-header,
 .budget__row {
   display: grid;
-  grid-template-columns: 1fr 7rem 7rem 7rem;
-  gap: var(--space-sm);
+  grid-template-columns: minmax(0, 1fr) 5rem 5rem;
+  gap: var(--space-2xs);
   align-items: center;
   padding: 0.55rem var(--space-sm);
-  border-top: 1px solid var(--border-soft);
   font-size: var(--fs-sm);
+}
+.budget__group-header { background: var(--bg-alt); font-weight: 600; }
+.budget__row { border-top: 1px solid var(--border-soft); }
+
+.budget__activity { display: none; }
+.budget__group-header > :nth-child(3) { display: none; }
+
+@media (min-width: 600px) {
+  .budget__group-header,
+  .budget__row {
+    grid-template-columns: minmax(0, 1fr) 6.5rem 6.5rem 6.5rem;
+    gap: var(--space-sm);
+  }
+  .budget__activity { display: block; text-align: right; font-variant-numeric: tabular-nums; }
+  .budget__group-header > :nth-child(3) { display: block; }
 }
 .budget__category { font-weight: 500; }
 .budget__assigned input {
@@ -82,9 +89,3 @@
 .goal-badge--needed  { background: rgba(168, 52, 31, 0.12); color: var(--danger); }
 .goal-badge--over    { background: var(--accent-soft); color: var(--accent); }
 
-@media (max-width: 600px) {
-  .budget__group-header { grid-template-columns: 1fr 5rem 5rem; }
-  .budget__group-header > :nth-child(4) { display: none; }
-  .budget__row { grid-template-columns: 1fr 5rem 5rem; }
-  .budget__activity { display: none; }
-}

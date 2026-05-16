@@ -1,7 +1,10 @@
 .register {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
+.register__table { min-width: 720px; }
 .register__toolbar {
   display: flex;
   flex-wrap: wrap;

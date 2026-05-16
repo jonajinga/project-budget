@@ -10,7 +10,7 @@ import {
   freshStart, trimHistory,
 } from "./profile.js";
 import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES } from "./persist.js";
-import { snapshotIfStale, listBackups, restoreBackup } from "./backup.js";
+import { snapshotIfStale, listBackups, restoreBackup, listSnapshots, takeSnapshot, deleteSnapshot, restoreSnapshot } from "./backup.js";
 
 import {
   newAccountGroup, newAccount, newCategoryGroup, newCategory,
@@ -55,7 +55,7 @@ import {
   monthlyTrendsByCategory, debtOverview, assignmentHistory, projection,
 } from "../domain/reports.js";
 
-import { download as downloadJSON, suggestedFilename } from "../io/export-json.js";
+import { download as downloadJSON, suggestedFilename, downloadBundle, suggestedBundleFilename } from "../io/export-json.js";
 import { parseFile as parseJSON, importAsNew as cloneAsNew, importReplacing } from "../io/import-json.js";
 import { parseCSV, applyMapping, dryRun as csvDryRun, detect as csvDetect } from "../io/import-csv.js";
 import { parseOFX, dryRun as ofxDryRun } from "../io/import-ofx.js";
@@ -259,6 +259,44 @@ export function createStore() {
       this.profile = restored;
       this.refreshProfiles();
       this.pushToast("Restored snapshot from " + day + ".");
+      return true;
+    },
+
+    /* ---- Manual snapshots ---- */
+    listSnapshots() {
+      if (!this.profile) return [];
+      return listSnapshots(this.profile.id);
+    },
+
+    takeSnapshot(label) {
+      if (!this.profile) return null;
+      var rec = takeSnapshot(this.profile, label);
+      if (rec) {
+        this.pushToast("Snapshot saved" + (rec.label ? ": '" + rec.label + "'" : "") + ".");
+      }
+      return rec;
+    },
+
+    deleteSnapshot(id) {
+      if (!this.profile) return;
+      deleteSnapshot(this.profile.id, id);
+      this.pushToast("Snapshot removed.");
+    },
+
+    restoreSnapshot(id, confirmedName) {
+      if (!this.profile) return false;
+      if (confirmedName !== this.profile.name) {
+        this.pushToast("Restore cancelled — typed name did not match.", "warn");
+        return false;
+      }
+      var restored = restoreSnapshot(this.profile.id, id);
+      if (!restored) {
+        this.pushToast("Could not restore snapshot.", "danger");
+        return false;
+      }
+      this.profile = restored;
+      this.refreshProfiles();
+      this.pushToast("Snapshot restored.");
       return true;
     },
 
@@ -735,12 +773,43 @@ export function createStore() {
     exportFilename() {
       return this.profile ? suggestedFilename(this.profile) : "";
     },
+    exportAllProfilesJSON() {
+      var index = this.profiles || [];
+      if (!index.length) return;
+      var profiles = index
+        .map(function (entry) { return loadProfile(entry.id); })
+        .filter(Boolean);
+      if (!profiles.length) {
+        this.pushToast("No profiles available to export.", "warn");
+        return;
+      }
+      downloadBundle(profiles);
+      this.pushToast("Exported " + profiles.length + " profile" + (profiles.length === 1 ? "" : "s") + " as one bundle.");
+    },
+    exportBundleFilename() { return suggestedBundleFilename(); },
 
     /* ---- JSON import ---- */
     parseImportJSON(text) { return parseJSON(text); },
 
     importJSONAsNew(parsed) {
       if (!parsed || !parsed.ok) return null;
+      /* Bundle: import every profile as new. */
+      if (parsed.kind === "bundle") {
+        var self = this;
+        var index = _readJSON(_profilesIndexKey()) || [];
+        var imported = [];
+        parsed.profiles.forEach(function (p) {
+          var fresh = cloneAsNew({ ok: true, profile: p });
+          _writeJSON(_profileKey(fresh.id), fresh);
+          index.push({ id: fresh.id, name: fresh.name, lastOpenedAt: fresh.updatedAt, schemaVersion: fresh.schemaVersion });
+          imported.push(fresh);
+        });
+        _writeJSON(_profilesIndexKey(), index);
+        this.refreshProfiles();
+        if (imported.length) this._load(imported[0].id);
+        this.pushToast("Imported " + imported.length + " profile" + (imported.length === 1 ? "" : "s") + " from bundle.");
+        return imported;
+      }
       var fresh = cloneAsNew(parsed);
       var index = _readJSON(_profilesIndexKey()) || [];
       _writeJSON(_profileKey(fresh.id), fresh);

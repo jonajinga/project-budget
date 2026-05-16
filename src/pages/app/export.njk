@@ -35,6 +35,20 @@ eleventyExcludeFromCollections: true
     </div>
   </section>
 
+  <section class="card" style="margin-top: var(--space-md);" x-data x-show="$store.budget.profiles?.length > 0" x-cloak>
+    <h2 class="card__title">Export all profiles</h2>
+    <p class="card__body" style="margin-bottom: var(--space-sm);">
+      Bundle every profile in this browser into one JSON file. Useful for moving everything to another browser or device in a single import. The bundle file name follows
+      <code x-text="$store.budget.exportBundleFilename()"></code>.
+    </p>
+    <p style="color: var(--fg-muted); font-size: var(--fs-sm); margin-bottom: var(--space-sm);">
+      <strong x-text="$store.budget.profiles?.length"></strong> profile(s) will be included.
+    </p>
+    <div class="form-actions">
+      <button class="btn btn--secondary" type="button" @click="$store.budget.exportAllProfilesJSON()">Download all profiles as bundle</button>
+    </div>
+  </section>
+
   <section class="card" style="margin-top: var(--space-md);">
     <h2 class="card__title">Make exporting a habit</h2>
     <p class="card__body">

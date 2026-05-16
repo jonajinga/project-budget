@@ -27,8 +27,14 @@ eleventyExcludeFromCollections: true
 
   {# JSON import flow #}
   <section class="card" x-show="mode === 'json'" x-cloak style="margin-top: var(--space-md);">
-    <h2 class="card__title">JSON profile detected</h2>
-    <p class="card__body" x-show="jsonParsed.ok" x-cloak>
+    <h2 class="card__title">
+      <span x-show="jsonParsed.kind === 'bundle'">JSON profile bundle detected</span>
+      <span x-show="jsonParsed.kind !== 'bundle'">JSON profile detected</span>
+    </h2>
+    <p class="card__body" x-show="jsonParsed.ok && jsonParsed.kind === 'bundle'" x-cloak>
+      Bundle contains <strong x-text="jsonParsed.counts?.profiles"></strong> profile(s).
+    </p>
+    <p class="card__body" x-show="jsonParsed.ok && jsonParsed.kind !== 'bundle'" x-cloak>
       Schema version <span x-text="jsonParsed.profile?.schemaVersion"></span>.
       Counts: <span x-text="jsonParsed.counts?.accounts"></span> accounts &middot;
       <span x-text="jsonParsed.counts?.transactions"></span> transactions &middot;
@@ -37,8 +43,12 @@ eleventyExcludeFromCollections: true
     <p style="color: var(--danger);" x-show="!jsonParsed.ok" x-cloak x-text="jsonParsed.error"></p>
 
     <div class="form-actions" x-show="jsonParsed.ok" x-cloak>
-      <button class="btn btn--primary" type="button" @click="$store.budget.importJSONAsNew(jsonParsed); reset();">Import as new profile</button>
+      <button class="btn btn--primary" type="button" @click="$store.budget.importJSONAsNew(jsonParsed); reset();">
+        <span x-show="jsonParsed.kind === 'bundle'">Import all profiles as new</span>
+        <span x-show="jsonParsed.kind !== 'bundle'">Import as new profile</span>
+      </button>
       <button class="btn btn--secondary" type="button"
+              x-show="jsonParsed.kind !== 'bundle'"
               :disabled="!$store.budget.profile"
               @click="replaceMode = true">Replace active profile</button>
     </div>

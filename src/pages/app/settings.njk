@@ -1,23 +1,75 @@
 ---
 layout: layouts/app.njk
 title: "Settings"
-description: "Storage usage, backups, theme preference."
+description: "Storage usage, backups, manual snapshots, theme preference, tooltip toggle."
 permalink: /app/settings/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="{
-  restoreDay: null,
-  restoreValue: '',
-  doRestore() {
-    if (!this.restoreDay) return;
-    if ($store.budget.restoreBackup(this.restoreDay, this.restoreValue)) {
-      this.restoreDay = null;
-    }
-  },
-}">
+<div class="app-page" x-data="settingsView()">
   <header class="app-page__header">
     <h1 class="app-page__title">Settings</h1>
   </header>
+
+  {# Data summary card — quick overview + jump links #}
+  <section class="card" x-show="$store.budget.profile" x-cloak>
+    <h2 class="card__title">Data</h2>
+    <p class="card__body" style="margin-bottom: var(--space-sm);">
+      An overview of what's stored in this browser and how to manage it.
+    </p>
+    <dl class="data-summary">
+      <div class="data-summary__row">
+        <dt>Profiles</dt>
+        <dd>
+          <strong x-text="$store.budget.profiles?.length || 0"></strong>
+          <a class="data-summary__link" href="/app/profiles/">Manage profiles &rarr;</a>
+        </dd>
+      </div>
+      <div class="data-summary__row">
+        <dt>Transactions (active profile)</dt>
+        <dd>
+          <strong x-text="$store.budget.profile?.transactions?.length ?? 0"></strong>
+          <a class="data-summary__link" href="/app/register/">Open register &rarr;</a>
+        </dd>
+      </div>
+      <div class="data-summary__row">
+        <dt>Accounts</dt>
+        <dd>
+          <strong x-text="$store.budget.profile?.accounts?.length ?? 0"></strong>
+          <a class="data-summary__link" href="/app/accounts/">Manage accounts &rarr;</a>
+        </dd>
+      </div>
+      <div class="data-summary__row">
+        <dt>Categories</dt>
+        <dd>
+          <strong x-text="$store.budget.profile?.categories?.length ?? 0"></strong>
+          <a class="data-summary__link" href="/app/categories/">Manage categories &rarr;</a>
+        </dd>
+      </div>
+      <div class="data-summary__row">
+        <dt>Daily backups (auto, 14-day window)</dt>
+        <dd>
+          <strong x-text="$store.budget.listBackups()?.length || 0"></strong>
+        </dd>
+      </div>
+      <div class="data-summary__row">
+        <dt>Manual snapshots (kept until you remove them)</dt>
+        <dd>
+          <strong x-text="$store.budget.listSnapshots()?.length || 0"></strong>
+        </dd>
+      </div>
+      <div class="data-summary__row">
+        <dt>Last saved</dt>
+        <dd><strong x-text="$store.budget.lastSavedLabel"></strong></dd>
+      </div>
+    </dl>
+    <div class="form-actions" style="margin-top: var(--space-md);">
+      <a class="btn btn--secondary btn--sm" href="/app/export/">Export</a>
+      <a class="btn btn--secondary btn--sm" href="/app/import/">Import</a>
+      <button class="btn btn--secondary btn--sm" type="button" @click="$store.budget.exportAllProfilesJSON()"
+              :disabled="!$store.budget.profiles?.length"
+              data-tip="Download every profile in this browser as one JSON bundle.">Export all profiles</button>
+    </div>
+  </section>
 
   <div class="grid grid--2">
     <section class="card">
@@ -66,26 +118,65 @@ eleventyExcludeFromCollections: true
     </section>
 
     <section class="card" style="grid-column: 1 / -1;">
-      <h2 class="card__title">Daily backups</h2>
+      <h2 class="card__title">Manual snapshots</h2>
       <p class="card__body" style="margin-bottom: var(--space-sm);">
-        One snapshot per calendar day for the active profile. The last 14 days are kept. Restoring overwrites the current profile.
+        Take a labeled snapshot any time &mdash; before a risky operation like fresh-start, history trim, or a large import. Snapshots are kept until you remove them (cap 20 per profile, oldest gets evicted) and do not compete with the rolling 14-day daily backups.
+      </p>
+
+      <form class="form-row" @submit.prevent="snap()" style="margin-bottom: var(--space-sm);">
+        <div class="field" style="flex: 1;">
+          <label class="field__label" for="snap-label">Label (optional)</label>
+          <input class="input" id="snap-label" type="text" x-model="snapLabel" placeholder="before trim, end of March, ...">
+        </div>
+        <div class="form-actions" style="align-self: flex-end;">
+          <button class="btn btn--primary" type="submit" :disabled="!$store.budget.profile">Take snapshot now</button>
+        </div>
+      </form>
+
+      <table class="table" x-show="$store.budget.listSnapshots().length" x-cloak>
+        <thead>
+          <tr><th scope="col">Label</th><th scope="col">Created</th><th scope="col" class="num">Size</th><th scope="col" class="num">Actions</th></tr>
+        </thead>
+        <tbody>
+          <template x-for="s in $store.budget.listSnapshots()" :key="s.id">
+            <tr>
+              <td x-text="s.label || '(unlabeled)'"></td>
+              <td x-text="new Date(s.createdAt).toLocaleString()"></td>
+              <td class="num" x-text="(s.size / 1024).toFixed(1) + ' KB'"></td>
+              <td class="num">
+                <div class="cluster" style="justify-content: flex-end;">
+                  <button class="btn btn--secondary btn--sm" type="button"
+                          @click="restoreSnapId = s.id; restoreSnapValue = ''"
+                          data-tip="Replace the active profile with this snapshot. Typed-name confirm required.">Restore</button>
+                  <button class="btn btn--danger btn--sm" type="button"
+                          @click="if (confirm('Remove this snapshot?')) $store.budget.deleteSnapshot(s.id)">Remove</button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <p x-show="!$store.budget.listSnapshots().length" x-cloak style="color: var(--fg-muted);">
+        No snapshots yet. Take one before any operation you might want to undo.
+      </p>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2 class="card__title">Daily backups (automatic)</h2>
+      <p class="card__body" style="margin-bottom: var(--space-sm);">
+        One snapshot per calendar day for the active profile. The last 14 days are kept. Use these to recover from drift; use manual snapshots above for named recovery points.
       </p>
 
       <p x-show="!$store.budget.profile" x-cloak style="color: var(--fg-muted);">
         No active profile.
       </p>
-
       <p x-show="$store.budget.profile && !$store.budget.listBackups().length" x-cloak style="color: var(--fg-muted);">
-        No snapshots yet. One is created automatically the next time you load the app.
+        No automatic backups yet. One is created the next time you load the app on a new day.
       </p>
 
       <table class="table" x-show="$store.budget.profile && $store.budget.listBackups().length" x-cloak>
         <thead>
-          <tr>
-            <th>Day</th>
-            <th class="num">Size</th>
-            <th class="num">Actions</th>
-          </tr>
+          <tr><th scope="col">Day</th><th scope="col" class="num">Size</th><th scope="col" class="num">Actions</th></tr>
         </thead>
         <tbody>
           <template x-for="b in $store.budget.listBackups()" :key="b.key">
@@ -114,23 +205,67 @@ eleventyExcludeFromCollections: true
   <div class="modal-backdrop" x-show="restoreDay" x-cloak @keydown.escape.window="restoreDay = null">
     <div class="modal" @click.outside="restoreDay = null">
       <button class="modal__close" type="button" @click="restoreDay = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Restore snapshot</h3>
+      <h3 class="modal__title">Restore daily backup</h3>
       <p style="color: var(--fg-muted);">
         Restoring overwrites the active profile with the snapshot from <strong x-text="restoreDay"></strong>. The current state will be replaced. Today's automatic backup remains intact.
       </p>
       <p style="margin-top: var(--space-sm);">
-        To confirm, type the profile name exactly:
-        <strong x-text="$store.budget.profile?.name"></strong>
+        To confirm, type the profile name exactly: <strong x-text="$store.budget.profile?.name"></strong>
       </p>
-      <form @submit.prevent="doRestore()">
+      <form @submit.prevent="doRestoreBackup()">
         <div class="field" style="margin-top: var(--space-sm);">
           <input class="input" type="text" x-model="restoreValue" required autofocus>
         </div>
         <div class="form-actions">
-          <button class="btn btn--primary" type="submit">Restore snapshot</button>
+          <button class="btn btn--primary" type="submit">Restore daily backup</button>
           <button class="btn btn--ghost" type="button" @click="restoreDay = null">Cancel</button>
         </div>
       </form>
     </div>
   </div>
+
+  {# Manual snapshot restore confirm modal #}
+  <div class="modal-backdrop" x-show="restoreSnapId" x-cloak @keydown.escape.window="restoreSnapId = null">
+    <div class="modal" @click.outside="restoreSnapId = null">
+      <button class="modal__close" type="button" @click="restoreSnapId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Restore snapshot</h3>
+      <p style="color: var(--fg-muted);">
+        Restoring overwrites the active profile with this snapshot. The current state will be replaced.
+      </p>
+      <p style="margin-top: var(--space-sm);">
+        To confirm, type the profile name exactly: <strong x-text="$store.budget.profile?.name"></strong>
+      </p>
+      <form @submit.prevent="doRestoreSnapshot()">
+        <div class="field" style="margin-top: var(--space-sm);">
+          <input class="input" type="text" x-model="restoreSnapValue" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Restore snapshot</button>
+          <button class="btn btn--ghost" type="button" @click="restoreSnapId = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+
+<script>
+function settingsView() {
+  return {
+    snapLabel: "",
+    restoreDay: null,
+    restoreValue: "",
+    restoreSnapId: null,
+    restoreSnapValue: "",
+    snap() {
+      this.$store.budget.takeSnapshot(this.snapLabel);
+      this.snapLabel = "";
+    },
+    doRestoreBackup() {
+      if (this.$store.budget.restoreBackup(this.restoreDay, this.restoreValue)) this.restoreDay = null;
+    },
+    doRestoreSnapshot() {
+      if (this.$store.budget.restoreSnapshot(this.restoreSnapId, this.restoreSnapValue)) this.restoreSnapId = null;
+    },
+  };
+}
+</script>

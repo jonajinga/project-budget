@@ -176,9 +176,10 @@
   color: var(--fg);
 }
 
-/* Right-rail TOC — sticky and collapsible. */
-.docs-layout__toc { min-width: 0; }
-@media (max-width: 1023px) { .docs-layout__toc { display: none; } }
+/* Right-rail TOC — sticky and collapsible. Hidden below 1024px since
+   the layout drops to one column at that breakpoint. */
+.docs-layout__toc { min-width: 0; display: none; }
+@media (min-width: 1024px) { .docs-layout__toc { display: block; } }
 .docs-toc {
   position: sticky;
   top: var(--space-md);

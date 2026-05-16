@@ -12,6 +12,7 @@ export function profilesIndexKey()        { return PREFIX + "profiles"; }
 export function activeKey()               { return PREFIX + "active"; }
 export function trashKey(id)              { return PREFIX + "trash:" + id; }
 export function backupKey(profileId, day) { return PREFIX + "backup:" + profileId + ":" + day; }
+export function snapshotKey(profileId, id) { return PREFIX + "snapshot:" + profileId + ":" + id; }
 
 function safeStorage() {
   try {

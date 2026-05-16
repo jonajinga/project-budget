@@ -1,63 +1,63 @@
-feat: Broadsheet visual identity + docs + blog + a11y + sitemap
+feat+fix: mobile-first audit, manual snapshots, bundle export, Data card
 
-Visual identity (matches Project Broadsheet):
-- Paper/ink/vermillion/slate/gold palette, light + dark
-- Playfair Display (display), Lora (headlines), Source Serif 4 (body),
-  DM Sans (UI for app shell), monospace via system stack
-- Bunny Fonts updated to load the new families
-- Squared corners (unchanged)
-- Marketing pages use serif body; app shell switches to DM Sans for
-  readability of tabular financial data
+Audit findings (run via scripts/audit-viewports.mjs at 360/414/768/1024/1280):
 
-Account management:
-- updateAccount(id, patch) handles name, type, and groupId in one call
-- Type-change side-effects: credit-card auto-creates the payment
-  category; switching away removes it; non-credit -> credit creates one
-- Edit modal on /app/accounts/ replaces the prompt-only rename
+Critical fixes:
+- Horizontal scroll on /app/register/ (+431px at 360px), accounts,
+  categories, scheduled, profiles, spending, projection. Root cause:
+  flex children in .app-page defaulted to min-width: auto, which
+  preserved intrinsic min-content and defeated overflow-x: auto on
+  containers. Now force min-width: 0 on .app-page > * plus
+  overflow-x: hidden on .app-main.
+- Wrap wide app tables in scrollable containers (.register has its own
+  overflow-x: auto + min-width: 720px on the inner table).
+- JS errors on accounts + categories pages — Alpine couldn't parse
+  inline @click handlers that used `var n = prompt(...)`. Alpine
+  compiles attribute expressions as AsyncFunctions where `var` outside
+  a function scope is a SyntaxError. Wrapped in IIFE with `const`.
 
-Collapsible groups:
-- Account groups on /app/accounts/ and in the app sidebar
-- Category groups on /app/budget/
-- toggleAccountGroupCollapsed and toggleCategoryGroupCollapsed
-  mutators persist the open/closed state in the profile schema
-  (collapsed flag already existed on the group shape)
+Mobile-first CSS:
+- Converted budget__group-header from max-width: 600px (anti-pattern)
+  to mobile-first: 3 cols default, 4 cols at min-width: 600px.
+  (Pre-fix the mobile rule also hid the Available column instead of
+  the Activity column, which was a real bug — Available is the most
+  important number on the page.)
+- Converted .docs-layout__toc from max-width: 1023px hide to
+  display: none + min-width: 1024px reveal.
+- KPI grid: 1 col on phones, 2 on bigger phones, 4 on tablet+ with
+  minmax(0, 1fr) so long currency strings don't push columns wider.
+- KPI value font now clamps from 1.5rem to 2rem so it fits at 360px.
+- RTA value font clamps similarly.
 
-Resizable app sidebar:
-- Drag handle between sidebar and main writes to --app-sidebar-width
-- Clamps to 180-480px, persists to projectbudget:sidebar-width
-- Double-click resets to 260px default; arrow keys nudge when focused
+Touch targets:
+- Marked the per-category budget assign input as data-touch="compact"
+  (acceptable inline-edit per CLAUDE.md convention). Other compact
+  controls (TOC links, sitemap rows) meet WCAG 2.5.8 AA (24x24)
+  even when below the 44x44 aspirational target.
 
-Tippy.js tooltips:
-- New toggle on /app/settings/ (Show tooltips throughout the app)
-- localStorage flag projectbudget:tooltips-off honored on next attach;
-  custom event projectbudget:tooltips-changed allows same-tab refresh
-- Tooltips added to account edit, type selector, transfer, reconcile,
-  split, new group, sidebar resize handle, and more
+New features:
 
-Documentation system:
-- src/docs/<category>/*.md, surfaced via collections.docs
-- layouts/doc.njk: left nav + content + right sticky TOC
-- assets/js/docs.js generates the TOC from H2/H3 inside .doc-content
-  __prose, highlights active via IntersectionObserver, supports
-  collapsible right rail and toggleable left sidebar
-- 10 starter docs across 5 categories; docCategories.js data file
-- /docs/ hub auto-links to the first doc of each category
+Manual snapshots:
+- Take a named snapshot at any time via /app/settings/
+- Stored under projectbudget:snapshot:<profileId>:<snapshotId>,
+  separate keyspace from the rolling 14-day daily backups
+- Cap 20 per profile, oldest auto-evicted on overflow
+- Optional label, restore requires typed-name confirm
+- store.js: listSnapshots, takeSnapshot, deleteSnapshot, restoreSnapshot
 
-Blog system:
-- src/blog/posts/*.md with date/tag/summary front-matter
-- /blog/ listing + per-post layout with reading time and meta strip
-- Sample post: "Hello, Project Budget"
+Export all profiles as bundle:
+- New export shape: { kind: "bundle", schemaVersion, exportedAt, profiles: [] }
+- Filename: projectbudget-all-<date>.json
+- Import side detects bundle and offers "Import all as new"
+- Single-profile and bundle imports share the same parseFile entry
+- store.js: exportAllProfilesJSON, importJSONAsNew handles bundles
 
-Accessibility page at /accessibility/
-- Standards we target, Perceivable / Operable / Understandable / Robust
-- Known issues, how to report a problem, AT tested, technical specs
-
-Human-readable sitemap at /sitemap/ (separate from sitemap.xml)
-- Six columns: Product, App, Reports, Docs, Blog, Legal & meta
-
-Nav updates: Blog added to header + footer; Accessibility and Sitemap
-added to footer.
-
-Lighthouse remains green; pa11y findings re-checked.
+Data summary card on /app/settings/:
+- Counts at a glance: profiles, transactions, accounts, categories,
+  daily backups, manual snapshots, last-saved time
+- Inline jump links to /app/profiles/, /app/register/, /app/accounts/,
+  /app/categories/, plus Export / Import / Export-all-profiles buttons
+- Keeps the dedicated workflow pages intact (Settings doesn't try to
+  replace them, just summarizes and links)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

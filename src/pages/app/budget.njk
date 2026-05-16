@@ -73,6 +73,7 @@ eleventyExcludeFromCollections: true
             </div>
             <div class="budget__assigned">
               <input type="text" inputmode="decimal"
+                     data-touch="compact"
                      :aria-label="'Assigned for ' + c.name"
                      :value="(($store.budget.assignedFor(c.id) || 0) / 100).toFixed(2)"
                      @blur="commitAssign(c.id, $event.target.value); $event.target.value = (($store.budget.assignedFor(c.id) || 0) / 100).toFixed(2);"

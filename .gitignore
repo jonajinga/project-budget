@@ -6,4 +6,5 @@ node_modules/
 *.log
 .cache/
 _sample/
+_audit/
 lighthouse-reports/

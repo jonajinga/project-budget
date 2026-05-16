@@ -1,16 +1,29 @@
-.app-page { display: flex; flex-direction: column; gap: var(--space-lg); }
+/* Force every direct child to have min-width: 0 so overflow-x: auto on
+   .card / .register actually clips horizontally instead of letting the
+   child push the page wider. Flex children default to min-width: auto
+   which preserves intrinsic min-content, which defeats horizontal
+   scroll containers. */
+.app-page { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+.app-page > * { min-width: 0; max-width: 100%; }
+.app-main { min-width: 0; overflow-x: hidden; }
 
 .kpi-grid {
   display: grid;
   gap: var(--space-md);
-  grid-template-columns: repeat(2, 1fr);
+  /* Each KPI value is a long currency string. Auto-fit so 1 column on
+     small phones, 2 on bigger phones / tablet portrait, 4 on tablet
+     landscape and up. minmax keeps the value from forcing horizontal
+     overflow when it's too wide for the available column. */
+  grid-template-columns: 1fr;
 }
-@media (min-width: 768px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 480px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 .kpi {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   padding: var(--space-md);
+  min-width: 0;
 }
 .kpi__label {
   font-size: var(--fs-xs);
@@ -21,9 +34,10 @@
 }
 .kpi__value {
   font-family: var(--font-display);
-  font-size: var(--fs-2xl);
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 2rem);
   font-variant-numeric: tabular-nums;
   margin-top: var(--space-2xs);
+  overflow-wrap: break-word;
 }
 .kpi__hint { color: var(--fg-muted); font-size: var(--fs-xs); margin-top: var(--space-2xs); }
 
@@ -41,10 +55,11 @@
 }
 .rta__value {
   font-family: var(--font-display);
-  font-size: var(--fs-3xl);
+  font-size: clamp(1.75rem, 1.1rem + 3vw, 2.625rem);
   font-variant-numeric: tabular-nums;
   margin-top: var(--space-2xs);
   color: #ffffff;
+  overflow-wrap: break-word;
 }
 .rta__hint { margin-top: var(--space-2xs); color: #f3eee0; font-size: var(--fs-sm); }
 .rta--negative { background: var(--danger); }
@@ -74,6 +89,28 @@
   gap: var(--space-2xs);
   flex-wrap: wrap;
 }
+
+/* Data summary on /app/settings/ */
+.data-summary { display: flex; flex-direction: column; gap: var(--space-2xs); margin: 0; }
+.data-summary__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.data-summary__row dt { color: var(--fg-muted); font-size: var(--fs-sm); }
+.data-summary__row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.data-summary__link { font-size: var(--fs-sm); }
 
 .empty-state {
   text-align: center;

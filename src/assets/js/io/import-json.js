@@ -12,7 +12,34 @@ export function parseFile(text) {
   try { data = JSON.parse(text); }
   catch (_e) { return { ok: false, error: "Could not parse JSON." }; }
 
-  /* Accept either a bare profile or the wrapped {profile, exportedAt} shape. */
+  /* Bundle: { kind: "bundle", profiles: [...] } */
+  if (data && data.kind === "bundle" && Array.isArray(data.profiles)) {
+    if (data.schemaVersion && data.schemaVersion > SCHEMA_VERSION) {
+      return { ok: false, error: "Bundle was made with a newer Project Budget version (" + data.schemaVersion + ") than this one (" + SCHEMA_VERSION + ")." };
+    }
+    var validProfiles = [];
+    var errors = [];
+    data.profiles.forEach(function (p, i) {
+      if (!p || !p.id || !p.schemaVersion) {
+        errors.push("Profile #" + (i + 1) + " missing id or schemaVersion.");
+        return;
+      }
+      try { migrate(p); validProfiles.push(p); }
+      catch (e) { errors.push("Profile '" + (p.name || "?") + "' migration failed: " + (e.message || e)); }
+    });
+    if (!validProfiles.length) {
+      return { ok: false, error: "No importable profiles in bundle. " + errors.join(" ") };
+    }
+    return {
+      ok: true,
+      kind: "bundle",
+      profiles: validProfiles,
+      counts: { profiles: validProfiles.length },
+      warnings: errors,
+    };
+  }
+
+  /* Single profile: bare or wrapped {profile, exportedAt}. */
   var profile = data.profile && data.profile.id ? data.profile : data;
   if (!profile || !profile.id || !profile.schemaVersion) {
     return { ok: false, error: "Not a Project Budget export — missing id or schemaVersion." };
@@ -21,12 +48,12 @@ export function parseFile(text) {
     return { ok: false, error: "Export was made with a newer Project Budget version (" + profile.schemaVersion + ") than this one (" + SCHEMA_VERSION + ")." };
   }
 
-  /* Run migrations to current schema. Migrations mutate in place. */
   try { migrate(profile); }
   catch (e) { return { ok: false, error: "Schema migration failed: " + (e.message || e) }; }
 
   return {
     ok: true,
+    kind: "profile",
     profile: profile,
     counts: {
       accounts: (profile.accounts || []).length,

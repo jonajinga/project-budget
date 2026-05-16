@@ -77,6 +77,16 @@
 .table tbody tr:hover { background: var(--bg-alt); }
 .table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
+/* Any table inside a .card scrolls horizontally on narrow screens
+   instead of forcing the whole page to overflow. The card wrap stays
+   in place so the table doesn't escape its bounds. */
+.card {
+  /* let the table scroll without spilling out */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
 /* Badge */
 .badge {
   display: inline-block;

@@ -31,7 +31,7 @@ eleventyExcludeFromCollections: true
                   :disabled="!group.group">Add category</button>
           <button class="btn btn--ghost btn--sm" type="button"
                   x-show="group.group"
-                  @click="var n = prompt('Rename group', group.group.name); if (n) $store.budget.renameCategoryGroup(group.group.id, n);">Rename</button>
+                  @click="(() => { const n = prompt('Rename group', group.group.name); if (n) $store.budget.renameCategoryGroup(group.group.id, n); })()">Rename</button>
           <button class="btn btn--danger btn--sm" type="button"
                   x-show="group.group"
                   @click="if (confirm('Remove this group? Categories will be unassigned but kept.')) $store.budget.deleteCategoryGroup(group.group.id);">Remove</button>
@@ -60,7 +60,7 @@ eleventyExcludeFromCollections: true
                 <div class="cluster" style="justify-content: flex-end;">
                   <button class="btn btn--ghost btn--sm" type="button" @click="openGoal(c)">Goal</button>
                   <button class="btn btn--ghost btn--sm" type="button"
-                          @click="var n = prompt('Rename category', c.name); if (n) $store.budget.renameCategory(c.id, n);">Rename</button>
+                          @click="(() => { const n = prompt('Rename category', c.name); if (n) $store.budget.renameCategory(c.id, n); })()">Rename</button>
                   <button class="btn btn--danger btn--sm" type="button"
                           x-show="!$store.budget.isPaymentCategory(c.id)"
                           @click="if (confirm('Delete category? Activity becomes uncategorized.')) $store.budget.deleteCategory(c.id);">Delete</button>
