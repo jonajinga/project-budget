@@ -286,14 +286,14 @@ eleventyExcludeFromCollections: true
     </header>
 
     <template x-if="anchorISO">
-      <div x-data="{ d: dayData(anchorISO) }">
-        <p x-show="!(d.posted.length + d.scheduled.length)" x-cloak style="color: var(--fg-muted);">
+      <div>
+        <p x-show="!(anchorDay.posted.length + anchorDay.scheduled.length)" x-cloak style="color: var(--fg-muted);">
           Nothing posted or scheduled on this day.
         </p>
-        <section x-show="d.posted.length" x-cloak>
-          <h3 class="cal__detail-section">Posted (<span x-text="d.posted.length"></span>)</h3>
+        <section x-show="anchorDay.posted.length" x-cloak>
+          <h3 class="cal__detail-section">Posted (<span x-text="anchorDay.posted.length"></span>)</h3>
           <ul class="cal-day__list">
-            <template x-for="t in d.posted" :key="t.id">
+            <template x-for="t in anchorDay.posted" :key="t.id">
               <li>
                 <button type="button"
                         class="cal-day__row cal-day__row--clickable"
@@ -314,10 +314,10 @@ eleventyExcludeFromCollections: true
             </template>
           </ul>
         </section>
-        <section x-show="d.scheduled.length" x-cloak>
-          <h3 class="cal__detail-section">Upcoming (scheduled) (<span x-text="d.scheduled.length"></span>)</h3>
+        <section x-show="anchorDay.scheduled.length" x-cloak>
+          <h3 class="cal__detail-section">Upcoming (scheduled) (<span x-text="anchorDay.scheduled.length"></span>)</h3>
           <ul class="cal-day__list">
-            <template x-for="s in d.scheduled" :key="s.id">
+            <template x-for="s in anchorDay.scheduled" :key="s.id">
               <li>
                 <a class="cal-day__row cal-day__row--clickable"
                    :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
