@@ -1,18 +1,38 @@
-fix: load PapaParse + reactive list updates
+feat: persistent hamburger + centered profile in app header
 
-PapaParse was vendored to disk and import-csv.js used window.Papa when
-available, but no layout actually loaded the script tag — same class of
-bug as the missing D3 fix earlier. CSV imports were silently going
-through the small fallback parser. Add it to layouts/app.njk alongside
-D3/Popper/Tippy.
+Replaced the duplicated "Project Budget Project Budget" wordmark in the
+header with two header variants:
 
-Manual-snapshot UI required a page refresh to show new entries because
-listSnapshots() reads localStorage directly and Alpine's fine-grained
-reactivity only tracks reads of reactive store props. Add a
-_listVersion counter on the store; listSnapshots() and listBackups()
-"void this._listVersion" to register a dependency; takeSnapshot,
-deleteSnapshot, restoreSnapshot, restoreBackup, and _load all call
-_bumpLists() to invalidate. Verified end-to-end in headless Chromium:
-adding a snapshot now causes the table to grow without reload.
+Marketing pages (everything outside /app/):
+- Single "Project Budget" wordmark on the left (the redundant
+  brand__full duplicate is gone)
+- Horizontal site nav on desktop
+- Hamburger button on mobile (where the horizontal nav was hidden)
+- Theme toggle on the right
+
+App pages (/app/*):
+- Persistent hamburger button on the left at every viewport — what the
+  user requested ("hamburger menu persistent on all devices")
+- Profile name centered in the header ("PROFILE" eyebrow over the
+  active profile, links to /app/profiles/ for quick switching)
+- Theme toggle on the right
+- Wordmark removed entirely from the app header — the profile name
+  takes the prominent slot it deserves
+- Removed the now-redundant floating .app-sidebar-toggle bottom-left
+  button; the persistent header hamburger does its job
+
+Shared slide-out site menu (opens from the hamburger):
+- Section 1 (app pages only): "In this app" — Dashboard, Budget,
+  Register, Accounts, Categories, Recurring, Reports, Import, Export,
+  Profiles, Settings
+- Section 2: "Project Budget" — Home, Features, Docs, Blog, Glossary,
+  Open source
+- Section 3: "More" — Docs, Blog, Open source, Changelog, Accessibility,
+  Sitemap, Privacy, Terms
+- Closes on backdrop click or Escape
+
+Verified at 360/414/768/1024/1280 in headless Chromium: hamburger
+visible at every app viewport, profile name "Sample household" rendered
+centered, menu opens on click, zero horizontal scroll, zero JS errors.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
