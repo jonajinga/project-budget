@@ -6,9 +6,11 @@
 
   {% include "partials/theme-script.njk" %}
 
-  {# Bunny Fonts — preconnect + stylesheet. font-display=swap is baked in. #}
+  {# Bunny Fonts — preconnect + stylesheet. font-display=swap is baked in.
+     Stack matches Project Broadsheet: Playfair Display (masthead),
+     Lora (headlines), Source Serif 4 (body), DM Sans (UI). #}
   <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
-  <link rel="stylesheet" href="https://fonts.bunny.net/css?family=inter:400,500,600,700|source-serif-pro:600,700&display=swap">
+  <link rel="stylesheet" href="https://fonts.bunny.net/css?family=dm-sans:400,500,600,700|lora:400,500,600,700|playfair-display:400,700|source-serif-4:400,600&display=swap">
 
   {% include "partials/head-meta.njk" %}
   {% include "partials/structured-data.njk" %}

@@ -46,12 +46,20 @@ eleventyExcludeFromCollections: true
     <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
       <div class="budget__group">
         <div class="budget__group-header" style="background: var(--bg-elevated);">
-          <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
+          <button type="button" class="group-toggle"
+                  @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
+                  :aria-expanded="group.group && !group.group.collapsed ? 'true' : 'false'"
+                  :disabled="!group.group">
+            <span class="group-toggle__chevron" :class="group.group && group.group.collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+            <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
+          </button>
           <span class="num" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
           <span class="num" x-text="formatCents(groupTotalActivity(group.categories))"></span>
           <span class="num" x-text="formatCents(groupTotalAvailable(group.categories))"></span>
         </div>
 
+        <template x-if="!(group.group && group.group.collapsed)">
+        <div>
         <template x-for="c in group.categories" :key="c.id">
           <div class="budget__row">
             <div class="budget__category">
@@ -80,6 +88,8 @@ eleventyExcludeFromCollections: true
         <p x-show="!group.categories.length" x-cloak style="padding: var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm);">
           No categories in this group yet.
         </p>
+        </div>
+        </template>
       </div>
     </template>
   </section>

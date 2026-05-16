@@ -20,8 +20,10 @@ eleventyExcludeFromCollections: true
       </p>
     </div>
     <div class="cluster">
-      <button class="btn btn--secondary" type="button" @click="showTransfer = true" :disabled="!hasAccounts">Transfer</button>
-      <button class="btn btn--secondary" type="button" @click="showReconcile = true" x-show="filterAccountId" x-cloak>Reconcile</button>
+      <button class="btn btn--secondary" type="button" @click="showTransfer = true" :disabled="!hasAccounts"
+              data-tip="Move money between two of your own accounts. Creates a paired entry on each side.">Transfer</button>
+      <button class="btn btn--secondary" type="button" @click="showReconcile = true" x-show="filterAccountId" x-cloak
+              data-tip="Match the cleared balance to your statement. Closes any gap with an adjustment, then locks cleared transactions.">Reconcile</button>
     </div>
   </header>
 
@@ -190,7 +192,8 @@ eleventyExcludeFromCollections: true
               <td class="num">
                 <div class="cluster" style="justify-content: flex-end;">
                   <button class="btn btn--ghost btn--sm" type="button" @click="startEdit(t)" x-show="!t.reconciled && !t.transferTxnId">Edit</button>
-                  <button class="btn btn--ghost btn--sm" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId">Split</button>
+                  <button class="btn btn--ghost btn--sm" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId"
+                          data-tip="Divide this transaction across multiple categories (groceries + household, for example).">Split</button>
                   <button class="btn btn--ghost btn--sm" type="button" @click="unlock(t)" x-show="t.reconciled">Unlock</button>
                   <button class="btn btn--danger btn--sm" type="button" @click="del(t)" x-show="!t.reconciled">Delete</button>
                 </div>

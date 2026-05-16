@@ -1,4 +1,10 @@
 /* Project Budget design tokens.
+
+   Palette + typography mirror Project Broadsheet (paper / ink / vermillion /
+   slate / gold) so the user's projects share an identity. Variable NAMES
+   stay project-local (--bg, --fg, --accent, etc.) so the rest of the CSS
+   doesn't need to change.
+
    Canonical breakpoints (do not introduce ad-hoc values):
      360 / 480 / 600 / 768 / 820 / 1024 / 1180 / 1280
    CSS custom properties cannot be used inside @media queries — the scale
@@ -6,10 +12,12 @@
 */
 
 :root {
-  /* Typography */
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Source Serif Pro", "Source Serif 4", Georgia, serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Typography — Broadsheet stack. */
+  --font-display:  "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-headline: "Lora", Georgia, "Times New Roman", serif;
+  --font-body:     "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-ui:       "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:     ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --fs-xs:   0.8125rem;
   --fs-sm:   0.9375rem;
@@ -25,7 +33,6 @@
   --lh-base:  1.55;
   --lh-loose: 1.75;
 
-  /* Spacing */
   --space-3xs: 0.25rem;
   --space-2xs: 0.5rem;
   --space-xs:  0.75rem;
@@ -36,73 +43,104 @@
   --space-2xl: 4.5rem;
   --space-3xl: 6rem;
 
-  /* Layout */
   --max-width:        1180px;
   --max-width-narrow: 720px;
   --container-pad:    clamp(1rem, 3vw, 2rem);
 
-  /* Radius — squared by default per CLAUDE.md */
   --radius: 0;
-  --radius-input: 4px;
+  --radius-input: 0;
 
-  /* Light theme palette */
-  --bg:           #f7f5f0;
-  --bg-elevated:  #ffffff;
-  --bg-alt:       #efece4;
-  --fg:           #14120f;
-  --fg-muted:     #4d4940;
-  --fg-subtle:    #555047;
-  --border:       #d9d3c5;
-  --border-soft:  #e7e2d4;
-  --accent:       #1f5f49;
-  --accent-hover: #163f31;
-  --accent-soft:  rgba(31, 95, 73, 0.10);
-  --danger:       #a8341f;
-  --warn:         #a86b14;
-  --ok:           #1f5f49;
+  /* Broadsheet light palette. */
+  --paper:        #f4f1eb;
+  --paper-raised: #fbf8f2;
+  --paper-sunken: #ebe6db;
+  --ink:          #1a1a1a;
+  --ink-soft:     #2c2c2c;
+  --muted:        #5c544a;
+  --rule:         #8b6f47;
+  --vermillion:   #c0392b;
+  --vermillion-d: #9e2d22;
+  --slate:        #2c5f8a;
+  --slate-d:      #1e4462;
+  --gold:         #b8862c;
 
-  /* Chart palette — read by charts/theme-colors.js */
-  --chart-1: #1f5f49;
-  --chart-2: #2d6e8c;
-  --chart-3: #a86b14;
-  --chart-4: #6a4b8a;
-  --chart-5: #a8341f;
-  --chart-6: #4a544d;
+  /* Project-local aliases used by the rest of the CSS. */
+  --bg:           var(--paper);
+  --bg-elevated:  var(--paper-raised);
+  --bg-alt:       var(--paper-sunken);
+  --fg:           var(--ink);
+  --fg-muted:     var(--muted);
+  --fg-subtle:    #6b6457;
+  --border:       rgba(26, 26, 26, 0.16);
+  --border-soft:  rgba(26, 26, 26, 0.08);
+  --accent:       var(--vermillion);
+  --accent-hover: var(--vermillion-d);
+  --accent-soft:  rgba(192, 57, 43, 0.10);
+  --link:         var(--slate);
+  --link-hover:   var(--slate-d);
+  --danger:       var(--vermillion-d);
+  --warn:         var(--gold);
+  --ok:           #2f6e4d;
 
-  /* Shadow */
-  --shadow-sm: 0 1px 2px rgba(20, 18, 15, 0.06);
-  --shadow-md: 0 2px 6px rgba(20, 18, 15, 0.08), 0 8px 16px rgba(20, 18, 15, 0.06);
-  --shadow-lg: 0 4px 12px rgba(20, 18, 15, 0.10), 0 16px 32px rgba(20, 18, 15, 0.10);
+  /* D3 chart palette — read by charts/theme-colors.js. */
+  --chart-1: #c0392b;
+  --chart-2: #2c5f8a;
+  --chart-3: #b8862c;
+  --chart-4: #2f6e4d;
+  --chart-5: #8b6f47;
+  --chart-6: #5c544a;
 
-  /* Motion */
-  --t-fast: 120ms ease;
+  --shadow-sm: 0 1px 2px rgba(26, 26, 26, 0.06), 0 1px 4px rgba(26, 26, 26, 0.04);
+  --shadow-md: 0 2px 4px rgba(26, 26, 26, 0.08), 0 6px 16px rgba(26, 26, 26, 0.08);
+  --shadow-lg: 0 4px 8px rgba(26, 26, 26, 0.10), 0 16px 48px rgba(26, 26, 26, 0.12);
+
+  --t-fast: 150ms ease;
   --t-base: 200ms ease;
 }
 
 [data-theme="dark"] {
-  --bg:           #14120f;
-  --bg-elevated:  #1d1b16;
-  --bg-alt:       #1a1814;
-  --fg:           #f5f0e4;
-  --fg-muted:     #b9b2a2;
-  --fg-subtle:    #807868;
-  --border:       #2e2a23;
-  --border-soft:  #25221c;
-  --accent:       #4ea986;
-  --accent-hover: #6fc1a0;
-  --accent-soft:  rgba(78, 169, 134, 0.16);
-  --danger:       #d56a55;
-  --warn:         #d4a45a;
-  --ok:           #4ea986;
+  /* Broadsheet dark palette. */
+  --paper:        #12100e;
+  --paper-raised: #1c1a17;
+  --paper-sunken: #0a0908;
+  --ink:          #e8e3d6;
+  --ink-soft:     #d6d0c2;
+  --muted:        #b3aba0;
+  --rule:         #c2a878;
+  --vermillion:   #e05a4b;
+  --vermillion-d: #c0392b;
+  --slate:        #6fa9d9;
+  --slate-d:      #4e8dc0;
+  --gold:         #d4a45a;
 
-  --chart-1: #4ea986;
-  --chart-2: #62a8c9;
+  --bg:           var(--paper);
+  --bg-elevated:  var(--paper-raised);
+  --bg-alt:       var(--paper-sunken);
+  --fg:           var(--ink);
+  --fg-muted:     var(--muted);
+  --fg-subtle:    #908779;
+  --border:       rgba(232, 227, 214, 0.18);
+  --border-soft:  rgba(232, 227, 214, 0.10);
+  --accent:       var(--vermillion);
+  --accent-hover: var(--vermillion-d);
+  --accent-soft:  rgba(224, 90, 75, 0.16);
+  --link:         var(--slate);
+  --link-hover:   var(--slate-d);
+  --danger:       var(--vermillion);
+  --warn:         var(--gold);
+  --ok:           #6fbf95;
+
+  --chart-1: #e05a4b;
+  --chart-2: #6fa9d9;
   --chart-3: #d4a45a;
-  --chart-4: #b39ad1;
-  --chart-5: #d56a55;
-  --chart-6: #9aa49e;
+  --chart-4: #6fbf95;
+  --chart-5: #c2a878;
+  --chart-6: #b3aba0;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.55), 0 16px 32px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.40), 0 16px 48px rgba(0, 0, 0, 0.35);
 }
+
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }

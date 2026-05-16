@@ -8,7 +8,8 @@ eleventyExcludeFromCollections: true
 <div class="app-page" x-data="{
   showAccount: false,
   showGroup: false,
-  editAccountId: null,
+  editId: null,
+  editForm: { name: '', type: 'checking', groupId: '' },
   deleteAccountId: null,
   deleteAccountValue: '',
   newAccount: { name: '', type: 'checking', groupId: '', openingBalance: '' },
@@ -40,6 +41,19 @@ eleventyExcludeFromCollections: true
     this.resetNewGroup();
     this.showGroup = false;
   },
+  openEdit(a) {
+    this.editId = a.id;
+    this.editForm = { name: a.name, type: a.type, groupId: a.groupId || '' };
+  },
+  saveEdit() {
+    if (!this.editId) return;
+    $store.budget.updateAccount(this.editId, {
+      name: this.editForm.name,
+      type: this.editForm.type,
+      groupId: this.editForm.groupId || null,
+    });
+    this.editId = null;
+  },
   startDelete(a) { this.deleteAccountId = a.id; this.deleteAccountValue = ''; },
   doDelete() {
     if (!this.deleteAccountId) return;
@@ -51,7 +65,8 @@ eleventyExcludeFromCollections: true
   <header class="app-page__header">
     <h1 class="app-page__title">Accounts</h1>
     <div class="cluster">
-      <button class="btn btn--secondary" type="button" @click="showGroup = true">New group</button>
+      <button class="btn btn--secondary" type="button" @click="showGroup = true"
+              data-tip="Groups organize the sidebar (Daily, Reserves, Debts, Investments). Drag accounts into them.">New group</button>
       <button class="btn btn--primary" type="button" @click="showAccount = true">Add account</button>
     </div>
   </header>
@@ -66,22 +81,31 @@ eleventyExcludeFromCollections: true
 
   <template x-for="group in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
     <section class="card" style="margin-bottom: var(--space-md);">
-      <header style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-sm);">
-        <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
-        <button class="btn btn--ghost btn--sm" type="button"
-                x-show="group.group"
-                @click="if (confirm('Remove this group? Accounts will be unassigned but kept.')) $store.budget.deleteAccountGroup(group.group.id)">
-          Remove group
+      <header style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-sm);">
+        <button type="button" class="group-toggle"
+                @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
+                :aria-expanded="group.group && !group.group.collapsed ? 'true' : 'false'"
+                :disabled="!group.group">
+          <span class="group-toggle__chevron" :class="group.group && group.group.collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+          <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
         </button>
+        <div class="cluster">
+          <button class="btn btn--ghost btn--sm" type="button"
+                  x-show="group.group"
+                  @click="var n = prompt('Rename group', group.group.name); if (n) $store.budget.renameAccountGroup(group.group.id, n);">Rename</button>
+          <button class="btn btn--ghost btn--sm" type="button"
+                  x-show="group.group"
+                  @click="if (confirm('Remove this group? Accounts will be unassigned but kept.')) $store.budget.deleteAccountGroup(group.group.id)">Remove</button>
+        </div>
       </header>
 
-      <table class="table">
+      <table class="table" x-show="!(group.group && group.group.collapsed)" x-cloak>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th class="num">Balance</th>
-            <th class="num">Actions</th>
+            <th scope="col">Name</th>
+            <th scope="col">Type</th>
+            <th scope="col" class="num">Balance</th>
+            <th scope="col" class="num">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -95,8 +119,8 @@ eleventyExcludeFromCollections: true
                   x-text="formatCents($store.budget.accountBalance(a.id))"></td>
               <td class="num">
                 <div class="cluster" style="justify-content: flex-end;">
-                  <button class="btn btn--ghost btn--sm" type="button"
-                          @click="var n = prompt('Rename account', a.name); if (n) $store.budget.renameAccount(a.id, n);">Rename</button>
+                  <button class="btn btn--ghost btn--sm" type="button" @click="openEdit(a)"
+                          data-tip="Change the account's name, type, or group.">Edit</button>
                   <button class="btn btn--danger btn--sm" type="button" @click="startDelete(a)">Delete</button>
                 </div>
               </td>
@@ -121,7 +145,8 @@ eleventyExcludeFromCollections: true
           <div class="form-row">
             <div class="field">
               <label class="field__label" for="acct-type">Type</label>
-              <select class="select" id="acct-type" x-model="newAccount.type">
+              <select class="select" id="acct-type" x-model="newAccount.type"
+                      data-tip="On-budget: checking, savings, cash, credit card — affect Ready to Assign. Tracking: investments and loans — affect net worth only.">
                 <template x-for="t in $store.budget.ACCOUNT_TYPES" :key="t.value">
                   <option :value="t.value" x-text="t.label"></option>
                 </template>
@@ -147,6 +172,47 @@ eleventyExcludeFromCollections: true
         <div class="form-actions">
           <button class="btn btn--primary" type="submit">Create account</button>
           <button class="btn btn--ghost" type="button" @click="showAccount = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Edit-account modal #}
+  <div class="modal-backdrop" x-show="editId" x-cloak @keydown.escape.window="editId = null">
+    <div class="modal" @click.outside="editId = null">
+      <button class="modal__close" type="button" @click="editId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Edit account</h3>
+      <form @submit.prevent="saveEdit()">
+        <div class="form-stack">
+          <div class="field">
+            <label class="field__label" for="edit-name">Name</label>
+            <input class="input" id="edit-name" type="text" x-model="editForm.name" required>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="edit-type">Type</label>
+              <select class="select" id="edit-type" x-model="editForm.type"
+                      data-tip="Switching to credit card auto-creates a paired payment category. Switching away removes it.">
+                <template x-for="t in $store.budget.ACCOUNT_TYPES" :key="t.value">
+                  <option :value="t.value" x-text="t.label"></option>
+                </template>
+              </select>
+              <p class="field__hint">Changing the type also flips whether the account counts toward Ready to Assign.</p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="edit-group">Group</label>
+              <select class="select" id="edit-group" x-model="editForm.groupId">
+                <option value="">(no group)</option>
+                <template x-for="g in $store.budget.profile?.accountGroups || []" :key="g.id">
+                  <option :value="g.id" x-text="g.name"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Save changes</button>
+          <button class="btn btn--ghost" type="button" @click="editId = null">Cancel</button>
         </div>
       </form>
     </div>

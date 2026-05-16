@@ -9,13 +9,21 @@ document.addEventListener("alpine:init", function () {
   store.init();
 });
 
-/* Tippy.js wiring — initialize after Alpine has hydrated DOM so any
-   dynamically-inserted [data-tip] elements get tooltips on first render.
-   The MutationObserver picks up nodes added later (modals, new rows). */
+/* ---- Tippy.js wiring -------------------------------------------------- */
+/* Initialize after Alpine has hydrated DOM. The MutationObserver picks up
+   nodes added later (modals, new rows). A localStorage flag
+   (projectbudget:tooltips-off) disables tooltips entirely. */
+
+function tooltipsEnabled() {
+  try { return localStorage.getItem("projectbudget:tooltips-off") !== "1"; }
+  catch (_e) { return true; }
+}
+
 document.addEventListener("alpine:initialized", function () {
   if (typeof window.tippy !== "function") return;
 
   function attach(scope) {
+    if (!tooltipsEnabled()) return;
     var root = scope || document;
     var nodes = root.querySelectorAll ? root.querySelectorAll("[data-tip]:not([data-tippy-bound])") : [];
     nodes.forEach(function (el) {
@@ -36,7 +44,6 @@ document.addEventListener("alpine:initialized", function () {
 
   attach();
 
-  /* Re-scan whenever Alpine mounts a new template (modals, table rows). */
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
       m.addedNodes && m.addedNodes.forEach(function (n) {
@@ -45,7 +52,116 @@ document.addEventListener("alpine:initialized", function () {
     });
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  /* The settings page toggles this flag. We listen for storage events so
+     the toggle takes effect across tabs without a reload. */
+  window.addEventListener("storage", function (e) {
+    if (e.key !== "projectbudget:tooltips-off") return;
+    if (tooltipsEnabled()) {
+      attach();
+    } else {
+      document.querySelectorAll("[data-tippy-bound]").forEach(function (el) {
+        if (el._tippy) el._tippy.destroy();
+        el.removeAttribute("data-tippy-bound");
+      });
+    }
+  });
+
+  /* Settings page emits a custom event for same-tab updates. */
+  document.addEventListener("projectbudget:tooltips-changed", function () {
+    if (tooltipsEnabled()) {
+      attach();
+    } else {
+      document.querySelectorAll("[data-tippy-bound]").forEach(function (el) {
+        if (el._tippy) el._tippy.destroy();
+        el.removeAttribute("data-tippy-bound");
+      });
+    }
+  });
 });
+
+/* ---- Resizable app sidebar ------------------------------------------- */
+/* Drag handle between sidebar and main writes to --app-sidebar-width on
+   the layout root; the width is persisted to localStorage and restored
+   on next boot. Double-click resets to default. Keyboard arrows when
+   focused give a 16px nudge. */
+
+(function () {
+  var KEY = "projectbudget:sidebar-width";
+  var MIN = 180, MAX = 480, DEFAULT = 260;
+  var widthCache = DEFAULT;
+
+  function applyWidth(px) {
+    var clamped = Math.max(MIN, Math.min(MAX, Math.round(px)));
+    widthCache = clamped;
+    document.querySelectorAll(".layout-app").forEach(function (root) {
+      root.style.setProperty("--app-sidebar-width", clamped + "px");
+    });
+  }
+
+  function loadSaved() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var v = parseInt(raw, 10);
+      if (isFinite(v)) applyWidth(v);
+    } catch (_e) {}
+  }
+
+  function save() { try { localStorage.setItem(KEY, String(widthCache)); } catch (_e) {} }
+
+  function wire() {
+    var handle = document.querySelector(".app-sidebar-handle");
+    if (!handle) return;
+    var dragging = false;
+    var startX = 0;
+    var startWidth = widthCache;
+
+    function onMove(e) {
+      if (!dragging) return;
+      var x = (e.touches ? e.touches[0].clientX : e.clientX);
+      applyWidth(startWidth + (x - startX));
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove("is-dragging");
+      document.body.style.removeProperty("cursor");
+      save();
+    }
+
+    handle.addEventListener("mousedown", function (e) {
+      dragging = true;
+      handle.classList.add("is-dragging");
+      startX = e.clientX;
+      startWidth = widthCache;
+      document.body.style.cursor = "col-resize";
+      e.preventDefault();
+    });
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+
+    handle.addEventListener("touchstart", function (e) {
+      dragging = true;
+      startX = e.touches[0].clientX;
+      startWidth = widthCache;
+      handle.classList.add("is-dragging");
+    }, { passive: true });
+    document.addEventListener("touchmove", onMove, { passive: true });
+    document.addEventListener("touchend", onUp);
+
+    handle.addEventListener("dblclick", function () { applyWidth(DEFAULT); save(); });
+
+    handle.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowLeft")  { applyWidth(widthCache - 16); save(); e.preventDefault(); }
+      if (e.key === "ArrowRight") { applyWidth(widthCache + 16); save(); e.preventDefault(); }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { loadSaved(); wire(); });
+  } else { loadSaved(); wire(); }
+})();
 
 window.ProjectBudget = window.ProjectBudget || {};
 window.ProjectBudget.version = "0.1.0";

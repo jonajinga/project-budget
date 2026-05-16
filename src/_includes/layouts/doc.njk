@@ -1,0 +1,91 @@
+---
+layout: layouts/base.njk
+---
+<div class="container container--wide doc-shell">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a>
+    <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+    <a href="/docs/">Docs</a>
+    {% if category %}
+      {% for cat in docCategories %}{% if cat.slug == category %}
+        <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+        <a href="/docs/{{ cat.slug }}/">{{ cat.name }}</a>
+      {% endif %}{% endfor %}
+    {% endif %}
+    <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+    <span aria-current="page">{{ title }}</span>
+  </nav>
+
+  <button class="docs-sidebar-toggle" type="button" onclick="toggleDocsSidebar && toggleDocsSidebar()" aria-controls="docs-sidebar" aria-expanded="true">
+    <span class="docs-sidebar-toggle__label docs-sidebar-toggle__label--open">Hide menu</span>
+    <span class="docs-sidebar-toggle__label docs-sidebar-toggle__label--closed">Browse docs</span>
+  </button>
+
+  <div class="docs-layout" id="docs-layout" data-sidebar="open">
+    <aside class="docs-layout__sidebar" id="docs-sidebar" aria-label="Documentation navigation">
+      <div class="docs-sidebar">
+        <p class="docs-sidebar__heading">Documentation</p>
+        {% for cat in docCategories %}
+          <div class="docs-sidebar__group">
+            <p class="docs-sidebar__title">{{ cat.name }}</p>
+            {% set hasDocs = false %}
+            {% for doc in collections.docs %}
+              {% if doc.data.category == cat.slug %}
+                {% set hasDocs = true %}
+                <a class="docs-sidebar__link" href="{{ doc.url }}"{% if doc.url == page.url %} aria-current="page"{% endif %}>{{ doc.data.title }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if not hasDocs %}
+              <p class="docs-sidebar__empty">Coming soon.</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </aside>
+
+    <article class="doc-content" id="doc-content">
+      <h1>{{ title }}</h1>
+      {% if subtitle %}<p class="doc-lead">{{ subtitle }}</p>{% endif %}
+
+      <div class="doc-content__prose">
+        {{ content | safe }}
+      </div>
+
+      {% set docList = [] %}
+      {% for d in collections.docs %}{% if d.data.category == category %}{% set docList = (docList.push(d), docList) %}{% endif %}{% endfor %}
+      {% if docList.length > 1 %}
+        {% set prevDoc = null %}{% set nextDoc = null %}
+        {% for d in docList %}{% if d.url == page.url %}
+          {% if loop.index0 > 0 %}{% set prevDoc = docList[loop.index0 - 1] %}{% endif %}
+          {% if loop.index0 < docList.length - 1 %}{% set nextDoc = docList[loop.index0 + 1] %}{% endif %}
+        {% endif %}{% endfor %}
+        <nav class="doc-nav" aria-label="Document">
+          {% if prevDoc %}
+            <a class="doc-nav__item" href="{{ prevDoc.url }}">
+              <span class="doc-nav__eyebrow">Previous</span>
+              <span class="doc-nav__title">{{ prevDoc.data.title }}</span>
+            </a>
+          {% else %}<div></div>{% endif %}
+          {% if nextDoc %}
+            <a class="doc-nav__item doc-nav__item--next" href="{{ nextDoc.url }}">
+              <span class="doc-nav__eyebrow">Next</span>
+              <span class="doc-nav__title">{{ nextDoc.data.title }}</span>
+            </a>
+          {% endif %}
+        </nav>
+      {% endif %}
+    </article>
+
+    <aside class="docs-layout__toc" aria-label="On this page">
+      <div class="docs-toc" id="docs-toc">
+        <button type="button" class="docs-toc__toggle" id="docs-toc-toggle" aria-controls="toc-list" aria-expanded="true">
+          <span>On this page</span>
+          <span class="docs-toc__chevron" aria-hidden="true">&#9662;</span>
+        </button>
+        <ol id="toc-list" class="docs-toc__list"></ol>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script defer src="/assets/js/docs.js"></script>

@@ -42,6 +42,29 @@ eleventyExcludeFromCollections: true
       </p>
     </section>
 
+    <section class="card" x-data="{
+      get enabled() {
+        try { return localStorage.getItem('projectbudget:tooltips-off') !== '1'; }
+        catch (_e) { return true; }
+      },
+      toggle() {
+        try {
+          if (this.enabled) localStorage.setItem('projectbudget:tooltips-off', '1');
+          else localStorage.removeItem('projectbudget:tooltips-off');
+        } catch (_e) {}
+        document.dispatchEvent(new CustomEvent('projectbudget:tooltips-changed'));
+      }
+    }">
+      <h2 class="card__title">Tooltips</h2>
+      <p class="card__body" style="margin-bottom: var(--space-sm);">
+        Hover-help on numeric fields, buttons, and budget terms. Turn them off if they get in the way.
+      </p>
+      <label class="cluster" style="gap: var(--space-2xs); cursor: pointer;">
+        <input type="checkbox" :checked="enabled" @change="toggle()">
+        <span>Show tooltips throughout the app</span>
+      </label>
+    </section>
+
     <section class="card" style="grid-column: 1 / -1;">
       <h2 class="card__title">Daily backups</h2>
       <p class="card__body" style="margin-bottom: var(--space-sm);">

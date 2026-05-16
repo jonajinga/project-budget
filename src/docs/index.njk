@@ -1,0 +1,32 @@
+---
+layout: layouts/marketing.njk
+title: "Documentation"
+description: "How to use Project Budget — accounts, envelope budgeting, reports, import, profiles."
+permalink: /docs/
+eleventyExcludeFromCollections: true
+---
+<article class="container container--narrow page">
+  <header class="page__header">
+    <h1>Documentation</h1>
+    <p class="page__subtitle">A guide to envelope budgeting in Project Budget. Each category below is a short series of focused pages.</p>
+  </header>
+
+  <div class="docs-categories">
+    {% for cat in docCategories %}
+      {% set firstDoc = null %}
+      {% for d in collections.docs %}{% if not firstDoc and d.data.category == cat.slug %}{% set firstDoc = d %}{% endif %}{% endfor %}
+      {% if firstDoc %}
+        <a class="docs-category" href="{{ firstDoc.url }}">
+          <h2 class="docs-category__name">{{ cat.name }}</h2>
+          <p class="docs-category__summary">{{ cat.summary }}</p>
+        </a>
+      {% else %}
+        <div class="docs-category docs-category--empty">
+          <h2 class="docs-category__name">{{ cat.name }}</h2>
+          <p class="docs-category__summary">{{ cat.summary }}</p>
+          <p class="docs-category__pending">Coming soon.</p>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</article>

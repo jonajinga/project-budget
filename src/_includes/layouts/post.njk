@@ -5,11 +5,18 @@ layout: layouts/marketing.njk
   <header class="post__header">
     <p class="post__meta">
       <time datetime="{{ page.date | htmlDateString }}">{{ page.date | readableDate }}</time>
+      {% if tag %} &middot; {{ tag }}{% endif %}
+      {% if templateContent %} &middot; {{ templateContent | readingTime }} min read{% endif %}
+      {% if author %} &middot; {{ author }}{% endif %}
     </p>
-    <h1>{{ title }}</h1>
-    {% if description %}<p class="post__subtitle">{{ description }}</p>{% endif %}
+    <h1 class="post__title">{{ title }}</h1>
+    {% if summary %}<p class="post__subtitle">{{ summary }}</p>{% endif %}
   </header>
   <div class="prose">
     {{ content | safe }}
   </div>
+
+  <footer class="post__footer">
+    <p><a href="/blog/">&larr; All posts</a></p>
+  </footer>
 </article>

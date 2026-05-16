@@ -5,6 +5,9 @@
 {% block content %}
 <div class="app-shell" x-data="{ sidebarOpen: false }">
   {% include "partials/app-shell.njk" %}
+  <div class="app-sidebar-handle" role="separator" aria-orientation="vertical"
+       aria-label="Resize sidebar" tabindex="0"
+       data-tip="Drag to resize the sidebar. Double-click to reset to the default width."></div>
   <section class="app-main">
     {% include "partials/sample-banner.njk" %}
     {{ content | safe }}

@@ -1,0 +1,63 @@
+feat: Broadsheet visual identity + docs + blog + a11y + sitemap
+
+Visual identity (matches Project Broadsheet):
+- Paper/ink/vermillion/slate/gold palette, light + dark
+- Playfair Display (display), Lora (headlines), Source Serif 4 (body),
+  DM Sans (UI for app shell), monospace via system stack
+- Bunny Fonts updated to load the new families
+- Squared corners (unchanged)
+- Marketing pages use serif body; app shell switches to DM Sans for
+  readability of tabular financial data
+
+Account management:
+- updateAccount(id, patch) handles name, type, and groupId in one call
+- Type-change side-effects: credit-card auto-creates the payment
+  category; switching away removes it; non-credit -> credit creates one
+- Edit modal on /app/accounts/ replaces the prompt-only rename
+
+Collapsible groups:
+- Account groups on /app/accounts/ and in the app sidebar
+- Category groups on /app/budget/
+- toggleAccountGroupCollapsed and toggleCategoryGroupCollapsed
+  mutators persist the open/closed state in the profile schema
+  (collapsed flag already existed on the group shape)
+
+Resizable app sidebar:
+- Drag handle between sidebar and main writes to --app-sidebar-width
+- Clamps to 180-480px, persists to projectbudget:sidebar-width
+- Double-click resets to 260px default; arrow keys nudge when focused
+
+Tippy.js tooltips:
+- New toggle on /app/settings/ (Show tooltips throughout the app)
+- localStorage flag projectbudget:tooltips-off honored on next attach;
+  custom event projectbudget:tooltips-changed allows same-tab refresh
+- Tooltips added to account edit, type selector, transfer, reconcile,
+  split, new group, sidebar resize handle, and more
+
+Documentation system:
+- src/docs/<category>/*.md, surfaced via collections.docs
+- layouts/doc.njk: left nav + content + right sticky TOC
+- assets/js/docs.js generates the TOC from H2/H3 inside .doc-content
+  __prose, highlights active via IntersectionObserver, supports
+  collapsible right rail and toggleable left sidebar
+- 10 starter docs across 5 categories; docCategories.js data file
+- /docs/ hub auto-links to the first doc of each category
+
+Blog system:
+- src/blog/posts/*.md with date/tag/summary front-matter
+- /blog/ listing + per-post layout with reading time and meta strip
+- Sample post: "Hello, Project Budget"
+
+Accessibility page at /accessibility/
+- Standards we target, Perceivable / Operable / Understandable / Robust
+- Known issues, how to report a problem, AT tested, technical specs
+
+Human-readable sitemap at /sitemap/ (separate from sitemap.xml)
+- Six columns: Product, App, Reports, Docs, Blog, Legal & meta
+
+Nav updates: Blog added to header + footer; Accessibility and Sitemap
+added to footer.
+
+Lighthouse remains green; pa11y findings re-checked.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

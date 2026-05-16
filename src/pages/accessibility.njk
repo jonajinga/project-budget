@@ -1,0 +1,81 @@
+---
+layout: layouts/page.njk
+title: "Accessibility"
+description: "Project Budget targets WCAG 2.2 AA. What's built in, known issues, and how to report a problem."
+permalink: /accessibility/
+---
+<p>
+  Project Budget targets WCAG 2.2 Level AA across every public page and inside the app. The list below covers what's built in, what's known to be incomplete, and how to report a problem.
+</p>
+
+<h2>Standards we target</h2>
+<ul>
+  <li><strong>WCAG 2.2 AA</strong> for both the marketing site and the in-browser app.</li>
+  <li><strong>Touch-target floor</strong> of 44 by 44 CSS pixels for every interactive element, with documented opt-outs for compact data controls.</li>
+  <li><strong>Contrast</strong> of 4.5:1 minimum for body text, 3:1 for large text and meaningful UI surfaces. Audited in both light and dark themes.</li>
+</ul>
+
+<h2>What's built in</h2>
+
+<h3>Perceivable</h3>
+<ul>
+  <li>Semantic HTML throughout. Landmark elements (<code>header</code>, <code>nav</code>, <code>main</code>, <code>footer</code>) wrap their respective regions.</li>
+  <li>All images carry alt text. Decorative SVG icons use <code>aria-hidden="true"</code>.</li>
+  <li>Color is never the sole signal. Available balances pair color with a sign and a number.</li>
+  <li>Light and dark themes with a no-flash inline script. <code>prefers-color-scheme</code> is the default when no preference is stored.</li>
+</ul>
+
+<h3>Operable</h3>
+<ul>
+  <li>Skip-to-content link as the first focusable element on every page.</li>
+  <li>Visible focus rings on every interactive element. Focus order matches reading order.</li>
+  <li>Modals trap focus and close on Escape.</li>
+  <li>Inline table editors expose <code>aria-label</code> on every input.</li>
+  <li>The right-rail TOC on docs pages updates the active link via <code>IntersectionObserver</code> as you scroll.</li>
+</ul>
+
+<h3>Understandable</h3>
+<ul>
+  <li>Plain-English copy. Banking jargon is glossary-linked at <a href="/glossary/">/glossary/</a>.</li>
+  <li>Help tooltips on numeric inputs and budget terms (<a href="/app/settings/">disable</a> if they distract).</li>
+  <li>Predictable interaction patterns: same modal shape for create / edit / delete; same column order in every register.</li>
+  <li>Form errors describe what's wrong and how to fix it.</li>
+</ul>
+
+<h3>Robust</h3>
+<ul>
+  <li>HTML validates against the WHATWG spec.</li>
+  <li>ARIA only used where native HTML semantics aren't enough — <code>aria-current</code> on active nav, <code>aria-expanded</code> on toggles, <code>aria-live</code> on the toast stack and the &quot;last saved&quot; indicator.</li>
+</ul>
+
+<h2>Known issues</h2>
+<ul>
+  <li>D3 charts are presented as <code>img</code>-roled SVG with an <code>aria-label</code>. The companion data table below each chart is the screen-reader friendly view of the same data.</li>
+  <li>The drag handle for the resizable app sidebar is keyboard-operable (arrow keys when focused) but not yet exposed as a slider role.</li>
+  <li>Reduced motion is honored by the framework defaults; we are still auditing individual transitions in the app shell.</li>
+</ul>
+
+<h2>How to report a problem</h2>
+<p>
+  Open an issue at <a href="https://github.com/jonajinga/project-budget/issues">github.com/jonajinga/project-budget/issues</a> with the page URL, your browser, and what you were trying to do. If the issue is visual, a screenshot helps.
+</p>
+
+<h2>Assistive technology tested</h2>
+<ul>
+  <li>VoiceOver on macOS (Safari, Chrome).</li>
+  <li>NVDA on Windows (Firefox, Chrome).</li>
+  <li>Keyboard-only navigation across every public page and every primary in-app flow.</li>
+</ul>
+
+<h2>Technical specifications</h2>
+<ul>
+  <li>HTML5 + ARIA where the native semantics fall short.</li>
+  <li>Vanilla CSS with custom properties. No CSS-in-JS, no runtime style injection.</li>
+  <li>Alpine.js for state. No virtual DOM, no client-side router.</li>
+  <li>Charts: D3 v7 rendered to SVG with explicit <code>role="img"</code> and <code>aria-label</code>.</li>
+</ul>
+
+<h2>This statement</h2>
+<p>
+  Last reviewed: <time datetime="2026-05-16">{{ "2026-05-16" | readableDate | default("May 16, 2026") }}</time>. We re-review the page whenever a major release lands.
+</p>

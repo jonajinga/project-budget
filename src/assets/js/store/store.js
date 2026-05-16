@@ -281,6 +281,22 @@ export function createStore() {
       return g;
     },
 
+    toggleAccountGroupCollapsed(id) {
+      if (!this.profile) return;
+      var g = this.profile.accountGroups.find(function (x) { return x.id === id; });
+      if (!g) return;
+      g.collapsed = !g.collapsed;
+      this._save();
+    },
+
+    toggleCategoryGroupCollapsed(id) {
+      if (!this.profile) return;
+      var g = this.profile.categoryGroups.find(function (x) { return x.id === id; });
+      if (!g) return;
+      g.collapsed = !g.collapsed;
+      this._save();
+    },
+
     renameAccountGroup(id, name) {
       if (!this.profile) return;
       var g = this.profile.accountGroups.find(function (x) { return x.id === id; });
@@ -334,6 +350,32 @@ export function createStore() {
       if (!a) return;
       a.groupId = groupId || null;
       this._save();
+    },
+
+    /* Single-call update for name / type / groupId. Handles the credit-card
+       payment-category bookkeeping when type changes to or from credit. */
+    updateAccount(id, patch) {
+      if (!this.profile) return null;
+      var a = findAccount(this.profile, id);
+      if (!a) return null;
+      var oldType = a.type;
+      var oldName = a.name;
+      if (patch.name !== undefined) a.name = (patch.name || "").trim() || a.name;
+      if (patch.groupId !== undefined) a.groupId = patch.groupId || null;
+      if (patch.type !== undefined && patch.type !== oldType) {
+        a.type = patch.type;
+        var isTracking = patch.type === "tracking-asset" || patch.type === "tracking-liability";
+        a.onBudget = !isTracking;
+        if (oldType === "credit" && patch.type !== "credit") {
+          removePaymentCategory(this.profile, a.id);
+        } else if (oldType !== "credit" && patch.type === "credit") {
+          ensurePaymentCategory(this.profile, a.id, a.name);
+        }
+      } else if (patch.name !== undefined && oldName !== a.name && a.type === "credit") {
+        syncPaymentCategoryName(this.profile, a.id, a.name);
+      }
+      this._save();
+      return a;
     },
 
     closeAccount(id) {

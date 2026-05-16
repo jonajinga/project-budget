@@ -1,0 +1,84 @@
+---
+layout: layouts/page.njk
+title: "Sitemap"
+description: "Every page on Project Budget, organized by section."
+permalink: /sitemap/
+---
+<p>
+  Every URL on this site, grouped by section. For a machine-readable version, see <a href="/sitemap.xml">/sitemap.xml</a>.
+</p>
+
+<div class="sitemap-columns">
+  <section class="sitemap-column">
+    <h2>Product</h2>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/#features">Features</a></li>
+      <li><a href="/changelog/">Changelog</a></li>
+      <li><a href="/open-source/">Open source</a></li>
+    </ul>
+  </section>
+
+  <section class="sitemap-column">
+    <h2>App</h2>
+    <ul>
+      <li><a href="/app/">Dashboard</a></li>
+      <li><a href="/app/budget/">Budget</a></li>
+      <li><a href="/app/register/">Register</a></li>
+      <li><a href="/app/accounts/">Accounts</a></li>
+      <li><a href="/app/categories/">Categories</a></li>
+      <li><a href="/app/scheduled/">Recurring</a></li>
+      <li><a href="/app/profiles/">Profiles</a></li>
+      <li><a href="/app/import/">Import</a></li>
+      <li><a href="/app/export/">Export</a></li>
+      <li><a href="/app/settings/">Settings</a></li>
+    </ul>
+  </section>
+
+  <section class="sitemap-column">
+    <h2>Reports</h2>
+    <ul>
+      <li><a href="/app/reports/">Reports hub</a></li>
+      <li><a href="/app/reports/income-expense/">Income vs expense</a></li>
+      <li><a href="/app/reports/net-worth/">Net worth</a></li>
+      <li><a href="/app/reports/spending/">Spending by category</a></li>
+      <li><a href="/app/reports/trends/">Monthly trends</a></li>
+      <li><a href="/app/reports/debt/">Debt overview</a></li>
+      <li><a href="/app/reports/assignment-history/">Assignment history</a></li>
+      <li><a href="/app/reports/projection/">Cashflow projection</a></li>
+    </ul>
+  </section>
+
+  <section class="sitemap-column">
+    <h2>Documentation</h2>
+    <ul>
+      <li><a href="/docs/">Docs home</a></li>
+      {% for cat in docCategories %}
+        <li><a href="/docs/{{ cat.slug }}/">{{ cat.name }}</a></li>
+      {% endfor %}
+      <li><a href="/glossary/">Glossary</a></li>
+    </ul>
+  </section>
+
+  <section class="sitemap-column">
+    <h2>Blog</h2>
+    <ul>
+      <li><a href="/blog/">Blog home</a></li>
+      {% for post in collections.posts | reverse %}
+        <li><a href="{{ post.url }}">{{ post.data.title }}</a></li>
+      {% endfor %}
+      <li><a href="/feed.xml">RSS / Atom feed</a></li>
+    </ul>
+  </section>
+
+  <section class="sitemap-column">
+    <h2>Legal and meta</h2>
+    <ul>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/accessibility/">Accessibility</a></li>
+      <li><a href="/sitemap.xml">XML sitemap</a></li>
+      <li><a href="https://github.com/jonajinga/project-budget">GitHub source</a></li>
+    </ul>
+  </section>
+</div>

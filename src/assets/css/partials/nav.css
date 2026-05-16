@@ -228,6 +228,23 @@
   color: var(--fg-muted);
   margin-bottom: var(--space-3xs);
 }
+.acct-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  width: 100%;
+  padding: 0.25rem 0;
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  min-height: auto;
+}
+.acct-group__head:not(:disabled):hover { color: var(--accent); }
 .acct-group__list { display: flex; flex-direction: column; gap: 0; }
 .acct-link {
   display: flex;

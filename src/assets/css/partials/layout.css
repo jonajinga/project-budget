@@ -28,15 +28,33 @@
 .flow > * + * { margin-top: var(--space-md); }
 .cluster { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
 
-/* App shell — sidebar + main */
-.layout-app { background: var(--bg-alt); }
+/* App shell — sidebar + handle + main.
+   The sidebar width is driven by --app-sidebar-width so the resize JS
+   can write to it without touching layout markup. Default 260px; clamps
+   are enforced in JS (180px..480px). */
+.layout-app { background: var(--bg-alt); --app-sidebar-width: 260px; }
 .app-shell {
   display: grid;
   grid-template-columns: 1fr;
   min-height: calc(100vh - 5rem);
 }
 @media (min-width: 1024px) {
-  .app-shell { grid-template-columns: 260px 1fr; }
+  .app-shell { grid-template-columns: var(--app-sidebar-width) 6px 1fr; }
+}
+
+.app-sidebar-handle { display: none; }
+@media (min-width: 1024px) {
+  .app-sidebar-handle {
+    display: block;
+    cursor: col-resize;
+    background: var(--border-soft);
+    transition: background var(--t-fast);
+    user-select: none;
+    touch-action: none;
+  }
+  .app-sidebar-handle:hover,
+  .app-sidebar-handle:focus-visible,
+  .app-sidebar-handle.is-dragging { background: var(--accent); }
 }
 
 .app-main {

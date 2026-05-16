@@ -21,6 +21,7 @@ const CSS_PARTIAL_ORDER = [
   "register.css",
   "budget.css",
   "reports.css",
+  "docs.css",
   "forms.css",
   "print.css",
 ];
@@ -155,6 +156,22 @@ export default function (eleventyConfig) {
   // ---- Collections -------------------------------------------------------
   eleventyConfig.addCollection("changelog", (api) =>
     api.getFilteredByGlob("src/pages/changelog/*.md").sort((a, b) => b.date - a.date)
+  );
+
+  // Docs collection — order within a category follows the page's `order`
+  // front-matter (defaults to 99 for missing values).
+  eleventyConfig.addCollection("docs", (api) =>
+    api.getFilteredByGlob("src/docs/**/*.md").sort((a, b) => {
+      const oa = a.data.order ?? 99;
+      const ob = b.data.order ?? 99;
+      if (oa !== ob) return oa - ob;
+      return (a.data.title || "").localeCompare(b.data.title || "");
+    })
+  );
+
+  // Blog posts.
+  eleventyConfig.addCollection("posts", (api) =>
+    api.getFilteredByGlob("src/blog/posts/*.md").sort((a, b) => b.date - a.date)
   );
 
   return {
