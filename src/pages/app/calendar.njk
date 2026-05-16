@@ -1,20 +1,67 @@
 ---
 layout: layouts/app.njk
 title: "Calendar"
-description: "Month grid view of posted transactions and upcoming scheduled entries."
+description: "Day, Week, Month, and Year views of posted transactions and upcoming recurring entries."
 permalink: /app/calendar/
 eleventyExcludeFromCollections: true
 ---
 <div class="app-page" x-data="calendarView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title" x-text="monthLabel()"></h1>
-      <p class="app-page__lead">Posted transactions sit on their post date; upcoming recurring templates show on their next due date.</p>
+
+  {# ---- Toolbar ---------------------------------------------------- #}
+  <header class="cal-toolbar">
+    <div class="cal-toolbar__row">
+      <div class="cal-toolbar__views" role="tablist" aria-label="Calendar view">
+        <template x-for="v in views" :key="v.value">
+          <button type="button"
+                  class="cal-toolbar__view"
+                  role="tab"
+                  :class="{ 'is-active': v.value === view }"
+                  :aria-selected="(v.value === view).toString()"
+                  @click="view = v.value"
+                  x-text="v.label"></button>
+        </template>
+      </div>
+
+      <div class="cal-toolbar__nav">
+        <button type="button" class="btn btn--ghost btn--sm"
+                @click="step(-1)" :aria-label="'Previous ' + view">&larr;</button>
+        <button type="button" class="btn btn--secondary btn--sm"
+                @click="jumpToday()">Today</button>
+        <button type="button" class="btn btn--ghost btn--sm"
+                @click="step(1)" :aria-label="'Next ' + view">&rarr;</button>
+        <h1 class="cal-toolbar__title" x-text="anchorLabel()"></h1>
+      </div>
     </div>
-    <div class="cluster">
-      <button class="btn btn--ghost btn--sm" type="button" @click="step(-1)" aria-label="Previous month">&larr;</button>
-      <button class="btn btn--secondary btn--sm" type="button" @click="jumpToday()">Today</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="step(1)" aria-label="Next month">&rarr;</button>
+
+    <div class="cal-toolbar__row cal-toolbar__row--filters">
+      <div class="field cal-toolbar__search">
+        <label class="visually-hidden" for="cal-search">Search payee, memo, category</label>
+        <input class="input" id="cal-search" type="search"
+               x-model="searchQuery"
+               placeholder="Search payee, memo, category…">
+      </div>
+      <div class="field cal-toolbar__filter">
+        <label class="visually-hidden" for="cal-account">Account filter</label>
+        <select class="select" id="cal-account" x-model="filterAccountId">
+          <option value="">All accounts</option>
+          <template x-for="a in openAccounts()" :key="a.id">
+            <option :value="a.id" x-text="a.name"></option>
+          </template>
+        </select>
+      </div>
+      <div class="field cal-toolbar__filter">
+        <label class="visually-hidden" for="cal-kind">Kind filter</label>
+        <select class="select" id="cal-kind" x-model="filterKind">
+          <option value="all">Posted + Scheduled</option>
+          <option value="posted">Posted only</option>
+          <option value="scheduled">Scheduled only</option>
+          <option value="inflow">Inflows only</option>
+          <option value="outflow">Outflows only</option>
+        </select>
+      </div>
+      <p class="cal-toolbar__count" x-show="searchQuery || filterAccountId || filterKind !== 'all'" x-cloak>
+        <span x-text="visibleCount()"></span> matching entries in view
+      </p>
     </div>
   </header>
 
@@ -22,41 +69,82 @@ eleventyExcludeFromCollections: true
     Load or create a profile to see its calendar.
   </p>
 
-  <section class="cal" x-show="$store.budget.profile" x-cloak>
-    {# Weekday headings — Sun-first, matches the grid below. Hidden on
-       very narrow screens (the day cells already carry the date). #}
+  {# ---- Year view --------------------------------------------------- #}
+  <section class="cal-year" x-show="$store.budget.profile && view === 'year'" x-cloak>
+    <template x-for="mm in monthsOfYear()" :key="mm.iso">
+      <article class="cal-mini">
+        <header class="cal-mini__head">
+          <button type="button" class="cal-mini__title-btn"
+                  @click="view = 'month'; anchorISO = mm.iso + '-01'"
+                  :aria-label="'Open ' + mm.label">
+            <h2 class="cal-mini__title" x-text="mm.label"></h2>
+          </button>
+          <span class="cal-mini__total" x-text="formatCents(monthNet(mm.iso))"
+                :class="monthNet(mm.iso) < 0 ? 'amount--outflow' : (monthNet(mm.iso) > 0 ? 'amount--inflow' : '')"></span>
+        </header>
+        <ol class="cal-mini__weekdays" aria-hidden="true">
+          <li>S</li><li>M</li><li>T</li><li>W</li><li>T</li><li>F</li><li>S</li>
+        </ol>
+        <ol class="cal-mini__grid">
+          <template x-for="cell in miniCells(mm.iso)" :key="cell.key">
+            <li class="cal-mini__cell"
+                :class="{
+                  'cal-mini__cell--blank': cell.blank,
+                  'cal-mini__cell--today': cell.isToday,
+                  'cal-mini__cell--has':   !cell.blank && cell.count > 0
+                }">
+              <button type="button"
+                      x-show="!cell.blank"
+                      class="cal-mini__day"
+                      @click="view = 'day'; anchorISO = cell.iso"
+                      :aria-label="'Open ' + cell.iso"
+                      :title="cell.count + ' entries'">
+                <span x-text="cell.day"></span>
+              </button>
+            </li>
+          </template>
+        </ol>
+      </article>
+    </template>
+  </section>
+
+  {# ---- Month view -------------------------------------------------- #}
+  <section class="cal" x-show="$store.budget.profile && view === 'month'" x-cloak>
     <ol class="cal__weekdays" aria-hidden="true">
       <li>Sun</li><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li>
     </ol>
-
-    <ol class="cal__grid" role="grid" :aria-label="'Calendar for ' + monthLabel()">
-      <template x-for="cell in monthCells()" :key="cell.iso || ('blank-' + cell.idx)">
+    <ol class="cal__grid" role="grid" :aria-label="'Calendar for ' + monthLabel(anchorMonthISO())">
+      <template x-for="cell in monthCells()" :key="cell.key">
         <li class="cal__cell"
             :class="{
-              'cal__cell--blank':   cell.blank,
-              'cal__cell--today':   cell.isToday,
-              'cal__cell--selected': cell.iso === selectedISO,
-              'cal__cell--has':     !cell.blank && (cell.posted.length + cell.scheduled.length) > 0
+              'cal__cell--blank':    cell.blank,
+              'cal__cell--today':    cell.isToday,
+              'cal__cell--selected': cell.iso && cell.iso === selectedISO,
+              'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
+              'cal__cell--other-month': cell.otherMonth
             }">
           <template x-if="!cell.blank">
             <button type="button"
                     class="cal__cell-btn"
                     @click="selectedISO = cell.iso"
+                    @dblclick="view = 'day'; anchorISO = cell.iso"
                     :aria-label="'Open ' + cell.iso">
-              <span class="cal__day-num" x-text="cell.day"></span>
+              <span class="cal__day-num-wrap">
+                <span class="cal__day-num" x-text="cell.day"></span>
+              </span>
               <span class="cal__totals" x-show="cell.totalInflow !== 0 || cell.totalOutflow !== 0">
                 <span class="cal__delta cal__delta--in"  x-show="cell.totalInflow > 0"  x-text="formatCents(cell.totalInflow)"></span>
                 <span class="cal__delta cal__delta--out" x-show="cell.totalOutflow < 0" x-text="formatCents(cell.totalOutflow)"></span>
               </span>
               <span class="cal__dots" x-show="cell.posted.length + cell.scheduled.length > 0">
-                <template x-for="n in Math.min(cell.posted.length, 5)" :key="'p' + n">
+                <template x-for="n in Math.min(cell.posted.length, 4)" :key="'p' + n">
                   <span class="cal__dot cal__dot--posted" aria-hidden="true"></span>
                 </template>
-                <template x-for="n in Math.min(cell.scheduled.length, 5)" :key="'s' + n">
+                <template x-for="n in Math.min(cell.scheduled.length, 4)" :key="'s' + n">
                   <span class="cal__dot cal__dot--scheduled" aria-hidden="true"></span>
                 </template>
-                <span class="cal__count" x-show="(cell.posted.length + cell.scheduled.length) > 5"
-                      x-text="'+' + ((cell.posted.length + cell.scheduled.length) - 5)"></span>
+                <span class="cal__count" x-show="(cell.posted.length + cell.scheduled.length) > 8"
+                      x-text="'+' + ((cell.posted.length + cell.scheduled.length) - 8)"></span>
               </span>
             </button>
           </template>
@@ -64,159 +152,455 @@ eleventyExcludeFromCollections: true
       </template>
     </ol>
 
-    {# Detail panel — shows the entries for the selected day. Scrolls
-       independently from the grid on tablet+; stacks below on phones. #}
     <aside class="cal__detail" x-show="selectedISO" x-cloak aria-live="polite">
       <header class="cal__detail-head">
-        <h2 x-text="selectedLabel()"></h2>
+        <h2 x-text="dayLabel(selectedISO)"></h2>
         <button class="btn btn--ghost btn--sm" type="button" @click="selectedISO = null" aria-label="Close day details">&times;</button>
       </header>
-
-      <p x-show="!selectedHasAnything()" x-cloak style="color: var(--fg-muted); padding: var(--space-sm) 0;">
-        Nothing posted or scheduled on this day.
-      </p>
-
-      <section x-show="selectedPosted().length" x-cloak>
-        <h3 class="cal__detail-section">Posted</h3>
-        <ul class="cal__list">
-          <template x-for="t in selectedPosted()" :key="t.id">
-            <li class="cal__row" :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
-              <span class="cal__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
-              <span class="cal__row-meta">
-                <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
-                <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
-              </span>
-              <span class="cal__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                    x-text="formatCents(t.amount)"></span>
-            </li>
-          </template>
-        </ul>
-      </section>
-
-      <section x-show="selectedScheduled().length" x-cloak>
-        <h3 class="cal__detail-section">Upcoming (scheduled)</h3>
-        <ul class="cal__list">
-          <template x-for="s in selectedScheduled()" :key="s.id">
-            <li class="cal__row" :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
-              <span class="cal__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
-              <span class="cal__row-meta">
-                <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
-                <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
-              </span>
-              <span class="cal__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                    x-text="formatCents(s.template.amount)"></span>
-            </li>
-          </template>
-        </ul>
-      </section>
+      <button type="button" class="btn btn--secondary btn--sm"
+              x-show="selectedISO"
+              @click="view = 'day'; anchorISO = selectedISO"
+              style="margin-bottom: var(--space-sm);">Open full day</button>
+      <template x-if="selectedISO">
+        <div x-data="{ d: dayData(selectedISO) }">
+          <p x-show="!(d.posted.length + d.scheduled.length)" x-cloak style="color: var(--fg-muted);">
+            Nothing posted or scheduled on this day.
+          </p>
+          <section x-show="d.posted.length" x-cloak>
+            <h3 class="cal__detail-section">Posted</h3>
+            <ul class="cal__list">
+              <template x-for="t in d.posted" :key="t.id">
+                <li class="cal__row" :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
+                  <span class="cal__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                  <span class="cal__row-meta">
+                    <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                    <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                  </span>
+                  <span class="cal__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="formatCents(t.amount)"></span>
+                </li>
+              </template>
+            </ul>
+          </section>
+          <section x-show="d.scheduled.length" x-cloak>
+            <h3 class="cal__detail-section">Upcoming (scheduled)</h3>
+            <ul class="cal__list">
+              <template x-for="s in d.scheduled" :key="s.id">
+                <li class="cal__row" :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
+                  <span class="cal__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+                  <span class="cal__row-meta">
+                    <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                    <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                  </span>
+                  <span class="cal__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="formatCents(s.template.amount)"></span>
+                </li>
+              </template>
+            </ul>
+          </section>
+        </div>
+      </template>
     </aside>
+  </section>
+
+  {# ---- Week view --------------------------------------------------- #}
+  <section class="cal-week" x-show="$store.budget.profile && view === 'week'" x-cloak>
+    <ol class="cal-week__strip">
+      <template x-for="cell in weekCells()" :key="cell.iso">
+        <li class="cal-week__day"
+            :class="{
+              'is-today': cell.isToday,
+              'is-empty': !(cell.posted.length + cell.scheduled.length)
+            }">
+          <header class="cal-week__head">
+            <p class="cal-week__weekday" x-text="cell.weekday"></p>
+            <p class="cal-week__date">
+              <button type="button" class="cal-week__date-btn"
+                      @click="view = 'day'; anchorISO = cell.iso"
+                      :aria-label="'Open ' + cell.iso">
+                <span x-text="cell.dayMonth"></span>
+              </button>
+            </p>
+            <p class="cal-week__totals" x-show="cell.totalInflow + cell.totalOutflow !== 0">
+              <span x-show="cell.totalInflow > 0" class="amount--inflow"
+                    x-text="formatCents(cell.totalInflow)"></span>
+              <span x-show="cell.totalOutflow < 0" class="amount--outflow"
+                    x-text="formatCents(cell.totalOutflow)"></span>
+            </p>
+          </header>
+          <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
+            <template x-for="t in cell.posted" :key="'p' + t.id">
+              <li class="cal-week__entry cal-week__entry--posted">
+                <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(t.amount)"></span>
+              </li>
+            </template>
+            <template x-for="s in cell.scheduled" :key="'s' + s.id">
+              <li class="cal-week__entry cal-week__entry--scheduled" title="Scheduled (not posted)">
+                <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+                <span class="cal-week__entry-amt" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(s.template.amount)"></span>
+              </li>
+            </template>
+          </ul>
+          <p class="cal-week__empty" x-show="!(cell.posted.length + cell.scheduled.length)" x-cloak>—</p>
+        </li>
+      </template>
+    </ol>
+  </section>
+
+  {# ---- Day view ---------------------------------------------------- #}
+  <section class="cal-day" x-show="$store.budget.profile && view === 'day'" x-cloak>
+    <header class="cal-day__head">
+      <h2 class="cal-day__title" x-text="dayLabel(anchorISO)"></h2>
+      <p class="cal-day__totals">
+        <span x-show="dayData(anchorISO).totalInflow > 0" class="amount--inflow"
+              x-text="formatCents(dayData(anchorISO).totalInflow)"></span>
+        <span x-show="dayData(anchorISO).totalOutflow < 0" class="amount--outflow"
+              x-text="formatCents(dayData(anchorISO).totalOutflow)"></span>
+        <span x-show="dayData(anchorISO).totalInflow === 0 && dayData(anchorISO).totalOutflow === 0"
+              style="color: var(--fg-muted);">No net activity</span>
+      </p>
+    </header>
+
+    <template x-if="anchorISO">
+      <div x-data="{ d: dayData(anchorISO) }">
+        <p x-show="!(d.posted.length + d.scheduled.length)" x-cloak style="color: var(--fg-muted);">
+          Nothing posted or scheduled on this day.
+        </p>
+        <section x-show="d.posted.length" x-cloak>
+          <h3 class="cal__detail-section">Posted (<span x-text="d.posted.length"></span>)</h3>
+          <ul class="cal-day__list">
+            <template x-for="t in d.posted" :key="t.id">
+              <li class="cal-day__row" :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
+                <div>
+                  <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
+                  <p class="cal-day__row-meta">
+                    <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                    <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                    <span x-show="t.memo" x-text="' · ' + t.memo"></span>
+                  </p>
+                </div>
+                <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(t.amount)"></span>
+              </li>
+            </template>
+          </ul>
+        </section>
+        <section x-show="d.scheduled.length" x-cloak>
+          <h3 class="cal__detail-section">Upcoming (scheduled) (<span x-text="d.scheduled.length"></span>)</h3>
+          <ul class="cal-day__list">
+            <template x-for="s in d.scheduled" :key="s.id">
+              <li class="cal-day__row" :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
+                <div>
+                  <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
+                  <p class="cal-day__row-meta">
+                    <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                    <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                  </p>
+                </div>
+                <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(s.template.amount)"></span>
+              </li>
+            </template>
+          </ul>
+        </section>
+      </div>
+    </template>
   </section>
 </div>
 
 <script>
 function calendarView() {
   return {
-    /* Anchor month (YYYY-MM) — independent of the budget store's
-       currentMonth so navigating here doesn't shift the budget view. */
-    viewMonth: "",
-    selectedISO: null,
+    view: "month",     // 'day' | 'week' | 'month' | 'year'
+    anchorISO: "",     // selected day OR a YYYY-MM-DD anchor for month/week/year
+    selectedISO: null, // month-view click selection
+
+    searchQuery: "",
+    filterAccountId: "",
+    filterKind: "all", // 'all' | 'posted' | 'scheduled' | 'inflow' | 'outflow'
+
+    views: [
+      { value: "day",   label: "Day" },
+      { value: "week",  label: "Week" },
+      { value: "month", label: "Month" },
+      { value: "year",  label: "Year" },
+    ],
 
     init() {
-      this.viewMonth = this.$store.budget.currentMonth || this._isoMonth(new Date());
+      this.anchorISO = this._isoDay(new Date());
     },
 
-    _isoMonth(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); },
-    _isoDay(d)   { return d.toISOString().slice(0, 10); },
+    /* ---------- date helpers ---------- */
+    _pad(n) { return String(n).padStart(2, "0"); },
+    _isoDay(d) { return d.getFullYear() + "-" + this._pad(d.getMonth() + 1) + "-" + this._pad(d.getDate()); },
+    _isoMonth(d) { return d.getFullYear() + "-" + this._pad(d.getMonth() + 1); },
+    _parseISO(s) {
+      var parts = (s || "").split("-").map(Number);
+      return new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    },
+    _startOfWeek(d) {
+      var copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      copy.setDate(copy.getDate() - copy.getDay()); // Sun = 0
+      return copy;
+    },
 
-    monthLabel() {
-      var parts = this.viewMonth.split("-");
+    anchorMonthISO() { return this._isoMonth(this._parseISO(this.anchorISO)); },
+    anchorYear()     { return this._parseISO(this.anchorISO).getFullYear(); },
+
+    anchorLabel() {
+      var d = this._parseISO(this.anchorISO);
+      if (this.view === "day") {
+        return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+      }
+      if (this.view === "week") {
+        var start = this._startOfWeek(d);
+        var end = new Date(start); end.setDate(start.getDate() + 6);
+        return start.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+               " – " +
+               end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      }
+      if (this.view === "month") {
+        return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      }
+      return String(d.getFullYear());
+    },
+
+    monthLabel(iso) {
+      var parts = (iso || "").split("-");
       var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
       return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     },
 
+    dayLabel(iso) {
+      if (!iso) return "";
+      var d = this._parseISO(iso);
+      return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    },
+
+    /* ---------- navigation ---------- */
     jumpToday() {
-      var d = new Date();
-      this.viewMonth = this._isoMonth(d);
-      this.selectedISO = this._isoDay(d);
+      this.anchorISO = this._isoDay(new Date());
+      this.selectedISO = this.anchorISO;
     },
-
     step(delta) {
-      var parts = this.viewMonth.split("-");
-      var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1 + delta, 1);
-      this.viewMonth = this._isoMonth(d);
-      this.selectedISO = null;
+      var d = this._parseISO(this.anchorISO);
+      if (this.view === "day")   d.setDate(d.getDate() + delta);
+      if (this.view === "week")  d.setDate(d.getDate() + (7 * delta));
+      if (this.view === "month") d.setMonth(d.getMonth() + delta);
+      if (this.view === "year")  d.setFullYear(d.getFullYear() + delta);
+      this.anchorISO = this._isoDay(d);
+      if (this.view !== "month") this.selectedISO = null;
     },
 
+    /* ---------- data ---------- */
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
 
-    /* Returns the grid cells for the visible month: leading blanks so
-       the first row aligns to the right weekday, then days 1..N.
-       Each non-blank cell carries pre-bucketed posted + scheduled
-       transactions so the template stays lean. */
+    openAccounts() {
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      return p.accounts.filter(function (a) { return !a.closedAt; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    },
+
+    /* True when a posted or scheduled item passes all active filters. */
+    _matchTxn(t) {
+      if (this.filterAccountId && t.accountId !== this.filterAccountId) return false;
+      if (this.filterKind === "scheduled") return false;
+      if (this.filterKind === "inflow" && !(t.amount > 0)) return false;
+      if (this.filterKind === "outflow" && !(t.amount < 0)) return false;
+      return this._matchSearch(
+        this.$store.budget.payeeName(t.payeeId),
+        t.memo,
+        this.$store.budget.categoryName(t.categoryId)
+      );
+    },
+    _matchSched(s) {
+      if (this.filterAccountId && s.template.accountId !== this.filterAccountId) return false;
+      if (this.filterKind === "posted") return false;
+      if (this.filterKind === "inflow"  && !(s.template.amount > 0)) return false;
+      if (this.filterKind === "outflow" && !(s.template.amount < 0)) return false;
+      return this._matchSearch(
+        this.$store.budget.payeeName(s.template.payeeId) || s.template.payeeName,
+        s.template.memo,
+        this.$store.budget.categoryName(s.template.categoryId)
+      );
+    },
+    _matchSearch(payee, memo, category) {
+      var q = (this.searchQuery || "").trim().toLowerCase();
+      if (!q) return true;
+      var hay = ((payee || "") + " " + (memo || "") + " " + (category || "")).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    },
+
+    /* Returns { posted, scheduled, totalInflow, totalOutflow, count }. */
+    dayData(iso) {
+      var p = this.$store.budget.profile;
+      var out = { posted: [], scheduled: [], totalInflow: 0, totalOutflow: 0, count: 0 };
+      if (!p || !iso) return out;
+      var prefix = iso;
+      var self = this;
+      (p.transactions || []).forEach(function (t) {
+        if ((t.date || "").slice(0, 10) !== prefix) return;
+        if (!self._matchTxn(t)) return;
+        out.posted.push(t);
+        if (t.amount > 0) out.totalInflow  += t.amount;
+        if (t.amount < 0) out.totalOutflow += t.amount;
+      });
+      (p.scheduled || []).forEach(function (s) {
+        if ((s.nextDate || "").slice(0, 10) !== prefix) return;
+        if (!self._matchSched(s)) return;
+        out.scheduled.push(s);
+      });
+      out.count = out.posted.length + out.scheduled.length;
+      return out;
+    },
+
+    /* Net (inflow + outflow) across the named month (YYYY-MM). */
+    monthNet(monthISO) {
+      var p = this.$store.budget.profile;
+      if (!p) return 0;
+      var sum = 0;
+      var self = this;
+      (p.transactions || []).forEach(function (t) {
+        if ((t.date || "").slice(0, 7) !== monthISO) return;
+        if (!self._matchTxn(t)) return;
+        sum += t.amount || 0;
+      });
+      return sum;
+    },
+
+    /* ---------- grid builders ---------- */
     monthCells() {
-      var parts = this.viewMonth.split("-");
-      var year = parseInt(parts[0], 10);
-      var month = parseInt(parts[1], 10);
-      var firstDay = new Date(year, month - 1, 1).getDay(); // 0=Sun
+      var anchor = this._parseISO(this.anchorISO);
+      var year = anchor.getFullYear();
+      var month = anchor.getMonth() + 1;
+      var firstDay = new Date(year, month - 1, 1).getDay();
       var daysInMonth = new Date(year, month, 0).getDate();
       var today = this._isoDay(new Date());
-      var profile = this.$store.budget.profile;
-      var postedByDay = {};
-      var schedByDay = {};
-      if (profile) {
-        (profile.transactions || []).forEach(function (t) {
-          if (!t.date) return;
-          var d = t.date.slice(0, 10);
-          if (d.indexOf(year + "-" + String(month).padStart(2, "0")) !== 0) return;
-          (postedByDay[d] = postedByDay[d] || []).push(t);
-        });
-        (profile.scheduled || []).forEach(function (s) {
-          if (!s.nextDate) return;
-          var d = s.nextDate.slice(0, 10);
-          if (d.indexOf(year + "-" + String(month).padStart(2, "0")) !== 0) return;
-          (schedByDay[d] = schedByDay[d] || []).push(s);
-        });
-      }
       var cells = [];
-      for (var i = 0; i < firstDay; i++) cells.push({ blank: true, idx: i });
+      for (var i = 0; i < firstDay; i++) cells.push({ blank: true, key: "blank-" + i });
       for (var day = 1; day <= daysInMonth; day++) {
-        var iso = year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
-        var posted = postedByDay[iso] || [];
-        var scheduled = schedByDay[iso] || [];
-        var inflow = posted.reduce(function (s, t) { return s + (t.amount > 0 ? t.amount : 0); }, 0);
-        var outflow = posted.reduce(function (s, t) { return s + (t.amount < 0 ? t.amount : 0); }, 0);
+        var iso = year + "-" + this._pad(month) + "-" + this._pad(day);
+        var d = this.dayData(iso);
         cells.push({
           blank: false,
+          key: iso,
           iso: iso,
           day: day,
           isToday: iso === today,
-          posted: posted,
-          scheduled: scheduled,
-          totalInflow: inflow,
-          totalOutflow: outflow,
+          posted: d.posted,
+          scheduled: d.scheduled,
+          totalInflow: d.totalInflow,
+          totalOutflow: d.totalOutflow,
+        });
+      }
+      /* Trailing blanks to fill the last row to a multiple of 7. */
+      var trailing = (7 - (cells.length % 7)) % 7;
+      for (var j = 0; j < trailing; j++) cells.push({ blank: true, key: "blank-end-" + j });
+      return cells;
+    },
+
+    weekCells() {
+      var start = this._startOfWeek(this._parseISO(this.anchorISO));
+      var today = this._isoDay(new Date());
+      var cells = [];
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(start); d.setDate(start.getDate() + i);
+        var iso = this._isoDay(d);
+        var data = this.dayData(iso);
+        cells.push({
+          iso: iso,
+          weekday: d.toLocaleDateString("en-US", { weekday: "short" }),
+          dayMonth: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          isToday: iso === today,
+          posted: data.posted,
+          scheduled: data.scheduled,
+          totalInflow: data.totalInflow,
+          totalOutflow: data.totalOutflow,
         });
       }
       return cells;
     },
 
-    /* Detail panel helpers — read the selected day from monthCells. */
-    _selectedCell() {
-      if (!this.selectedISO) return null;
-      return this.monthCells().find((c) => c.iso === this.selectedISO) || null;
+    /* Year view: 12 month tiles. */
+    monthsOfYear() {
+      var year = this.anchorYear();
+      var labels = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      var self = this;
+      return labels.map(function (label, i) {
+        var iso = year + "-" + self._pad(i + 1);
+        return { iso: iso, label: label };
+      });
     },
-    selectedPosted()    { var c = this._selectedCell(); return c ? c.posted : []; },
-    selectedScheduled() { var c = this._selectedCell(); return c ? c.scheduled : []; },
-    selectedHasAnything() {
-      var c = this._selectedCell();
-      return !!(c && (c.posted.length + c.scheduled.length) > 0);
+
+    /* Mini-grid cells for one month in the year view (no totals,
+       no scheduled, just a "has data" hint). */
+    miniCells(monthISO) {
+      var parts = monthISO.split("-");
+      var year = parseInt(parts[0], 10);
+      var month = parseInt(parts[1], 10);
+      var firstDay = new Date(year, month - 1, 1).getDay();
+      var daysInMonth = new Date(year, month, 0).getDate();
+      var today = this._isoDay(new Date());
+      var p = this.$store.budget.profile;
+      var hits = {};
+      if (p) {
+        var monthPrefix = monthISO + "-";
+        var self = this;
+        (p.transactions || []).forEach(function (t) {
+          if ((t.date || "").indexOf(monthPrefix) !== 0) return;
+          if (!self._matchTxn(t)) return;
+          var k = t.date.slice(0, 10);
+          hits[k] = (hits[k] || 0) + 1;
+        });
+        (p.scheduled || []).forEach(function (s) {
+          if ((s.nextDate || "").indexOf(monthPrefix) !== 0) return;
+          if (!self._matchSched(s)) return;
+          var k = s.nextDate.slice(0, 10);
+          hits[k] = (hits[k] || 0) + 1;
+        });
+      }
+      var cells = [];
+      for (var i = 0; i < firstDay; i++) cells.push({ blank: true, key: monthISO + "-blank-" + i });
+      for (var day = 1; day <= daysInMonth; day++) {
+        var iso = year + "-" + this._pad(month) + "-" + this._pad(day);
+        cells.push({
+          blank: false,
+          key: iso,
+          iso: iso,
+          day: day,
+          isToday: iso === today,
+          count: hits[iso] || 0,
+        });
+      }
+      return cells;
     },
-    selectedLabel() {
-      if (!this.selectedISO) return "";
-      var parts = this.selectedISO.split("-");
-      var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
+    /* Header readout — only meaningful when a filter is active. */
+    visibleCount() {
+      if (this.view === "year") {
+        var sum = 0, self = this;
+        this.monthsOfYear().forEach(function (mm) {
+          self.miniCells(mm.iso).forEach(function (c) { if (!c.blank) sum += c.count; });
+        });
+        return sum;
+      }
+      if (this.view === "month") {
+        var sum2 = 0;
+        this.monthCells().forEach(function (c) { if (!c.blank) sum2 += c.posted.length + c.scheduled.length; });
+        return sum2;
+      }
+      if (this.view === "week") {
+        var sum3 = 0;
+        this.weekCells().forEach(function (c) { sum3 += c.posted.length + c.scheduled.length; });
+        return sum3;
+      }
+      var d = this.dayData(this.anchorISO);
+      return d.posted.length + d.scheduled.length;
     },
   };
 }
