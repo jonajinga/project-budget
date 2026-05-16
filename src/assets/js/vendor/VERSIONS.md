@@ -14,3 +14,4 @@ version and the date the file was fetched.
 | dexie.min.js | 4.0.10 | 2026-05-16 | 92 KB | jsdelivr.net/npm/dexie |
 | fuse.min.js | 7.0.0 | 2026-05-16 | 23 KB | jsdelivr.net/npm/fuse.js |
 | sortable.min.js | 1.15.6 | 2026-05-16 | 45 KB | jsdelivr.net/npm/sortablejs |
+| chart.umd.min.js | 4.4.7 | 2026-05-16 | 206 KB | jsdelivr.net/npm/chart.js |

@@ -14,6 +14,25 @@
   align-items: center;
   justify-content: space-between;
 }
+.register__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Filter select shrinks to content + a little; search expands to fill
+   what's left so both controls land on the same baseline regardless of
+   the account name lengths. */
+.register__filters .select { width: auto; min-width: 12rem; }
+.register__filters .register__search { flex: 1 1 18rem; min-width: 0; }
+.register__count {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  flex-shrink: 0;
+}
 
 .register__table {
   width: 100%;

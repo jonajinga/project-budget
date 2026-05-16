@@ -99,7 +99,7 @@ eleventyExcludeFromCollections: true
                       class="cal-mini__day"
                       @click="view = 'day'; anchorISO = cell.iso"
                       :aria-label="'Open ' + cell.iso"
-                      :title="cell.count + ' entries'">
+                      :data-tip="miniTooltip(cell)">
                 <span x-text="cell.day"></span>
               </button>
             </li>
@@ -548,6 +548,15 @@ function calendarView() {
       if (cell.posted.length)    parts.push(cell.posted.length + " posted");
       if (cell.scheduled.length) parts.push(cell.scheduled.length + " scheduled");
       return parts.join(" · ");
+    },
+    /* Year-view mini cell tooltip. Counts both posted + projected
+       scheduled entries, prefixed with the date so the popover reads
+       well over a tiny square. */
+    miniTooltip(cell) {
+      if (!cell || cell.blank) return "";
+      if (!cell.count) return cell.iso;
+      var label = cell.count === 1 ? "entry" : "entries";
+      return cell.iso + " · " + cell.count + " " + label;
     },
 
     openAccounts() {
