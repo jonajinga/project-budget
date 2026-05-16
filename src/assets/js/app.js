@@ -22,36 +22,61 @@ function tooltipsEnabled() {
 document.addEventListener("alpine:initialized", function () {
   if (typeof window.tippy !== "function") return;
 
+  function attachOne(el) {
+    if (!el || el.nodeType !== 1 || el.getAttribute("data-tippy-bound") === "1") return;
+    var content = el.getAttribute("data-tip");
+    if (!content) return;
+    el.setAttribute("data-tippy-bound", "1");
+    var inst = window.tippy(el, {
+      content: content,
+      theme: "projectbudget",
+      placement: "top",
+      maxWidth: 280,
+      delay: [120, 80],
+      touch: ["hold", 250],
+      allowHTML: false,
+      /* Re-read data-tip at show time so reactive content (Alpine
+         :data-tip bindings that update after binding) stays fresh. */
+      onShow: function (instance) {
+        var fresh = el.getAttribute("data-tip");
+        if (!fresh) return false;
+        if (fresh !== instance.props.content) instance.setContent(fresh);
+      },
+    });
+    return inst;
+  }
+
   function attach(scope) {
     if (!tooltipsEnabled()) return;
     var root = scope || document;
+    if (root.matches && root.matches("[data-tip]")) attachOne(root);
     var nodes = root.querySelectorAll ? root.querySelectorAll("[data-tip]:not([data-tippy-bound])") : [];
-    nodes.forEach(function (el) {
-      var content = el.getAttribute("data-tip");
-      if (!content) return;
-      el.setAttribute("data-tippy-bound", "1");
-      window.tippy(el, {
-        content: content,
-        theme: "projectbudget",
-        placement: "top",
-        maxWidth: 280,
-        delay: [120, 80],
-        touch: ["hold", 250],
-        allowHTML: false,
-      });
-    });
+    nodes.forEach(attachOne);
   }
 
   attach();
 
+  /* Alpine sets :data-tip values AFTER the DOM node is inserted, so
+     childList-only observation misses many bindings (the attribute is
+     empty when we look). Also watch for data-tip attribute mutations
+     so deferred binds + reactive updates pick up. */
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
-      m.addedNodes && m.addedNodes.forEach(function (n) {
-        if (n.nodeType === 1) attach(n);
-      });
+      if (m.type === "childList") {
+        m.addedNodes && m.addedNodes.forEach(function (n) {
+          if (n.nodeType === 1) attach(n);
+        });
+      } else if (m.type === "attributes" && m.attributeName === "data-tip") {
+        attachOne(m.target);
+      }
     });
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-tip"],
+  });
 
   /* The settings page toggles this flag. We listen for storage events so
      the toggle takes effect across tabs without a reload. */

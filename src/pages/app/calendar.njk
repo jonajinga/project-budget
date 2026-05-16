@@ -351,40 +351,36 @@ eleventyExcludeFromCollections: true
       <h3 class="modal__title" id="cal-txn-title">Transaction</h3>
       <form @submit.prevent="saveTxn()">
         <div class="form-stack">
-          <div class="form-row">
-            <div class="field">
-              <label class="field__label" for="cal-txn-date">Date</label>
-              <input class="input" id="cal-txn-date" type="date" x-model="txnForm.date" required>
-            </div>
-            <div class="field">
-              <label class="field__label" for="cal-txn-account">Account</label>
-              <select class="select" id="cal-txn-account" x-model="txnForm.accountId" required>
-                <template x-for="a in openAccounts()" :key="a.id">
-                  <option :value="a.id" x-text="a.name"></option>
-                </template>
-              </select>
-            </div>
+          <div class="field">
+            <label class="field__label" for="cal-txn-date">Date</label>
+            <input class="input" id="cal-txn-date" type="date" x-model="txnForm.date" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cal-txn-account">Account</label>
+            <select class="select" id="cal-txn-account" x-model="txnForm.accountId" required>
+              <template x-for="a in openAccounts()" :key="a.id">
+                <option :value="a.id" x-text="a.name"></option>
+              </template>
+            </select>
           </div>
           <div class="field">
             <label class="field__label" for="cal-txn-payee">Payee</label>
             <input class="input" id="cal-txn-payee" type="text" x-model="txnForm.payeeName">
           </div>
-          <div class="form-row">
-            <div class="field">
-              <label class="field__label" for="cal-txn-amount">Amount</label>
-              <input class="input" id="cal-txn-amount" type="text" x-model="txnForm.amount"
-                     inputmode="decimal" required>
-              <p class="field__hint">Negative = outflow.</p>
-            </div>
-            <div class="field">
-              <label class="field__label" for="cal-txn-category">Category</label>
-              <select class="select" id="cal-txn-category" x-model="txnForm.categoryId">
-                <option value="">(uncategorized)</option>
-                <template x-for="c in selectableCategories()" :key="c.id">
-                  <option :value="c.id" x-text="c.name"></option>
-                </template>
-              </select>
-            </div>
+          <div class="field">
+            <label class="field__label" for="cal-txn-amount">Amount</label>
+            <input class="input" id="cal-txn-amount" type="text" x-model="txnForm.amount"
+                   inputmode="decimal" required>
+            <p class="field__hint">Negative = outflow.</p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cal-txn-category">Category</label>
+            <select class="select" id="cal-txn-category" x-model="txnForm.categoryId">
+              <option value="">(uncategorized)</option>
+              <template x-for="c in selectableCategories()" :key="c.id">
+                <option :value="c.id" x-text="c.name"></option>
+              </template>
+            </select>
           </div>
           <div class="field">
             <label class="field__label" for="cal-txn-memo">Memo</label>
