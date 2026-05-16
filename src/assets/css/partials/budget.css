@@ -55,16 +55,24 @@
   .budget__group-header > :nth-child(3) { display: block; }
 }
 .budget__category { font-weight: 500; }
+/* Right-edge of the input text must line up with the right-edge of the
+   group total spans in the same column. Zero horizontal padding +
+   transparent border keeps the editable input visually flush with the
+   read-only totals above it; the focus state pulls the border back in. */
 .budget__assigned input {
   width: 100%;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  padding: 0.3rem 0.5rem;
+  padding: 0.3rem 0;
   border: 1px solid transparent;
   background: transparent;
   border-radius: var(--radius-input);
 }
-.budget__assigned input:focus { background: var(--bg-elevated); border-color: var(--accent); }
+.budget__assigned input:focus {
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+  padding: 0.3rem 0.45rem;
+}
 .budget__activity, .budget__available {
   text-align: right;
   font-variant-numeric: tabular-nums;

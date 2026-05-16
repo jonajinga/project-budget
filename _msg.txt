@@ -1,38 +1,50 @@
-feat: persistent hamburger + centered profile in app header
+feat: Dexie/IndexedDB persistence + budget alignment fix
 
-Replaced the duplicated "Project Budget Project Budget" wordmark in the
-header with two header variants:
+Storage: add Dexie.js as a second persistence backend that mirrors
+every localStorage write. The live profile, snapshots, daily backups,
+and active-profile id all flow to both stores. Reads stay sync from
+localStorage to keep the reactive store sync; Dexie is the durable
+backup that survives a localStorage wipe.
 
-Marketing pages (everything outside /app/):
-- Single "Project Budget" wordmark on the left (the redundant
-  brand__full duplicate is gone)
-- Horizontal site nav on desktop
-- Hamburger button on mobile (where the horizontal nav was hidden)
-- Theme toggle on the right
+Versioning is split into two independent surfaces so upgrades don't
+break users:
+- Dexie schema version (db.version(N).stores(...).upgrade()) governs
+  table shapes + indexes in IndexedDB.
+- Profile schema version (SCHEMA_VERSION + MIGRATIONS in schema.js)
+  governs the bundle shape. A single Dexie table can hold profiles at
+  v1, v2, v3 simultaneously; the loader normalizes on read.
 
-App pages (/app/*):
-- Persistent hamburger button on the left at every viewport — what the
-  user requested ("hamburger menu persistent on all devices")
-- Profile name centered in the header ("PROFILE" eyebrow over the
-  active profile, links to /app/profiles/ for quick switching)
-- Theme toggle on the right
-- Wordmark removed entirely from the app header — the profile name
-  takes the prominent slot it deserves
-- Removed the now-redundant floating .app-sidebar-toggle bottom-left
-  button; the persistent header hamburger does its job
+Boot flow:
+1. _bootDexie opens the DB; sets storageBackend = "mirrored" or stays
+   "localStorage" if Dexie is unavailable (private browsing, very old
+   browser).
+2. One-time migrateLocalStorageIfNeeded copies any existing
+   localStorage keys (profile, snapshot, backup, active) into Dexie.
+   Idempotent via a meta flag.
+3. Reverse-restore: if localStorage is empty but Dexie has profiles
+   (user wiped site data, IndexedDB persisted), copy them back so the
+   sync-reading store sees them. Toast notifies.
+4. Normal in-memory boot.
 
-Shared slide-out site menu (opens from the hamburger):
-- Section 1 (app pages only): "In this app" — Dashboard, Budget,
-  Register, Accounts, Categories, Recurring, Reports, Import, Export,
-  Profiles, Settings
-- Section 2: "Project Budget" — Home, Features, Docs, Blog, Glossary,
-  Open source
-- Section 3: "More" — Docs, Blog, Open source, Changelog, Accessibility,
-  Sitemap, Privacy, Terms
-- Closes on backdrop click or Escape
+Mirror writes use a JSON round-trip unwrap() helper. Alpine's reactive
+Proxy can't be passed to IndexedDB.put() — structured-clone throws
+DataCloneError on the Proxy traps. Strip it first.
 
-Verified at 360/414/768/1024/1280 in headless Chromium: hamburger
-visible at every app viewport, profile name "Sample household" rendered
-centered, menu opens on click, zero horizontal scroll, zero JS errors.
+Storage backend shown on /app/settings/ Data card.
+New docs page: /docs/profiles-backups/how-storage-works/.
+
+Budget table alignment (user-reported via screenshot):
+- Editable amount inputs were inset 0.5rem from the cell edge while
+  the read-only group totals sat flush — visible misalignment.
+- Input padding: 0.3rem 0 (was 0.5rem horizontal). Focus state pulls
+  the padding back in so the visible border doesn't crowd the digits.
+- Reformat input value with Intl.NumberFormat thousands grouping
+  ("1,450.00" not "1450.00") to match the group totals' formatting.
+
+Library survey responses (asked in conversation, none added):
+- dinero.js: skip. We model money as integer cents already.
+- date-fns: skip. Our date math fits in <100 lines of Intl + parse.
+- Intl.NumberFormat/DateTimeFormat: already using.
+- imask.js: defer. parseDollars already accepts permissive input.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

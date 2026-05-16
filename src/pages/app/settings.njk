@@ -61,6 +61,12 @@ eleventyExcludeFromCollections: true
         <dt>Last saved</dt>
         <dd><strong x-text="$store.budget.lastSavedLabel"></strong></dd>
       </div>
+      <div class="data-summary__row">
+        <dt data-tip="Where this browser keeps your data. Mirrored means every write hits both localStorage and IndexedDB so neither one losing data wipes you out.">Storage backend</dt>
+        <dd>
+          <strong x-text="$store.budget.storageBackend === 'mirrored' ? 'localStorage + IndexedDB (mirrored)' : 'localStorage only'"></strong>
+        </dd>
+      </div>
     </dl>
     <div class="form-actions" style="margin-top: var(--space-md);">
       <a class="btn btn--secondary btn--sm" href="/app/export/">Export</a>

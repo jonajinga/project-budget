@@ -11,6 +11,14 @@ import {
 } from "./profile.js";
 import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES } from "./persist.js";
 import { snapshotIfStale, listBackups, restoreBackup, listSnapshots, takeSnapshot, deleteSnapshot, restoreSnapshot } from "./backup.js";
+import * as dexie from "./db.js";
+
+/* JSON round-trip clone: strips Alpine reactive Proxies so the result
+   is a plain object that IndexedDB's structured-clone can serialize. */
+function unwrap(value) {
+  if (value == null) return value;
+  return JSON.parse(JSON.stringify(value));
+}
 
 import {
   newAccountGroup, newAccount, newCategoryGroup, newCategory,
@@ -91,6 +99,13 @@ export function createStore() {
     _listVersion: 0,
     _bumpLists() { this._listVersion += 1; },
 
+    /* Persistence backend status. Populated during init():
+       - "localStorage"  : Dexie unavailable; writes go to localStorage only
+       - "mirrored"      : Both Dexie and localStorage receive every write
+       Surfaced on /app/settings/ as the "Storage backend" line. */
+    storageBackend: "localStorage",
+    storageMigration: null,    /* result of the one-time LS -> Dexie scan */
+
     init() {
       this.privateBrowsing = isPrivateBrowsing();
       if (this.privateBrowsing) {
@@ -101,15 +116,71 @@ export function createStore() {
         );
       }
       pruneTrash();
+
+      /* Boot order:
+         1. Check whether Dexie is usable. Sets storageBackend.
+         2. One-time migration from localStorage to Dexie (if user is
+            upgrading from a pre-Dexie build).
+         3. If localStorage has no profiles but Dexie does, restore from
+            Dexie (covers users whose localStorage was wiped while
+            IndexedDB persisted).
+         4. Then run the normal in-memory boot from localStorage. */
+      var self = this;
+      this._bootDexie().catch(function (e) {
+        console.warn("Dexie boot failed (will keep using localStorage):", e);
+      }).finally(function () {
+        self._bootFromLocalStorage();
+      });
+    },
+
+    /* Try to open Dexie, migrate localStorage if needed, and reverse-restore
+       if localStorage is empty but Dexie has data. All steps are non-fatal —
+       any failure falls back to localStorage-only. */
+    async _bootDexie() {
+      var available = await dexie.isAvailable();
+      if (!available) {
+        this.storageBackend = "localStorage";
+        return;
+      }
+      this.storageBackend = "mirrored";
+
+      /* Forward migration: copy any localStorage data into Dexie once. */
+      try {
+        this.storageMigration = await dexie.migrateLocalStorageIfNeeded(
+          typeof localStorage !== "undefined" ? localStorage : null
+        );
+      } catch (_e) { /* migration is best-effort */ }
+
+      /* Reverse restore: if localStorage is empty but Dexie has profiles,
+         copy them back so the rest of the app (which reads sync from
+         localStorage) can see them. */
+      try {
+        if (!listProfiles().length) {
+          var dexieProfiles = await dexie.listProfilesDB();
+          if (dexieProfiles.length) {
+            var index = dexieProfiles.map(function (p) {
+              return { id: p.id, name: p.name, lastOpenedAt: p.updatedAt, schemaVersion: p.schemaVersion };
+            });
+            localStorage.setItem("projectbudget:profiles", JSON.stringify(index));
+            dexieProfiles.forEach(function (p) {
+              localStorage.setItem("projectbudget:profile:" + p.id, JSON.stringify(p));
+            });
+            var activeFromMeta = await dexie.getMeta("active");
+            if (activeFromMeta) localStorage.setItem("projectbudget:active", activeFromMeta);
+            this.pushToast("Restored " + dexieProfiles.length + " profile(s) from IndexedDB.");
+          }
+        }
+      } catch (_e) {}
+    },
+
+    _bootFromLocalStorage() {
       this.refreshProfiles();
       var id = getActiveId();
       if (id && this.profiles.find(function (p) { return p.id === id; })) {
         this._load(id);
       } else if (!this.profiles.length && !this.privateBrowsing) {
         /* First-time visitor — auto-load the bundled sample so the app
-           isn't empty. The sample is a regular profile they can edit or
-           delete; we just bootstrap it once. The "sample-loaded" flag
-           prevents re-fetching if they delete it later. */
+           isn't empty. */
         this.loadSampleIfFirstVisit();
       }
     },
@@ -161,20 +232,34 @@ export function createStore() {
       this.profile = p;
       this.active = id;
       setActiveId(id);
-      snapshotIfStale(p);
+      this._mirrorActive(id);
+      var snapKey = snapshotIfStale(p);
+      if (snapKey) {
+        /* snapKey is the localStorage key; mirror the same backup into
+           Dexie keyed by [profileId, day]. */
+        var parts = snapKey.split(":"); // projectbudget : backup : profileId : day
+        this._mirrorBackup(parts[2], parts[3], p);
+      }
       this._bumpLists();
     },
 
     _save() {
       if (!this.profile) return;
       var self = this;
-      /* Pass the underlying object — Alpine proxies serialize fine via
-         JSON.stringify but we read the raw object here for clarity. */
       scheduleSave(
         this.profile,
         function () {
           self.lastSavedAt = new Date();
           self.refreshProfiles();
+          /* Mirror to Dexie. Fire-and-forget — localStorage already
+             committed, Dexie failure is non-fatal. Clone via JSON
+             round-trip so we hand IndexedDB a plain object instead of
+             Alpine's reactive Proxy (structured-clone can't handle it). */
+          if (self.storageBackend === "mirrored") {
+            dexie.putProfile(unwrap(self.profile)).catch(function (e) {
+              console.warn("Dexie putProfile failed:", e);
+            });
+          }
         },
         function (err) {
           var msg = (err && err.name === "QuotaExceededError")
@@ -183,6 +268,32 @@ export function createStore() {
           self.pushToast(msg, "danger", true);
         }
       );
+    },
+
+    /* Mirror helpers — fire-and-forget. The store calls these alongside
+       localStorage mutations so the two backends stay in lockstep without
+       blocking the UI on async I/O. Every payload passed to Dexie is
+       unwrap()ped to a plain object first — IndexedDB's structured-clone
+       throws DataCloneError on Alpine's reactive Proxies. */
+    _mirrorProfileDelete(id) {
+      if (this.storageBackend !== "mirrored") return;
+      dexie.deleteProfileDB(id).catch(function (e) { console.warn("Dexie deleteProfile failed:", e); });
+    },
+    _mirrorSnapshot(profileId, rec) {
+      if (this.storageBackend !== "mirrored") return;
+      dexie.putSnapshot(profileId, unwrap(rec)).catch(function (e) { console.warn("Dexie putSnapshot failed:", e); });
+    },
+    _mirrorSnapshotDelete(profileId, snapshotId) {
+      if (this.storageBackend !== "mirrored") return;
+      dexie.deleteSnapshotDB(profileId, snapshotId).catch(function (e) { console.warn("Dexie deleteSnapshot failed:", e); });
+    },
+    _mirrorBackup(profileId, day, profile) {
+      if (this.storageBackend !== "mirrored") return;
+      dexie.putBackup(profileId, day, unwrap(profile)).catch(function (e) { console.warn("Dexie putBackup failed:", e); });
+    },
+    _mirrorActive(id) {
+      if (this.storageBackend !== "mirrored") return;
+      dexie.setMeta("active", id || "").catch(function () {});
     },
 
     get lastSavedLabel() {
@@ -230,9 +341,11 @@ export function createStore() {
         return false;
       }
       deleteProfile(id);
+      this._mirrorProfileDelete(id);
       if (this.active === id) {
         this.active = null;
         this.profile = null;
+        this._mirrorActive(null);
       }
       this.refreshProfiles();
       this.pushToast("Profile deleted. It can be restored from Settings within 7 days.");
@@ -285,6 +398,7 @@ export function createStore() {
       if (!this.profile) return null;
       var rec = takeSnapshot(this.profile, label);
       if (rec) {
+        this._mirrorSnapshot(this.profile.id, rec);
         this._bumpLists();
         this.pushToast("Snapshot saved" + (rec.label ? ": '" + rec.label + "'" : "") + ".");
       }
@@ -293,7 +407,9 @@ export function createStore() {
 
     deleteSnapshot(id) {
       if (!this.profile) return;
-      deleteSnapshot(this.profile.id, id);
+      var pid = this.profile.id;
+      deleteSnapshot(pid, id);
+      this._mirrorSnapshotDelete(pid, id);
       this._bumpLists();
       this.pushToast("Snapshot removed.");
     },

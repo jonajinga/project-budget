@@ -75,8 +75,8 @@ eleventyExcludeFromCollections: true
               <input type="text" inputmode="decimal"
                      data-touch="compact"
                      :aria-label="'Assigned for ' + c.name"
-                     :value="(($store.budget.assignedFor(c.id) || 0) / 100).toFixed(2)"
-                     @blur="commitAssign(c.id, $event.target.value); $event.target.value = (($store.budget.assignedFor(c.id) || 0) / 100).toFixed(2);"
+                     :value="formatAssigned($store.budget.assignedFor(c.id))"
+                     @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
                      @keydown.enter="$event.target.blur()">
             </div>
             <div class="budget__activity" x-text="formatCents($store.budget.activityFor(c.id))"></div>
@@ -111,6 +111,13 @@ function budgetView() {
 
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    /* Editable input value — thousands commas, no $ (avoids the typing
+       friction of "$2,400" while keeping the right-edge of the digits
+       aligned with the group-total currency strings above). */
+    formatAssigned(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
 
     parseDollars(s) {
