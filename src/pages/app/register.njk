@@ -127,7 +127,7 @@ eleventyExcludeFromCollections: true
             </template>
           </select>
         </label>
-        <input class="input" type="search" x-model="search" placeholder="Search payee or memo" style="min-width: 220px;">
+        <input class="input" type="search" aria-label="Search payee or memo" x-model="search" placeholder="Search payee or memo" style="min-width: 220px;">
       </div>
       <p style="color: var(--fg-muted); font-size: var(--fs-sm); margin: 0;">
         <span x-text="visibleTransactions().length"></span> shown

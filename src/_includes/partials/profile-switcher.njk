@@ -1,6 +1,7 @@
 <div class="profile-switcher" x-data="{ open: false }">
   <button class="profile-switcher__current"
           type="button"
+          aria-label="Switch profile"
           @click="open = !open"
           :aria-expanded="open.toString()">
     <span class="profile-switcher__label">Profile</span>

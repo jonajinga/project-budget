@@ -50,7 +50,9 @@
   white-space: nowrap;
 }
 .site-nav__link:hover { color: var(--accent); }
-.site-nav__link[aria-current="page"] { color: var(--accent); }
+.site-nav__link[aria-current="page"]:not(.site-nav__link--cta) { color: var(--accent); }
+/* CTA on its own active page: keep white text on accent bg — overriding to
+   accent would collapse contrast to 1:1. */
 .site-nav__link--cta {
   background: var(--accent);
   color: #fff;

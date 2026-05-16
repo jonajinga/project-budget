@@ -84,36 +84,36 @@ eleventyExcludeFromCollections: true
         </p>
         <div class="form-row">
           <div class="field">
-            <label class="field__label">Date column</label>
-            <select class="select" x-model="columnMap.date">
+            <label class="field__label" for="map-date">Date column</label>
+            <select class="select" id="map-date" x-model="columnMap.date">
               <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
             </select>
           </div>
           <div class="field">
-            <label class="field__label">Payee column</label>
-            <select class="select" x-model="columnMap.payee">
+            <label class="field__label" for="map-payee">Payee column</label>
+            <select class="select" id="map-payee" x-model="columnMap.payee">
               <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
             </select>
           </div>
         </div>
         <div class="form-row">
           <div class="field">
-            <label class="field__label">Amount column (signed)</label>
-            <select class="select" x-model="columnMap.amount">
+            <label class="field__label" for="map-amount">Amount column (signed)</label>
+            <select class="select" id="map-amount" x-model="columnMap.amount">
               <option value="">(use debit/credit below)</option>
               <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
             </select>
           </div>
           <div class="field">
-            <label class="field__label">Debit column</label>
-            <select class="select" x-model="columnMap.debit" :disabled="!!columnMap.amount">
+            <label class="field__label" for="map-debit">Debit column</label>
+            <select class="select" id="map-debit" x-model="columnMap.debit" :disabled="!!columnMap.amount">
               <option value="">(none)</option>
               <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
             </select>
           </div>
           <div class="field">
-            <label class="field__label">Credit column</label>
-            <select class="select" x-model="columnMap.credit" :disabled="!!columnMap.amount">
+            <label class="field__label" for="map-credit">Credit column</label>
+            <select class="select" id="map-credit" x-model="columnMap.credit" :disabled="!!columnMap.amount">
               <option value="">(none)</option>
               <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
             </select>
@@ -121,15 +121,15 @@ eleventyExcludeFromCollections: true
         </div>
         <div class="form-row">
           <div class="field">
-            <label class="field__label">Category column (optional)</label>
-            <select class="select" x-model="columnMap.category">
+            <label class="field__label" for="map-category">Category column (optional)</label>
+            <select class="select" id="map-category" x-model="columnMap.category">
               <option value="">(none)</option>
               <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
             </select>
           </div>
           <div class="field">
-            <label class="field__label">Memo column (optional)</label>
-            <select class="select" x-model="columnMap.memo">
+            <label class="field__label" for="map-memo">Memo column (optional)</label>
+            <select class="select" id="map-memo" x-model="columnMap.memo">
               <option value="">(none)</option>
               <template x-for="c in csvHeaders" :key="c"><option :value="c" x-text="c"></option></template>
             </select>

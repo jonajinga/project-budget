@@ -9,7 +9,7 @@ eleventyExcludeFromCollections: true
   <header class="app-page__header">
     <div class="cluster" style="gap: var(--space-2xs);">
       <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.goPrevMonth()">&larr;</button>
-      <input class="input" type="month" :value="$store.budget.currentMonth" @change="$store.budget.setMonth($event.target.value)" style="width: auto;">
+      <input class="input" type="month" aria-label="Budget month" :value="$store.budget.currentMonth" @change="$store.budget.setMonth($event.target.value)" style="width: auto;">
       <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.goNextMonth()">&rarr;</button>
       <button class="btn btn--secondary btn--sm" type="button" @click="$store.budget.jumpToThisMonth()">This month</button>
     </div>
