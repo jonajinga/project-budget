@@ -142,6 +142,7 @@ export default function (eleventyConfig) {
   // ---- Passthrough -------------------------------------------------------
   eleventyConfig.addPassthroughCopy({ "src/assets/img": "assets/img" });
   eleventyConfig.addPassthroughCopy({ "src/assets/js": "assets/js" });
+  eleventyConfig.addPassthroughCopy({ "src/assets/sample": "assets/sample" });
   eleventyConfig.addPassthroughCopy({ "src/_headers": "_headers" });
   eleventyConfig.addPassthroughCopy({ "src/favicon.ico": "favicon.ico" });
   eleventyConfig.addPassthroughCopy({ "src/favicon.svg": "favicon.svg" });

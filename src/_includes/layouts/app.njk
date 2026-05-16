@@ -6,6 +6,7 @@
 <div class="app-shell" x-data="{ sidebarOpen: false }">
   {% include "partials/app-shell.njk" %}
   <section class="app-main">
+    {% include "partials/sample-banner.njk" %}
     {{ content | safe }}
   </section>
 </div>

@@ -97,7 +97,50 @@ export function createStore() {
       var id = getActiveId();
       if (id && this.profiles.find(function (p) { return p.id === id; })) {
         this._load(id);
+      } else if (!this.profiles.length && !this.privateBrowsing) {
+        /* First-time visitor — auto-load the bundled sample so the app
+           isn't empty. The sample is a regular profile they can edit or
+           delete; we just bootstrap it once. The "sample-loaded" flag
+           prevents re-fetching if they delete it later. */
+        this.loadSampleIfFirstVisit();
       }
+    },
+
+    /* Fetches /assets/sample/sample.json and registers it as a profile.
+       Marked as sample so the app shell can show a starter banner.
+       Sets the seen flag BEFORE the async fetch so concurrent calls
+       (some Alpine setups re-enter init) can't both create profiles. */
+    async loadSampleIfFirstVisit() {
+      var flagKey = "projectbudget:sample-loaded";
+      try {
+        if (localStorage.getItem(flagKey)) return;
+        localStorage.setItem(flagKey, "1");
+      } catch (_e) { return; }
+      try {
+        var res = await fetch("/assets/sample/sample.json", { cache: "no-store" });
+        if (!res.ok) return;
+        var data = await res.json();
+        var parsed = parseJSON(JSON.stringify(data));
+        if (!parsed.ok) return;
+        var fresh = cloneAsNew(parsed);
+        fresh.name = "Sample household";
+        fresh.settings = fresh.settings || {};
+        fresh.settings.isSample = true;
+        _writeJSON(_profileKey(fresh.id), fresh);
+        var index = _readJSON(_profilesIndexKey()) || [];
+        index.push({ id: fresh.id, name: fresh.name, lastOpenedAt: fresh.updatedAt, schemaVersion: fresh.schemaVersion });
+        _writeJSON(_profilesIndexKey(), index);
+        this.refreshProfiles();
+        this._load(fresh.id);
+      } catch (_e) {
+        /* Offline or sample not deployed — quietly skip. */
+      }
+    },
+
+    /* Convenience for the sample banner CTA. */
+    startFreshProfile(name) {
+      var p = this.createProfile(name || "My budget");
+      return p;
     },
 
     refreshProfiles() {

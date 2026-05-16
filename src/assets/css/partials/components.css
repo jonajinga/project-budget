@@ -178,6 +178,12 @@
   flex-wrap: wrap;
   gap: var(--space-sm);
 }
+.hero__note {
+  margin-top: var(--space-sm);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  max-width: 60ch;
+}
 
 /* Feature list */
 .feature-list {

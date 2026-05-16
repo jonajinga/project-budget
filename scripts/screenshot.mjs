@@ -50,17 +50,22 @@ async function capture(theme) {
   });
   const page = await context.newPage();
 
-  /* Seed the profile + theme into localStorage before first navigation
-     by hooking into the dev server with init scripts. */
+  /* Seed the profile + theme directly so screenshots are deterministic.
+     We mark the profile with settings.isSample so the sample banner
+     renders alongside the populated data. */
   await context.addInitScript(({ profile, theme }) => {
     const prefix = "projectbudget:";
-    const json = JSON.stringify(profile);
-    localStorage.setItem(prefix + "profile:" + profile.id, json);
+    const seeded = JSON.parse(JSON.stringify(profile));
+    seeded.settings = seeded.settings || {};
+    seeded.settings.isSample = true;
+    localStorage.setItem(prefix + "profile:" + seeded.id, JSON.stringify(seeded));
     localStorage.setItem(prefix + "profiles", JSON.stringify([{
-      id: profile.id, name: profile.name, lastOpenedAt: profile.updatedAt, schemaVersion: profile.schemaVersion,
+      id: seeded.id, name: seeded.name, lastOpenedAt: seeded.updatedAt, schemaVersion: seeded.schemaVersion,
     }]));
-    localStorage.setItem(prefix + "active", profile.id);
+    localStorage.setItem(prefix + "active", seeded.id);
     localStorage.setItem("projectbudget-theme", theme);
+    /* Stop the in-app auto-load from racing. */
+    localStorage.setItem("projectbudget:sample-loaded", "1");
   }, { profile, theme });
 
   for (const p of pages) {

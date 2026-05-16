@@ -49,6 +49,32 @@
 .rta__hint { margin-top: var(--space-2xs); color: #f3eee0; font-size: var(--fs-sm); }
 .rta--negative { background: var(--danger); }
 
+.sample-banner {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+}
+.sample-banner__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.sample-banner__body {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  max-width: 70ch;
+}
+.sample-banner__actions {
+  display: flex;
+  gap: var(--space-2xs);
+  flex-wrap: wrap;
+}
+
 .empty-state {
   text-align: center;
   padding: var(--space-2xl) var(--space-md);

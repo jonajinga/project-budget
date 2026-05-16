@@ -1,9 +1,10 @@
-/* Build a realistic sample profile for screenshots / demos.
+/* Build a realistic sample profile.
 
-   Run as a plain node script: produces ./_sample/sample.json — a complete
-   Project Budget JSON export. Drop that file into the running app via
-   /app/import/ → Import as new profile, and every page populates with
-   demo data.
+   Writes two outputs:
+     - src/assets/sample/sample.json — shipped with the build so first-time
+       visitors auto-load it (see store.init -> loadSampleIfFirstVisit).
+     - _sample/sample.json — a copy outside the build, useful for ad-hoc
+       imports while developing.
 
    The profile exercises:
      - 5 accounts across all on-budget + tracking types
@@ -50,6 +51,8 @@ const TWO_BACK = "2026-03";
 const s = createStore();
 s.init();
 const profile = s.createProfile("Sample household");
+profile.settings = profile.settings || {};
+profile.settings.isSample = true;
 s.setMonth(CURRENT_MONTH);
 
 /* ---- Account groups + accounts -------------------------------------- */
@@ -249,11 +252,16 @@ if (ccPaymentCat) {
 
 /* ---- Export ---- */
 const exportData = buildExport(s.profile);
-const outDir = resolve(__dirname, "..", "_sample");
-mkdirSync(outDir, { recursive: true });
-writeFileSync(resolve(outDir, "sample.json"), JSON.stringify(exportData, null, 2));
 
-console.log("Wrote _sample/sample.json");
+const devOut = resolve(__dirname, "..", "_sample");
+mkdirSync(devOut, { recursive: true });
+writeFileSync(resolve(devOut, "sample.json"), JSON.stringify(exportData, null, 2));
+
+const shippedOut = resolve(__dirname, "..", "src", "assets", "sample");
+mkdirSync(shippedOut, { recursive: true });
+writeFileSync(resolve(shippedOut, "sample.json"), JSON.stringify(exportData));
+
+console.log("Wrote _sample/sample.json and src/assets/sample/sample.json");
 console.log("Profile:", s.profile.name);
 console.log("  accounts:    ", s.profile.accounts.length);
 console.log("  categories:  ", s.profile.categories.length);

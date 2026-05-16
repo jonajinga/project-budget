@@ -1,36 +1,26 @@
 import { chromium } from "playwright";
-import { readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SAMPLE_PATH = resolve(__dirname, "..", "_sample", "sample.json");
-const sample = JSON.parse(readFileSync(SAMPLE_PATH, "utf8"));
-const profile = sample.profile;
+/* Test the real first-visit auto-load. NO localStorage seed — we want
+   to verify the in-app fetch + import path works end-to-end. */
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-await context.addInitScript(({ profile }) => {
-  const prefix = "projectbudget:";
-  localStorage.setItem(prefix + "profile:" + profile.id, JSON.stringify(profile));
-  localStorage.setItem(prefix + "profiles", JSON.stringify([{ id: profile.id, name: profile.name, lastOpenedAt: profile.updatedAt, schemaVersion: profile.schemaVersion }]));
-  localStorage.setItem(prefix + "active", profile.id);
-  localStorage.setItem("projectbudget-theme", "light");
-}, { profile });
 const page = await context.newPage();
 page.on("console", msg => console.log("BROWSER", msg.type(), msg.text()));
 page.on("pageerror", err => console.log("PAGEERR", err.message));
-await page.goto("http://localhost:8080/app/reports/income-expense/", { waitUntil: "networkidle" });
-await page.waitForTimeout(2000);
+await page.goto("http://localhost:8080/app/", { waitUntil: "networkidle" });
+await page.waitForTimeout(2500);  /* allow fetch + import + boot */
 const inspect = await page.evaluate(() => {
+  const store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
   return {
-    hasD3: typeof window.d3,
-    hasAlpine: typeof window.Alpine,
-    hasStore: !!(window.Alpine && window.Alpine.store && window.Alpine.store("budget")),
-    profileName: window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.Alpine.store("budget").profile && window.Alpine.store("budget").profile.name,
-    chartHTML: (document.querySelector("#chart-ie") || {}).innerHTML || "(missing)",
-    chartChildren: (document.querySelector("#chart-ie") || {}).children?.length ?? -1,
-    seenScripts: [...document.scripts].map(s => s.src || "(inline " + s.type + ")")
+    hasStore: !!store,
+    profileName: store && store.profile && store.profile.name,
+    isSample: store && store.profile && store.profile.settings && store.profile.settings.isSample,
+    accountCount: store && store.profile && store.profile.accounts.length,
+    txnCount: store && store.profile && store.profile.transactions.length,
+    bannerVisible: !!document.querySelector(".sample-banner [x-show]:not([style*='display: none'])"),
+    storageKeys: Object.keys(localStorage).filter(k => k.startsWith("projectbudget")),
+    sampleLoadedFlag: localStorage.getItem("projectbudget:sample-loaded"),
   };
 });
 console.log("INSPECT", JSON.stringify(inspect, null, 2));

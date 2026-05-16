@@ -1,0 +1,26 @@
+<div class="sample-banner"
+     x-data="{
+       dismissed: (typeof sessionStorage !== 'undefined') && sessionStorage.getItem('projectbudget:sample-banner-dismissed') === '1',
+       hide() {
+         try { sessionStorage.setItem('projectbudget:sample-banner-dismissed', '1'); } catch (_e) {}
+         this.dismissed = true;
+       },
+       startFresh() {
+         var name = prompt('Name your new profile', 'My budget');
+         if (!name) return;
+         $store.budget.startFreshProfile(name);
+       }
+     }"
+     x-show="$store.budget.profile && $store.budget.profile.settings && $store.budget.profile.settings.isSample && !dismissed"
+     x-cloak>
+  <div class="sample-banner__inner">
+    <p class="sample-banner__body">
+      <strong>You're exploring a sample household budget.</strong>
+      Every number you see is example data. Start your own profile to begin tracking your real finances — the sample profile stays available until you delete it.
+    </p>
+    <div class="sample-banner__actions">
+      <button class="btn btn--primary btn--sm" type="button" @click="startFresh()">Start a fresh profile</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="hide()" aria-label="Hide this notice">Hide</button>
+    </div>
+  </div>
+</div>
