@@ -110,7 +110,8 @@ eleventyExcludeFromCollections: true
   </section>
 
   {# ---- Month view -------------------------------------------------- #}
-  <section class="cal" x-show="$store.budget.profile && view === 'month'" x-cloak>
+  <section class="cal" :class="{ 'cal--has-detail': selectedISO }"
+           x-show="$store.budget.profile && view === 'month'" x-cloak>
     <div class="cal__main">
     <ol class="cal__weekdays" aria-hidden="true">
       <li>Sun</li><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li>
@@ -166,14 +167,14 @@ eleventyExcludeFromCollections: true
               @click="view = 'day'; anchorISO = selectedISO"
               style="margin-bottom: var(--space-sm);">Open full day</button>
       <template x-if="selectedISO">
-        <div x-data="{ d: dayData(selectedISO) }">
-          <p x-show="!(d.posted.length + d.scheduled.length)" x-cloak style="color: var(--fg-muted);">
+        <div>
+          <p x-show="!(selectedDay.posted.length + selectedDay.scheduled.length)" x-cloak style="color: var(--fg-muted);">
             Nothing posted or scheduled on this day.
           </p>
-          <section x-show="d.posted.length" x-cloak>
+          <section x-show="selectedDay.posted.length" x-cloak>
             <h3 class="cal__detail-section">Posted</h3>
             <ul class="cal__list">
-              <template x-for="t in d.posted" :key="t.id">
+              <template x-for="t in selectedDay.posted" :key="t.id">
                 <li>
                   <button type="button" class="cal__row cal__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -190,10 +191,10 @@ eleventyExcludeFromCollections: true
               </template>
             </ul>
           </section>
-          <section x-show="d.scheduled.length" x-cloak>
+          <section x-show="selectedDay.scheduled.length" x-cloak>
             <h3 class="cal__detail-section">Upcoming (scheduled)</h3>
             <ul class="cal__list">
-              <template x-for="s in d.scheduled" :key="s.id">
+              <template x-for="s in selectedDay.scheduled" :key="s.id">
                 <li>
                   <a class="cal__row cal__row--clickable"
                      :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -636,6 +637,12 @@ function calendarView() {
       var hay = ((payee || "") + " " + (memo || "") + " " + (category || "")).toLowerCase();
       return hay.indexOf(q) !== -1;
     },
+
+    /* Computed shorthands so views can read .anchorDay / .selectedDay
+       without a nested x-data (nested scope loses `this` for the
+       projection memo helpers). */
+    get anchorDay() { return this.dayData(this.anchorISO); },
+    get selectedDay() { return this.dayData(this.selectedISO); },
 
     /* Returns { posted, scheduled, totalInflow, totalOutflow, count }.
        Scheduled entries come from the projection map so recurring

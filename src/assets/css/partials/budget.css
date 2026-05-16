@@ -481,8 +481,12 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   gap: var(--space-2xs);
   min-width: 0;
 }
+/* Two-column layout (grid + detail) only kicks in when a day is
+   selected. Otherwise the grid spans the full container width
+   instead of reserving the empty detail column. The .cal--has-detail
+   class is applied by Alpine when selectedISO is truthy. */
 @media (min-width: 1024px) {
-  .cal { grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr); }
+  .cal.cal--has-detail { grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr); }
 }
 
 .cal__weekdays {
@@ -564,9 +568,11 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   padding: 0 0.35rem;
   border-radius: 999px;
 }
+.cal__cell--today { background: color-mix(in oklab, var(--accent) 8%, var(--bg-elevated)); }
 .cal__cell--today .cal__day-num {
   background: var(--accent);
   color: #fff;
+  box-shadow: 0 0 0 2px var(--bg-elevated);
 }
 .cal__totals {
   display: flex;
@@ -777,8 +783,11 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 .cal-mini__cell[style*="--intensity"] {
   background: color-mix(in oklab, var(--accent) calc(var(--intensity, 0) * 1%), var(--bg-alt));
 }
-.cal-mini__cell--today { background: var(--accent); }
-.cal-mini__cell--today .cal-mini__day { color: #fff; }
+.cal-mini__cell--today {
+  background: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.cal-mini__cell--today .cal-mini__day { color: #fff; font-weight: 700; }
 .cal-mini__day {
   flex: 1;
   background: transparent;
@@ -833,7 +842,14 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   }
 }
 .cal-week__day:last-child { border-right: 0; }
-.cal-week__day.is-today { background: var(--accent-soft); }
+/* Today's column — stronger tint + top accent bar so it actually
+   stands out against the rest of the week strip (accent-soft alone
+   was barely visible). */
+.cal-week__day.is-today {
+  background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
+  box-shadow: inset 0 3px 0 0 var(--accent);
+}
+.cal-week__day.is-today .cal-week__date-btn { color: var(--accent); }
 .cal-week__head { display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--border-soft); padding-bottom: var(--space-2xs); }
 .cal-week__weekday {
   font-size: var(--fs-xs);
