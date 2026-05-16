@@ -402,10 +402,10 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
 .app-sidebar {
   background: var(--bg-elevated);
   border-right: 1px solid var(--border-soft);
-  padding: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-md);
 
   position: fixed;
   inset: 0 30% 0 0;
@@ -413,7 +413,13 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
   transform: translateX(-100%);
   transition: transform var(--t-base);
   overflow-y: auto;
+  /* Hide the scrollbar chrome but keep scrolling working — the sidebar
+     never benefits from a visible bar (it's always tall enough that
+     mouse-wheel / touch scrolls naturally). */
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* legacy Edge / IE */
 }
+.app-sidebar::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 .app-sidebar.is-open { transform: translateX(0); }
 .app-sidebar__close {
   align-self: flex-end;
@@ -438,11 +444,16 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
 }
 @media (min-width: 1024px) {
   .app-sidebar {
+    /* Full-viewport height sidebar that scrolls independently from
+       the main content. The header is sticky above so the user
+       always sees both — but the sidebar gets the whole viewport's
+       worth of vertical room for its account list. */
     position: sticky;
-    top: 4rem;
+    top: 0;
     inset: auto;
-    height: calc(100vh - 4rem);
+    height: 100vh;
     transform: none;
+    padding-top: calc(4rem + var(--space-sm));
   }
   .app-sidebar__close { display: none; }
 }
