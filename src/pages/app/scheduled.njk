@@ -1,39 +1,14 @@
 ---
 layout: layouts/app.njk
 title: "Recurring"
-description: "Manage recurring transactions and the due queue."
+description: "Manage recurring transactions: edit, post on demand, skip, or remove."
 permalink: /app/scheduled/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="{
-  show: false,
-  form: { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', customInterval: 2, customUnit: 'weeks', nextDate: '' },
-  parseDollars(s) { if (!s && s !== 0) return 0; var c = String(s).replace(/[$,\s]/g, '').trim(); if (/^\(.*\)$/.test(c)) c = '-' + c.slice(1, -1); var n = Number(c); return isFinite(n) ? Math.round(n * 100) : 0; },
-  formatCents(c) { return ((c || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); },
-  submit() {
-    if (!this.form.accountId || !this.form.nextDate) return;
-    var isCustom = this.form.frequency === 'custom';
-    $store.budget.addSchedule({
-      template: {
-        accountId: this.form.accountId,
-        payeeId: null,
-        payeeName: this.form.payeeName,
-        amount: this.parseDollars(this.form.amount),
-        memo: this.form.memo,
-        categoryId: null,
-      },
-      frequency: this.form.frequency,
-      customInterval: isCustom ? Math.max(1, Math.round(Number(this.form.customInterval) || 1)) : null,
-      customUnit: isCustom ? this.form.customUnit : null,
-      nextDate: this.form.nextDate,
-    });
-    this.form = { accountId: '', payeeName: '', amount: '', memo: '', frequency: 'monthly', customInterval: 2, customUnit: 'weeks', nextDate: '' };
-    this.show = false;
-  },
-}">
+<div class="app-page" x-data="scheduledView()" x-init="init()">
   <header class="app-page__header">
     <h1 class="app-page__title">Recurring transactions</h1>
-    <button class="btn btn--primary" type="button" @click="show = true" :disabled="!$store.budget.profile">Add recurring</button>
+    <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">Add recurring</button>
   </header>
 
   <p class="app-page__lead">
@@ -50,22 +25,34 @@ eleventyExcludeFromCollections: true
           <th>Frequency</th>
           <th>Account</th>
           <th>Payee</th>
+          <th>Category</th>
           <th class="num">Amount</th>
           <th class="num">Actions</th>
         </tr>
       </thead>
       <tbody>
         <template x-for="s in $store.budget.profile?.scheduled || []" :key="s.id">
-          <tr>
+          <tr :id="'edit-' + s.id">
             <td x-text="s.nextDate"></td>
             <td x-text="$store.budget.frequencyLabel(s)"></td>
             <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
             <td x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></td>
+            <td x-text="$store.budget.categoryName(s.template.categoryId) || '—'"
+                style="color: var(--fg-muted);"></td>
             <td class="num" x-text="formatCents(s.template.amount)"></td>
             <td class="num">
               <div class="cluster" style="justify-content: flex-end;">
-                <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.skipScheduled(s.id)">Skip next</button>
-                <button class="btn btn--danger btn--sm" type="button" @click="if (confirm('Remove this recurring template?')) $store.budget.removeSchedule(s.id)">Remove</button>
+                <button class="btn btn--ghost btn--sm" type="button"
+                        @click="openEdit(s)"
+                        data-tip="Edit this recurring template.">Edit</button>
+                <button class="btn btn--ghost btn--sm" type="button"
+                        @click="postNow(s.id)"
+                        data-tip="Post this occurrence as a real transaction now and advance the next date.">Post now</button>
+                <button class="btn btn--ghost btn--sm" type="button"
+                        @click="$store.budget.skipScheduled(s.id)"
+                        data-tip="Advance the next date without posting.">Skip next</button>
+                <button class="btn btn--danger btn--sm" type="button"
+                        @click="if (confirm('Remove this recurring template?')) $store.budget.removeSchedule(s.id)">Remove</button>
               </div>
             </td>
           </tr>
@@ -77,11 +64,13 @@ eleventyExcludeFromCollections: true
     </p>
   </section>
 
-  {# Add recurring modal #}
-  <div class="modal-backdrop" x-show="show" x-cloak @keydown.escape.window="show = false">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="show = false">
-      <button class="modal__close" type="button" @click="show = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Add recurring transaction</h3>
+  {# Create / Edit modal — same form, mode flips which store call fires #}
+  <div class="modal-backdrop" x-show="show" x-cloak @keydown.escape.window="close()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rc-modal-title" @click.outside="close()">
+      <button class="modal__close" type="button" @click="close()" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="rc-modal-title">
+        <span x-text="mode === 'edit' ? 'Edit recurring transaction' : 'Add recurring transaction'"></span>
+      </h3>
       <form @submit.prevent="submit()">
         <div class="form-stack">
           <div class="form-row">
@@ -89,7 +78,7 @@ eleventyExcludeFromCollections: true
               <label class="field__label" for="rc-account">Account</label>
               <select class="select" id="rc-account" x-model="form.accountId" required>
                 <option value="">Select account</option>
-                <template x-for="a in $store.budget.profile?.accounts.filter(a => !a.closedAt) || []" :key="a.id">
+                <template x-for="a in openAccounts()" :key="a.id">
                   <option :value="a.id" x-text="a.name"></option>
                 </template>
               </select>
@@ -127,27 +116,171 @@ eleventyExcludeFromCollections: true
               <input class="input" id="rc-payee" type="text" x-model="form.payeeName">
             </div>
             <div class="field">
-              <label class="field__label" for="rc-amount">Amount</label>
-              <input class="input" id="rc-amount" type="text" x-model="form.amount" inputmode="decimal" placeholder="-50.00" required>
-              <p class="field__hint">Negative = outflow.</p>
+              <label class="field__label" for="rc-category">Category</label>
+              <select class="select" id="rc-category" x-model="form.categoryId">
+                <option value="">(uncategorized)</option>
+                <template x-for="c in selectableCategories()" :key="c.id">
+                  <option :value="c.id" x-text="c.name"></option>
+                </template>
+              </select>
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label class="field__label" for="rc-next">First due date</label>
-              <input class="input" id="rc-next" type="date" x-model="form.nextDate" required>
+              <label class="field__label" for="rc-amount">Amount</label>
+              <input class="input" id="rc-amount" type="text" x-model="form.amount" inputmode="decimal" placeholder="-50.00" required>
+              <p class="field__hint">Negative = outflow.</p>
             </div>
             <div class="field">
-              <label class="field__label" for="rc-memo">Memo (optional)</label>
-              <input class="input" id="rc-memo" type="text" x-model="form.memo">
+              <label class="field__label" for="rc-next">
+                <span x-text="mode === 'edit' ? 'Next due date' : 'First due date'"></span>
+              </label>
+              <input class="input" id="rc-next" type="date" x-model="form.nextDate" required>
             </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="rc-memo">Memo (optional)</label>
+            <input class="input" id="rc-memo" type="text" x-model="form.memo">
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn btn--primary" type="submit">Save recurring</button>
-          <button class="btn btn--ghost" type="button" @click="show = false">Cancel</button>
+          <button class="btn btn--primary" type="submit">
+            <span x-text="mode === 'edit' ? 'Save changes' : 'Add recurring'"></span>
+          </button>
+          <button class="btn btn--ghost" type="button" @click="close()">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<script>
+function scheduledView() {
+  return {
+    show: false,
+    mode: "create", // 'create' | 'edit'
+    editId: null,
+    form: {
+      accountId: "", payeeName: "", categoryId: "", amount: "", memo: "",
+      frequency: "monthly", customInterval: 2, customUnit: "weeks", nextDate: "",
+    },
+
+    init() {
+      /* If the URL is /app/scheduled/#edit-<id>, open the edit modal
+         for that schedule on load. Used by calendar entries to deep-link. */
+      var hash = (window.location.hash || "").replace(/^#/, "");
+      if (hash.indexOf("edit-") === 0) {
+        var id = hash.slice("edit-".length);
+        var self = this;
+        /* Defer one tick so the store has loaded the active profile. */
+        this.$nextTick(function () {
+          var p = self.$store.budget.profile;
+          if (!p) return;
+          var s = (p.scheduled || []).find(function (x) { return x.id === id; });
+          if (s) self.openEdit(s);
+        });
+      }
+    },
+
+    parseDollars(s) {
+      if (!s && s !== 0) return 0;
+      var c = String(s).replace(/[$,\s]/g, "").trim();
+      if (/^\(.*\)$/.test(c)) c = "-" + c.slice(1, -1);
+      var n = Number(c);
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    openAccounts() {
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      return p.accounts.filter(function (a) { return !a.closedAt; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+    },
+    selectableCategories() {
+      var s = this.$store.budget;
+      if (!s.profile) return [];
+      return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
+    },
+
+    resetForm() {
+      this.form = {
+        accountId: "", payeeName: "", categoryId: "", amount: "", memo: "",
+        frequency: "monthly", customInterval: 2, customUnit: "weeks", nextDate: "",
+      };
+    },
+
+    openCreate() {
+      this.resetForm();
+      this.mode = "create";
+      this.editId = null;
+      this.show = true;
+    },
+    openEdit(s) {
+      this.mode = "edit";
+      this.editId = s.id;
+      this.form = {
+        accountId: s.template.accountId || "",
+        payeeName: s.template.payeeName || this.$store.budget.payeeName(s.template.payeeId) || "",
+        categoryId: s.template.categoryId || "",
+        amount: ((s.template.amount || 0) / 100).toFixed(2),
+        memo: s.template.memo || "",
+        frequency: s.frequency || "monthly",
+        customInterval: s.customInterval || 2,
+        customUnit: s.customUnit || "weeks",
+        nextDate: s.nextDate || "",
+      };
+      this.show = true;
+    },
+    close() {
+      this.show = false;
+      this.mode = "create";
+      this.editId = null;
+      /* Drop the deep-link hash so re-opening the page is clean. */
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    },
+
+    submit() {
+      if (!this.form.accountId || !this.form.nextDate) return;
+      var isCustom = this.form.frequency === "custom";
+      var template = {
+        accountId: this.form.accountId,
+        payeeId: null,
+        payeeName: this.form.payeeName,
+        amount: this.parseDollars(this.form.amount),
+        memo: this.form.memo,
+        categoryId: this.form.categoryId || null,
+      };
+      if (this.mode === "edit" && this.editId) {
+        this.$store.budget.updateSchedule(this.editId, {
+          template: template,
+          frequency: this.form.frequency,
+          customInterval: isCustom ? Math.max(1, Math.round(Number(this.form.customInterval) || 1)) : null,
+          customUnit: isCustom ? this.form.customUnit : null,
+          nextDate: this.form.nextDate,
+        });
+        this.$store.budget.pushToast("Recurring transaction updated.");
+      } else {
+        this.$store.budget.addSchedule({
+          template: template,
+          frequency: this.form.frequency,
+          customInterval: isCustom ? Math.max(1, Math.round(Number(this.form.customInterval) || 1)) : null,
+          customUnit: isCustom ? this.form.customUnit : null,
+          nextDate: this.form.nextDate,
+        });
+        this.$store.budget.pushToast("Recurring transaction added.");
+      }
+      this.close();
+    },
+
+    postNow(id) {
+      this.$store.budget.postScheduled(id);
+      this.$store.budget.pushToast("Posted. Next date advanced.");
+    },
+  };
+}
+</script>

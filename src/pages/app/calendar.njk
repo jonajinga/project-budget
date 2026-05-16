@@ -111,6 +111,7 @@ eleventyExcludeFromCollections: true
 
   {# ---- Month view -------------------------------------------------- #}
   <section class="cal" x-show="$store.budget.profile && view === 'month'" x-cloak>
+    <div class="cal__main">
     <ol class="cal__weekdays" aria-hidden="true">
       <li>Sun</li><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li>
     </ol>
@@ -129,7 +130,7 @@ eleventyExcludeFromCollections: true
                     class="cal__cell-btn"
                     @click="selectedISO = cell.iso"
                     @dblclick="view = 'day'; anchorISO = cell.iso"
-                    :title="cellTooltip(cell)"
+                    :data-tip="cellTooltip(cell)"
                     :aria-label="'Open ' + cell.iso">
               <span class="cal__day-num-wrap">
                 <span class="cal__day-num" x-text="cell.day"></span>
@@ -153,6 +154,7 @@ eleventyExcludeFromCollections: true
         </li>
       </template>
     </ol>
+    </div>
 
     <aside class="cal__detail" x-show="selectedISO" x-cloak aria-live="polite">
       <header class="cal__detail-head">
@@ -172,14 +174,18 @@ eleventyExcludeFromCollections: true
             <h3 class="cal__detail-section">Posted</h3>
             <ul class="cal__list">
               <template x-for="t in d.posted" :key="t.id">
-                <li class="cal__row" :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
-                  <span class="cal__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
-                  <span class="cal__row-meta">
-                    <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
-                    <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
-                  </span>
-                  <span class="cal__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                        x-text="formatCents(t.amount)"></span>
+                <li>
+                  <button type="button" class="cal__row cal__row--clickable"
+                          :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                          @click="openTxn(t.id)">
+                    <span class="cal__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                    <span class="cal__row-meta">
+                      <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                      <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                    </span>
+                    <span class="cal__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(t.amount)"></span>
+                  </button>
                 </li>
               </template>
             </ul>
@@ -188,14 +194,18 @@ eleventyExcludeFromCollections: true
             <h3 class="cal__detail-section">Upcoming (scheduled)</h3>
             <ul class="cal__list">
               <template x-for="s in d.scheduled" :key="s.id">
-                <li class="cal__row" :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
-                  <span class="cal__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
-                  <span class="cal__row-meta">
-                    <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
-                    <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
-                  </span>
-                  <span class="cal__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                        x-text="formatCents(s.template.amount)"></span>
+                <li>
+                  <a class="cal__row cal__row--clickable"
+                     :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                     :href="'/app/scheduled/#edit-' + s.id">
+                    <span class="cal__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+                    <span class="cal__row-meta">
+                      <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                      <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                    </span>
+                    <span class="cal__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(s.template.amount)"></span>
+                  </a>
                 </li>
               </template>
             </ul>
@@ -232,17 +242,25 @@ eleventyExcludeFromCollections: true
           </header>
           <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
             <template x-for="t in cell.posted" :key="'p' + t.id">
-              <li class="cal-week__entry cal-week__entry--posted">
-                <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
-                <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                      x-text="formatCents(t.amount)"></span>
+              <li>
+                <button type="button"
+                        class="cal-week__entry cal-week__entry--posted cal-week__entry--clickable"
+                        @click="openTxn(t.id)">
+                  <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                  <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="formatCents(t.amount)"></span>
+                </button>
               </li>
             </template>
             <template x-for="s in cell.scheduled" :key="'s' + s.id">
-              <li class="cal-week__entry cal-week__entry--scheduled" title="Scheduled (not posted)">
-                <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
-                <span class="cal-week__entry-amt" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                      x-text="formatCents(s.template.amount)"></span>
+              <li>
+                <a class="cal-week__entry cal-week__entry--scheduled cal-week__entry--clickable"
+                   :href="'/app/scheduled/#edit-' + s.id"
+                   title="Scheduled (not posted)">
+                  <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+                  <span class="cal-week__entry-amt" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="formatCents(s.template.amount)"></span>
+                </a>
               </li>
             </template>
           </ul>
@@ -275,17 +293,22 @@ eleventyExcludeFromCollections: true
           <h3 class="cal__detail-section">Posted (<span x-text="d.posted.length"></span>)</h3>
           <ul class="cal-day__list">
             <template x-for="t in d.posted" :key="t.id">
-              <li class="cal-day__row" :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
-                <div>
-                  <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
-                  <p class="cal-day__row-meta">
-                    <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
-                    <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
-                    <span x-show="t.memo" x-text="' · ' + t.memo"></span>
-                  </p>
-                </div>
-                <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                      x-text="formatCents(t.amount)"></span>
+              <li>
+                <button type="button"
+                        class="cal-day__row cal-day__row--clickable"
+                        :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                        @click="openTxn(t.id)">
+                  <div>
+                    <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
+                    <p class="cal-day__row-meta">
+                      <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                      <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                      <span x-show="t.memo" x-text="' · ' + t.memo"></span>
+                    </p>
+                  </div>
+                  <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="formatCents(t.amount)"></span>
+                </button>
               </li>
             </template>
           </ul>
@@ -294,16 +317,20 @@ eleventyExcludeFromCollections: true
           <h3 class="cal__detail-section">Upcoming (scheduled) (<span x-text="d.scheduled.length"></span>)</h3>
           <ul class="cal-day__list">
             <template x-for="s in d.scheduled" :key="s.id">
-              <li class="cal-day__row" :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'">
-                <div>
-                  <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
-                  <p class="cal-day__row-meta">
-                    <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
-                    <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
-                  </p>
-                </div>
-                <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                      x-text="formatCents(s.template.amount)"></span>
+              <li>
+                <a class="cal-day__row cal-day__row--clickable"
+                   :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                   :href="'/app/scheduled/#edit-' + s.id">
+                  <div>
+                    <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
+                    <p class="cal-day__row-meta">
+                      <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                      <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                    </p>
+                  </div>
+                  <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="formatCents(s.template.amount)"></span>
+                </a>
               </li>
             </template>
           </ul>
@@ -311,6 +338,70 @@ eleventyExcludeFromCollections: true
       </div>
     </template>
   </section>
+
+  {# ---- Transaction edit modal ----
+     Opened by clicking any posted row across Day/Week/Month/Year views.
+     Reuses store.updateTransaction + store.deleteTransaction so the
+     register stays the source of truth. #}
+  <div class="modal-backdrop" x-show="txnEditId" x-cloak @keydown.escape.window="closeTxn()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cal-txn-title"
+         @click.outside="closeTxn()">
+      <button class="modal__close" type="button" @click="closeTxn()" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="cal-txn-title">Transaction</h3>
+      <form @submit.prevent="saveTxn()">
+        <div class="form-stack">
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="cal-txn-date">Date</label>
+              <input class="input" id="cal-txn-date" type="date" x-model="txnForm.date" required>
+            </div>
+            <div class="field">
+              <label class="field__label" for="cal-txn-account">Account</label>
+              <select class="select" id="cal-txn-account" x-model="txnForm.accountId" required>
+                <template x-for="a in openAccounts()" :key="a.id">
+                  <option :value="a.id" x-text="a.name"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cal-txn-payee">Payee</label>
+            <input class="input" id="cal-txn-payee" type="text" x-model="txnForm.payeeName">
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="cal-txn-amount">Amount</label>
+              <input class="input" id="cal-txn-amount" type="text" x-model="txnForm.amount"
+                     inputmode="decimal" required>
+              <p class="field__hint">Negative = outflow.</p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="cal-txn-category">Category</label>
+              <select class="select" id="cal-txn-category" x-model="txnForm.categoryId">
+                <option value="">(uncategorized)</option>
+                <template x-for="c in selectableCategories()" :key="c.id">
+                  <option :value="c.id" x-text="c.name"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cal-txn-memo">Memo</label>
+            <input class="input" id="cal-txn-memo" type="text" x-model="txnForm.memo">
+          </div>
+          <label class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted);">
+            <input type="checkbox" x-model="txnForm.cleared"> Cleared
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Save</button>
+          <button class="btn btn--danger" type="button" @click="deleteTxn()"
+                  data-tip="Permanently delete this transaction.">Delete</button>
+          <button class="btn btn--ghost" type="button" @click="closeTxn()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -323,6 +414,10 @@ function calendarView() {
     searchQuery: "",
     filterAccountId: "",
     filterKind: "all", // 'all' | 'posted' | 'scheduled' | 'inflow' | 'outflow'
+
+    /* Transaction edit modal state — opened by clicking a posted row. */
+    txnEditId: null,
+    txnForm: { date: "", accountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false },
 
     views: [
       { value: "day",   label: "Day" },
@@ -458,6 +553,58 @@ function calendarView() {
       var p = this.$store.budget.profile;
       if (!p) return [];
       return p.accounts.filter(function (a) { return !a.closedAt; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    },
+    selectableCategories() {
+      var s = this.$store.budget;
+      if (!s.profile) return [];
+      return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
+    },
+
+    /* ---------- transaction modal ---------- */
+    openTxn(id) {
+      var p = this.$store.budget.profile;
+      if (!p) return;
+      var t = (p.transactions || []).find(function (x) { return x.id === id; });
+      if (!t) return;
+      this.txnEditId = id;
+      this.txnForm = {
+        date: t.date,
+        accountId: t.accountId,
+        payeeName: this.$store.budget.payeeName(t.payeeId) || "",
+        amount: ((t.amount || 0) / 100).toFixed(2),
+        categoryId: t.categoryId || "",
+        memo: t.memo || "",
+        cleared: !!t.cleared,
+      };
+    },
+    closeTxn() { this.txnEditId = null; },
+    _parseDollars(s) {
+      if (!s && s !== 0) return 0;
+      var clean = String(s).replace(/[$,\s]/g, "").trim();
+      if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
+      var n = Number(clean);
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+    saveTxn() {
+      if (!this.txnEditId) return;
+      this.$store.budget.updateTransaction(this.txnEditId, {
+        date: this.txnForm.date,
+        accountId: this.txnForm.accountId,
+        payeeName: this.txnForm.payeeName,
+        amount: this._parseDollars(this.txnForm.amount),
+        categoryId: this.txnForm.categoryId || null,
+        memo: this.txnForm.memo,
+        cleared: this.txnForm.cleared,
+      });
+      this.$store.budget.pushToast("Transaction updated.");
+      this.closeTxn();
+    },
+    deleteTxn() {
+      if (!this.txnEditId) return;
+      if (!confirm("Delete this transaction?")) return;
+      this.$store.budget.deleteTransaction(this.txnEditId);
+      this.$store.budget.pushToast("Transaction deleted.");
+      this.closeTxn();
     },
 
     /* True when a posted or scheduled item passes all active filters. */

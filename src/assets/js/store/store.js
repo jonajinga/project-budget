@@ -34,7 +34,7 @@ import {
 } from "../domain/transactions.js";
 import { upsertPayee, suggestPayees, findPayee, findPayeeByName } from "../domain/payees.js";
 import {
-  addSchedule, removeSchedule, dueTransactions, postScheduled, skipScheduled, FREQUENCIES, CUSTOM_UNITS, frequencyLabel, occurrencesIn,
+  addSchedule, removeSchedule, updateSchedule, dueTransactions, postScheduled, skipScheduled, FREQUENCIES, CUSTOM_UNITS, frequencyLabel, occurrencesIn,
 } from "../domain/scheduled.js";
 import {
   reconciliationStatus, applyReconcile, addAdjustment, unlockReconciled,
@@ -796,7 +796,15 @@ export function createStore() {
     removeSchedule(id) {
       if (!this.profile) return;
       removeSchedule(this.profile, id);
+      this._bumpLists();
       this._save();
+    },
+    updateSchedule(id, patch) {
+      if (!this.profile) return null;
+      var s = updateSchedule(this.profile, id, patch);
+      this._bumpLists();
+      this._save();
+      return s;
     },
     dueScheduled() {
       if (!this.profile) return [];

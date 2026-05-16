@@ -83,6 +83,21 @@ export function removeSchedule(profile, id) {
   profile.scheduled = profile.scheduled.filter(function (s) { return s.id !== id; });
 }
 
+/* Edit an existing schedule in place. `patch` may carry any of:
+   template (full object replacement), frequency, customInterval,
+   customUnit, nextDate, lastRun. Returns the updated record. */
+export function updateSchedule(profile, id, patch) {
+  var s = profile.scheduled.find(function (x) { return x.id === id; });
+  if (!s || !patch) return null;
+  if (patch.template !== undefined) s.template = patch.template;
+  if (patch.frequency !== undefined) s.frequency = patch.frequency;
+  if (patch.customInterval !== undefined) s.customInterval = patch.customInterval;
+  if (patch.customUnit !== undefined) s.customUnit = patch.customUnit;
+  if (patch.nextDate !== undefined) s.nextDate = patch.nextDate;
+  if (patch.lastRun !== undefined) s.lastRun = patch.lastRun;
+  return s;
+}
+
 /* Returns the list of due-today (or overdue) scheduled transactions for
    the user to approve. Does NOT post anything. */
 export function dueTransactions(profile, today) {
