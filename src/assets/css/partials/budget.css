@@ -314,7 +314,16 @@
   font-weight: 600;
 }
 .pool-card__amount { display: flex; justify-content: flex-end; }
+/* Wrap so the bar + percent label sit on the same baseline. The "✓"
+   suffix at 100% makes "fully covered" instantly readable; a bare
+   full bar looks the same as 99% otherwise. */
+.pool-card__progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .pool-card__progress {
+  flex: 1 1 auto;
   background: var(--bg-alt);
   height: 8px;
   border-radius: 999px;
@@ -328,6 +337,19 @@
 .pool-card__progress-bar--low  { background: var(--danger); }
 .pool-card__progress-bar--mid  { background: var(--warn); }
 .pool-card__progress-bar--full { background: var(--ok); }
+.pool-card__pct {
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 3em;
+  text-align: right;
+}
+.pool-card__pct--full { color: var(--ok); }
+@media (prefers-reduced-motion: reduce) {
+  .pool-card__progress-bar { transition: none; }
+}
 .pool-card__hint {
   margin: 0;
   font-size: var(--fs-xs);

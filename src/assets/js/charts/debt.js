@@ -1,46 +1,58 @@
-/* Stacked horizontal bars showing each debt account's current balance,
-   with payoff months alongside. */
+/* Debt overview — Chart.js horizontal bars per account, sorted by
+   balance descending. */
 
+import { upsert, fmtCents, fmtCentsPrecise } from "./chartjs.js";
 import { colors } from "./theme-colors.js";
 
 export function render(el, rows) {
-  if (!el || !window.d3) return;
-  var d3 = window.d3;
-  el.innerHTML = "";
-  if (!rows || !rows.length) { el.textContent = "No debt accounts."; return; }
-
+  if (!el || !window.Chart) return;
+  if (!rows || !rows.length) {
+    el.innerHTML = "<p style=\"padding: var(--space-md); color: var(--fg-muted);\">No debt accounts.</p>";
+    return;
+  }
   var c = colors();
-  var rect = el.getBoundingClientRect();
-  var width = Math.max(320, rect.width || 600);
-  var rowH = 36;
-  var height = rows.length * rowH + 16;
-
-  var svg = d3.select(el).append("svg")
-    .attr("viewBox", "0 0 " + width + " " + height)
-    .attr("class", "chart__svg")
-    .attr("role", "img")
-    .attr("aria-label", "Debt balances");
-
-  var margin = { left: 160, right: 96, top: 8, bottom: 8 };
-  var maxV = d3.max(rows, function (r) { return r.balance; }) || 1;
-  var x = d3.scaleLinear().domain([0, maxV]).range([0, width - margin.left - margin.right]);
-
-  rows.forEach(function (r, i) {
-    var yTop = margin.top + i * rowH;
-    svg.append("text")
-      .attr("x", margin.left - 8).attr("y", yTop + 22)
-      .attr("text-anchor", "end").attr("fill", c["fg"])
-      .attr("font-size", 13).text(r.account);
-
-    svg.append("rect")
-      .attr("x", margin.left).attr("y", yTop + 8)
-      .attr("width", x(r.balance)).attr("height", rowH - 16)
-      .attr("fill", c["chart-5"]).attr("fill-opacity", 0.85);
-
-    var label = "$" + (r.balance / 100).toFixed(0);
-    if (r.monthsToPayoff) label += " · " + r.monthsToPayoff + " mo";
-    svg.append("text")
-      .attr("x", margin.left + x(r.balance) + 8).attr("y", yTop + 22)
-      .attr("fill", c["fg-muted"]).attr("font-size", 12).text(label);
+  var sorted = rows.slice().sort(function (a, b) { return b.balance - a.balance; });
+  /* Container needs height proportional to rows since this chart is
+     row-major. Each row gets ~36px. */
+  el.style.minHeight = Math.max(120, sorted.length * 44 + 24) + "px";
+  upsert(el, {
+    type: "bar",
+    data: {
+      labels: sorted.map(function (r) { return r.account; }),
+      datasets: [{
+        label: "Balance",
+        data: sorted.map(function (r) { return r.balance; }),
+        backgroundColor: c["chart-5"],
+        borderRadius: 0,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: c["border"] },
+          ticks: { callback: function (v) { return fmtCents(v); } },
+        },
+        y: { grid: { display: false } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var r = sorted[ctx.dataIndex];
+              var lines = [fmtCentsPrecise(ctx.parsed.x)];
+              if (r.monthsToPayoff) lines.push("Payoff: " + r.monthsToPayoff + " months");
+              else lines.push("No recent payments");
+              return lines;
+            },
+          },
+        },
+      },
+    },
   });
 }

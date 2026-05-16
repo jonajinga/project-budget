@@ -109,11 +109,13 @@ eleventyExcludeFromCollections: true
                          x-cloak
                          :class="goalBarClass(c.id)"
                          :style="'--pct:' + goalPercent(c.id)"
-                         :title="goalPercent(c.id) + '% of goal funded this month'"
+                         :data-tip="goalBarTooltip(c.id)"
                          role="progressbar"
                          :aria-valuenow="goalPercent(c.id)"
                          aria-valuemin="0" aria-valuemax="100">
-                      <span class="goal-bar__fill"></span>
+                      <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
+                      <span class="goal-bar__cap"
+                            x-text="goalPercent(c.id) >= 100 ? '✓ 100%' : (goalPercent(c.id) + '%')"></span>
                     </div>
                   </div>
                   <div class="budget__assigned">
@@ -172,15 +174,21 @@ eleventyExcludeFromCollections: true
                   :class="poolPillClass(p)"
                   x-text="formatCents(p.pool)"></span>
           </div>
-          <div class="pool-card__progress" :title="poolCoverageLabel(p)">
-            <div class="pool-card__progress-bar"
-                 :class="poolBarClass(p)"
-                 :style="'width: ' + Math.min(100, p.coveragePct) + '%;'"
-                 role="progressbar"
-                 :aria-valuenow="p.coveragePct"
-                 aria-valuemin="0"
-                 aria-valuemax="100"
-                 :aria-label="poolCoverageLabel(p)"></div>
+          <div class="pool-card__progress-wrap">
+            <div class="pool-card__progress"
+                 :data-tip="poolCoverageLabel(p)">
+              <div class="pool-card__progress-bar"
+                   :class="poolBarClass(p)"
+                   :style="'width: ' + Math.min(100, p.coveragePct) + '%;'"
+                   role="progressbar"
+                   :aria-valuenow="p.coveragePct"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   :aria-label="poolCoverageLabel(p)"></div>
+            </div>
+            <span class="pool-card__pct"
+                  :class="p.coveragePct >= 100 ? 'pool-card__pct--full' : ''"
+                  x-text="p.coveragePct >= 100 ? '✓ 100%' : (p.coveragePct + '%')"></span>
           </div>
           <p class="pool-card__hint" x-text="poolCoverageLabel(p)"></p>
         </article>
@@ -327,6 +335,13 @@ function budgetView() {
       if (pct >= 100) return "goal-bar--funded";
       if (pct >= 50)  return "goal-bar--accent";
       return "goal-bar--muted";
+    },
+    goalBarTooltip(catId) {
+      var g = this.$store.budget.findGoal(catId);
+      if (!g || !g.target) return "";
+      var assigned = this.$store.budget.assignedFor(catId);
+      var pct = this.goalPercent(catId);
+      return pct + "% funded: " + this.formatCents(assigned) + " of " + this.formatCents(g.target);
     },
 
     /* ---- Month strip helpers ----------------------------------------
