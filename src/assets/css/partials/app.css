@@ -91,7 +91,8 @@
 }
 
 /* Mobile tighten — banner is informational, not the focal point. Trim
-   padding, body size, and stack the buttons under a shorter message. */
+   padding, body size, and drop the long secondary sentence so only the
+   essential "this is sample data" callout remains in view. */
 @media (max-width: 599px) {
   .sample-banner {
     padding: var(--space-2xs) var(--space-sm);
@@ -100,6 +101,7 @@
   }
   .sample-banner__inner { gap: var(--space-2xs); }
   .sample-banner__body { font-size: var(--fs-xs); line-height: 1.4; }
+  .sample-banner__detail { display: none; }
 }
 
 /* Data summary on /app/settings/ */

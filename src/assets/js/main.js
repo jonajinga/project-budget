@@ -145,6 +145,95 @@
     };
   }
 
+  /* ---- Modal focus trap ------------------------------------------- */
+  /* Any element with role="dialog" + aria-modal="true" gets focus
+     management: when it becomes visible we save the previously-focused
+     element, move focus inside (unless something inside already has
+     focus, e.g. autofocus); when it hides we restore focus. Tab
+     cycles within the dialog so keyboard users can't escape to the
+     background while a modal is open. */
+
+  var FOCUSABLE_SEL =
+    'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]),' +
+    ' select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function focusableIn(root) {
+    return Array.prototype.slice.call(root.querySelectorAll(FOCUSABLE_SEL))
+      .filter(function (el) { return el.offsetParent !== null; });
+  }
+
+  function topmostVisibleDialog() {
+    var dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+    for (var i = dialogs.length - 1; i >= 0; i--) {
+      if (dialogs[i].offsetParent !== null) return dialogs[i];
+    }
+    return null;
+  }
+
+  function handleDialogOpen(dialog) {
+    if (dialog._fxActive) return;
+    dialog._fxActive = true;
+    dialog._fxPrev = document.activeElement;
+    /* Defer to the next frame so any autofocus inside the modal wins
+       — only steal focus if nothing inside has claimed it. */
+    requestAnimationFrame(function () {
+      if (!dialog.contains(document.activeElement)) {
+        var fs = focusableIn(dialog);
+        if (fs.length) fs[0].focus();
+        else { dialog.setAttribute("tabindex", "-1"); dialog.focus(); }
+      }
+    });
+  }
+
+  function handleDialogClose(dialog) {
+    if (!dialog._fxActive) return;
+    dialog._fxActive = false;
+    var prev = dialog._fxPrev;
+    dialog._fxPrev = null;
+    if (prev && document.body.contains(prev) && typeof prev.focus === "function") {
+      prev.focus();
+    }
+  }
+
+  function attachDialogObserver(dialog) {
+    if (dialog._fxObserver) return;
+    /* App modals are toggled by display:none on the .modal-backdrop
+       parent; watching style + class + hidden on the parent covers
+       Alpine x-show, native [hidden], and class-driven toggles. */
+    var target = dialog.parentElement || dialog;
+    var obs = new MutationObserver(function () {
+      if (dialog.offsetParent !== null) handleDialogOpen(dialog);
+      else handleDialogClose(dialog);
+    });
+    obs.observe(target, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    /* Also observe the dialog itself in case it's directly toggled. */
+    obs.observe(dialog, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    dialog._fxObserver = obs;
+    /* If it's already visible at boot, run the open path once. */
+    if (dialog.offsetParent !== null) handleDialogOpen(dialog);
+  }
+
+  function scanDialogs() {
+    document.querySelectorAll('[role="dialog"][aria-modal="true"]').forEach(attachDialogObserver);
+  }
+
+  function trapTabInDialog(e) {
+    if (e.key !== "Tab") return;
+    var dialog = topmostVisibleDialog();
+    if (!dialog) return;
+    var fs = focusableIn(dialog);
+    if (!fs.length) { e.preventDefault(); return; }
+    var first = fs[0], last = fs[fs.length - 1];
+    var active = document.activeElement;
+    if (!dialog.contains(active)) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+      return;
+    }
+    if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+  }
+
   /* ---- Wire everything on DOM ready -------------------------------- */
 
   function wire() {
@@ -193,6 +282,12 @@
         if (!localStorage.getItem(THEME_KEY)) applyTheme(e.matches ? "dark" : "light");
       });
     } catch (e) {}
+
+    /* Modal focus trap — observe every existing dialog and watch for
+       new ones added later (Alpine renders some lazily). */
+    scanDialogs();
+    new MutationObserver(scanDialogs).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener("keydown", trapTabInDialog);
   }
 
   /* Export to window so onclick="" handlers can call these. */

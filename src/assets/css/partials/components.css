@@ -37,8 +37,19 @@
 .btn--secondary { background: var(--bg-elevated); color: var(--fg); border-color: var(--border); }
 .btn--secondary:hover { background: var(--bg-alt); color: var(--fg); }
 
-.btn--ghost { background: transparent; color: var(--fg); }
-.btn--ghost:hover { background: var(--bg-alt); color: var(--fg); }
+/* Ghost keeps the lowest visual weight in a cluster but still reads as
+   a button: muted border + muted text + clear hover lift so users
+   recognize it as interactive next to a Delete-style filled button. */
+.btn--ghost {
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--border-soft);
+}
+.btn--ghost:hover {
+  background: var(--bg-alt);
+  color: var(--accent);
+  border-color: var(--border);
+}
 
 .btn--danger { background: var(--danger); color: #fff; }
 .btn--danger:hover { background: var(--danger); color: #fff; opacity: 0.9; }
