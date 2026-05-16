@@ -309,6 +309,20 @@
       } else if (e.key === "Escape") {
         if (searchModal() && !searchModal().hidden) closeSearch();
         if (siteMenu() && siteMenu().classList.contains("is-open")) closeSiteMenu();
+      } else if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "z") {
+        /* Skip undo/redo when the user is typing in a field so they
+           can use the OS-native text undo inside inputs/textareas. */
+        var t = e.target;
+        var tag = t && t.tagName ? t.tagName.toUpperCase() : "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
+        var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+        if (!s) return;
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (s.canRedo()) s.redo();
+        } else {
+          if (s.canUndo()) s.undo();
+        }
       }
     });
 

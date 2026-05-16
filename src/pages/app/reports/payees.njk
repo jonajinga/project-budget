@@ -1,0 +1,157 @@
+---
+layout: layouts/app.njk
+title: "Payee leaderboard"
+description: "Top merchants and payees ranked by total spend. Surfaces subscription creep and your biggest recipients."
+permalink: /app/reports/payees/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page"
+     x-data="Object.assign(
+       payeeLeaderboardView(),
+       reportTable(
+         (self) => ($store.budget.reportPayeeLeaderboard(self.from, self.to, self.limit) || []),
+         { keys: [
+             { key: 'payee',    label: 'Payee' },
+             { key: 'total',    label: 'Total spent', numeric: true },
+             { key: 'count',    label: 'Transactions', numeric: true },
+             { key: 'avg',      label: 'Avg / txn',    numeric: true },
+             { key: 'lastDate', label: 'Last used' },
+           ], defaultSort: { key: 'total', dir: 'desc' } }
+       )
+     )" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Payee leaderboard</h1>
+      <p class="app-page__lead">Top merchants ranked by total spend over the chosen window. Useful for spotting subscription creep, recurring purchases, and your largest individual recipients.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <div class="form-row" style="margin-bottom: var(--space-md);">
+    <div class="field">
+      <label class="field__label" for="pl-from">From</label>
+      <input class="input" id="pl-from" type="month" x-model="from">
+    </div>
+    <div class="field">
+      <label class="field__label" for="pl-to">To</label>
+      <input class="input" id="pl-to" type="month" x-model="to">
+    </div>
+    <div class="field">
+      <label class="field__label" for="pl-limit">Top N</label>
+      <select class="select" id="pl-limit" x-model.number="limit">
+        <option :value="10">10</option>
+        <option :value="25">25</option>
+        <option :value="50">50</option>
+        <option :value="100">100</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Total to top payees</span>
+      <span class="kpi__value" x-text="fmt(kpis().total)"></span>
+      <span class="kpi__delta" x-text="kpis().count + ' payees · ' + kpis().txns + ' txns'"></span>
+    </div>
+    <div class="kpi kpi--warn">
+      <span class="kpi__label">#1 payee</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
+      <span class="kpi__delta" x-text="kpis().topShare === null ? '—' : (kpis().topShare.toFixed(1) + '% of top spend')"></span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">Avg per txn</span>
+      <span class="kpi__value" x-text="fmt(kpis().avgTxn)"></span>
+      <span class="kpi__delta">Across all visible payees</span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Concentration</span>
+      <span class="kpi__value" x-text="kpis().top5Share === null ? '—' : kpis().top5Share.toFixed(0) + '%'"></span>
+      <span class="kpi__delta">Top 5 share of total</span>
+    </div>
+  </div>
+
+  <section class="report">
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="pl-search">Filter</label>
+        <input class="input" id="pl-search" type="search" x-model="query" placeholder="Filter payee name…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="visibleCount"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('payee-leaderboard')">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width: 3rem;">#</th>
+          <th class="is-sortable"><button type="button" @click="sortBy('payee')">Payee <span class="sort-ind" x-text="sortIndicator('payee')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('total')">Total spent <span class="sort-ind" x-text="sortIndicator('total')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('count')">Txns <span class="sort-ind" x-text="sortIndicator('count')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('avg')">Avg / txn <span class="sort-ind" x-text="sortIndicator('avg')"></span></button></th>
+          <th class="is-sortable"><button type="button" @click="sortBy('lastDate')">Last used <span class="sort-ind" x-text="sortIndicator('lastDate')"></span></button></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="(r, i) in rows" :key="r.payeeId">
+          <tr>
+            <td style="color: var(--fg-muted); font-variant-numeric: tabular-nums;" x-text="i + 1"></td>
+            <td>
+              <a :href="'/app/register/?payee=' + r.payeeId" x-text="r.payee"
+                 data-tip="Open the register filtered to this payee."></a>
+            </td>
+            <td class="num amount--outflow" x-text="'$' + (r.total / 100).toFixed(2)"></td>
+            <td class="num" x-text="r.count"></td>
+            <td class="num" x-text="'$' + (r.avg / 100).toFixed(2)"></td>
+            <td x-text="r.lastDate"></td>
+          </tr>
+        </template>
+        <tr x-show="!rows.length" x-cloak>
+          <td colspan="6" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No payees in this range.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+function payeeLeaderboardView() {
+  return {
+    from: '',
+    to: '',
+    limit: 25,
+    init() {
+      var store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+      if (store && store.currentMonth) {
+        this.to = store.currentMonth;
+        var parts = store.currentMonth.split("-").map(Number);
+        var fd = new Date(parts[0] - 1, parts[1] - 1, 1);  /* 12 months back */
+        this.from = fd.getFullYear() + "-" + String(fd.getMonth() + 1).padStart(2, "0");
+      } else {
+        var d = new Date();
+        this.to = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+        var f = new Date(d.getFullYear() - 1, d.getMonth(), 1);
+        this.from = f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0");
+      }
+    },
+    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    kpis() {
+      var data = this.$store.budget.reportPayeeLeaderboard(this.from, this.to, this.limit) || [];
+      var total = data.reduce(function (s, r) { return s + r.total; }, 0);
+      var txns  = data.reduce(function (s, r) { return s + r.count; }, 0);
+      var top5  = data.slice(0, 5).reduce(function (s, r) { return s + r.total; }, 0);
+      return {
+        total: total,
+        count: data.length,
+        txns: txns,
+        avgTxn: txns ? Math.round(total / txns) : 0,
+        topName: data[0] ? data[0].payee : '',
+        topShare: data[0] && total > 0 ? (data[0].total / total) * 100 : null,
+        top5Share: total > 0 ? (top5 / total) * 100 : null,
+      };
+    },
+  };
+}
+</script>

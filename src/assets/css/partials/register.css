@@ -36,14 +36,16 @@
 
 .register__table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: var(--fs-sm);
 }
 .register__table th,
 .register__table td {
-  padding: 0.55rem 0.65rem;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--border);
   text-align: left;
+  vertical-align: middle;
 }
 .register__table th {
   font-weight: 600;
@@ -51,6 +53,46 @@
   background: var(--bg-alt);
   position: sticky;
   top: 0;
+  border-bottom: 2px solid var(--border-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--fs-xs);
+  z-index: 2;
+}
+/* Alternating row bands + clear hover lift = unmistakable row
+   boundaries on the cream page background. The bands are subtle
+   (sunken vs elevated) but their contrast is amplified by the
+   per-row border-bottom. */
+.register__table tbody tr:nth-child(even) td { background: color-mix(in oklab, var(--bg-alt) 50%, var(--bg-elevated)); }
+/* Hover state — distinct from both row bands. A 16% accent mix
+   tints the row noticeably warmer than either band, and a 3px
+   accent left rail confirms "this is the focused row". Override
+   the alt-row rule with higher specificity. */
+.register__table tbody tr:hover td,
+.register__table tbody tr:nth-child(even):hover td {
+  background: color-mix(in oklab, var(--accent) 16%, var(--bg-elevated));
+}
+.register__table tbody tr:hover td:first-child,
+.register__table tbody tr:nth-child(even):hover td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--accent);
+}
+/* Dark theme — both row bands are already very low contrast on the
+   near-black bg-elevated, so a 16% accent mix vanishes. Use a much
+   larger lift (28% accent over bg) plus a brighter top/bottom rule
+   so the focused row pops cleanly out of the alt-band stripe. */
+[data-theme="dark"] .register__table tbody tr:hover td,
+[data-theme="dark"] .register__table tbody tr:nth-child(even):hover td {
+  background: color-mix(in oklab, var(--accent) 28%, var(--bg-elevated));
+  color: var(--fg);
+}
+[data-theme="dark"] .register__table tbody tr:hover td:first-child,
+[data-theme="dark"] .register__table tbody tr:nth-child(even):hover td:first-child {
+  box-shadow:
+    inset 3px 0 0 0 var(--accent),
+    inset 0 1px 0 0 color-mix(in oklab, var(--accent) 60%, transparent);
+}
+[data-theme="dark"] .register__table tbody tr:hover td:last-child {
+  box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--accent) 60%, transparent);
 }
 .register__table .num,
 .register__table .col-amount,
@@ -59,30 +101,89 @@
   font-variant-numeric: tabular-nums;
 }
 .register__table .col-cleared { width: 36px; text-align: center; }
-.register__row--reconciled { background: rgba(31, 95, 73, 0.04); }
 .register__row--reconciled td { color: var(--fg-muted); }
-.register__row--editing { background: var(--accent-soft); }
+.register__row--reconciled td:not(.col-cleared)::before {
+  content: "";
+}
+.register__row--editing td,
+.register__row--editing:nth-child(even) td { background: var(--accent-soft); }
 
-/* Cleared toggle — 28×28 visual, but wrapped in 44×44 hit area via
-   padding so it meets WCAG 2.2 AAA target size in dense table rows. */
+/* Focus flash — triggered when arriving at the register from a budget
+   drill-down row (?focus=<id>). Briefly tints the row accent so the
+   user sees where they landed, then fades back to normal. */
+.register__row--focus td {
+  background: color-mix(in oklab, var(--accent) 28%, var(--bg-elevated)) !important;
+  animation: register-focus-flash 2200ms ease-out;
+}
+@keyframes register-focus-flash {
+  0%   { background: color-mix(in oklab, var(--accent) 40%, var(--bg-elevated)); box-shadow: inset 3px 0 0 0 var(--accent); }
+  60%  { background: color-mix(in oklab, var(--accent) 28%, var(--bg-elevated)); }
+  100% { background: transparent; box-shadow: none; }
+}
+
+/* Edit-mode row — keep every input + Save/Cancel cluster on the same
+   single line so toggling edit doesn't shift the layout. Inputs shed
+   their default min-widths so they fit each column comfortably, and
+   the action cluster forbids wrapping. */
+.register__row--editing td { padding: 0.4rem 0.5rem; vertical-align: middle; }
+.register__row--editing .input,
+.register__row--editing .select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: var(--fs-sm);
+}
+.register__row--editing input[type="date"] { min-width: 0; }
+.register__edit-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: var(--space-3xs);
+}
+.register__edit-actions .btn { white-space: nowrap; }
+
+/* Calculator live preview — sits under any amount input whose value
+   contains a math expression. Tabular numerals + accent tint so it
+   reads as a real-time computed result, not just helper text. */
+.calc-preview {
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Payee column gets emphasized weight so the eye lands on the
+   merchant first when scanning a long register. Date stays as
+   secondary info in tabular numerals. */
+.register__table .col-payee { font-weight: 600; }
+.register__table .col-date  {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.register__table .col-date strong { color: var(--fg); font-weight: 600; }
+
+/* Cleared toggle — small square in the dense row. 18×18 visual, but
+   wrapped in 44×44 hit area via the ::before overlay so it still
+   passes WCAG 2.2 AAA target size. */
 .cleared-toggle {
-  width: 28px; height: 28px;
+  width: 18px; height: 18px;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-input);
+  border-radius: 3px;
   position: relative;
   cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
 }
 .cleared-toggle::before {
   content: "";
   position: absolute;
-  inset: -8px;
+  inset: -13px;
 }
-.cleared-toggle[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.cleared-toggle[aria-pressed="true"] { background: var(--ok); color: #fff; border-color: var(--ok); }
 .cleared-toggle[data-locked="true"] { opacity: 0.6; cursor: not-allowed; }
 .cleared-toggle:focus-visible {
   outline: 2px solid var(--accent);

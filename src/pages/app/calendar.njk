@@ -33,6 +33,58 @@ eleventyExcludeFromCollections: true
       </div>
     </div>
 
+    {# ---- Year-view display toggle — swaps the cell content from
+       day numbers to per-day net $ so users can scan a 12-month
+       cash-flow heatmap at a glance. #}
+    <div class="cal-toolbar__row cal-toolbar__row--span"
+         x-show="view === 'year'" x-cloak>
+      <label class="cal-toolbar__toggle"
+             :class="yearShowNet ? 'is-on' : ''"
+             style="margin-left: auto;"
+             data-tip="Replace each day's date number with its net $ for the day. Week-number column hides so the cell has room for the amount. Toggle off to return to date numbers.">
+        <input type="checkbox" x-model="yearShowNet" class="visually-hidden">
+        <span class="cal-toolbar__toggle-switch" aria-hidden="true">
+          <span class="cal-toolbar__toggle-knob"></span>
+        </span>
+        <span class="cal-toolbar__toggle-label">Show net $ instead of dates</span>
+      </label>
+    </div>
+
+    {# ---- View controls — span selector + display toggles on the
+       same row. Visible on day / week / month views. Defaults to 1
+       span; the number input accepts any custom value. #}
+    <div class="cal-toolbar__row cal-toolbar__row--span"
+         x-show="view === 'month' || view === 'week' || view === 'day'" x-cloak>
+      <span class="cal-toolbar__span-label"
+            x-text="view === 'month' ? 'Months to show:' : (view === 'week' ? 'Weeks to show:' : 'Days to show:')"></span>
+      <div class="cal-toolbar__span-buttons" role="group"
+           :aria-label="view === 'month' ? 'Number of months' : (view === 'week' ? 'Number of weeks' : 'Number of days')">
+        <template x-for="opt in (view === 'month' ? monthSpanPresets : (view === 'week' ? weekSpanPresets : daySpanPresets))" :key="opt.value">
+          <button type="button"
+                  class="cal-toolbar__span-btn"
+                  :class="{ 'is-active': (view === 'month' ? monthSpan : (view === 'week' ? weekSpan : daySpan)) === opt.value }"
+                  @click="setSpan(opt.value)"
+                  x-text="opt.label"></button>
+        </template>
+        <label class="cal-toolbar__span-custom">
+          <span class="visually-hidden">Custom number</span>
+          <input type="number" min="1" max="60" step="1"
+                 :value="view === 'month' ? monthSpan : (view === 'week' ? weekSpan : daySpan)"
+                 @change="setSpan(parseInt($event.target.value, 10) || 1)"
+                 data-tip="Type any number from 1 to 60.">
+        </label>
+      </div>
+      <label class="cal-toolbar__toggle"
+             :class="showDayTotals ? 'is-on' : ''"
+             data-tip="Show inline In / Out / Net rollups inside each day cell and each week-number column. Toggle off for a cleaner grid (the period header totals at the top of the view always stay visible).">
+        <input type="checkbox" x-model="showDayTotals" class="visually-hidden">
+        <span class="cal-toolbar__toggle-switch" aria-hidden="true">
+          <span class="cal-toolbar__toggle-knob"></span>
+        </span>
+        <span class="cal-toolbar__toggle-label">Show grid totals</span>
+      </label>
+    </div>
+
     <div class="cal-toolbar__row cal-toolbar__row--filters">
       <div class="field cal-toolbar__search">
         <label class="visually-hidden" for="cal-search">Search payee, memo, category</label>
@@ -70,55 +122,202 @@ eleventyExcludeFromCollections: true
   </p>
 
   {# ---- Year view --------------------------------------------------- #}
-  <section class="cal-year" x-show="$store.budget.profile && view === 'year'" x-cloak>
+  <section x-show="$store.budget.profile && view === 'year'" x-cloak>
+    <dl class="cal-period-totals" aria-label="Year totals">
+      <div class="cal-period-totals__tile"
+           :data-tip="'Total money in across the visible year: ' + formatCents(yearTotals().inflow) + '.'">
+        <dt>Inflow</dt>
+        <dd class="amount--inflow" x-text="formatCents(yearTotals().inflow)"></dd>
+      </div>
+      <div class="cal-period-totals__tile"
+           :data-tip="'Total money out across the visible year: ' + formatCents(yearTotals().outflow) + '.'">
+        <dt>Outflow</dt>
+        <dd class="amount--outflow" x-text="formatCents(yearTotals().outflow)"></dd>
+      </div>
+      <div class="cal-period-totals__tile"
+           :data-tip="'Net = inflow + outflow for the year. Positive means more money came in than went out.'">
+        <dt>Net</dt>
+        <dd :class="yearTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(yearTotals().net)"></dd>
+      </div>
+      <div class="cal-period-totals__tile cal-period-totals__tile--muted"
+           :data-tip="'Number of entries (posted + scheduled) visible in this year.'">
+        <dt>Entries</dt>
+        <dd x-text="yearTotals().count"></dd>
+      </div>
+    </dl>
+
+  <div class="cal-year">
     <template x-for="mm in monthsOfYear()" :key="mm.iso">
-      <article class="cal-mini">
+      <article class="cal-mini" :class="yearShowNet ? 'cal-mini--net' : ''">
         <header class="cal-mini__head">
           <button type="button" class="cal-mini__title-btn"
                   @click="view = 'month'; anchorISO = mm.iso + '-01'"
                   :aria-label="'Open ' + mm.label">
             <h2 class="cal-mini__title" x-text="mm.label"></h2>
           </button>
-          <span class="cal-mini__total" x-text="formatCents(monthNet(mm.iso))"
-                :class="monthNet(mm.iso) < 0 ? 'amount--outflow' : (monthNet(mm.iso) > 0 ? 'amount--inflow' : '')"></span>
+          {# Labeled stats — IN / OUT / NET for the month. In and Out
+             are clickable to open the period transactions modal. #}
+          <dl class="cal-mini__totals" aria-label="Month totals">
+            <button type="button" class="cal-mini__stat cal-mini__stat--clickable"
+                    @click="openPeriodModal('Inflows — ' + mm.label, 'Money in for the month', 'in', miniCells(mm.iso))"
+                    data-tip="See every inflow in this month.">
+              <dt>In</dt>
+              <dd class="amount--inflow" x-text="formatCents(miniMonthTotals(mm.iso).inflow)"></dd>
+            </button>
+            <button type="button" class="cal-mini__stat cal-mini__stat--clickable"
+                    @click="openPeriodModal('Outflows — ' + mm.label, 'Money out for the month', 'out', miniCells(mm.iso))"
+                    data-tip="See every outflow in this month.">
+              <dt>Out</dt>
+              <dd class="amount--outflow" x-text="formatCents(miniMonthTotals(mm.iso).outflow)"></dd>
+            </button>
+            <div class="cal-mini__stat cal-mini__stat--net">
+              <dt>Net</dt>
+              <dd :class="miniMonthTotals(mm.iso).net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(miniMonthTotals(mm.iso).net)"></dd>
+            </div>
+          </dl>
         </header>
-        <ol class="cal-mini__weekdays" aria-hidden="true">
-          <li>S</li><li>M</li><li>T</li><li>W</li><li>T</li><li>F</li><li>S</li>
-        </ol>
-        <ol class="cal-mini__grid">
-          <template x-for="cell in miniCells(mm.iso)" :key="cell.key">
-            <li class="cal-mini__cell"
-                :class="{
-                  'cal-mini__cell--blank': cell.blank,
-                  'cal-mini__cell--today': cell.isToday,
-                  'cal-mini__cell--has':   !cell.blank && cell.count > 0
-                }"
-                :style="!cell.blank && cell.intensity > 0 ? ('--intensity: ' + cell.intensity) : ''">
+        {# Header row: WK label on the left, 7 weekday initials on
+           the right. Mirrors .cal-mini__row's flex layout so the
+           columns line up vertically with the day cells below. #}
+        <div class="cal-mini__row cal-mini__row--head" aria-hidden="true">
+          <span class="cal-mini__wknum cal-mini__wknum--head">Wk</span>
+          <div class="cal-mini__row-cells cal-mini__row-cells--weekdays">
+            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+          </div>
+        </div>
+        {# One row per week. Leading column is the ISO week number
+           (clickable to open the period modal scoped to that week);
+           the day cells live in a nested 7-col grid so the parent
+           flex layout can't break across rows. #}
+        <div class="cal-mini__rows">
+          <template x-for="wk in miniWeeks(mm.iso)" :key="wk.weekKey">
+            <div class="cal-mini__row">
               <button type="button"
-                      x-show="!cell.blank"
-                      class="cal-mini__day"
-                      @click="view = 'day'; anchorISO = cell.iso"
-                      :aria-label="'Open ' + cell.iso"
-                      :data-tip="miniTooltip(cell)">
-                <span x-text="cell.day"></span>
-              </button>
-            </li>
+                      class="cal-mini__wknum cal-mini__wknum--btn"
+                      :disabled="!wk.startISO"
+                      @click="wk.startISO && openPeriodModal('Week ' + wk.weekNumber + ' — ' + mm.label, 'Money in/out + entries for week ' + wk.weekNumber, 'all', wk.cells)"
+                      :data-tip="wk.startISO ? ('Week ' + wk.weekNumber + ' · In ' + formatCents(_periodTotalsFor(wk.cells).inflow) + ' · Out ' + formatCents(_periodTotalsFor(wk.cells).outflow) + ' · Net ' + formatCents(_periodTotalsFor(wk.cells).net) + ' · ' + _periodTotalsFor(wk.cells).count + ' entries') : ''"
+                      x-text="wk.weekNumber"></button>
+              <div class="cal-mini__row-cells">
+                <template x-for="cell in wk.cells" :key="cell.key">
+                  <span class="cal-mini__cell"
+                        :class="{
+                          'cal-mini__cell--blank': cell.blank,
+                          'cal-mini__cell--today': cell.isToday,
+                          'cal-mini__cell--has':   !cell.blank && cell.count > 0,
+                          'cal-mini__cell--hot':   !cell.blank && (cell.intensity || 0) >= 50
+                        }"
+                        :style="!cell.blank && cell.intensity > 0 ? ('--intensity: ' + cell.intensity) : ''">
+                    <button type="button"
+                            x-show="!cell.blank"
+                            class="cal-mini__day"
+                            :class="yearShowNet ? 'cal-mini__day--net' : ''"
+                            @click="openYearDay(cell.iso)"
+                            :aria-label="'Open ' + cell.iso">
+                      <span x-show="!yearShowNet" x-text="cell.day"></span>
+                      <span x-show="yearShowNet"
+                            :class="(cell.totalInflow + cell.totalOutflow) < 0 ? 'amount--outflow' : ((cell.totalInflow + cell.totalOutflow) > 0 ? 'amount--inflow' : 'cal-mini__day-zero')"
+                            x-text="(cell.totalInflow + cell.totalOutflow) === 0 ? '·' : fmtCompact(cell.totalInflow + cell.totalOutflow)"></span>
+                    </button>
+                  </span>
+                </template>
+              </div>
+            </div>
           </template>
-        </ol>
+        </div>
       </article>
     </template>
+  </div>
   </section>
 
   {# ---- Month view -------------------------------------------------- #}
-  <section class="cal" :class="{ 'cal--has-detail': selectedISO }"
-           x-show="$store.budget.profile && view === 'month'" x-cloak>
+  <section x-show="$store.budget.profile && view === 'month'" x-cloak>
+    {# Primary month-view block — wrapped in the same .cal-extra-month
+       card chrome as the extras below so all month blocks look
+       identical. Header drops the --primary modifier. #}
+    <article class="cal-extra-month">
+    <header class="cal-extra-month__head">
+      <h3 class="cal-extra-month__title" x-text="monthLabel(anchorMonthISO())"></h3>
+      <dl class="cal-extra-period__totals" aria-label="Month totals">
+        <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                @click="openPeriodModal('Inflows — ' + monthLabel(anchorMonthISO()), 'Money in for the month', 'in', monthCells())"
+                data-tip="See every inflow in this month.">
+          <dt>In</dt>
+          <dd class="amount--inflow" x-text="formatCents(monthTotals().inflow)"></dd>
+        </button>
+        <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                @click="openPeriodModal('Outflows — ' + monthLabel(anchorMonthISO()), 'Money out for the month', 'out', monthCells())"
+                data-tip="See every outflow in this month.">
+          <dt>Out</dt>
+          <dd class="amount--outflow" x-text="formatCents(monthTotals().outflow)"></dd>
+        </button>
+        <div class="cal-extra-period__stat cal-extra-period__stat--net">
+          <dt>Net</dt>
+          <dd :class="monthTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(monthTotals().net)"></dd>
+        </div>
+        <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                @click="openPeriodModal('All entries — ' + monthLabel(anchorMonthISO()), 'Every transaction in the month', 'all', monthCells())"
+                data-tip="See every entry in this month.">
+          <dt>Entries</dt>
+          <dd x-text="monthTotals().count"></dd>
+        </button>
+      </dl>
+    </header>
+
+  <div class="cal" :class="{ 'cal--no-totals': !showDayTotals }">
     <div class="cal__main">
-    <ol class="cal__weekdays" aria-hidden="true">
-      <li>Sun</li><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li>
-    </ol>
-    <ol class="cal__grid" role="grid" :aria-label="'Calendar for ' + monthLabel(anchorMonthISO())">
-      <template x-for="cell in monthCells()" :key="cell.key">
-        <li class="cal__cell"
+    {# Header row mirrors the row layout below: WK column + 7 day
+       labels in their own grid container. #}
+    <div class="cal__weekdays" aria-hidden="true">
+      <span class="cal__wknum cal__wknum--head">Wk</span>
+      <div class="cal__weekdays-days">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+    </div>
+    {# One row per week. Leading column is the ISO week-number
+       button (clickable to open the period transactions modal
+       scoped to that week's cells); the day cells live in a nested
+       7-col grid so the parent flex layout can't break across rows. #}
+    <div class="cal__grid" role="grid" :aria-label="'Calendar for ' + monthLabel(anchorMonthISO())">
+      <template x-for="wk in monthWeeks()" :key="wk.weekKey">
+        <div class="cal__week-row">
+          <button type="button"
+                  class="cal__wknum cal__wknum--btn"
+                  :disabled="!wk.startISO"
+                  @click="wk.startISO && openPeriodModal('Week ' + wk.weekNumber + ' — ' + monthLabel(anchorMonthISO()), 'Money in/out + entries for week ' + wk.weekNumber, 'all', wk.cells)"
+                  :data-tip="wk.startISO ? ('Week ' + wk.weekNumber + ' · click to see every entry') : ''">
+            <span class="cal__wknum-num">Wk <span x-text="wk.weekNumber"></span></span>
+            <template x-if="showDayTotals && wk.startISO && _periodTotalsFor(wk.cells).count > 0">
+              <span class="cal__wknum-stats">
+                <span class="cal__wknum-stat" x-show="_periodTotalsFor(wk.cells).inflow > 0">
+                  <span class="cal__wknum-stat-label">In</span>
+                  <span class="cal__wknum-stat-value amount--inflow"
+                        x-text="fmtCompact(_periodTotalsFor(wk.cells).inflow)"></span>
+                </span>
+                <span class="cal__wknum-stat" x-show="_periodTotalsFor(wk.cells).outflow < 0">
+                  <span class="cal__wknum-stat-label">Out</span>
+                  <span class="cal__wknum-stat-value amount--outflow"
+                        x-text="fmtCompact(_periodTotalsFor(wk.cells).outflow)"></span>
+                </span>
+                <span class="cal__wknum-stat cal__wknum-stat--net">
+                  <span class="cal__wknum-stat-label">Net</span>
+                  <span class="cal__wknum-stat-value"
+                        :class="_periodTotalsFor(wk.cells).net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="fmtCompact(_periodTotalsFor(wk.cells).net)"></span>
+                </span>
+                <span class="cal__wknum-stat">
+                  <span class="cal__wknum-stat-label">Entries</span>
+                  <span class="cal__wknum-stat-value"
+                        x-text="_periodTotalsFor(wk.cells).count"></span>
+                </span>
+              </span>
+            </template>
+          </button>
+          <div class="cal__week-row-cells">
+      <template x-for="cell in wk.cells" :key="cell.key">
+        <div class="cal__cell"
             :class="{
               'cal__cell--blank':    cell.blank,
               'cal__cell--today':    cell.isToday,
@@ -127,97 +326,211 @@ eleventyExcludeFromCollections: true
               'cal__cell--other-month': cell.otherMonth
             }">
           <template x-if="!cell.blank">
-            <button type="button"
-                    class="cal__cell-btn"
-                    @click="selectedISO = cell.iso"
-                    @dblclick="view = 'day'; anchorISO = cell.iso"
-                    :data-tip="cellTooltip(cell)"
-                    :aria-label="'Open ' + cell.iso">
-              <span class="cal__day-num-wrap">
+            <div class="cal__cell-inner">
+              <button type="button"
+                      class="cal__day-btn"
+                      @click="selectedISO = cell.iso"
+                      @dblclick="view = 'day'; anchorISO = cell.iso"
+                      :aria-label="'Open ' + cell.iso">
                 <span class="cal__day-num" x-text="cell.day"></span>
-              </span>
-              <span class="cal__totals" x-show="cell.totalInflow !== 0 || cell.totalOutflow !== 0">
-                <span class="cal__delta cal__delta--in"  x-show="cell.totalInflow > 0"  x-text="fmtCompact(cell.totalInflow)"></span>
-                <span class="cal__delta cal__delta--out" x-show="cell.totalOutflow < 0" x-text="fmtCompact(cell.totalOutflow)"></span>
-              </span>
-              <span class="cal__dots" x-show="cell.posted.length + cell.scheduled.length > 0">
-                <template x-for="n in Math.min(cell.posted.length, 4)" :key="'p' + n">
-                  <span class="cal__dot cal__dot--posted" aria-hidden="true"></span>
-                </template>
-                <template x-for="n in Math.min(cell.scheduled.length, 4)" :key="'s' + n">
-                  <span class="cal__dot cal__dot--scheduled" aria-hidden="true"></span>
-                </template>
-                <span class="cal__count" x-show="(cell.posted.length + cell.scheduled.length) > 8"
-                      x-text="'+' + ((cell.posted.length + cell.scheduled.length) - 8)"></span>
-              </span>
-            </button>
-          </template>
-        </li>
-      </template>
-    </ol>
-    </div>
+              </button>
 
-    <aside class="cal__detail" x-show="selectedISO" x-cloak aria-live="polite">
-      <header class="cal__detail-head">
-        <h2 x-text="dayLabel(selectedISO)"></h2>
-        <button class="btn btn--ghost btn--sm" type="button" @click="selectedISO = null" aria-label="Close day details">&times;</button>
-      </header>
-      <button type="button" class="btn btn--secondary btn--sm"
-              x-show="selectedISO"
-              @click="view = 'day'; anchorISO = selectedISO"
-              style="margin-bottom: var(--space-sm);">Open full day</button>
-      <template x-if="selectedISO">
-        <div>
-          <p x-show="!(selectedDay.posted.length + selectedDay.scheduled.length)" x-cloak style="color: var(--fg-muted);">
-            Nothing posted or scheduled on this day.
-          </p>
-          <section x-show="selectedDay.posted.length" x-cloak>
-            <h3 class="cal__detail-section">Posted</h3>
-            <ul class="cal__list">
-              <template x-for="t in selectedDay.posted" :key="t.id">
-                <li>
-                  <button type="button" class="cal__row cal__row--clickable"
-                          :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
-                          @click="openTxn(t.id)">
-                    <span class="cal__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
-                    <span class="cal__row-meta">
-                      <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
-                      <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
-                    </span>
-                    <span class="cal__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                          x-text="formatCents(t.amount)"></span>
-                  </button>
+              {# Entry list — mirrors the week-view card style so a
+                 month cell reads as a mini day-column. Cap at 3 to keep
+                 cells from blowing past row height. #}
+              <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
+                <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'p-' + t.id">
+                  <li>
+                    <button type="button"
+                            class="cal__entry cal__entry--clickable"
+                            :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
+                            @click.stop="openTxn(t.id)">
+                      <span class="cal__entry-payee"
+                            x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                      <span class="cal__entry-amt"
+                            :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                            x-text="fmtCompact(t.amount)"></span>
+                    </button>
+                  </li>
+                </template>
+                <template x-for="s in (cell.scheduled || []).slice(0, Math.max(0, 3 - (cell.posted || []).length))" :key="'s-' + s.id">
+                  <li>
+                    <a class="cal__entry cal__entry--clickable cal__entry--scheduled"
+                       :href="'/app/scheduled/#edit-' + s.id"
+                       @click.stop>
+                      <span class="cal__entry-payee"
+                            x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+                      <span class="cal__entry-amt"
+                            :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                            x-text="fmtCompact(s.template.amount)"></span>
+                    </a>
+                  </li>
+                </template>
+                <li x-show="((cell.posted || []).length + (cell.scheduled || []).length) > 3" x-cloak>
+                  <button type="button"
+                          class="cal__entry-more"
+                          @click="selectedISO = cell.iso"
+                          x-text="'+ ' + (((cell.posted || []).length + (cell.scheduled || []).length) - 3) + ' more'"></button>
                 </li>
-              </template>
-            </ul>
-          </section>
-          <section x-show="selectedDay.scheduled.length" x-cloak>
-            <h3 class="cal__detail-section">Upcoming (scheduled)</h3>
-            <ul class="cal__list">
-              <template x-for="s in selectedDay.scheduled" :key="s.id">
-                <li>
-                  <a class="cal__row cal__row--clickable"
-                     :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
-                     :href="'/app/scheduled/#edit-' + s.id">
-                    <span class="cal__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
-                    <span class="cal__row-meta">
-                      <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
-                      <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
-                    </span>
-                    <span class="cal__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                          x-text="formatCents(s.template.amount)"></span>
-                  </a>
-                </li>
-              </template>
-            </ul>
-          </section>
+              </ul>
+
+              {# Per-day rollup — In / Out on one compact row, Net on
+                 its own emphasized row beneath. Uses fmtCompact so
+                 even at narrow cell widths the digits fit. Hidden
+                 via the showDayTotals toolbar toggle. #}
+              <div class="cal__cell-totals"
+                   x-show="showDayTotals && (cell.totalInflow !== 0 || cell.totalOutflow !== 0)"
+                   x-cloak>
+                <div class="cal__cell-totals-row">
+                  <span class="cal__cell-total cal__cell-total--in"
+                        x-show="cell.totalInflow > 0" x-cloak>
+                    <span class="cal__cell-total-label">In</span>
+                    <span class="cal__cell-total-value amount--inflow"
+                          x-text="fmtCompact(cell.totalInflow)"></span>
+                  </span>
+                  <span class="cal__cell-total cal__cell-total--out"
+                        x-show="cell.totalOutflow < 0" x-cloak>
+                    <span class="cal__cell-total-label">Out</span>
+                    <span class="cal__cell-total-value amount--outflow"
+                          x-text="fmtCompact(cell.totalOutflow)"></span>
+                  </span>
+                </div>
+                <div class="cal__cell-total cal__cell-total--net">
+                  <span class="cal__cell-total-label">Net</span>
+                  <span class="cal__cell-total-value"
+                        :class="(cell.totalInflow + cell.totalOutflow) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                        x-text="fmtCompact(cell.totalInflow + cell.totalOutflow)"></span>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </template>
-    </aside>
+          </div>
+        </div>
+      </template>
+    </div>
+    </div>
+
+  </div>
+  </article>
+
+  {# Extra months (when monthSpan > 1) — stacked beneath the primary
+     grid. Each gets its own header label + grid. No detail panel per
+     extra month — the single global detail aside above stays in sync. #}
+  <template x-for="mb in monthsToRender().slice(1)" :key="mb.monthISO">
+    <article class="cal-extra-month">
+      <header class="cal-extra-month__head">
+        <h3 class="cal-extra-month__title" x-text="mb.label"></h3>
+        <dl class="cal-extra-period__totals" aria-label="Month totals">
+          <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                  @click="openPeriodModal('Inflows — ' + mb.label, 'Money in for the month', 'in', monthCellsFor(mb.anchorISO))"
+                  data-tip="See every inflow in this month.">
+            <dt>In</dt>
+            <dd class="amount--inflow" x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).inflow)"></dd>
+          </button>
+          <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                  @click="openPeriodModal('Outflows — ' + mb.label, 'Money out for the month', 'out', monthCellsFor(mb.anchorISO))"
+                  data-tip="See every outflow in this month.">
+            <dt>Out</dt>
+            <dd class="amount--outflow" x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).outflow)"></dd>
+          </button>
+          <div class="cal-extra-period__stat cal-extra-period__stat--net">
+            <dt>Net</dt>
+            <dd :class="_periodTotalsFor(monthCellsFor(mb.anchorISO)).net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).net)"></dd>
+          </div>
+          <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                  @click="openPeriodModal('All entries — ' + mb.label, 'Every transaction in the month', 'all', monthCellsFor(mb.anchorISO))"
+                  data-tip="See every entry in this month.">
+            <dt>Entries</dt>
+            <dd x-text="_periodTotalsFor(monthCellsFor(mb.anchorISO)).count"></dd>
+          </button>
+        </dl>
+      </header>
+      <ol class="cal__weekdays" aria-hidden="true">
+        <li>Sun</li><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li>
+      </ol>
+      <ol class="cal__grid" role="grid" :aria-label="'Calendar for ' + mb.label">
+        <template x-for="cell in monthCellsFor(mb.anchorISO)" :key="'m' + mb.monthISO + cell.key">
+          <li class="cal__cell"
+              :class="{
+                'cal__cell--blank':    cell.blank,
+                'cal__cell--today':    cell.isToday,
+                'cal__cell--selected': cell.iso && cell.iso === selectedISO,
+                'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
+                'cal__cell--other-month': cell.otherMonth
+              }">
+            <template x-if="!cell.blank">
+              <div class="cal__cell-inner">
+                <button type="button" class="cal__day-btn"
+                        @click="selectedISO = cell.iso"
+                        @dblclick="view = 'day'; anchorISO = cell.iso"
+                        :aria-label="'Open ' + cell.iso">
+                  <span class="cal__day-num" x-text="cell.day"></span>
+                </button>
+                <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
+                  <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'p-' + mb.monthISO + t.id">
+                    <li>
+                      <button type="button" class="cal__entry cal__entry--clickable"
+                              :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
+                              @click.stop="openTxn(t.id)">
+                        <span class="cal__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                        <span class="cal__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                              x-text="fmtCompact(t.amount)"></span>
+                      </button>
+                    </li>
+                  </template>
+                  <li x-show="((cell.posted || []).length + (cell.scheduled || []).length) > 3" x-cloak>
+                    <button type="button" class="cal__entry-more"
+                            @click="selectedISO = cell.iso"
+                            x-text="'+ ' + (((cell.posted || []).length + (cell.scheduled || []).length) - 3) + ' more'"></button>
+                  </li>
+                </ul>
+              </div>
+            </template>
+          </li>
+        </template>
+      </ol>
+    </article>
+  </template>
   </section>
 
   {# ---- Week view --------------------------------------------------- #}
-  <section class="cal-week" x-show="$store.budget.profile && view === 'week'" x-cloak>
+  <section x-show="$store.budget.profile && view === 'week'" x-cloak>
+    {# Primary week-view block — wrapped in the same .cal-extra-week
+       card chrome as the extras below for visual consistency. #}
+    <article class="cal-extra-week">
+    <header class="cal-extra-week__head">
+      <h3 class="cal-extra-week__title" x-text="anchorLabel()"></h3>
+      <dl class="cal-extra-period__totals" aria-label="Week totals">
+        <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                @click="openPeriodModal('Inflows — ' + anchorLabel(), 'Money in for the week', 'in', weekCells())"
+                data-tip="See every inflow in this week.">
+          <dt>In</dt>
+          <dd class="amount--inflow" x-text="formatCents(weekTotals().inflow)"></dd>
+        </button>
+        <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                @click="openPeriodModal('Outflows — ' + anchorLabel(), 'Money out for the week', 'out', weekCells())"
+                data-tip="See every outflow in this week.">
+          <dt>Out</dt>
+          <dd class="amount--outflow" x-text="formatCents(weekTotals().outflow)"></dd>
+        </button>
+        <div class="cal-extra-period__stat cal-extra-period__stat--net">
+          <dt>Net</dt>
+          <dd :class="weekTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(weekTotals().net)"></dd>
+        </div>
+        <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                @click="openPeriodModal('All entries — ' + anchorLabel(), 'Every transaction in the week', 'all', weekCells())"
+                data-tip="See every entry in this week.">
+          <dt>Entries</dt>
+          <dd x-text="weekTotals().count"></dd>
+        </button>
+      </dl>
+    </header>
+
+  <div class="cal-week">
     <ol class="cal-week__strip">
       <template x-for="cell in weekCells()" :key="cell.iso">
         <li class="cal-week__day"
@@ -233,12 +546,6 @@ eleventyExcludeFromCollections: true
                       :aria-label="'Open ' + cell.iso">
                 <span x-text="cell.dayMonth"></span>
               </button>
-            </p>
-            <p class="cal-week__totals" x-show="cell.totalInflow + cell.totalOutflow !== 0">
-              <span x-show="cell.totalInflow > 0" class="amount--inflow"
-                    x-text="formatCents(cell.totalInflow)"></span>
-              <span x-show="cell.totalOutflow < 0" class="amount--outflow"
-                    x-text="formatCents(cell.totalOutflow)"></span>
             </p>
           </header>
           <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
@@ -266,79 +573,534 @@ eleventyExcludeFromCollections: true
             </template>
           </ul>
           <p class="cal-week__empty" x-show="!(cell.posted.length + cell.scheduled.length)" x-cloak>—</p>
+          {# Per-day totals — pinned to the bottom via margin-top: auto
+             on .cal-week__totals so In/Out/Net line up across the row
+             even when each day has different entry counts. Hidden
+             via the showDayTotals toolbar toggle. #}
+          <dl class="cal-week__totals"
+              x-show="showDayTotals && (cell.totalInflow !== 0 || cell.totalOutflow !== 0)"
+              x-cloak>
+            <div class="cal-week__total" x-show="cell.totalInflow > 0" x-cloak>
+              <dt>In</dt>
+              <dd class="amount--inflow" x-text="formatCents(cell.totalInflow)"></dd>
+            </div>
+            <div class="cal-week__total" x-show="cell.totalOutflow < 0" x-cloak>
+              <dt>Out</dt>
+              <dd class="amount--outflow" x-text="formatCents(cell.totalOutflow)"></dd>
+            </div>
+            <div class="cal-week__total cal-week__total--net">
+              <dt>Net</dt>
+              <dd :class="(cell.totalInflow + cell.totalOutflow) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(cell.totalInflow + cell.totalOutflow)"></dd>
+            </div>
+          </dl>
         </li>
       </template>
     </ol>
+  </div>
+  </article>
+
+  {# Extra weeks (when weekSpan > 1) — stacked below the primary
+     strip. Each extra week has its own label header + 7-day strip. #}
+  <template x-for="wb in weeksToRender().slice(1)" :key="wb.startISO">
+    <article class="cal-extra-week">
+      <header class="cal-extra-week__head">
+        <h3 class="cal-extra-week__title" x-text="wb.label"></h3>
+        <dl class="cal-extra-period__totals" aria-label="Week totals">
+          <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                  @click="openPeriodModal('Inflows — ' + wb.label, 'Money in for the week', 'in', weekCellsFor(wb.startISO))"
+                  data-tip="See every inflow in this week.">
+            <dt>In</dt>
+            <dd class="amount--inflow" x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).inflow)"></dd>
+          </button>
+          <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                  @click="openPeriodModal('Outflows — ' + wb.label, 'Money out for the week', 'out', weekCellsFor(wb.startISO))"
+                  data-tip="See every outflow in this week.">
+            <dt>Out</dt>
+            <dd class="amount--outflow" x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).outflow)"></dd>
+          </button>
+          <div class="cal-extra-period__stat cal-extra-period__stat--net">
+            <dt>Net</dt>
+            <dd :class="_periodTotalsFor(weekCellsFor(wb.startISO)).net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).net)"></dd>
+          </div>
+          <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                  @click="openPeriodModal('All entries — ' + wb.label, 'Every transaction in the week', 'all', weekCellsFor(wb.startISO))"
+                  data-tip="See every entry in this week.">
+            <dt>Entries</dt>
+            <dd x-text="_periodTotalsFor(weekCellsFor(wb.startISO)).count"></dd>
+          </button>
+        </dl>
+      </header>
+      <ol class="cal-week__strip">
+        <template x-for="cell in weekCellsFor(wb.startISO)" :key="'w' + wb.startISO + cell.iso">
+          <li class="cal-week__day"
+              :class="{ 'is-today': cell.isToday,
+                        'is-empty': !(cell.posted.length + cell.scheduled.length) }">
+            <header class="cal-week__head">
+              <p class="cal-week__weekday" x-text="cell.weekday"></p>
+              <p class="cal-week__date">
+                <button type="button" class="cal-week__date-btn"
+                        @click="view = 'day'; anchorISO = cell.iso"
+                        :aria-label="'Open ' + cell.iso">
+                  <span x-text="cell.dayMonth"></span>
+                </button>
+              </p>
+            </header>
+            <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
+              <template x-for="t in cell.posted" :key="'p' + wb.startISO + t.id">
+                <li>
+                  <button type="button"
+                          class="cal-week__entry cal-week__entry--posted cal-week__entry--clickable"
+                          @click="openTxn(t.id)">
+                    <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                    <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(t.amount)"></span>
+                  </button>
+                </li>
+              </template>
+              <template x-for="s in cell.scheduled" :key="'s' + wb.startISO + s.id">
+                <li>
+                  <a class="cal-week__entry cal-week__entry--scheduled cal-week__entry--clickable"
+                     :href="'/app/scheduled/#edit-' + s.id">
+                    <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+                    <span class="cal-week__entry-amt" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(s.template.amount)"></span>
+                  </a>
+                </li>
+              </template>
+            </ul>
+            <p class="cal-week__empty" x-show="!(cell.posted.length + cell.scheduled.length)" x-cloak>—</p>
+          </li>
+        </template>
+      </ol>
+    </article>
+  </template>
   </section>
 
   {# ---- Day view ---------------------------------------------------- #}
-  <section class="cal-day" x-show="$store.budget.profile && view === 'day'" x-cloak>
-    <header class="cal-day__head">
-      <h2 class="cal-day__title" x-text="dayLabel(anchorISO)"></h2>
-      <p class="cal-day__totals">
-        <span x-show="dayData(anchorISO).totalInflow > 0" class="amount--inflow"
-              x-text="formatCents(dayData(anchorISO).totalInflow)"></span>
-        <span x-show="dayData(anchorISO).totalOutflow < 0" class="amount--outflow"
-              x-text="formatCents(dayData(anchorISO).totalOutflow)"></span>
-        <span x-show="dayData(anchorISO).totalInflow === 0 && dayData(anchorISO).totalOutflow === 0"
-              style="color: var(--fg-muted);">No net activity</span>
-      </p>
-    </header>
+  <section x-show="$store.budget.profile && view === 'day'" x-cloak>
+    <template x-for="(db, dIdx) in daysToRender()" :key="db.iso">
+      <article class="cal-day-block"
+               :class="dIdx === 0 ? 'cal-day-block--primary' : ''">
+        <header class="cal-extra-week__head"
+                :class="dIdx === 0 ? 'cal-extra-week__head--primary' : ''">
+          <h3 class="cal-extra-week__title" x-text="db.label"></h3>
+          <dl class="cal-extra-period__totals" aria-label="Day totals">
+            <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                    @click="openPeriodModal('Inflows — ' + db.label, 'Money in for the day', 'in', [dayData(db.iso)])"
+                    data-tip="See every inflow on this day.">
+              <dt>In</dt>
+              <dd class="amount--inflow" x-text="formatCents(dayData(db.iso).totalInflow)"></dd>
+            </button>
+            <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                    @click="openPeriodModal('Outflows — ' + db.label, 'Money out for the day', 'out', [dayData(db.iso)])"
+                    data-tip="See every outflow on this day.">
+              <dt>Out</dt>
+              <dd class="amount--outflow" x-text="formatCents(dayData(db.iso).totalOutflow)"></dd>
+            </button>
+            <div class="cal-extra-period__stat cal-extra-period__stat--net">
+              <dt>Net</dt>
+              <dd :class="(dayData(db.iso).totalInflow + dayData(db.iso).totalOutflow) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(dayData(db.iso).totalInflow + dayData(db.iso).totalOutflow)"></dd>
+            </div>
+            <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                    @click="openPeriodModal('All entries — ' + db.label, 'Every transaction on the day', 'all', [dayData(db.iso)])"
+                    data-tip="See every entry on this day.">
+              <dt>Entries</dt>
+              <dd x-text="dayData(db.iso).posted.length + dayData(db.iso).scheduled.length"></dd>
+            </button>
+          </dl>
+        </header>
 
-    <template x-if="anchorISO">
-      <div>
-        <p x-show="!(anchorDay.posted.length + anchorDay.scheduled.length)" x-cloak style="color: var(--fg-muted);">
-          Nothing posted or scheduled on this day.
-        </p>
-        <section x-show="anchorDay.posted.length" x-cloak>
-          <h3 class="cal__detail-section">Posted (<span x-text="anchorDay.posted.length"></span>)</h3>
-          <ul class="cal-day__list">
-            <template x-for="t in anchorDay.posted" :key="t.id">
-              <li>
-                <button type="button"
-                        class="cal-day__row cal-day__row--clickable"
-                        :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
-                        @click="openTxn(t.id)">
-                  <div>
-                    <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
-                    <p class="cal-day__row-meta">
-                      <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
-                      <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
-                      <span x-show="t.memo" x-text="' · ' + t.memo"></span>
-                    </p>
-                  </div>
-                  <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                        x-text="formatCents(t.amount)"></span>
-                </button>
-              </li>
-            </template>
-          </ul>
-        </section>
-        <section x-show="anchorDay.scheduled.length" x-cloak>
-          <h3 class="cal__detail-section">Upcoming (scheduled) (<span x-text="anchorDay.scheduled.length"></span>)</h3>
-          <ul class="cal-day__list">
-            <template x-for="s in anchorDay.scheduled" :key="s.id">
-              <li>
-                <a class="cal-day__row cal-day__row--clickable"
-                   :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
-                   :href="'/app/scheduled/#edit-' + s.id">
-                  <div>
-                    <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
-                    <p class="cal-day__row-meta">
-                      <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
-                      <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
-                    </p>
-                  </div>
-                  <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                        x-text="formatCents(s.template.amount)"></span>
-                </a>
-              </li>
-            </template>
-          </ul>
-        </section>
-      </div>
+        <div>
+          <p x-show="!(dayData(db.iso).posted.length + dayData(db.iso).scheduled.length)" x-cloak
+             style="color: var(--fg-muted); padding: var(--space-md) 0; text-align: center; margin: 0;">
+            Nothing posted or scheduled on this day.
+          </p>
+          <section x-show="dayData(db.iso).posted.length" x-cloak>
+            <h4 class="cal__detail-section">Posted (<span x-text="dayData(db.iso).posted.length"></span>)</h4>
+            <ul class="cal-day__list">
+              <template x-for="t in dayData(db.iso).posted" :key="'p' + db.iso + t.id">
+                <li>
+                  <button type="button"
+                          class="cal-day__row cal-day__row--clickable"
+                          :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                          @click="openTxn(t.id)">
+                    <div>
+                      <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
+                      <p class="cal-day__row-meta">
+                        <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                        <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                        <span x-show="t.memo" x-text="' · ' + t.memo"></span>
+                      </p>
+                    </div>
+                    <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(t.amount)"></span>
+                  </button>
+                </li>
+              </template>
+            </ul>
+          </section>
+          <section x-show="dayData(db.iso).scheduled.length" x-cloak>
+            <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="dayData(db.iso).scheduled.length"></span>)</h4>
+            <ul class="cal-day__list">
+              <template x-for="s in dayData(db.iso).scheduled" :key="'s' + db.iso + s.id">
+                <li>
+                  <a class="cal-day__row cal-day__row--clickable"
+                     :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                     :href="'/app/scheduled/#edit-' + s.id">
+                    <div>
+                      <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
+                      <p class="cal-day__row-meta">
+                        <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                        <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                      </p>
+                    </div>
+                    <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(s.template.amount)"></span>
+                  </a>
+                </li>
+              </template>
+            </ul>
+          </section>
+        </div>
+      </article>
     </template>
   </section>
+
+  {# ---- Period transactions modal ----
+     Opened from a stat button (In / Out / Entries) on any period
+     header. Shows the title (kind + range), a subtitle, and the
+     clickable transaction list. Posted rows open the txn edit
+     modal; scheduled rows deep-link to /app/scheduled/. #}
+  <div class="modal-backdrop" x-show="periodModalOpen" x-cloak
+       @keydown.escape.window="closePeriodModal()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cal-period-title"
+         @click.outside="closePeriodModal()" style="max-width: 680px;">
+      <button class="modal__close" type="button" @click="closePeriodModal()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="cal-period-title"
+          style="margin: 0 0 var(--space-2xs);" x-text="periodModalTitle"></h3>
+      <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);"
+         x-text="periodModalSubtitle"></p>
+
+      {# Filter strip — In / Out / Entries become buttons that
+         narrow the list below. Net stays a static stat. Selected
+         stat is highlighted; a "Clear filter" pill appears whenever
+         the kind isn't 'all'. #}
+      <dl class="cal-extra-period__totals period-modal__filters"
+          aria-label="Period totals — click to filter"
+          style="margin: 0 0 var(--space-md);">
+        <button type="button"
+                class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                :class="periodModalKind === 'in' ? 'is-active' : ''"
+                @click="periodModalKind = 'in'"
+                :aria-pressed="(periodModalKind === 'in').toString()"
+                data-tip="Filter the list below to inflows only.">
+          <dt>In</dt>
+          <dd class="amount--inflow" x-text="formatCents(periodModalTotals().inflow)"></dd>
+        </button>
+        <button type="button"
+                class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                :class="periodModalKind === 'out' ? 'is-active' : ''"
+                @click="periodModalKind = 'out'"
+                :aria-pressed="(periodModalKind === 'out').toString()"
+                data-tip="Filter the list below to outflows only.">
+          <dt>Out</dt>
+          <dd class="amount--outflow" x-text="formatCents(periodModalTotals().outflow)"></dd>
+        </button>
+        <div class="cal-extra-period__stat cal-extra-period__stat--net">
+          <dt>Net</dt>
+          <dd :class="periodModalTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(periodModalTotals().net)"></dd>
+        </div>
+        <button type="button"
+                class="cal-extra-period__stat cal-extra-period__stat--clickable"
+                :class="periodModalKind === 'all' ? 'is-active' : ''"
+                @click="periodModalKind = 'all'"
+                :aria-pressed="(periodModalKind === 'all').toString()"
+                data-tip="Show every entry in this period.">
+          <dt>Entries</dt>
+          <dd x-text="periodModalTotals().count"></dd>
+        </button>
+      </dl>
+
+      <p class="period-modal__active-filter" x-show="periodModalKind !== 'all'" x-cloak>
+        <span x-text="'Showing ' + (periodModalKind === 'in' ? 'inflows' : 'outflows') + ' only · '"></span>
+        <button type="button" class="period-modal__clear" @click="periodModalKind = 'all'"
+                data-tip="Show every entry in this period (no filter).">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+          Clear filter
+        </button>
+      </p>
+
+      <div x-show="!periodModalTxns().count" x-cloak
+           style="color: var(--fg-muted); padding: var(--space-md) 0; text-align: center;">
+        No matching entries in this period.
+      </div>
+
+      <section x-show="periodModalTxns().posted.length" x-cloak>
+        <h4 class="cal__detail-section">Posted (<span x-text="periodModalTxns().posted.length"></span>)</h4>
+        <ul class="cal-day__list">
+          <template x-for="t in periodModalTxns().posted" :key="t.id">
+            <li>
+              <button type="button"
+                      class="cal-day__row cal-day__row--clickable"
+                      :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                      @click="closePeriodModal(); openTxn(t.id)">
+                <div>
+                  <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
+                  <p class="cal-day__row-meta">
+                    <span x-text="t.date"></span>
+                    <span x-text="' · ' + ($store.budget.findAccount(t.accountId)?.name || '')"></span>
+                    <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                  </p>
+                </div>
+                <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(t.amount)"></span>
+              </button>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <section x-show="periodModalTxns().scheduled.length" x-cloak style="margin-top: var(--space-md);">
+        <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="periodModalTxns().scheduled.length"></span>)</h4>
+        <ul class="cal-day__list">
+          <template x-for="s in periodModalTxns().scheduled" :key="s.id">
+            <li>
+              <a class="cal-day__row cal-day__row--clickable"
+                 :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                 :href="'/app/scheduled/#edit-' + s.id"
+                 @click="closePeriodModal()">
+                <div>
+                  <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
+                  <p class="cal-day__row-meta">
+                    <span x-text="s.nextDate"></span>
+                    <span x-text="' · ' + ($store.budget.findAccount(s.template.accountId)?.name || '')"></span>
+                    <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                  </p>
+                </div>
+                <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(s.template.amount)"></span>
+              </a>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <div class="form-actions" style="margin-top: var(--space-md);">
+        <button type="button" class="btn btn--ghost btn--sm" @click="closePeriodModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  {# ---- Year-day summary modal ----
+     Opens when the user clicks any date in the year-view grids.
+     Shows In/Out/Net tile row + a clickable list of every posted
+     and scheduled entry for that day. Each row opens the txn edit
+     modal (posted) or deep-links to the scheduled-edit page. #}
+  <div class="modal-backdrop" x-show="yearDayISO" x-cloak
+       @keydown.escape.window="closeYearDay()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cal-yearday-title"
+         @click.outside="closeYearDay()" style="max-width: 680px;">
+      <button class="modal__close" type="button" @click="closeYearDay()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="cal-yearday-title"
+          style="margin: 0 0 var(--space-md);"
+          x-text="dayLabel(yearDayISO)"></h3>
+
+      <dl class="cal-period-totals" aria-label="Day totals" style="margin: 0 0 var(--space-lg);">
+        <div class="cal-period-totals__tile">
+          <dt>Inflow</dt>
+          <dd class="amount--inflow" x-text="formatCents(yearDayData().totalInflow)"></dd>
+        </div>
+        <div class="cal-period-totals__tile">
+          <dt>Outflow</dt>
+          <dd class="amount--outflow" x-text="formatCents(yearDayData().totalOutflow)"></dd>
+        </div>
+        <div class="cal-period-totals__tile">
+          <dt>Net</dt>
+          <dd :class="(yearDayData().totalInflow + yearDayData().totalOutflow) < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(yearDayData().totalInflow + yearDayData().totalOutflow)"></dd>
+        </div>
+        <div class="cal-period-totals__tile cal-period-totals__tile--muted">
+          <dt>Entries</dt>
+          <dd x-text="yearDayData().count"></dd>
+        </div>
+      </dl>
+
+      <template x-if="yearDayISO">
+        <div>
+          <p x-show="!yearDayData().count" x-cloak
+             style="color: var(--fg-muted); margin: var(--space-md) 0; text-align: center;">
+            Nothing posted or scheduled on this day.
+          </p>
+
+          <section x-show="yearDayData().posted.length" x-cloak style="margin-top: var(--space-md);">
+            <h4 class="cal__detail-section">Posted (<span x-text="yearDayData().posted.length"></span>)</h4>
+            <ul class="cal-day__list">
+              <template x-for="t in yearDayData().posted" :key="t.id">
+                <li>
+                  <button type="button"
+                          class="cal-day__row cal-day__row--clickable"
+                          :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                          @click="closeYearDay(); openTxn(t.id)">
+                    <div>
+                      <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
+                      <p class="cal-day__row-meta">
+                        <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                        <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                        <span x-show="t.memo" x-text="' · ' + t.memo"></span>
+                      </p>
+                    </div>
+                    <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(t.amount)"></span>
+                  </button>
+                </li>
+              </template>
+            </ul>
+          </section>
+
+          <section x-show="yearDayData().scheduled.length" x-cloak style="margin-top: var(--space-md);">
+            <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="yearDayData().scheduled.length"></span>)</h4>
+            <ul class="cal-day__list">
+              <template x-for="s in yearDayData().scheduled" :key="s.id">
+                <li>
+                  <a class="cal-day__row cal-day__row--clickable"
+                     :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                     :href="'/app/scheduled/#edit-' + s.id"
+                     @click="closeYearDay()">
+                    <div>
+                      <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
+                      <p class="cal-day__row-meta">
+                        <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                        <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                      </p>
+                    </div>
+                    <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(s.template.amount)"></span>
+                  </a>
+                </li>
+              </template>
+            </ul>
+          </section>
+        </div>
+      </template>
+
+      <div class="form-actions" style="margin-top: var(--space-md);">
+        <button type="button" class="btn btn--secondary btn--sm"
+                @click="anchorISO = yearDayISO; view = 'day'; closeYearDay()"
+                data-tip="Switch to Day view focused on this date.">Open full day</button>
+        <button type="button" class="btn btn--ghost btn--sm" @click="closeYearDay()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  {# ---- Month-view day detail modal ----
+     Opens when a Month-view cell is clicked. Shows the same Inflow/
+     Outflow/Net/Entries tiles + posted + scheduled rows as the year-day
+     modal so users get a consistent day-detail surface across views. #}
+  <div class="modal-backdrop" x-show="selectedISO" x-cloak
+       @keydown.escape.window="selectedISO = null">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cal-monthday-title"
+         @click.outside="selectedISO = null" style="max-width: 680px;">
+      <button class="modal__close" type="button" @click="selectedISO = null" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="cal-monthday-title"
+          style="margin: 0 0 var(--space-md);"
+          x-text="dayLabel(selectedISO)"></h3>
+
+      <dl class="cal-period-totals" aria-label="Day totals" style="margin: 0 0 var(--space-lg);">
+        <div class="cal-period-totals__tile">
+          <dt>Inflow</dt>
+          <dd class="amount--inflow" x-text="formatCents(selectedDay.totalInflow)"></dd>
+        </div>
+        <div class="cal-period-totals__tile">
+          <dt>Outflow</dt>
+          <dd class="amount--outflow" x-text="formatCents(selectedDay.totalOutflow)"></dd>
+        </div>
+        <div class="cal-period-totals__tile">
+          <dt>Net</dt>
+          <dd :class="(selectedDay.totalInflow + selectedDay.totalOutflow) < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(selectedDay.totalInflow + selectedDay.totalOutflow)"></dd>
+        </div>
+        <div class="cal-period-totals__tile cal-period-totals__tile--muted">
+          <dt>Entries</dt>
+          <dd x-text="selectedDay.count"></dd>
+        </div>
+      </dl>
+
+      <template x-if="selectedISO">
+        <div>
+          <p x-show="!selectedDay.count" x-cloak
+             style="color: var(--fg-muted); margin: var(--space-md) 0; text-align: center;">
+            Nothing posted or scheduled on this day.
+          </p>
+
+          <section x-show="selectedDay.posted.length" x-cloak style="margin-top: var(--space-md);">
+            <h4 class="cal__detail-section">Posted (<span x-text="selectedDay.posted.length"></span>)</h4>
+            <ul class="cal-day__list">
+              <template x-for="t in selectedDay.posted" :key="t.id">
+                <li>
+                  <button type="button"
+                          class="cal-day__row cal-day__row--clickable"
+                          :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                          @click="var iso = selectedISO; selectedISO = null; openTxn(t.id)">
+                    <div>
+                      <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
+                      <p class="cal-day__row-meta">
+                        <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                        <span x-show="t.categoryId" x-text="' · ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                        <span x-show="t.memo" x-text="' · ' + t.memo"></span>
+                      </p>
+                    </div>
+                    <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(t.amount)"></span>
+                  </button>
+                </li>
+              </template>
+            </ul>
+          </section>
+
+          <section x-show="selectedDay.scheduled.length" x-cloak style="margin-top: var(--space-md);">
+            <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="selectedDay.scheduled.length"></span>)</h4>
+            <ul class="cal-day__list">
+              <template x-for="s in selectedDay.scheduled" :key="s.id">
+                <li>
+                  <a class="cal-day__row cal-day__row--clickable"
+                     :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                     :href="'/app/scheduled/#edit-' + s.id"
+                     @click="selectedISO = null">
+                    <div>
+                      <p class="cal-day__row-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></p>
+                      <p class="cal-day__row-meta">
+                        <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                        <span x-text="' · ' + $store.budget.frequencyLabel(s)"></span>
+                      </p>
+                    </div>
+                    <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                          x-text="formatCents(s.template.amount)"></span>
+                  </a>
+                </li>
+              </template>
+            </ul>
+          </section>
+        </div>
+      </template>
+
+      <div class="form-actions" style="margin-top: var(--space-md);">
+        <button type="button" class="btn btn--secondary btn--sm"
+                @click="anchorISO = selectedISO; view = 'day'; selectedISO = null"
+                data-tip="Switch to Day view focused on this date.">Open full day</button>
+        <button type="button" class="btn btn--ghost btn--sm" @click="selectedISO = null">Close</button>
+      </div>
+    </div>
+  </div>
 
   {# ---- Transaction edit modal ----
      Opened by clicking any posted row across Day/Week/Month/Year views.
@@ -386,9 +1148,16 @@ eleventyExcludeFromCollections: true
             <label class="field__label" for="cal-txn-memo">Memo</label>
             <input class="input" id="cal-txn-memo" type="text" x-model="txnForm.memo">
           </div>
-          <label class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted);">
-            <input type="checkbox" x-model="txnForm.cleared"> Cleared
-          </label>
+          <span class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted); align-items: center;">
+            <button type="button"
+                    class="cleared-toggle"
+                    :aria-pressed="txnForm.cleared.toString()"
+                    @click="txnForm.cleared = !txnForm.cleared"
+                    :data-tip="txnForm.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
+              <span x-show="txnForm.cleared">&#10003;</span>
+            </button>
+            <span>Cleared</span>
+          </span>
         </div>
         <div class="form-actions">
           <button class="btn btn--primary" type="submit">Save</button>
@@ -397,6 +1166,29 @@ eleventyExcludeFromCollections: true
           <button class="btn btn--ghost" type="button" @click="closeTxn()">Cancel</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  {# ---- Confirm-delete modal ----
+     Custom replacement for window.confirm() so the dialog matches the
+     rest of the app's chrome instead of the browser's "Code" UA dialog.
+     Esc cancels; clicking the backdrop cancels; Enter confirms. #}
+  <div class="modal-backdrop" x-show="confirmDeleteId" x-cloak
+       @keydown.escape.window="cancelDeleteTxn()">
+    <div class="modal modal--sm" role="alertdialog" aria-modal="true"
+         aria-labelledby="confirm-del-title" aria-describedby="confirm-del-body"
+         @click.outside="cancelDeleteTxn()"
+         @keydown.enter.window.prevent="confirmDeleteTxn()">
+      <h3 class="modal__title" id="confirm-del-title">Delete this transaction?</h3>
+      <p id="confirm-del-body" style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
+        This permanently removes the entry from the register and adjusts the
+        account balance. You can recover it from a profile backup if needed.
+      </p>
+      <div class="form-actions">
+        <button class="btn btn--danger" type="button"
+                @click="confirmDeleteTxn()" autofocus>Delete transaction</button>
+        <button class="btn btn--ghost" type="button" @click="cancelDeleteTxn()">Cancel</button>
+      </div>
     </div>
   </div>
 </div>
@@ -415,6 +1207,22 @@ function calendarView() {
     /* Transaction edit modal state — opened by clicking a posted row. */
     txnEditId: null,
     txnForm: { date: "", accountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false },
+    /* Year-view day modal — click any day in a mini-grid to see its
+       In/Out/Net summary + the full transaction list for that day.
+       Each row in the modal is clickable to open the txn edit modal. */
+    yearDayISO: null,
+    /* Period transactions modal — opened by clicking the In / Out /
+       Entries stat on any period header (main week, extra week,
+       extra month, etc.). Holds a precomputed list since callers
+       already know the relevant cells. */
+    periodModalOpen: false,
+    periodModalTitle: "",
+    periodModalSubtitle: "",
+    periodModalKind: "all",
+    periodModalCells: null,
+    /* Confirm-delete modal state — replaces the browser-native confirm()
+       dialog that bleeds the page's chrome ("Code" title bar, OS buttons). */
+    confirmDeleteId: null,
 
     views: [
       { value: "day",   label: "Day" },
@@ -422,9 +1230,118 @@ function calendarView() {
       { value: "month", label: "Month" },
       { value: "year",  label: "Year" },
     ],
+    /* Span = how many consecutive months / weeks / days render
+       stacked beneath each other. 1 = single (current behavior);
+       2-N adds extra periods after the anchor. */
+    monthSpan: 1,
+    weekSpan: 1,
+    daySpan: 1,
+    /* Whether to show the per-day In/Out/Net rollup at the bottom
+       of each cell (Month view) and inside each day card (Week
+       view). Persisted to localStorage so the preference sticks
+       across sessions. */
+    showDayTotals: true,
+    /* Year-view only: when true, the mini-grid cells display each
+       day's net $ instead of the date number (and the week-number
+       column hides). Lets users scan a 12-month heat-map of cash
+       flow at a glance. */
+    yearShowNet: false,
+    monthSpanPresets: [{ value: 1, label: "1" }, { value: 2, label: "2" }, { value: 3, label: "3" }, { value: 6, label: "6" }],
+    weekSpanPresets:  [{ value: 1, label: "1" }, { value: 2, label: "2" }, { value: 4, label: "4" }, { value: 8, label: "8" }],
+    daySpanPresets:   [{ value: 1, label: "1" }, { value: 3, label: "3" }, { value: 7, label: "7" }, { value: 14, label: "14" }],
+    setSpan(n) {
+      var clean = Math.max(1, Math.min(60, parseInt(n, 10) || 1));
+      if (this.view === "month") this.monthSpan = clean;
+      else if (this.view === "week") this.weekSpan = clean;
+      else if (this.view === "day") this.daySpan = clean;
+    },
+    /* monthsToRender / weeksToRender return [{ label, anchorISO,
+       startISO }] arrays the template iterates over. Each entry is a
+       complete period the existing builders can target. */
+    monthsToRender() {
+      var out = [];
+      var d = this._parseISO(this.anchorISO);
+      var year = d.getFullYear();
+      var month = d.getMonth();
+      for (var i = 0; i < (this.monthSpan || 1); i++) {
+        var cur = new Date(year, month + i, 1);
+        var iso = this._isoDay(cur);
+        out.push({
+          anchorISO: iso,
+          monthISO: this._isoMonth(cur),
+          label: cur.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+        });
+      }
+      return out;
+    },
+    weeksToRender() {
+      var out = [];
+      var start = this._startOfWeek(this._parseISO(this.anchorISO));
+      for (var i = 0; i < (this.weekSpan || 1); i++) {
+        var s = new Date(start); s.setDate(start.getDate() + 7 * i);
+        var e = new Date(s); e.setDate(s.getDate() + 6);
+        out.push({
+          anchorISO: this._isoDay(s),
+          startISO: this._isoDay(s),
+          endISO: this._isoDay(e),
+          label: s.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+                 " – " +
+                 e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        });
+      }
+      return out;
+    },
+    daysToRender() {
+      var out = [];
+      var start = this._parseISO(this.anchorISO);
+      for (var i = 0; i < (this.daySpan || 1); i++) {
+        var d = new Date(start); d.setDate(start.getDate() + i);
+        var iso = this._isoDay(d);
+        out.push({
+          iso: iso,
+          label: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+          short: d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+        });
+      }
+      return out;
+    },
+    /* Cell builders that target a specific period instead of the
+       global anchorISO. Existing monthCells() / weekCells() still
+       use anchorISO and are the single-span code path. */
+    monthCellsFor(anchorISO) {
+      var prev = this.anchorISO;
+      this.anchorISO = anchorISO;
+      var cells = this.monthCells();
+      this.anchorISO = prev;
+      return cells;
+    },
+    weekCellsFor(startISO) {
+      var prev = this.anchorISO;
+      this.anchorISO = startISO;
+      var cells = this.weekCells();
+      this.anchorISO = prev;
+      return cells;
+    },
+    _periodTotalsFor(cells) { return this._periodTotals(cells); },
 
     init() {
       this.anchorISO = this._isoDay(new Date());
+      /* Read persisted display preferences (default ON for day-
+         totals, OFF for year-net). Watch + write back on change. */
+      try {
+        var saved = localStorage.getItem("projectbudget:cal-show-day-totals");
+        if (saved !== null) this.showDayTotals = saved === "1";
+        var savedNet = localStorage.getItem("projectbudget:cal-year-show-net");
+        if (savedNet !== null) this.yearShowNet = savedNet === "1";
+      } catch (_e) {}
+      this.$watch("showDayTotals", function (v) {
+        try { localStorage.setItem("projectbudget:cal-show-day-totals", v ? "1" : "0"); }
+        catch (_e) {}
+      });
+      this.$watch("yearShowNet", function (v) {
+        try { localStorage.setItem("projectbudget:cal-year-show-net", v ? "1" : "0"); }
+        catch (_e) {}
+      });
     },
 
     /* ---------- date helpers ---------- */
@@ -536,14 +1453,35 @@ function calendarView() {
       else                     out = Math.round(abs).toString();
       return sign + "$" + out;
     },
+    /* Builds the In / Out / Net summary segment used by both the
+       month and week cell tooltips. */
+    _periodSummary(cell) {
+      if (!cell) return "";
+      var inflow  = cell.totalInflow  || 0;
+      var outflow = cell.totalOutflow || 0;
+      var net     = inflow + outflow;
+      var parts = [];
+      if (inflow > 0)  parts.push("In "  + this.formatCents(inflow));
+      if (outflow < 0) parts.push("Out " + this.formatCents(outflow));
+      parts.push("Net " + this.formatCents(net));
+      return parts.join(" · ");
+    },
+    /* Month-grid cell tooltip — just the In/Out/Net summary. The
+       individual entries are already visible inline on the cell, so
+       the tooltip's job is the day-level rollup, not a duplicate list. */
     cellTooltip(cell) {
       if (!cell || cell.blank) return "";
-      var n = cell.posted.length + cell.scheduled.length;
+      var n = (cell.posted || []).length + (cell.scheduled || []).length;
       if (!n) return "";
-      var parts = [];
-      if (cell.posted.length)    parts.push(cell.posted.length + " posted");
-      if (cell.scheduled.length) parts.push(cell.scheduled.length + " scheduled");
-      return parts.join(" · ");
+      return this._periodSummary(cell);
+    },
+    /* Week-day cell tooltip — same shape (summary only). The entries
+       are already visible as cards in the column. */
+    weekCellTooltip(cell) {
+      if (!cell) return "";
+      var n = (cell.posted || []).length + (cell.scheduled || []).length;
+      if (!n) return "";
+      return this._periodSummary(cell);
     },
     /* Year-view mini cell tooltip. Lists actual payees + amounts so
        the user gets useful context on hover — the date is already
@@ -577,6 +1515,71 @@ function calendarView() {
       return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
     },
 
+    /* ---------- period transactions modal ----------
+       Generic: any caller passes a cells array + a kind filter
+       ('in' / 'out' / 'all') + a title + a subtitle. The modal
+       flattens cells → transactions, filters by kind, sorts by
+       date desc, and renders the same clickable .cal-day__row
+       list used by the year-day modal. */
+    openPeriodModal(title, subtitle, kind, cells) {
+      this.periodModalTitle = title || "Transactions";
+      this.periodModalSubtitle = subtitle || "";
+      this.periodModalKind = kind || "all";
+      this.periodModalCells = cells || [];
+      this.periodModalOpen = true;
+    },
+    closePeriodModal() { this.periodModalOpen = false; },
+    periodModalTxns() {
+      var cells = this.periodModalCells || [];
+      var kind = this.periodModalKind;
+      var posted = [];
+      var scheduled = [];
+      cells.forEach(function (c) {
+        if (!c || c.blank) return;
+        (c.posted || []).forEach(function (t) {
+          if (kind === "in"  && !(t.amount > 0)) return;
+          if (kind === "out" && !(t.amount < 0)) return;
+          posted.push(t);
+        });
+        (c.scheduled || []).forEach(function (s) {
+          if (kind === "in"  && !(s.template.amount > 0)) return;
+          if (kind === "out" && !(s.template.amount < 0)) return;
+          scheduled.push(s);
+        });
+      });
+      posted.sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); });
+      scheduled.sort(function (a, b) { return (a.nextDate || "").localeCompare(b.nextDate || ""); });
+      return { posted: posted, scheduled: scheduled, count: posted.length + scheduled.length };
+    },
+    /* Full-period totals (regardless of the modal's kind filter) so
+       the header stats always show the same In/Out/Net/Entries as
+       the period header that opened the modal. */
+    periodModalTotals() {
+      var cells = this.periodModalCells || [];
+      var inflow = 0, outflow = 0, count = 0;
+      cells.forEach(function (c) {
+        if (!c || c.blank) return;
+        inflow  += c.totalInflow  || 0;
+        outflow += c.totalOutflow || 0;
+        count   += (c.posted ? c.posted.length : 0) + (c.scheduled ? c.scheduled.length : 0);
+      });
+      return { inflow: inflow, outflow: outflow, net: inflow + outflow, count: count };
+    },
+
+    /* ---------- year-day modal ----------
+       Single-day summary popup triggered from any cell in the
+       year-view mini-grids. Reuses dayData() for the rollup +
+       transaction list. */
+    openYearDay(iso) {
+      if (!iso) return;
+      this.yearDayISO = iso;
+    },
+    closeYearDay() { this.yearDayISO = null; },
+    yearDayData() {
+      if (!this.yearDayISO) return { posted: [], scheduled: [], totalInflow: 0, totalOutflow: 0, count: 0 };
+      return this.dayData(this.yearDayISO);
+    },
+
     /* ---------- transaction modal ---------- */
     openTxn(id) {
       var p = this.$store.budget.profile;
@@ -596,12 +1599,17 @@ function calendarView() {
     },
     closeTxn() { this.txnEditId = null; },
     _parseDollars(s) {
-      if (!s && s !== 0) return 0;
+      if (s == null || s === "") return 0;
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
       var clean = String(s).replace(/[$,\s]/g, "").trim();
       if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
       var n = Number(clean);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
+    calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
     saveTxn() {
       if (!this.txnEditId) return;
       this.$store.budget.updateTransaction(this.txnEditId, {
@@ -618,11 +1626,19 @@ function calendarView() {
     },
     deleteTxn() {
       if (!this.txnEditId) return;
-      if (!confirm("Delete this transaction?")) return;
-      this.$store.budget.deleteTransaction(this.txnEditId);
+      /* Open custom confirm modal instead of native browser confirm()
+         (which renders a chrome dialog titled "Code" / OS buttons). */
+      this.confirmDeleteId = this.txnEditId;
+    },
+    confirmDeleteTxn() {
+      var id = this.confirmDeleteId;
+      if (!id) return;
+      this.$store.budget.deleteTransaction(id);
       this.$store.budget.pushToast("Transaction deleted.");
+      this.confirmDeleteId = null;
       this.closeTxn();
     },
+    cancelDeleteTxn() { this.confirmDeleteId = null; },
 
     /* True when a posted or scheduled item passes all active filters. */
     _matchTxn(t) {
@@ -683,6 +1699,35 @@ function calendarView() {
       });
       out.count = out.posted.length + out.scheduled.length;
       return out;
+    },
+
+    /* Roll a cell-array up into period totals. Reused by Week, Month,
+       and Year views so all four views show the same labeled tiles. */
+    _periodTotals(cells) {
+      var inflow = 0, outflow = 0, count = 0;
+      (cells || []).forEach(function (c) {
+        if (!c || c.blank) return;
+        inflow  += c.totalInflow  || 0;
+        outflow += c.totalOutflow || 0;
+        count   += (c.posted ? c.posted.length : 0) + (c.scheduled ? c.scheduled.length : 0);
+      });
+      return { inflow: inflow, outflow: outflow, net: inflow + outflow, count: count };
+    },
+    weekTotals()  { return this._periodTotals(this.weekCells()); },
+    monthTotals() { return this._periodTotals(this.monthCells()); },
+    yearTotals() {
+      /* Sum the per-day mini cells across all 12 months. */
+      var self = this;
+      var inflow = 0, outflow = 0, count = 0;
+      this.monthsOfYear().forEach(function (mm) {
+        self.miniCells(mm.iso).forEach(function (c) {
+          if (!c || c.blank) return;
+          inflow  += c.totalInflow  || 0;
+          outflow += c.totalOutflow || 0;
+          count   += c.count || 0;
+        });
+      });
+      return { inflow: inflow, outflow: outflow, net: inflow + outflow, count: count };
     },
 
     /* Net (inflow + outflow) across the named month (YYYY-MM). */
@@ -813,6 +1858,76 @@ function calendarView() {
       });
       this._cachedProjected = null;
       return cells;
+    },
+
+    /* Group miniCells into rows of 7 + attach an ISO week number to
+       each row. Used by the year-view mini-grids to render a
+       clickable leading column per week. */
+    miniWeeks(monthISO) {
+      var cells = this.miniCells(monthISO);
+      var weeks = [];
+      for (var i = 0; i < cells.length; i += 7) {
+        var slice = cells.slice(i, i + 7);
+        if (!slice.length) continue;
+        /* Find the first non-blank ISO for week-number calculation;
+           fall back to the slice's first iso (might be blank padding). */
+        var firstWithIso = slice.find(function (c) { return !c.blank && c.iso; });
+        var anchorIso = firstWithIso ? firstWithIso.iso : null;
+        weeks.push({
+          weekKey: monthISO + "-w" + (i / 7),
+          weekNumber: anchorIso ? this._isoWeekNumber(anchorIso) : "",
+          startISO: anchorIso || "",
+          cells: slice,
+        });
+      }
+      return weeks;
+    },
+
+    /* Same grouping as miniWeeks but for the main month-view grid.
+       Splits monthCells() into 6 rows of 7 with an ISO week number
+       attached to each row, used by the clickable week-number column. */
+    monthWeeks(anchorISO) {
+      var cells = anchorISO ? this.monthCellsFor(anchorISO) : this.monthCells();
+      var monthKey = anchorISO ? this._isoMonth(this._parseISO(anchorISO)) : this.anchorMonthISO();
+      var weeks = [];
+      for (var i = 0; i < cells.length; i += 7) {
+        var slice = cells.slice(i, i + 7);
+        if (!slice.length) continue;
+        var firstWithIso = slice.find(function (c) { return !c.blank && c.iso; });
+        var anchorIso = firstWithIso ? firstWithIso.iso : null;
+        weeks.push({
+          weekKey: monthKey + "-w" + (i / 7),
+          weekNumber: anchorIso ? this._isoWeekNumber(anchorIso) : "",
+          startISO: anchorIso || "",
+          cells: slice,
+        });
+      }
+      return weeks;
+    },
+    /* ISO 8601 week number (1-53). Algorithm from
+       https://en.wikipedia.org/wiki/ISO_week_date — Thursday in the
+       same calendar week determines the year-of-the-week. */
+    _isoWeekNumber(iso) {
+      var d = this._parseISO(iso);
+      var target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      var dayNr = (target.getDay() + 6) % 7; /* Mon=0 .. Sun=6 */
+      target.setDate(target.getDate() - dayNr + 3);
+      var firstThursday = new Date(target.getFullYear(), 0, 4);
+      var diff = target - firstThursday;
+      var oneDay = 1000 * 60 * 60 * 24;
+      return 1 + Math.round((diff / oneDay - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+    },
+    /* Per-month In/Out/Net rollup used by the year-view tile header. */
+    miniMonthTotals(monthISO) {
+      var cells = this.miniCells(monthISO);
+      var inflow = 0, outflow = 0, count = 0;
+      cells.forEach(function (c) {
+        if (!c || c.blank) return;
+        inflow  += c.totalInflow  || 0;
+        outflow += c.totalOutflow || 0;
+        count   += c.count || 0;
+      });
+      return { inflow: inflow, outflow: outflow, net: inflow + outflow, count: count };
     },
 
     /* Header readout — only meaningful when a filter is active. */

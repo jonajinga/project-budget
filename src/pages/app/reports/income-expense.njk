@@ -1,37 +1,81 @@
 ---
 layout: layouts/app.njk
 title: "Income vs expense"
-description: "Paired income and expense bars per month, last twelve months."
+description: "Monthly income vs expense with savings rate, best/worst month, and CSV export."
 permalink: /app/reports/income-expense/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="reportTable(
-  () => ($store.budget.reportIncomeVsExpense() || []),
-  { keys: [
-      { key: 'month',   label: 'Month' },
-      { key: 'income',  label: 'Income',  numeric: true },
-      { key: 'expense', label: 'Expense', numeric: true },
-      { key: 'net',     label: 'Net',     numeric: true },
-    ], defaultSort: { key: 'month', dir: 'asc' } })">
+<div class="app-page"
+     x-data="Object.assign(
+       incomeExpenseView(),
+       reportTable(
+         (self) => ($store.budget.reportIncomeVsExpense(null, self.rangeMonths) || []),
+         { keys: [
+             { key: 'month',   label: 'Month' },
+             { key: 'income',  label: 'Income',  numeric: true },
+             { key: 'expense', label: 'Expense', numeric: true },
+             { key: 'net',     label: 'Net',     numeric: true },
+           ], defaultSort: { key: 'month', dir: 'asc' } }
+       )
+     )" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Income vs expense</h1>
-      <p class="app-page__lead">Last twelve months. Inflows include every positive transaction; outflows include every negative transaction.</p>
+      <p class="app-page__lead">Inflows are positive transactions, outflows are negative ones. Transfers are excluded.</p>
     </div>
     <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
   </header>
+
+  {# ---- Range picker ---- #}
+  <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+    <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
+    <template x-for="r in ranges" :key="r.value">
+      <button type="button" class="btn btn--sm"
+              :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
+              @click="rangeMonths = r.value"
+              x-text="r.label"></button>
+    </template>
+  </div>
+
+  {# ---- KPI strip ---- #}
+  <div class="kpi-strip">
+    <div class="kpi kpi--ok">
+      <span class="kpi__label">Avg monthly income</span>
+      <span class="kpi__value" x-text="fmt(kpis().avgIncome)"></span>
+      <span class="kpi__delta" x-text="rangeLabel()"></span>
+    </div>
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Avg monthly expense</span>
+      <span class="kpi__value" x-text="fmt(kpis().avgExpense)"></span>
+      <span class="kpi__delta" x-text="rangeLabel()"></span>
+    </div>
+    <div class="kpi" :class="kpis().netAvg < 0 ? 'kpi--danger' : 'kpi--ok'">
+      <span class="kpi__label">Avg monthly net</span>
+      <span class="kpi__value" :class="kpis().netAvg < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="fmt(kpis().netAvg)"></span>
+      <span class="kpi__delta" x-text="'Savings rate ' + (kpis().savingsRate === null ? '—' : (kpis().savingsRate * 100).toFixed(1) + '%')"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Best / worst month</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);"
+            x-text="kpis().bestMonth ? (kpis().bestMonth + ' / ' + (kpis().worstMonth || '—')) : '—'"></span>
+      <span class="kpi__delta">Ranked by net cash flow</span>
+    </div>
+  </div>
 
   <section class="report">
     <div class="chart" id="chart-ie" style="min-height: 320px;"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="ie-search">Search</label>
+        <label class="visually-hidden" for="ie-search">Filter</label>
         <input class="input" id="ie-search" type="search" x-model="query" placeholder="Filter by month…">
       </div>
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('income-vs-expense')"
+              data-tip="Download the visible rows as a CSV file.">Export CSV</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -55,20 +99,82 @@ eleventyExcludeFromCollections: true
           </tr>
         </template>
         <tr x-show="!rows.length" x-cloak>
-          <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
+          <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows in this range.</td>
         </tr>
       </tbody>
     </table>
   </section>
 </div>
 
+<script>
+function incomeExpenseView() {
+  return {
+    rangeMonths: 12,
+    ranges: [
+      { value: 3,  label: '3 mo' },
+      { value: 6,  label: '6 mo' },
+      { value: 12, label: '12 mo' },
+      { value: 24, label: '24 mo' },
+    ],
+    init() {
+      /* Stash rangeMonths in a shared place so the Chart.js mount can
+         read it. Use a window-scoped slot keyed by the report id. */
+      var self = this;
+      window.__pbReportState = window.__pbReportState || {};
+      window.__pbReportState.incomeExpense = function () { return self.rangeMonths; };
+    },
+    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    rangeLabel() { return 'Trailing ' + this.rangeMonths + ' mo'; },
+    kpis() {
+      var rows = this.$store.budget.reportIncomeVsExpense(null, this.rangeMonths) || [];
+      if (!rows.length) {
+        return { avgIncome: 0, avgExpense: 0, netAvg: 0, savingsRate: null, bestMonth: '', worstMonth: '' };
+      }
+      var sumI = rows.reduce(function (s, r) { return s + r.income; }, 0);
+      var sumE = rows.reduce(function (s, r) { return s + r.expense; }, 0);
+      var best = rows[0], worst = rows[0];
+      rows.forEach(function (r) {
+        if (r.net > best.net) best = r;
+        if (r.net < worst.net) worst = r;
+      });
+      return {
+        avgIncome: Math.round(sumI / rows.length),
+        avgExpense: Math.round(sumE / rows.length),
+        netAvg: Math.round((sumI - sumE) / rows.length),
+        savingsRate: sumI > 0 ? ((sumI - sumE) / sumI) : null,
+        bestMonth: best.month,
+        worstMonth: worst.month,
+      };
+    },
+  };
+}
+</script>
+
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/income-expense.js";
   function boot() {
     var store = Alpine.store("budget");
-    var inst = mountChart("#chart-ie", render, function () { return store.reportIncomeVsExpense(); });
-    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
+    function getN() {
+      var fn = window.__pbReportState && window.__pbReportState.incomeExpense;
+      return (fn && fn()) || 12;
+    }
+    var inst = mountChart("#chart-ie", render, function () {
+      return store.reportIncomeVsExpense(null, getN());
+    });
+    Alpine.effect(function () {
+      store.profile; store.currentMonth; store._listVersion;
+      /* Touch a polled value so a range-button click triggers a redraw
+         on the next macrotask. */
+      var _ = getN();
+      inst.redraw();
+    });
+    /* Also redraw on any click in the toolbar — covers the range buttons. */
+    document.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest(".btn--sm")) {
+        setTimeout(function () { inst.redraw(); }, 0);
+      }
+    });
   }
   if (window.Alpine && window.Alpine.store("budget")) boot();
   else document.addEventListener("alpine:initialized", boot);

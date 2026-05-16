@@ -7,60 +7,171 @@ eleventyExcludeFromCollections: true
 ---
 <div class="app-page" x-data="scheduledView()" x-init="init()">
   <header class="app-page__header">
-    <h1 class="app-page__title">Recurring transactions</h1>
-    <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">Add recurring</button>
+    <div>
+      <h1 class="app-page__title">Recurring transactions</h1>
+      <p class="app-page__lead" style="margin-top: var(--space-2xs);">
+        Templates sit in a queue. When the due date arrives, the entry surfaces in the
+        <a href="/app/register/">register</a> for you to approve or skip — it never posts automatically.
+      </p>
+    </div>
+    <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">+ Add recurring</button>
   </header>
 
-  <p class="app-page__lead">
-    Recurring transactions sit in a queue. When the due date arrives, the entry shows up at the top of the
-    <a href="/app/register/">register</a> for you to approve or skip — it never posts automatically.
-  </p>
+  {# Summary tiles — quick view of monthly cash flow committed to recurring. #}
+  <section class="rec-summary" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
+    <div class="rec-summary__tile">
+      <span class="rec-summary__label">Active templates</span>
+      <span class="rec-summary__value" x-text="totalCount()"></span>
+    </div>
+    <div class="rec-summary__tile">
+      <span class="rec-summary__label">Monthly inflow</span>
+      <span class="rec-summary__value amount--inflow" x-text="formatCents(monthlyInflow())"></span>
+    </div>
+    <div class="rec-summary__tile">
+      <span class="rec-summary__label">Monthly outflow</span>
+      <span class="rec-summary__value amount--outflow" x-text="formatCents(monthlyOutflow())"></span>
+    </div>
+    <div class="rec-summary__tile">
+      <span class="rec-summary__label">Net monthly</span>
+      <span class="rec-summary__value"
+            :class="monthlyNet() < 0 ? 'amount--outflow' : (monthlyNet() > 0 ? 'amount--inflow' : '')"
+            x-text="formatCents(monthlyNet())"></span>
+    </div>
+  </section>
 
   <section class="card">
-    <h2 class="card__title">All recurring templates</h2>
-    <table class="table" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
+    <div class="rec-toolbar">
+      <div class="rec-toolbar__search field">
+        <label class="visually-hidden" for="rec-search">Search recurring</label>
+        <input class="input" id="rec-search" type="search"
+               x-model="searchQuery"
+               placeholder="Search payee, memo, account, category…">
+      </div>
+      <div class="rec-toolbar__filters">
+        <div class="field">
+          <label class="visually-hidden" for="rec-account">Account</label>
+          <select class="select" id="rec-account" x-model="filterAccountId">
+            <option value="">All accounts</option>
+            <template x-for="a in openAccounts()" :key="a.id">
+              <option :value="a.id" x-text="a.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="field">
+          <label class="visually-hidden" for="rec-freq">Frequency</label>
+          <select class="select" id="rec-freq" x-model="filterFrequency">
+            <option value="">All frequencies</option>
+            <template x-for="f in $store.budget.FREQUENCIES" :key="f.value">
+              <option :value="f.value" x-text="f.label"></option>
+            </template>
+          </select>
+        </div>
+        <div class="field">
+          <label class="visually-hidden" for="rec-kind">Kind</label>
+          <select class="select" id="rec-kind" x-model="filterKind">
+            <option value="all">Inflows + outflows</option>
+            <option value="inflow">Inflows only</option>
+            <option value="outflow">Outflows only</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="visually-hidden" for="rec-sort">Sort by</label>
+          <select class="select" id="rec-sort" x-model="sortKey">
+            <option value="nextDate">Sort: next date</option>
+            <option value="amount">Sort: amount</option>
+            <option value="payee">Sort: payee</option>
+            <option value="frequency">Sort: frequency</option>
+          </select>
+        </div>
+      </div>
+      <p class="rec-toolbar__count" x-show="hasActiveFilter()" x-cloak>
+        <span x-text="filtered().length"></span> of <span x-text="totalCount()"></span> showing
+      </p>
+    </div>
+
+    <table class="table" x-show="$store.budget.profile && filtered().length" x-cloak>
       <thead>
         <tr>
-          <th>Next date</th>
-          <th>Frequency</th>
-          <th>Account</th>
-          <th>Payee</th>
-          <th>Category</th>
-          <th class="num">Amount</th>
-          <th class="num">Actions</th>
+          <th scope="col" style="white-space: nowrap;">Next date</th>
+          <th scope="col">Frequency</th>
+          <th scope="col">Account</th>
+          <th scope="col">Payee</th>
+          <th scope="col">Category</th>
+          <th scope="col" class="num">Amount</th>
+          <th scope="col" class="num" style="width: 1%; white-space: nowrap;">Actions</th>
         </tr>
       </thead>
       <tbody>
-        <template x-for="s in $store.budget.profile?.scheduled || []" :key="s.id">
+        <template x-for="s in filtered()" :key="s.id">
           <tr :id="'edit-' + s.id">
-            <td x-text="s.nextDate"></td>
+            <td style="white-space: nowrap;" x-text="formatNextDate(s.nextDate)"></td>
             <td x-text="$store.budget.frequencyLabel(s)"></td>
             <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
-            <td x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></td>
-            <td x-text="$store.budget.categoryName(s.template.categoryId) || '—'"
-                style="color: var(--fg-muted);"></td>
-            <td class="num" x-text="formatCents(s.template.amount)"></td>
+            <td>
+              <strong x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></strong>
+              <p x-show="s.template.memo" x-cloak
+                 style="margin: var(--space-3xs) 0 0; color: var(--fg-muted); font-size: var(--fs-xs);"
+                 x-text="s.template.memo"></p>
+            </td>
+            <td x-text="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"
+                :style="$store.budget.categoryName(s.template.categoryId) ? '' : 'color: var(--fg-muted); font-style: italic;'"></td>
+            <td class="num"
+                :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="formatCents(s.template.amount)"></td>
             <td class="num">
-              <div class="cluster" style="justify-content: flex-end;">
-                <button class="btn btn--ghost btn--sm" type="button"
+              <div class="cluster" style="justify-content: flex-end; flex-wrap: nowrap; gap: var(--space-3xs);">
+                <button class="btn btn--icon" type="button"
                         @click="openEdit(s)"
-                        data-tip="Edit this recurring template.">Edit</button>
-                <button class="btn btn--ghost btn--sm" type="button"
+                        aria-label="Edit recurring template"
+                        data-tip="Edit this recurring template.">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M11.5 2.5l2 2L5 13l-3 1 1-3z"></path>
+                  </svg>
+                </button>
+                <button class="btn btn--icon" type="button"
                         @click="postNow(s.id)"
-                        data-tip="Post this occurrence as a real transaction now and advance the next date.">Post now</button>
-                <button class="btn btn--ghost btn--sm" type="button"
+                        aria-label="Post now"
+                        data-tip="Post this occurrence as a real transaction now and advance the next date.">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 8 7 12 13 4"></polyline>
+                  </svg>
+                </button>
+                <button class="btn btn--icon" type="button"
                         @click="$store.budget.skipScheduled(s.id)"
-                        data-tip="Advance the next date without posting.">Skip next</button>
-                <button class="btn btn--danger btn--sm" type="button"
-                        @click="if (confirm('Remove this recurring template?')) $store.budget.removeSchedule(s.id)">Remove</button>
+                        aria-label="Skip next occurrence"
+                        data-tip="Advance the next date without posting.">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="3 3 10 8 3 13 3 3"></polygon>
+                    <line x1="12" y1="3" x2="12" y2="13"></line>
+                  </svg>
+                </button>
+                <button class="btn btn--icon" type="button"
+                        @click="PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })"
+                        aria-label="Delete recurring template"
+                        data-tip="Permanently remove this recurring template."
+                        style="color: var(--danger);">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 4 13 4"></polyline>
+                    <path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1"></path>
+                    <path d="M5 4l1 9h4l1-9"></path>
+                  </svg>
+                </button>
               </div>
             </td>
           </tr>
         </template>
       </tbody>
     </table>
-    <p x-show="!$store.budget.profile || !$store.budget.profile.scheduled.length" x-cloak style="color: var(--fg-muted);">
-      No recurring transactions yet.
+
+    <p x-show="$store.budget.profile && $store.budget.profile.scheduled.length && !filtered().length" x-cloak
+       style="color: var(--fg-muted); padding: var(--space-md) 0; margin: 0; text-align: center;">
+      No recurring transactions match the current filters.
+      <button class="btn btn--ghost btn--sm" type="button" @click="clearFilters()" style="margin-left: var(--space-2xs);">Clear filters</button>
+    </p>
+
+    <p x-show="!$store.budget.profile || !$store.budget.profile.scheduled.length" x-cloak
+       style="color: var(--fg-muted); padding: var(--space-md) 0; margin: 0;">
+      No recurring transactions yet. Click <em>+ Add recurring</em> to add one.
     </p>
   </section>
 
@@ -73,70 +184,64 @@ eleventyExcludeFromCollections: true
       </h3>
       <form @submit.prevent="submit()">
         <div class="form-stack">
-          <div class="form-row">
-            <div class="field">
-              <label class="field__label" for="rc-account">Account</label>
-              <select class="select" id="rc-account" x-model="form.accountId" required>
-                <option value="">Select account</option>
-                <template x-for="a in openAccounts()" :key="a.id">
-                  <option :value="a.id" x-text="a.name"></option>
-                </template>
-              </select>
-            </div>
-            <div class="field">
-              <label class="field__label" for="rc-freq">Frequency</label>
-              <select class="select" id="rc-freq" x-model="form.frequency">
-                <template x-for="f in $store.budget.FREQUENCIES" :key="f.value">
-                  <option :value="f.value" x-text="f.label"></option>
-                </template>
-              </select>
-            </div>
+          <div class="field">
+            <label class="field__label" for="rc-account">Account</label>
+            <select class="select" id="rc-account" x-model="form.accountId" required>
+              <option value="">Select account</option>
+              <template x-for="a in openAccounts()" :key="a.id">
+                <option :value="a.id" x-text="a.name"></option>
+              </template>
+            </select>
           </div>
-          <div class="form-row" x-show="form.frequency === 'custom'" x-cloak>
-            <div class="field">
-              <label class="field__label" for="rc-custom-interval">Every</label>
-              <input class="input" id="rc-custom-interval" type="number" min="1" step="1"
-                     x-model.number="form.customInterval" inputmode="numeric"
-                     :required="form.frequency === 'custom'">
-            </div>
-            <div class="field">
-              <label class="field__label" for="rc-custom-unit">Unit</label>
-              <select class="select" id="rc-custom-unit" x-model="form.customUnit">
-                <template x-for="u in $store.budget.CUSTOM_UNITS" :key="u.value">
-                  <option :value="u.value" x-text="u.label"></option>
-                </template>
-              </select>
-              <p class="field__hint" x-show="form.customInterval && form.customUnit"
-                 x-text="'Reads as: every ' + form.customInterval + ' ' + form.customUnit + '.'"></p>
-            </div>
+          <div class="field">
+            <label class="field__label" for="rc-freq">Frequency</label>
+            <select class="select" id="rc-freq" x-model="form.frequency">
+              <template x-for="f in $store.budget.FREQUENCIES" :key="f.value">
+                <option :value="f.value" x-text="f.label"></option>
+              </template>
+            </select>
           </div>
-          <div class="form-row">
-            <div class="field">
-              <label class="field__label" for="rc-payee">Payee</label>
-              <input class="input" id="rc-payee" type="text" x-model="form.payeeName">
-            </div>
-            <div class="field">
-              <label class="field__label" for="rc-category">Category</label>
-              <select class="select" id="rc-category" x-model="form.categoryId">
-                <option value="">(uncategorized)</option>
-                <template x-for="c in selectableCategories()" :key="c.id">
-                  <option :value="c.id" x-text="c.name"></option>
-                </template>
-              </select>
-            </div>
+          <div class="field" x-show="form.frequency === 'custom'" x-cloak>
+            <label class="field__label" for="rc-custom-interval">Every</label>
+            <input class="input" id="rc-custom-interval" type="number" min="1" step="1"
+                   x-model.number="form.customInterval" inputmode="numeric"
+                   :required="form.frequency === 'custom'">
           </div>
-          <div class="form-row">
-            <div class="field">
-              <label class="field__label" for="rc-amount">Amount</label>
-              <input class="input" id="rc-amount" type="text" x-model="form.amount" inputmode="decimal" placeholder="-50.00" required>
-              <p class="field__hint">Negative = outflow.</p>
-            </div>
-            <div class="field">
-              <label class="field__label" for="rc-next">
-                <span x-text="mode === 'edit' ? 'Next due date' : 'First due date'"></span>
-              </label>
-              <input class="input" id="rc-next" type="date" x-model="form.nextDate" required>
-            </div>
+          <div class="field" x-show="form.frequency === 'custom'" x-cloak>
+            <label class="field__label" for="rc-custom-unit">Unit</label>
+            <select class="select" id="rc-custom-unit" x-model="form.customUnit">
+              <template x-for="u in $store.budget.CUSTOM_UNITS" :key="u.value">
+                <option :value="u.value" x-text="u.label"></option>
+              </template>
+            </select>
+            <p class="field__hint" x-show="form.customInterval && form.customUnit"
+               x-text="'Reads as: every ' + form.customInterval + ' ' + form.customUnit + '.'"></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="rc-payee">Payee</label>
+            <input class="input" id="rc-payee" type="text" x-model="form.payeeName">
+          </div>
+          <div class="field">
+            <label class="field__label" for="rc-category">Category</label>
+            <select class="select" id="rc-category" x-model="form.categoryId">
+              <option value="">(uncategorized)</option>
+              <template x-for="c in selectableCategories()" :key="c.id">
+                <option :value="c.id" x-text="c.name"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="rc-amount">Amount</label>
+            <input class="input" id="rc-amount" type="text" x-model="form.amount" inputmode="decimal" placeholder="-50.00 · or 40+10" required
+                   data-tip="Calculator: type expressions like 12.50 + 8.99 or 100 - 25 * 2 — they evaluate on save.">
+            <p class="field__hint">Negative = outflow.</p>
+            <p class="field__hint calc-preview" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="rc-next">
+              <span x-text="mode === 'edit' ? 'Next due date' : 'First due date'"></span>
+            </label>
+            <input class="input" id="rc-next" type="date" x-model="form.nextDate" required>
           </div>
           <div class="field">
             <label class="field__label" for="rc-memo">Memo (optional)</label>
@@ -160,10 +265,113 @@ function scheduledView() {
     show: false,
     mode: "create", // 'create' | 'edit'
     editId: null,
+    /* Toolbar state — drives filtered() + the summary. */
+    searchQuery: "",
+    filterAccountId: "",
+    filterFrequency: "",
+    filterKind: "all",
+    sortKey: "nextDate",
     form: {
       accountId: "", payeeName: "", categoryId: "", amount: "", memo: "",
       frequency: "monthly", customInterval: 2, customUnit: "weeks", nextDate: "",
     },
+
+    /* Format YYYY-MM-DD as "Jun 26, 2026" so the column doesn't wrap. */
+    formatNextDate(iso) {
+      if (!iso) return "—";
+      var parts = iso.split("-").map(Number);
+      var d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    },
+
+    /* All schedules (defensive — used by counts + summary). */
+    allSchedules() {
+      var p = this.$store.budget.profile;
+      return (p && p.scheduled) ? p.scheduled : [];
+    },
+    totalCount() { return this.allSchedules().length; },
+
+    hasActiveFilter() {
+      return !!(this.searchQuery || this.filterAccountId ||
+                this.filterFrequency || this.filterKind !== "all");
+    },
+    clearFilters() {
+      this.searchQuery = "";
+      this.filterAccountId = "";
+      this.filterFrequency = "";
+      this.filterKind = "all";
+    },
+
+    /* Toolbar-driven view of the schedule list. */
+    filtered() {
+      var self = this;
+      var q = (this.searchQuery || "").trim().toLowerCase();
+      var out = this.allSchedules().filter(function (s) {
+        if (self.filterAccountId && s.template.accountId !== self.filterAccountId) return false;
+        if (self.filterFrequency && s.frequency !== self.filterFrequency) return false;
+        if (self.filterKind === "inflow"  && (s.template.amount || 0) <= 0) return false;
+        if (self.filterKind === "outflow" && (s.template.amount || 0) >= 0) return false;
+        if (q) {
+          var payee = (s.template.payeeName || self.$store.budget.payeeName(s.template.payeeId) || "").toLowerCase();
+          var cat   = (self.$store.budget.categoryName(s.template.categoryId) || "").toLowerCase();
+          var acct  = (self.$store.budget.findAccount(s.template.accountId)?.name || "").toLowerCase();
+          var memo  = (s.template.memo || "").toLowerCase();
+          if (payee.indexOf(q) < 0 && cat.indexOf(q) < 0 && acct.indexOf(q) < 0 && memo.indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+      var key = this.sortKey;
+      out.sort(function (a, b) {
+        if (key === "amount") return (a.template.amount || 0) - (b.template.amount || 0);
+        if (key === "payee") {
+          var ap = (a.template.payeeName || self.$store.budget.payeeName(a.template.payeeId) || "").toLowerCase();
+          var bp = (b.template.payeeName || self.$store.budget.payeeName(b.template.payeeId) || "").toLowerCase();
+          return ap.localeCompare(bp);
+        }
+        if (key === "frequency") return (a.frequency || "").localeCompare(b.frequency || "");
+        /* nextDate (default) */
+        return (a.nextDate || "").localeCompare(b.nextDate || "");
+      });
+      return out;
+    },
+
+    /* Normalize any cadence to an approximate per-month cents figure so
+       the summary tiles compare apples to apples (weekly × 4.33, etc.). */
+    _monthlyCents(s) {
+      var amt = s.template.amount || 0;
+      switch (s.frequency) {
+        case "daily":    return Math.round(amt * 30.44);
+        case "weekly":   return Math.round(amt * 4.345);
+        case "biweekly": return Math.round(amt * 2.1725);
+        case "monthly":  return amt;
+        case "yearly":   return Math.round(amt / 12);
+        case "custom": {
+          var n = Math.max(1, Math.round(s.customInterval || 1));
+          var u = s.customUnit || "months";
+          if (u === "days")   return Math.round(amt * (30.44 / n));
+          if (u === "weeks")  return Math.round(amt * (4.345 / n));
+          if (u === "months") return Math.round(amt / n);
+          if (u === "years")  return Math.round(amt / (12 * n));
+          return amt;
+        }
+        default: return amt;
+      }
+    },
+    monthlyInflow() {
+      var self = this;
+      return this.allSchedules().reduce(function (sum, s) {
+        var m = self._monthlyCents(s);
+        return m > 0 ? sum + m : sum;
+      }, 0);
+    },
+    monthlyOutflow() {
+      var self = this;
+      return this.allSchedules().reduce(function (sum, s) {
+        var m = self._monthlyCents(s);
+        return m < 0 ? sum + m : sum;
+      }, 0);
+    },
+    monthlyNet() { return this.monthlyInflow() + this.monthlyOutflow(); },
 
     init() {
       /* If the URL is /app/scheduled/#edit-<id>, open the edit modal
@@ -183,12 +391,17 @@ function scheduledView() {
     },
 
     parseDollars(s) {
-      if (!s && s !== 0) return 0;
+      if (s == null || s === "") return 0;
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
       var c = String(s).replace(/[$,\s]/g, "").trim();
       if (/^\(.*\)$/.test(c)) c = "-" + c.slice(1, -1);
       var n = Number(c);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
+    calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },

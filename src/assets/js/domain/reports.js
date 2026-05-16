@@ -234,6 +234,102 @@ export function projection(profile, count) {
   return out;
 }
 
+/* Savings rate ----------------------------------------------------------- */
+
+/* Per-month savings rate = (income - expense) / income. NaN-safe (returns
+   null when income is 0 so the chart can skip that point). Carries the
+   underlying numbers so the table can show them alongside the rate. */
+export function savingsRate(profile, endMonth, count) {
+  var rows = incomeVsExpense(profile, endMonth, count);
+  return rows.map(function (r) {
+    var savings = r.income - r.expense;
+    var rate = r.income > 0 ? savings / r.income : null;
+    return { month: r.month, income: r.income, expense: r.expense, savings: savings, rate: rate };
+  });
+}
+
+/* Payee leaderboard ------------------------------------------------------- */
+
+/* Top N payees by absolute outflow over [fromMonth, toMonth]. Returns
+   one row per payee with usage count, total spend, average per
+   transaction, and last-used date so the table can rank merchants
+   the same way YNAB / Mint do. */
+export function payeeLeaderboard(profile, fromMonth, toMonth, limit) {
+  var n = limit || 25;
+  var bucket = {};
+  profile.transactions.forEach(function (t) {
+    if (t.transferTxnId) return;
+    if (!t.payeeId) return;
+    if (t.amount >= 0) return;
+    var m = t.date.slice(0, 7);
+    if (fromMonth && m < fromMonth) return;
+    if (toMonth   && m > toMonth)   return;
+    var b = bucket[t.payeeId] || (bucket[t.payeeId] = {
+      payeeId: t.payeeId,
+      total: 0,
+      count: 0,
+      lastDate: "",
+    });
+    b.total += Math.abs(t.amount || 0);
+    b.count += 1;
+    if (t.date > b.lastDate) b.lastDate = t.date;
+  });
+  var rows = Object.keys(bucket).map(function (id) {
+    var b = bucket[id];
+    var p = (profile.payees || []).find(function (x) { return x.id === id; });
+    return {
+      payeeId: id,
+      payee: p ? p.name : "(unknown)",
+      total: b.total,
+      count: b.count,
+      avg: b.count ? Math.round(b.total / b.count) : 0,
+      lastDate: b.lastDate,
+    };
+  });
+  rows.sort(function (a, b) { return b.total - a.total; });
+  return rows.slice(0, n);
+}
+
+/* Budget vs Actual -------------------------------------------------------- */
+
+/* For a given month, per-category snapshot: assigned, spent (absolute),
+   remaining, and a status flag (under / at / over). Drives the
+   envelope-health dashboard. Skips internal payment categories. */
+export function budgetVsActual(profile, month) {
+  var m = month || thisMonth();
+  return profile.categories
+    .filter(function (c) { return !c.isPaymentCategory; })
+    .map(function (c) {
+      var g = profile.categoryGroups.find(function (gg) { return gg.id === c.groupId; });
+      var a = assigned(profile, c.id, m);
+      var spent = Math.abs(Math.min(0, activity(profile, c.id, m)));
+      var remaining = a - spent;
+      var pct = a > 0 ? Math.min(999, Math.round((spent / a) * 100)) : (spent > 0 ? 999 : 0);
+      var status = "under";
+      if (a > 0 && spent > a) status = "over";
+      else if (a > 0 && spent === a) status = "at";
+      else if (a === 0 && spent > 0) status = "unbudgeted";
+      return {
+        categoryId: c.id,
+        category: c.name,
+        group: g ? g.name : "Ungrouped",
+        assigned: a,
+        spent: spent,
+        remaining: remaining,
+        pct: pct,
+        status: status,
+      };
+    })
+    .sort(function (a, b) {
+      /* Over-budget first, then unbudgeted spend, then by spent
+         descending so the table leads with what needs attention. */
+      var rank = { over: 0, unbudgeted: 1, at: 2, under: 3 };
+      var dr = (rank[a.status] || 9) - (rank[b.status] || 9);
+      if (dr !== 0) return dr;
+      return b.spent - a.spent;
+    });
+}
+
 function occurrencesIn(month, schedule) {
   /* For monthly+yearly schedules: 1 if the next due date falls within
      `month` or earlier (treated as occurring once that month). For weekly:

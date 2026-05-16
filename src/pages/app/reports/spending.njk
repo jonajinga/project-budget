@@ -26,6 +26,29 @@ eleventyExcludeFromCollections: true
       </div>
     </div>
 
+    <div class="kpi-strip">
+      <div class="kpi kpi--danger">
+        <span class="kpi__label">Total spent</span>
+        <span class="kpi__value" x-text="fmt(kpis().total)"></span>
+        <span class="kpi__delta" x-text="kpis().months + ' month' + (kpis().months === 1 ? '' : 's')"></span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">Avg per month</span>
+        <span class="kpi__value" x-text="fmt(kpis().monthlyAvg)"></span>
+        <span class="kpi__delta">Across the range</span>
+      </div>
+      <div class="kpi kpi--warn">
+        <span class="kpi__label">Top category</span>
+        <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
+        <span class="kpi__delta" x-text="kpis().topShare === null ? '—' : (kpis().topShare.toFixed(1) + '% of total')"></span>
+      </div>
+      <div class="kpi kpi--muted">
+        <span class="kpi__label">Categories active</span>
+        <span class="kpi__value" x-text="kpis().count"></span>
+        <span class="kpi__delta">With at least one outflow</span>
+      </div>
+    </div>
+
     <div class="chart" id="chart-spending" style="min-height: 360px;"></div>
 
     <div class="report-toolbar">
@@ -36,6 +59,8 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('spending-by-category')"
+              data-tip="Download the visible rows as a CSV file.">Export CSV</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -88,6 +113,30 @@ function spendingView() {
   rt.to   = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
   var from = new Date(d.getFullYear(), d.getMonth() - 2, 1);
   rt.from = from.getFullYear() + "-" + String(from.getMonth() + 1).padStart(2, "0");
+
+  rt.fmt = function (c) {
+    return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  };
+  rt.kpis = function () {
+    var data = Alpine.store("budget").reportSpending(this.from, this.to) || [];
+    var total = data.reduce(function (s, r) { return s + r.value; }, 0);
+    var top = data[0];
+    /* Approximate months in the range — inclusive. */
+    var fp = (this.from || "").split("-").map(Number);
+    var tp = (this.to   || "").split("-").map(Number);
+    var months = 1;
+    if (fp.length === 2 && tp.length === 2) {
+      months = Math.max(1, (tp[0] - fp[0]) * 12 + (tp[1] - fp[1]) + 1);
+    }
+    return {
+      total: total,
+      monthlyAvg: Math.round(total / months),
+      topName: top ? top.category : "",
+      topShare: top && total > 0 ? (top.value / total) * 100 : null,
+      count: data.length,
+      months: months,
+    };
+  };
 
   rt.init = function () {
     var self = this;

@@ -179,7 +179,7 @@ eleventyExcludeFromCollections: true
                           @click="restoreSnapId = s.id; restoreSnapValue = ''"
                           data-tip="Replace the active profile with this snapshot. Typed-name confirm required.">Restore</button>
                   <button class="btn btn--danger btn--sm" type="button"
-                          @click="if (confirm('Remove this snapshot?')) $store.budget.deleteSnapshot(s.id)">Remove</button>
+                          @click="PBDialog.confirm({ title: 'Remove this snapshot?', message: 'The snapshot will be permanently deleted. The active profile is not affected.', confirmLabel: 'Remove snapshot', danger: true }).then(ok => ok && $store.budget.deleteSnapshot(s.id))">Remove</button>
                 </div>
               </td>
             </tr>

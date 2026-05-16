@@ -67,6 +67,46 @@
   gap: var(--space-2xs);
   min-width: 0;
 }
+.budget__cat-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Per-row inline edit actions (rename / delete) — hidden by default,
+   fade in when the row is hovered or any child is focused so the
+   default budget grid stays clean. Always visible on touch since
+   hover doesn't exist there.
+
+   Sits flush-left next to the category name (no margin-left: auto
+   pushing it to the row's right edge). */
+.budget__row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-2xs);
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.budget__row:hover .budget__row-actions,
+.budget__row:focus-within .budget__row-actions { opacity: 1; }
+.budget__row-actions .btn--icon { width: 26px; height: 26px; min-height: 26px; }
+@media (hover: none) {
+  .budget__row-actions { opacity: 1; }
+}
+/* Same fade-in pattern for the group header's inline actions. */
+.budget__group-actions {
+  display: inline-flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.budget__group:hover .budget__group-actions,
+.budget__group:focus-within .budget__group-actions { opacity: 1; }
+.budget__group-actions .btn--icon { width: 28px; height: 28px; min-height: 28px; }
+@media (hover: none) {
+  .budget__group-actions { opacity: 1; }
+}
 /* Right-edge of the input text must line up with the right-edge of the
    group total spans in the same column. Zero horizontal padding +
    transparent border keeps the editable input visually flush with the
@@ -171,16 +211,19 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+/* Today's calendar month — underline beneath the label rather than
+   a dot. Reads as a "you are here" marker without competing with
+   the .is-active accent fill. Stops 8px in on either side so it
+   feels like a label underline, not a full-width border. */
 .month-strip__tab.is-current::after {
   content: "";
   position: absolute;
-  left: 50%;
-  bottom: 2px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  height: 2px;
   background: var(--accent);
-  transform: translateX(-50%);
+  border-radius: 1px;
 }
 .month-strip__tab.is-active {
   background: var(--accent);
@@ -250,10 +293,89 @@
 }
 
 /* Total budget row — like a group header but sits at the bottom. */
+/* Total Budget summary row — the bottom-line for the active month.
+   Distinct from per-category rows: elevated card, 4px accent rail,
+   "MONTH TOTAL / May 2026" eyebrow+title on the left, three labeled
+   value columns on the right. Uses the UI sans (DM Sans) for the
+   numbers — Playfair's thin-stroke serif made the dollar figures
+   hard to read at scanning speed. */
 .budget__total-row {
-  background: var(--bg-alt);
-  border-top: 2px solid var(--border);
-  font-size: var(--fs-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-input);
+  font-family: var(--font-ui);
+  padding: var(--space-md);
+  /* No upper margin — sits flush under the grid (or directly under
+     the toolbar when the grid is collapsed). */
+  margin-top: 0;
+  box-shadow: var(--shadow-sm);
+  align-items: center;
+  row-gap: var(--space-sm);
+  /* Override the default 6.5rem numeric columns — values use fs-xl
+     (24px) tabular numerals and 7-digit dollars need ~9rem to avoid
+     spilling into the next column. The label column flexes to fill
+     leftover space; numeric columns get more room first. */
+  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(9rem, max-content));
+  column-gap: var(--space-md);
+}
+.budget__total-row .num {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+/* Stack: eyebrow + month label */
+.budget__total-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.budget__total-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  line-height: 1;
+}
+.budget__total-label strong {
+  font-family: var(--font-ui);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: var(--fg);
+}
+/* Per-column micro label sits ABOVE the value, right-aligned to
+   match the value's right edge. */
+.budget__total-mini-label {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  line-height: 1;
+}
+/* Values use UI sans + heavier weight for clean digit scanning.
+   Display serif on dollars looked elegant but was harder to read —
+   especially the "$" glyph and small caps. */
+.budget__total-value {
+  font-family: var(--font-ui);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+/* Outflow button inside the total row keeps the same big numeric
+   treatment but stays inline (no background button chrome). */
+.budget__total-row .budget__activity-btn.budget__total-value {
+  font-weight: 700;
+  font-size: var(--fs-xl);
 }
 
 /* Right-edge alignment across every row type. Every number cell sits
@@ -266,6 +388,329 @@
 .budget__total-row    .num,
 .budget__activity {
   padding-right: 0.65rem;
+  /* Without text-align:right, the inline span content floats at the
+     left edge of its grid cell — so group Assigned + Available end up
+     left-flush while the per-category input/pill below right-aligns.
+     Forcing right alignment + tabular numerals here lines every
+     digit's right-edge up across group, total, and category rows. */
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Clickable Outflow cell — renders as a transparent button that
+   underlines on hover so users discover it's drillable. Disabled
+   when the cell is $0 (nothing to show).
+
+   padding-right matches the 0.65rem used by .budget__group-header
+   .num spans, the available-pill, and .budget__assigned input — so
+   every number's right edge lines up across every row type. */
+.budget__activity-btn {
+  background: transparent;
+  border: 0;
+  padding: 0 0.65rem 0 0;
+  font: inherit;
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  text-align: right;
+  width: 100%;
+  border-radius: 2px;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.budget__activity-btn:not(:disabled):hover {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+.budget__activity-btn:not(:disabled):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  color: var(--accent);
+}
+.budget__activity-btn:disabled {
+  cursor: default;
+  color: var(--fg-muted);
+}
+.budget__group-header .budget__activity-btn,
+.budget__total-row    .budget__activity-btn {
+  font-weight: 600;
+  /* The parent <span class="num"> already supplies the 0.65rem
+     padding-right — don't double it on the button or the group
+     outflow shifts left of the assigned/available totals. */
+  padding-right: 0;
+}
+
+/* Goal status panel — sits above the form in the goal modal.
+   Layout: full-width progress bar with inline "%/funded" cap, then
+   a 2x2 grid of stat tiles, then a narrative paragraph below. */
+.goal-status {
+  margin: 0 0 var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-alt);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+.goal-status__bar {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-sm);
+}
+.goal-status__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in oklab, var(--accent), transparent 50%);
+  transition: width var(--t-base);
+}
+.goal-status__fill--low     { background: color-mix(in oklab, var(--warn),  transparent 55%); }
+.goal-status__fill--partial { background: color-mix(in oklab, var(--accent), transparent 55%); }
+.goal-status__fill--funded  { background: color-mix(in oklab, var(--ok),    transparent 45%); }
+.goal-status__cap {
+  position: relative;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.goal-status__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-sm);
+  padding: 0;
+}
+@media (min-width: 600px) {
+  .goal-status__stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.goal-status__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+}
+.goal-status__stat--needed { border-left: 3px solid var(--accent); }
+.goal-status__stat dt {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
+}
+.goal-status__stat dd {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.goal-status__hint {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.goal-status__hint--new {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-alt);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius-input);
+}
+
+/* Auto-assign modal — extra width to fit big preview totals alongside
+   each strategy's body text. */
+.modal.auto-assign { max-width: 620px; }
+.auto-assign__header { margin-bottom: var(--space-md); }
+.auto-assign__lead {
+  margin: var(--space-2xs) 0 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+/* Strategy picker — each row is a radio | label+hint | preview-total
+   grid. Whole row is the click target. Selected row pops with an
+   accent left rail + tinted background; disabled rows gray out and
+   render the total as "—". */
+.auto-assign__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+.auto-assign__list > li { display: block; }
+
+/* Card body is a vertical stack: head row (radio + label + total)
+   on top, hint paragraph below. The vertical-stack approach is more
+   bulletproof than a 3-col grid when the hint wraps to multiple
+   lines. */
+.auto-assign__opt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  width: 100%;
+  padding: var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-input);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+/* Head row: radio | label (flex-grows) | total (flush right). */
+.auto-assign__opt-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+}
+.auto-assign__opt-head .auto-assign__opt-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.auto-assign__opt-head .auto-assign__opt-total {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.auto-assign__opt:hover:not(.is-disabled) {
+  background: color-mix(in oklab, var(--accent) 5%, var(--bg-elevated));
+  border-color: var(--accent);
+}
+.auto-assign__opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.auto-assign__opt.is-selected {
+  background: color-mix(in oklab, var(--accent) 10%, var(--bg-elevated));
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.auto-assign__opt.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Custom radio dot — 22×22 circle with an inner filled dot when
+   selected. Reads as a real radio without using the UA glyph. */
+.auto-assign__opt-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-elevated);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+  align-self: center;
+  transition: border-color var(--t-fast);
+}
+.auto-assign__opt.is-selected .auto-assign__opt-radio {
+  border-color: var(--accent);
+}
+.auto-assign__opt:hover:not(.is-disabled) .auto-assign__opt-radio {
+  border-color: var(--accent);
+}
+
+.auto-assign__opt-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  line-height: 1.25;
+}
+.auto-assign__opt-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  line-height: 1.5;
+  /* Indent so the hint visually aligns with the label (under the
+     radio's right edge) instead of starting flush with the radio. */
+  padding-left: calc(18px + var(--space-sm));
+}
+.auto-assign__opt-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  white-space: nowrap;
+  align-self: center;
+}
+.auto-assign__opt-total--muted { color: var(--fg-subtle); font-weight: 400; font-size: var(--fs-md); }
+
+/* Footer line under the strategy list — fades in when a choice is
+   made, showing how many categories the apply will touch. */
+.auto-assign__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: var(--space-md) 0 0;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-alt);
+  border-radius: var(--radius-input);
+  border-left: 3px solid var(--accent);
+  min-height: 44px;
+}
+.auto-assign__count {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+.auto-assign__count svg { color: var(--ok); flex-shrink: 0; }
+.auto-assign__count--placeholder {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+.auto-assign__count--placeholder svg { display: none; }
+
+@media (max-width: 599px) {
+  .auto-assign__opt { padding: var(--space-sm); }
+  .auto-assign__opt-total { font-size: var(--fs-md); }
+  .auto-assign__opt-hint { padding-left: 0; }
+}
+
+/* Drill-down activity rows — hover/focus state communicates that the
+   row is a button. Click navigates to the register filtered to that
+   account, with the row scrolled into view and briefly flashed. */
+.activity-row {
+  cursor: pointer;
+  transition: background var(--t-fast), box-shadow var(--t-fast);
+}
+.activity-row:hover td,
+.activity-row:focus-visible td {
+  background: color-mix(in oklab, var(--accent) 10%, var(--bg-elevated));
+}
+.activity-row:hover td:first-child,
+.activity-row:focus-visible td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--accent);
+}
+.activity-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* ---- Credit card payment-pool cards ------------------------------- */
@@ -363,41 +808,70 @@
      .is-chosen    - the originating item under the cursor
      .is-dragging  - the floating drag image (mirror)
    .dnd-handle is the grab cursor + uses Sortable's `handle:` selector
-   so the rest of the row stays clickable / editable. */
+   so the rest of the row stays clickable / editable.
+
+   Visual: matches the site header's hamburger icon — three
+   horizontal lines, 2px stroke, rounded caps. Same glyph the user
+   sees in the header so the affordance reads consistently across
+   the whole app. Inline SVG background, crisp at any zoom. */
 .dnd-handle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-input);
-  color: var(--fg-muted);
   cursor: grab;
   user-select: none;
-  font-size: 1.1em;
-  line-height: 1;
+  flex-shrink: 0;
   touch-action: none;
+  /* Hide any legacy text content (☰) so only the SVG glyph shows. */
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23524b43' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px 18px;
+  padding: 0;
+  transition: background-color var(--t-fast);
 }
-.dnd-handle:hover  { background: var(--bg-alt); color: var(--fg); }
+.dnd-handle:hover {
+  background-color: var(--bg-alt);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c0392b' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
+}
 .dnd-handle:active { cursor: grabbing; }
 .dnd-handle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Dark theme — lighten the strokes for contrast on the dark surface. */
+[data-theme="dark"] .dnd-handle {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b3aba0' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
+}
+[data-theme="dark"] .dnd-handle:hover {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e05a4b' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
+}
+/* Inline variant for paragraph mentions — keeps the text-based look. */
 .dnd-handle--inline {
   width: auto;
   height: auto;
   display: inline;
   padding: 0 0.2em;
-  background: var(--bg-alt);
+  background-image: none;
+  background-color: var(--bg-alt);
   border-radius: 4px;
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--fg-muted);
 }
-/* Compact handle for the dense budget grid. */
+.dnd-handle--inline::before { content: "⋮⋮"; }
+/* Compact handle for the dense budget grid — same glyph, smaller box. */
 .dnd-handle--sm {
-  width: 1.25rem;
-  height: 1.25rem;
-  font-size: 0.95em;
-  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  background-size: 14px 14px;
 }
 
 /* SortableJS-applied state classes. */
@@ -474,12 +948,317 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   font-weight: 700;
 }
 .cal-toolbar__search { flex: 1 1 220px; min-width: 0; }
-.cal-toolbar__filter { flex: 0 1 180px; min-width: 0; }
+/* Filter dropdowns need to fit the longest option ("Posted +
+   Scheduled"). 240px basis + 200px min keeps the label readable on
+   desktop and prevents truncation in the closed select. */
+.cal-toolbar__filter { flex: 0 1 240px; min-width: 200px; }
+
+/* Display toggle — pill-style switch shares the span-selector row.
+   Each toggle is a real label-wrapped checkbox so it's keyboard-
+   accessible; the native checkbox is hidden via .visually-hidden
+   and a custom pill-style switch renders in its place. */
+.cal-toolbar__toggle + .cal-toolbar__toggle { margin-left: var(--space-2xs); }
+.cal-toolbar__row--span .cal-toolbar__toggle {
+  margin-left: auto; /* push the toggle to the right of the row */
+}
+.cal-toolbar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-3xs) var(--space-2xs);
+  border-radius: var(--radius-input);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  transition: background var(--t-fast);
+}
+.cal-toolbar__toggle:hover { background: var(--bg-alt); }
+.cal-toolbar__toggle:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.cal-toolbar__toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  width: 32px;
+  height: 18px;
+  padding: 2px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.cal-toolbar__toggle-knob {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--fg-muted);
+  transition: transform var(--t-fast), background var(--t-fast);
+}
+.cal-toolbar__toggle.is-on .cal-toolbar__toggle-switch {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.cal-toolbar__toggle.is-on .cal-toolbar__toggle-knob {
+  background: #fff;
+  transform: translateX(14px);
+}
+.cal-toolbar__toggle-label {
+  font-weight: 500;
+}
+
+/* Span selector — only visible on month/week views. Lets the user
+   render N consecutive periods stacked beneath each other. */
+.cal-toolbar__row--span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.cal-toolbar__span-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+.cal-toolbar__span-buttons {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--bg-alt);
+  border-radius: var(--radius-input);
+  padding: 2px;
+  gap: 2px;
+}
+.cal-toolbar__span-btn {
+  padding: 0.35rem 0.7rem;
+  background: transparent;
+  border: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: calc(var(--radius-input) - 2px);
+  min-width: 32px;
+}
+.cal-toolbar__span-btn:hover { color: var(--fg); }
+.cal-toolbar__span-btn.is-active { background: var(--accent); color: #fff; }
+.cal-toolbar__span-custom { display: inline-flex; align-items: center; }
+.cal-toolbar__span-custom input {
+  width: 56px;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: center;
+  background: var(--bg-elevated);
+  color: var(--fg);
+  -moz-appearance: textfield;
+}
+.cal-toolbar__span-custom input::-webkit-outer-spin-button,
+.cal-toolbar__span-custom input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cal-toolbar__span-custom input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Extra month/week blocks (when span > 1) — each gets the same card
+   chrome as the primary block above (elevated bg + border) so the
+   second / third / Nth week doesn't disappear into the page
+   background. Margin separates them; the bordered card defines them. */
+.cal-extra-month,
+.cal-extra-week {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.cal-extra-month__head,
+.cal-extra-week__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-2xs);
+  border-bottom: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+}
+.cal-extra-month__title,
+.cal-extra-week__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+.cal-extra-month__totals,
+.cal-extra-week__totals {
+  display: inline-flex;
+  gap: var(--space-sm);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+}
+.cal-extra-month__totals strong,
+.cal-extra-week__totals strong {
+  font-weight: 700;
+  padding-left: var(--space-2xs);
+  border-left: 1px solid var(--border-soft);
+}
+
+/* Labeled IN / OUT / NET / ENTRIES stats in the extra-week/month
+   header — each pair sits in a small column with the label above
+   the value so the numbers aren't ambiguous. The In/Out/Entries
+   stats are real <button>s (clickable to open the period
+   transactions modal); Net is a static div. */
+.cal-extra-period__totals {
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+}
+.cal-extra-period__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+  padding: 4px 6px;
+  border-radius: var(--radius-input);
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+.cal-extra-period__stat--clickable {
+  cursor: pointer;
+  /* WCAG 1.4.11 — visible 1px border on every clickable stat so
+     the affordance is discoverable without hover. --border-strong
+     gives ~3:1 contrast against the surrounding bg, clearing the
+     UI-component contrast floor. */
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.cal-extra-period__stat--clickable:hover {
+  background: color-mix(in oklab, var(--accent) 16%, var(--bg-elevated));
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.cal-extra-period__stat--clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Active filter state — period modal lights up the currently-
+   selected stat so the user knows what's filtering. */
+.cal-extra-period__stat--clickable.is-active {
+  background: color-mix(in oklab, var(--accent) 22%, var(--bg-elevated));
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent) inset;
+}
+.cal-extra-period__stat--clickable.is-active dt { color: var(--accent); }
+
+/* Period modal — top filter strip + active-filter pill row. */
+.period-modal__filters {
+  padding: var(--space-2xs) var(--space-sm);
+  background: var(--bg-alt);
+  border-radius: var(--radius-input);
+}
+.period-modal__active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-md);
+  padding: var(--space-2xs) var(--space-sm);
+  background: color-mix(in oklab, var(--accent) 10%, var(--bg-elevated));
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+}
+.period-modal__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.period-modal__clear:hover { text-decoration: underline; }
+.period-modal__clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.cal-extra-period__stat dt {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
+}
+.cal-extra-period__stat dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+/* Net stat — same bordered chrome as the In/Out/Entries buttons
+   so the row reads as a cohesive 4-tile group, plus a 3px accent
+   left rail to mark it as the bottom-line / calculated value. */
+.cal-extra-period__stat--net {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+}
+.cal-extra-period__stat--net dt { color: var(--fg); }
+.cal-extra-period__stat--net dd { font-weight: 700; font-size: var(--fs-md); }
+
+/* No --primary modifier — every header (primary + extras) uses the
+   shared compact .cal-extra-*__head spacing so every block reads as
+   the same component.
+
+   When the primary .cal-week or .cal block is nested inside its
+   .cal-extra-* card wrapper, strip the inner's redundant bg/border
+   so the card chrome isn't double-painted. */
+.cal-extra-week > .cal-week,
+.cal-extra-month > .cal {
+  background: transparent;
+  border: 0;
+  margin-top: 0;
+  padding: 0;
+}
+
+/* Day view blocks — every block (primary + extra) wears the same
+   elevated card chrome so they look identical regardless of order. */
+.cal-day-block {
+  padding: var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.cal-day-block + .cal-day-block { margin-top: var(--space-md); }
 .cal-toolbar__count {
   margin: 0;
   color: var(--fg-muted);
   font-size: var(--fs-sm);
   flex-basis: 100%;
+}
+/* Phone: shrink the search field's flex-basis so it doesn't push
+   the filters off-row, and let the filters take a full row each. */
+@media (max-width: 599px) {
+  .cal-toolbar__search { flex: 1 1 100%; }
+  .cal-toolbar__filter { flex: 1 1 100%; min-width: 0; }
 }
 
 /* Month view: grid + sticky detail panel on tablet+.
@@ -503,17 +1282,13 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   gap: var(--space-2xs);
   min-width: 0;
 }
-/* Two-column layout (grid + detail) only kicks in when a day is
-   selected. Otherwise the grid spans the full container width
-   instead of reserving the empty detail column. The .cal--has-detail
-   class is applied by Alpine when selectedISO is truthy. */
-@media (min-width: 1024px) {
-  .cal.cal--has-detail { grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr); }
-}
-
+/* Month-view weekdays header now uses a flex row with the WK
+   column on the left + a nested 7-col grid of day labels — matches
+   the .cal__week-row layout below so the columns line up. */
 .cal__weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  display: flex;
+  align-items: center;
+  gap: 6px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -523,67 +1298,186 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   color: var(--fg-subtle);
   font-weight: 600;
 }
-.cal__weekdays li { padding: 0.25rem 0.5rem; text-align: left; }
-@media (max-width: 599px) {
-  .cal__weekdays li { font-size: 0.6875rem; padding: 0.2rem 0.25rem; }
-}
-
-.cal__grid {
+.cal__weekdays-days {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
-  list-style: none;
+  min-width: 0;
+}
+.cal__weekdays-days > span { padding: 0.25rem 0.5rem; text-align: left; }
+@media (max-width: 599px) {
+  .cal__weekdays-days > span { font-size: 0.6875rem; padding: 0.2rem 0.25rem; }
+}
+
+/* Month grid — now a flex column of week-rows. Each week-row is a
+   flex row with the WK column on the left + a nested 7-col grid of
+   day cells. Same chrome as the year-view mini grid (1px border,
+   border-soft hairlines between cells). */
+.cal__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   margin: 0;
   padding: 0;
   background: var(--border-soft);
   border: 1px solid var(--border-soft);
 }
+.cal__week-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  background: var(--bg-elevated);
+}
+.cal__week-row-cells {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  min-width: 0;
+  background: var(--border-soft);
+}
+
+/* Week-number column in the month grid — wider than the year
+   mini-view's column because it packs the full In/Out/Net/Entries
+   stack alongside the week number, in addition to being clickable.
+   When the user turns off grid totals (.cal--no-totals), the inline
+   stats are hidden, so collapse the column to just-the-number width. */
+.cal--no-totals .cal__wknum { flex: 0 0 2.25rem; width: 2.25rem; }
+.cal__wknum {
+  flex: 0 0 5.25rem;
+  width: 5.25rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  background: var(--bg-alt);
+  border: 0;
+  padding: 0;
+}
+.cal__wknum--head {
+  align-items: center;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0;
+  background: transparent;
+}
+.cal__wknum--btn {
+  cursor: pointer;
+  background: color-mix(in oklab, var(--accent) 5%, var(--bg-alt));
+  color: var(--fg);
+  padding: 4px 6px;
+  gap: 3px;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.cal__wknum--btn:hover {
+  background: color-mix(in oklab, var(--accent) 18%, var(--bg-alt));
+}
+.cal__wknum--btn:hover .cal__wknum-num { color: var(--accent); }
+.cal__wknum--btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cal__wknum--btn:disabled {
+  cursor: default;
+  background: transparent;
+  color: var(--fg-subtle);
+  opacity: 0.35;
+}
+.cal__wknum-num {
+  display: block;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+}
+.cal__wknum-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px solid var(--border-soft);
+}
+.cal__wknum-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.cal__wknum-stat-label {
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  font-weight: 700;
+}
+.cal__wknum-stat-value {
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+.cal__wknum-stat--net {
+  border-top: 1px solid var(--border-soft);
+  margin-top: 1px;
+  padding-top: 2px;
+}
+.cal__wknum-stat--net .cal__wknum-stat-label { color: var(--fg); }
+.cal__wknum-stat--net .cal__wknum-stat-value { font-weight: 700; }
 .cal__cell {
   background: var(--bg-elevated);
-  min-height: 5.5rem;
+  min-height: 6.5rem;
   position: relative;
 }
 .cal__cell--blank { background: var(--bg-alt); }
 /* Days from the previous/next month shown as dim context. */
 .cal__cell--other-month .cal__day-num { color: var(--fg-subtle); font-weight: 500; }
-.cal__cell--other-month .cal__cell-btn { opacity: 0.55; }
-.cal__cell--other-month:hover .cal__cell-btn { opacity: 1; }
-.cal__cell-btn {
+.cal__cell--other-month .cal__cell-inner { opacity: 0.55; }
+.cal__cell--other-month:hover .cal__cell-inner { opacity: 1; }
+.cal__cell-inner {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   width: 100%;
   height: 100%;
-  padding: 0.4rem 0.5rem;
+  padding: 0.3rem 0.35rem;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.cal__cell:hover { background: color-mix(in oklab, var(--accent) 4%, var(--bg-elevated)); }
+.cal__cell--selected { box-shadow: inset 0 0 0 2px var(--accent); z-index: 1; }
+
+/* Day-number pill button — sits at the top of the cell, opens the
+   detail panel. Stays a small affordance so the entry cards get the
+   visual weight. */
+.cal__day-btn {
+  align-self: flex-start;
   background: transparent;
   border: 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
+  padding: 0;
   cursor: pointer;
-  gap: 0.2rem;
+  font: inherit;
+  color: inherit;
 }
-.cal__cell-btn:hover { background: var(--bg-alt); }
-.cal__cell-btn:focus-visible {
+.cal__day-btn:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-.cal__cell--selected { box-shadow: inset 0 0 0 2px var(--accent); }
-/* Day number wraps in a fixed-size inline-flex so the "today" pill
-   doesn't stretch under flex stretch alignment. Centered horizontally
-   so the day number sits dead-middle of the cell — easier to scan
-   than left- or right-aligned. */
-.cal__day-num-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  outline-offset: 2px;
+  border-radius: 999px;
 }
 .cal__day-num {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-sm);
-  min-width: 1.6rem;
-  height: 1.6rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -596,59 +1490,183 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   color: #fff;
   box-shadow: 0 0 0 2px var(--bg-elevated);
 }
-.cal__totals {
+
+/* Entry list inside each month cell — mirrors the week-view card
+   style so a month grid reads as 35 mini day-columns rather than a
+   sparse dot grid. */
+.cal__entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
-  font-size: var(--fs-xs);
-  font-variant-numeric: tabular-nums;
-  margin-top: auto;
-}
-.cal__delta--in  { color: var(--accent); }
-.cal__delta--out { color: var(--danger); }
-.cal__dots {
-  display: flex;
-  flex-wrap: wrap;
   gap: 2px;
-  align-items: center;
+  min-width: 0;
 }
-.cal__dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  display: inline-block;
+.cal__entry {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 5px;
+  background: var(--bg-alt);
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  font: inherit;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  font-size: 0.72rem;
+  transition: background var(--t-fast), border-color var(--t-fast);
 }
-.cal__dot--posted    { background: var(--accent); }
-.cal__dot--scheduled { background: var(--warn); }
-.cal__count { font-size: var(--fs-xs); color: var(--fg-muted); margin-left: 2px; }
+.cal__entry--in  { border-left-color: color-mix(in oklab, var(--ok), transparent 40%); }
+.cal__entry--out { border-left-color: color-mix(in oklab, var(--danger), transparent 40%); }
+.cal__entry--scheduled {
+  background: color-mix(in oklab, var(--warn), var(--bg-elevated) 88%);
+  border-left-color: color-mix(in oklab, var(--warn), transparent 30%);
+}
+.cal__entry--clickable:hover {
+  background: color-mix(in oklab, var(--accent), var(--bg-elevated) 90%);
+  border-left-color: var(--accent);
+}
+.cal__entry--scheduled.cal__entry--clickable:hover {
+  background: color-mix(in oklab, var(--warn), var(--bg-elevated) 75%);
+  border-left-color: var(--warn);
+}
+.cal__entry--clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.cal__entry-payee {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.cal__entry-amt {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+.cal__entry-more {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 2px 5px;
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+}
+.cal__entry-more:hover { color: var(--accent); }
 
-@media (max-width: 599px) {
-  .cal__cell { min-height: 3.4rem; }
-  .cal__totals { display: none; }
-  .cal__cell-btn { padding: 0.25rem 0.3rem; gap: 0.1rem; }
-  .cal__day-num { font-size: var(--fs-xs); min-width: 1.4rem; height: 1.4rem; }
-}
+/* Per-day rollup pinned to the bottom of every month cell.
+   margin-top: auto inside the .cal__cell-inner flex column shoves
+   the rollup down to the cell's bottom edge regardless of how many
+   entries sit above — so In/Out/Net always line up across the row
+   even when each cell has a different entry count.
 
-.cal__detail {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
-  padding: var(--space-md);
-  align-self: start;
-  position: sticky;
-  top: calc(4rem + var(--space-sm));
-  max-height: calc(100vh - 6rem);
-  overflow-y: auto;
+   Negative x-margins let the bottom block span the cell's full
+   inner width with a subtle tinted background so it reads as its
+   own section, not just more entries. */
+.cal__cell-totals {
+  margin: auto -4px 0;
+  padding: 5px 4px 3px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg-alt) 60%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
 }
-@media (max-width: 1023px) {
-  .cal__detail { position: static; max-height: none; }
-}
-.cal__detail-head {
+.cal__cell-totals-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
+  gap: 6px;
+  min-height: 1em;
+  padding: 0 2px;
 }
-.cal__detail-head h2 { font-size: var(--fs-lg); margin: 0; }
+.cal__cell-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.cal__cell-total-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  font-weight: 700;
+}
+.cal__cell-total-value {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.cal__cell-total--net {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 6px 3px 4px;
+  margin-top: 2px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-input);
+}
+.cal__cell-total--net .cal__cell-total-label {
+  color: var(--fg);
+  font-size: 0.625rem;
+}
+.cal__cell-total--net .cal__cell-total-value {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+@media (max-width: 599px) {
+  /* On phone the cells are too narrow for entry cards — collapse back
+     to a compact dot row + day number. */
+  .cal__cell { min-height: 3.4rem; }
+  .cal__cell-inner { padding: 0.25rem 0.3rem; gap: 0.1rem; align-items: center; }
+  .cal__day-btn { align-self: center; }
+  .cal__day-num { font-size: var(--fs-xs); min-width: 1.4rem; height: 1.4rem; }
+  .cal__entries {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
+  }
+  .cal__entry, .cal__entry-more {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border-radius: 50%;
+    border-left: 0;
+    font-size: 0;
+    color: transparent;
+    background: var(--accent);
+  }
+  .cal__entry--scheduled { background: var(--warn); }
+  .cal__entry-payee, .cal__entry-amt { display: none; }
+  /* Hide the per-cell In/Out/Net rollup on phones — the cell is
+     too narrow to render labels + values. The bigger period-totals
+     tile row above the grid carries the same info. */
+  .cal__cell-totals { display: none; }
+}
+
 .cal__detail-section {
   font-size: var(--fs-xs);
   text-transform: uppercase;
@@ -681,7 +1699,13 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   border-radius: var(--radius);
   font-size: var(--fs-sm);
   transition: background var(--t-fast), border-color var(--t-fast);
+  /* When the row is rendered as a <button>, the UA defaults
+     text-align to center, which pushes payee + meta into the grid
+     cell center. Force left so the detail panel reads as a list. */
+  text-align: left;
 }
+.cal__row-payee, .cal__row-meta { text-align: left; }
+.cal__row-amount { text-align: right; }
 .cal__row.cal__row--in  { border-left: 3px solid var(--ok); }
 .cal__row.cal__row--out { border-left: 3px solid var(--danger); }
 .cal__row-payee { grid-area: payee; font-weight: 600; }
@@ -726,18 +1750,30 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 .cal-week__entry--clickable {
   width: 100%;
-  background: var(--bg-alt);
-  border: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid transparent;
   text-align: inherit;
   font: inherit;
   color: inherit;
   cursor: pointer;
   text-decoration: none;
-  transition: background var(--t-fast);
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.cal-week__entry--clickable:hover { background: var(--bg-elevated); }
-.cal-week__entry--clickable.cal-week__entry--scheduled { background: rgba(184, 134, 44, 0.12); }
-.cal-week__entry--clickable.cal-week__entry--scheduled:hover { background: rgba(184, 134, 44, 0.20); }
+.cal-week__entry--clickable:hover {
+  background: color-mix(in oklab, var(--accent), var(--bg-elevated) 88%);
+  border-color: var(--border);
+  border-left-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.cal-week__entry--clickable.cal-week__entry--scheduled {
+  background: color-mix(in oklab, var(--warn), var(--bg-elevated) 90%);
+  border-left-color: color-mix(in oklab, var(--warn), transparent 30%);
+}
+.cal-week__entry--clickable.cal-week__entry--scheduled:hover {
+  background: color-mix(in oklab, var(--warn), var(--bg-elevated) 75%);
+  border-left-color: var(--warn);
+}
 .cal-week__entry--clickable:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
@@ -765,12 +1801,18 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   flex-direction: column;
   gap: var(--space-2xs);
 }
+/* Always-vertical header layout — title on top, stat tiles below.
+   Avoids per-month inconsistency where small-value months kept the
+   stats on the same row but larger-value months pushed them to a
+   wrapped second line. Stacking guarantees identical presentation
+   regardless of the dollar magnitudes. */
 .cal-mini__head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-2xs);
 }
+.cal-mini__totals { align-self: stretch; }
 .cal-mini__title-btn {
   background: transparent;
   border: 0;
@@ -786,15 +1828,165 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 .cal-mini__title { margin: 0; font-size: var(--fs-md); }
 .cal-mini__total { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
-.cal-mini__weekdays {
+
+/* Month-header stats — IN / OUT / NET tiles under each month name
+   in the year view. 3-up grid so all three tiles take equal width
+   across the full mini-grid width regardless of dollar magnitude.
+   In + Out are buttons (open the period modal); Net is a static
+   tile that mirrors their chrome. */
+.cal-mini__totals {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  list-style: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
   margin: 0;
   padding: 0;
+}
+.cal-mini__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  padding: 4px 6px;
+  min-width: 0;
+  border-radius: var(--radius-input);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+.cal-mini__stat--clickable {
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+}
+.cal-mini__stat--clickable:hover {
+  background: color-mix(in oklab, var(--accent) 16%, var(--bg-elevated));
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.cal-mini__stat--clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.cal-mini__stat dt {
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
+}
+.cal-mini__stat dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+/* Net stays a static tile — same chrome but with an accent left
+   rail to mark it as the bottom-line / calculated value. */
+.cal-mini__stat--net {
+  border-left: 3px solid var(--accent);
+}
+.cal-mini__stat--net dt { color: var(--fg); }
+
+/* Mini month layout — flex row with the week-number column on the
+   left + a nested 7-col grid of day cells on the right. Splitting
+   the layout this way avoids grid auto-flow breaking the row when
+   the wknum + day cells share a single 8-col template. */
+.cal-mini__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cal-mini__row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.cal-mini__row-cells {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  min-width: 0;
+  /* Center grid items horizontally — guarantees each weekday letter
+     sits dead-center over its day column below, regardless of how
+     wide the letter or cell is. */
+  justify-items: center;
+}
+.cal-mini__row-cells--weekdays {
+  font-size: 0.625rem;
+  color: var(--fg-muted);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.cal-mini__row-cells--weekdays > span {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+/* Day cells should still fill their grid column (we want them
+   square, hit-area-friendly) so override the justify-items center
+   above and stretch each cell to its full column width. */
+.cal-mini__row-cells > .cal-mini__cell { justify-self: stretch; }
+.cal-mini__row--head {
+  margin-bottom: 2px;
   font-size: 0.625rem;
   color: var(--fg-subtle);
-  text-align: center;
+  align-items: center;
+}
+
+/* Week-number column. Visual separation comes from the 8px spacer
+   column in the grid template — no border needed. */
+/* Fixed-width week-number column — Wk head + per-row btn share
+   the same horizontal slot so the S M T W T F S header aligns
+   vertically with the day cells below. */
+.cal-mini__wknum {
+  flex: 0 0 1.75rem;
+  width: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.cal-mini__wknum--head {
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.cal-mini__wknum--btn {
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-input);
+  background: color-mix(in oklab, var(--accent) 5%, var(--bg-alt));
+  color: var(--fg);
+  font-size: 0.6875rem;
+  transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
+}
+.cal-mini__wknum--btn:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: scale(1.06);
+}
+.cal-mini__wknum--btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.cal-mini__wknum--btn:disabled {
+  cursor: default;
+  background: transparent;
+  color: var(--fg-subtle);
+  opacity: 0.35;
 }
 .cal-mini__grid {
   display: grid;
@@ -822,13 +2014,23 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   box-shadow: 0 0 0 1px var(--accent);
 }
 .cal-mini__cell--today .cal-mini__day { color: #fff; font-weight: 700; }
+/* High-intensity heatmap cells (≥50% — the dark accent backgrounds)
+   need light text to meet WCAG 1.4.3 (4.5:1 for normal text). The
+   default --fg ink color sits at ~2.5:1 against the strong accent
+   tint; #fff sits at ~5:1. Also overrides nested amount--* classes
+   so the +/− values keep contrast in net-display mode. */
+.cal-mini__cell--hot .cal-mini__day,
+.cal-mini__cell--hot .cal-mini__day .amount--inflow,
+.cal-mini__cell--hot .cal-mini__day .amount--outflow,
+.cal-mini__cell--hot .cal-mini__day .cal-mini__day-zero { color: #fff; }
 .cal-mini__day {
   flex: 1;
   background: transparent;
   border: 0;
-  padding: 0;
+  padding: 0 2px;
   color: var(--fg);
   font-size: 0.6875rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   display: flex;
@@ -840,6 +2042,25 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+/* Net-amount mode — replaces the day number with the day's net $.
+   Tighter font + tabular nums so 3-4 char values like "-$1.2k" fit
+   in the small mini cell. */
+.cal-mini__day--net {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.cal-mini__day--net:hover .amount--inflow,
+.cal-mini__day--net:hover .amount--outflow,
+.cal-mini__day--net:hover .cal-mini__day-zero { color: #fff; }
+.cal-mini__day-zero { color: var(--fg-subtle); }
+
+/* When the year view is in "Show net $" mode, hide the WK column
+   entirely so the day cells get the full mini-grid width for the
+   wider dollar values. */
+.cal-mini--net .cal-mini__wknum { display: none; }
+.cal-mini--net .cal-mini__row { gap: 0; }
+.cal-mini--net .cal-mini__cell { aspect-ratio: 1.6 / 1; }
 
 /* ---- Week view ----
    Scroll-free: at every viewport the 7-day strip fits the available
@@ -890,14 +2111,22 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 .cal-week__day.is-today .cal-week__weekday { color: var(--accent); font-weight: 700; }
 .cal-week__day.is-today .cal-week__date-btn { color: var(--accent); }
-.cal-week__head { display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--border-soft); padding-bottom: var(--space-2xs); }
+.cal-week__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: var(--space-2xs);
+  margin-bottom: var(--space-2xs);
+}
 .cal-week__weekday {
-  font-size: var(--fs-xs);
+  font-size: 0.6875rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--fg-subtle);
-  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  font-weight: 700;
   margin: 0;
+  line-height: 1;
 }
 .cal-week__date { margin: 0; }
 .cal-week__date-btn {
@@ -911,12 +2140,68 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   cursor: pointer;
 }
 .cal-week__date-btn:hover { color: var(--accent); }
+/* Day-totals readout — label + value pairs (In / Out / Net) so the
+   numbers aren't ambiguous. Stacks vertically with light dividers
+   between rows; small uppercase label, bigger tabular value. */
+/* Sit at the bottom of the day card so In/Out/Net rows align
+   horizontally across all 7 columns regardless of entry count.
+   Tinted background + solid top border + bleed margins match the
+   month-view .cal__cell-totals treatment so the rollup reads as
+   its own section instead of more entries. */
 .cal-week__totals {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* margin-top: auto pins this to the card bottom; negative
+     left/right margins (-1rem) bleed to the card's padding edge
+     so the tinted bg spans the full cell width. */
+  margin: auto -1rem 0;
+  padding: var(--space-2xs) var(--space-sm) var(--space-2xs);
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg-alt) 60%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.cal-week__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-2xs);
   font-size: var(--fs-xs);
-  font-variant-numeric: tabular-nums;
+}
+.cal-week__total dt {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+.cal-week__total dd {
   margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Net row sits one tier above In/Out — it's the headline number for
+   the day. Solid divider, tinted background pill, bigger value, and
+   the label flips from muted gray to ink so the row visually anchors
+   the readout. */
+/* Net row in each week-day card — full bordered tile with a 3px
+   accent left rail, matching the period-header Net style. */
+.cal-week__total--net {
+  padding: 4px 8px 4px 6px;
+  margin: 4px -2px 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-input);
+}
+.cal-week__total--net dt {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.6875rem;
+}
+.cal-week__total--net dd {
+  font-weight: 700;
+  font-size: var(--fs-sm);
 }
 .cal-week__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 /* Week-view entry cards. Stack the payee on its own line above the
@@ -970,7 +2255,101 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   margin-bottom: var(--space-md);
 }
 .cal-day__title { font-size: var(--fs-2xl); margin: 0; }
-.cal-day__totals { margin: 0; font-variant-numeric: tabular-nums; display: flex; gap: var(--space-sm); }
+/* Day-view totals — three labeled tiles (Inflow / Outflow / Net)
+   instead of a bare row of numbers. Each tile is a definition pair
+   carrying a Tippy tooltip with the breakdown. */
+.cal-day__totals {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: stretch;
+}
+.cal-day__total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.35rem 0.7rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  cursor: help;
+  min-width: 88px;
+  flex: 1 1 88px;
+}
+@media (max-width: 599px) {
+  .cal-day__totals { gap: var(--space-2xs); }
+  .cal-day__total  { min-width: 0; padding: 0.3rem 0.5rem; flex-basis: calc(50% - var(--space-2xs)); }
+}
+.cal-day__total-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  font-weight: 600;
+  margin: 0;
+}
+.cal-day__total-value {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+.cal-day__totals-empty { font-size: var(--fs-sm); }
+
+/* ---- Shared period totals (Week / Month / Year header tiles) ------
+   Same labeled-tile vocabulary as the Day view, just rendered above
+   the calendar grid as a 4-up row instead of inline with the title.
+   Tippy tooltips on each tile carry the explanation. */
+.cal-period-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin: var(--space-md) 0;
+}
+@media (max-width: 1023px) { .cal-period-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 599px)  { .cal-period-totals { grid-template-columns: 1fr; } }
+.cal-period-totals__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-2xs) var(--space-sm) var(--space-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: help;
+  min-width: 0;
+  /* Tile is its own container so the value can auto-scale to fit
+     ("$5,800.00" never breaks across two lines). */
+  container-type: inline-size;
+}
+.cal-period-totals__tile--muted { border-left-color: var(--border); }
+.cal-period-totals__tile dt {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1;
+}
+/* Values use the UI sans (DM Sans) — tighter advance widths than
+   Playfair so 7-digit dollar figures fit in narrow tiles without
+   the "$5,800.0(" clip we were seeing. Font shrinks with the tile
+   width via container query units so the digit string never wraps. */
+.cal-period-totals__tile dd {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: clamp(0.95rem, 11cqi, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .cal-day__list {
   list-style: none;
   margin: 0;
@@ -992,6 +2371,10 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
   transition: background var(--t-fast), border-color var(--t-fast);
+  /* Buttons default to text-align: center, which pushes the payee +
+     meta paragraphs to the middle of the row. Force left alignment so
+     the entry reads as a list row, not a card title. */
+  text-align: left;
 }
 .cal-day__row--clickable:hover {
   background: var(--bg-alt);
@@ -1005,3 +2388,149 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 .cal-day__row-meta { margin: var(--space-3xs) 0 0; color: var(--fg-muted); font-size: var(--fs-sm); }
 .cal-day__row-amount { font-variant-numeric: tabular-nums; font-weight: 600; font-size: var(--fs-md); }
 
+/* ---- Reports — budget-vs-actual mini progress bar -----------------
+   Inline in the % used column. Width tracks --pct, color flips to
+   danger when --pct-actual exceeds 100. Row backgrounds for over /
+   unbudgeted draw the eye to attention items. */
+.bva-bar {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+}
+.bva-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pct, 0%);
+  background: color-mix(in oklab, var(--accent), transparent 65%);
+  transition: width var(--t-base);
+}
+.bva-bar__fill--over {
+  width: 100%;
+  background: color-mix(in oklab, var(--danger), transparent 55%);
+}
+.bva-bar__label {
+  position: relative;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--fg);
+}
+.bva-row--over td       { background: color-mix(in oklab, var(--danger), transparent 92%); }
+.bva-row--unbudgeted td { background: color-mix(in oklab, var(--warn),   transparent 92%); }
+
+/* ---- Reports — KPI strip ------------------------------------------
+   A row of headline metrics above the chart on every report. Builds
+   confidence ("here's the number that matters") before the user
+   parses the chart. 4 across on desktop, 2 across on tablet, stacked
+   on phone. Each tile is label + big value + tiny delta line. */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+@media (max-width: 1023px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 599px)  { .kpi-strip { grid-template-columns: 1fr; } }
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+}
+.kpi--ok      { border-left-color: var(--ok); }
+.kpi--warn    { border-left-color: var(--warn); }
+.kpi--danger  { border-left-color: var(--danger); }
+.kpi--muted   { border-left-color: var(--border); }
+.kpi__label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+.kpi__value {
+  font-size: var(--fs-2xl);
+  line-height: 1.1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+}
+.kpi__delta {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.kpi__delta--up   { color: var(--ok); }
+.kpi__delta--down { color: var(--danger); }
+
+/* ---- Recurring (/app/scheduled/) summary + toolbar ---------------- */
+/* Summary tiles: at-a-glance monthly cash-flow committed to recurring
+   templates. Grid collapses 4 → 2 → 1 column at narrower viewports. */
+.rec-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+@media (max-width: 1023px) { .rec-summary { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 599px)  { .rec-summary { grid-template-columns: 1fr; } }
+.rec-summary__tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+.rec-summary__label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+.rec-summary__value {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Toolbar above the recurring table. Search on the left, filters
+   stack to the right on wider viewports, wrap underneath on phone. */
+.rec-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: flex-end;
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-soft);
+}
+.rec-toolbar__search { flex: 1 1 240px; min-width: 200px; }
+.rec-toolbar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  align-items: flex-end;
+}
+.rec-toolbar__filters .field { min-width: 140px; }
+.rec-toolbar__count {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}

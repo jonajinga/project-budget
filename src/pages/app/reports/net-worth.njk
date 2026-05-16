@@ -1,16 +1,21 @@
 ---
 layout: layouts/app.njk
 title: "Net worth over time"
-description: "Sum of all account balances at month-end."
+description: "Net worth trajectory with growth rate, MoM change, and CSV export."
 permalink: /app/reports/net-worth/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="reportTable(
-  () => ($store.budget.reportNetWorth() || []),
-  { keys: [
-      { key: 'month', label: 'Month-end' },
-      { key: 'value', label: 'Net worth', numeric: true },
-    ], defaultSort: { key: 'month', dir: 'asc' } })">
+<div class="app-page"
+     x-data="Object.assign(
+       netWorthView(),
+       reportTable(
+         (self) => ($store.budget.reportNetWorth(null, self.rangeMonths) || []),
+         { keys: [
+             { key: 'month', label: 'Month-end' },
+             { key: 'value', label: 'Net worth', numeric: true },
+           ], defaultSort: { key: 'month', dir: 'asc' } }
+       )
+     )" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Net worth over time</h1>
@@ -19,17 +24,55 @@ eleventyExcludeFromCollections: true
     <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
   </header>
 
+  <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+    <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
+    <template x-for="r in ranges" :key="r.value">
+      <button type="button" class="btn btn--sm"
+              :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
+              @click="rangeMonths = r.value"
+              x-text="r.label"></button>
+    </template>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi" :class="kpis().current < 0 ? 'kpi--danger' : 'kpi--ok'">
+      <span class="kpi__label">Current net worth</span>
+      <span class="kpi__value" x-text="fmt(kpis().current)"></span>
+      <span class="kpi__delta">As of this month</span>
+    </div>
+    <div class="kpi" :class="kpis().mom >= 0 ? 'kpi--ok' : 'kpi--danger'">
+      <span class="kpi__label">vs last month</span>
+      <span class="kpi__value" :class="kpis().mom >= 0 ? 'amount--inflow' : 'amount--outflow'"
+            x-text="(kpis().mom >= 0 ? '+' : '') + fmt(kpis().mom)"></span>
+      <span class="kpi__delta" :class="kpis().mom >= 0 ? 'kpi__delta--up' : 'kpi__delta--down'"
+            x-text="kpis().momPct === null ? '—' : ((kpis().momPct >= 0 ? '+' : '') + kpis().momPct.toFixed(1) + '%')"></span>
+    </div>
+    <div class="kpi" :class="kpis().rangeGrowth >= 0 ? 'kpi--ok' : 'kpi--danger'">
+      <span class="kpi__label">Range growth</span>
+      <span class="kpi__value" x-text="(kpis().rangeGrowth >= 0 ? '+' : '') + fmt(kpis().rangeGrowth)"></span>
+      <span class="kpi__delta" x-text="kpis().rangeGrowthPct === null ? '—' : ('Over the ' + rangeMonths + '-mo window (' + (kpis().rangeGrowthPct >= 0 ? '+' : '') + kpis().rangeGrowthPct.toFixed(1) + '%)')"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Avg monthly change</span>
+      <span class="kpi__value" :class="kpis().avgMonthly >= 0 ? 'amount--inflow' : 'amount--outflow'"
+            x-text="(kpis().avgMonthly >= 0 ? '+' : '') + fmt(kpis().avgMonthly)"></span>
+      <span class="kpi__delta" x-text="kpis().forecastNext === null ? '—' : ('Projected next: ' + fmt(kpis().forecastNext))"></span>
+    </div>
+  </div>
+
   <section class="report">
     <div class="chart" id="chart-nw" style="min-height: 320px;"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="nw-search">Search</label>
+        <label class="visually-hidden" for="nw-search">Filter</label>
         <input class="input" id="nw-search" type="search" x-model="query" placeholder="Filter by month…">
       </div>
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('net-worth')"
+              data-tip="Download the visible rows as a CSV file.">Export CSV</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -49,21 +92,70 @@ eleventyExcludeFromCollections: true
           </tr>
         </template>
         <tr x-show="!rows.length" x-cloak>
-          <td colspan="2" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
+          <td colspan="2" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows in this range.</td>
         </tr>
       </tbody>
     </table>
   </section>
 </div>
 
+<script>
+function netWorthView() {
+  return {
+    rangeMonths: 12,
+    ranges: [
+      { value: 6,  label: '6 mo' },
+      { value: 12, label: '12 mo' },
+      { value: 24, label: '24 mo' },
+      { value: 36, label: '36 mo' },
+    ],
+    init() {
+      var self = this;
+      window.__pbReportState = window.__pbReportState || {};
+      window.__pbReportState.netWorth = function () { return self.rangeMonths; };
+    },
+    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    kpis() {
+      var rows = this.$store.budget.reportNetWorth(null, this.rangeMonths) || [];
+      if (!rows.length) {
+        return { current: 0, mom: 0, momPct: null, rangeGrowth: 0, rangeGrowthPct: null, avgMonthly: 0, forecastNext: null };
+      }
+      var current = rows[rows.length - 1].value;
+      var prev    = rows.length > 1 ? rows[rows.length - 2].value : null;
+      var first   = rows[0].value;
+      var mom = prev === null ? 0 : (current - prev);
+      var momPct = prev ? ((mom / Math.abs(prev)) * 100) : null;
+      var rangeGrowth = current - first;
+      var rangeGrowthPct = first ? ((rangeGrowth / Math.abs(first)) * 100) : null;
+      var avgMonthly = rows.length > 1 ? Math.round(rangeGrowth / (rows.length - 1)) : 0;
+      var forecastNext = current + avgMonthly;
+      return { current, mom, momPct, rangeGrowth, rangeGrowthPct, avgMonthly, forecastNext };
+    },
+  };
+}
+</script>
+
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/net-worth.js";
   function boot() {
     var store = Alpine.store("budget");
-    var inst = mountChart("#chart-nw", render, function () { return store.reportNetWorth(); });
-    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
-  };
+    function getN() {
+      var fn = window.__pbReportState && window.__pbReportState.netWorth;
+      return (fn && fn()) || 12;
+    }
+    var inst = mountChart("#chart-nw", render, function () { return store.reportNetWorth(null, getN()); });
+    Alpine.effect(function () {
+      store.profile; store.currentMonth; store._listVersion;
+      var _ = getN();
+      inst.redraw();
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest(".btn--sm")) {
+        setTimeout(function () { inst.redraw(); }, 0);
+      }
+    });
+  }
   if (window.Alpine && window.Alpine.store("budget")) boot();
   else document.addEventListener("alpine:initialized", boot);
 </script>

@@ -1,0 +1,230 @@
+---
+layout: layouts/app.njk
+title: "Savings rate"
+description: "Monthly and trailing savings rate. The single most important wealth-building metric."
+permalink: /app/reports/savings-rate/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page"
+     x-data="Object.assign(
+       savingsRateView(),
+       reportTable(
+         (self) => ($store.budget.reportSavingsRate(null, self.rangeMonths) || []),
+         { keys: [
+             { key: 'month',   label: 'Month' },
+             { key: 'income',  label: 'Income',  numeric: true },
+             { key: 'expense', label: 'Expense', numeric: true },
+             { key: 'savings', label: 'Saved',   numeric: true },
+             { key: 'rate',    label: 'Rate',    numeric: true },
+           ], defaultSort: { key: 'month', dir: 'asc' } }
+       )
+     )" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Savings rate</h1>
+      <p class="app-page__lead">Income minus expense, divided by income. A 20% rate is solid; 30%+ is excellent. Negative means you spent more than you earned that month.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+    <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
+    <template x-for="r in ranges" :key="r.value">
+      <button type="button" class="btn btn--sm"
+              :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
+              @click="rangeMonths = r.value"
+              x-text="r.label"></button>
+    </template>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi" :class="kpis().rate === null ? 'kpi--muted' : (kpis().rate >= 0.2 ? 'kpi--ok' : (kpis().rate >= 0 ? 'kpi--warn' : 'kpi--danger'))">
+      <span class="kpi__label">Range savings rate</span>
+      <span class="kpi__value" x-text="kpis().rate === null ? '—' : (kpis().rate * 100).toFixed(1) + '%'"></span>
+      <span class="kpi__delta" x-text="'Trailing ' + rangeMonths + ' mo'"></span>
+    </div>
+    <div class="kpi kpi--ok">
+      <span class="kpi__label">Total saved</span>
+      <span class="kpi__value" :class="kpis().totalSavings < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="fmt(kpis().totalSavings)"></span>
+      <span class="kpi__delta" x-text="'Avg ' + fmt(kpis().avgSavings) + ' / mo'"></span>
+    </div>
+    <div class="kpi" :class="kpis().bestRate === null ? 'kpi--muted' : 'kpi--ok'">
+      <span class="kpi__label">Best month</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);"
+            x-text="kpis().bestMonth ? (kpis().bestMonth + ' · ' + (kpis().bestRate * 100).toFixed(0) + '%') : '—'"></span>
+      <span class="kpi__delta">Highest savings rate</span>
+    </div>
+    <div class="kpi" :class="kpis().negCount > 0 ? 'kpi--danger' : 'kpi--ok'">
+      <span class="kpi__label">Months in the red</span>
+      <span class="kpi__value" x-text="kpis().negCount + ' / ' + kpis().totalCount"></span>
+      <span class="kpi__delta">Months you spent more than you earned</span>
+    </div>
+  </div>
+
+  <section class="report">
+    <div class="chart" id="chart-sr" style="min-height: 320px;"></div>
+
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="sr-search">Filter</label>
+        <input class="input" id="sr-search" type="search" x-model="query" placeholder="Filter by month…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="visibleCount"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('savings-rate')">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('income')">Income <span class="sort-ind" x-text="sortIndicator('income')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('expense')">Expense <span class="sort-ind" x-text="sortIndicator('expense')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('savings')">Saved <span class="sort-ind" x-text="sortIndicator('savings')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('rate')">Rate <span class="sort-ind" x-text="sortIndicator('rate')"></span></button></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in rows" :key="r.month">
+          <tr>
+            <td x-text="r.month"></td>
+            <td class="num amount--inflow" x-text="'$' + (r.income / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="'$' + (r.expense / 100).toFixed(2)"></td>
+            <td class="num" :class="r.savings < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.savings / 100).toFixed(2)"></td>
+            <td class="num" :class="r.rate === null ? '' : (r.rate < 0 ? 'amount--outflow' : '')"
+                x-text="r.rate === null ? '—' : (r.rate * 100).toFixed(1) + '%'"></td>
+          </tr>
+        </template>
+        <tr x-show="!rows.length" x-cloak>
+          <td colspan="5" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No data in this range.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+function savingsRateView() {
+  return {
+    rangeMonths: 12,
+    ranges: [
+      { value: 6,  label: '6 mo' },
+      { value: 12, label: '12 mo' },
+      { value: 24, label: '24 mo' },
+    ],
+    init() {
+      var self = this;
+      window.__pbReportState = window.__pbReportState || {};
+      window.__pbReportState.savingsRate = function () { return self.rangeMonths; };
+    },
+    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    kpis() {
+      var rows = this.$store.budget.reportSavingsRate(null, this.rangeMonths) || [];
+      if (!rows.length) return { rate: null, totalSavings: 0, avgSavings: 0, bestMonth: '', bestRate: null, negCount: 0, totalCount: 0 };
+      var sumI = rows.reduce(function (s, r) { return s + r.income; }, 0);
+      var sumE = rows.reduce(function (s, r) { return s + r.expense; }, 0);
+      var totalSavings = sumI - sumE;
+      var rate = sumI > 0 ? totalSavings / sumI : null;
+      var best = null;
+      rows.forEach(function (r) { if (r.rate !== null && (!best || r.rate > best.rate)) best = r; });
+      var negCount = rows.filter(function (r) { return r.savings < 0; }).length;
+      return {
+        rate: rate,
+        totalSavings: totalSavings,
+        avgSavings: Math.round(totalSavings / rows.length),
+        bestMonth: best ? best.month : '',
+        bestRate: best ? best.rate : null,
+        negCount: negCount,
+        totalCount: rows.length,
+      };
+    },
+  };
+}
+</script>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { applyChartDefaults, upsert } from "/assets/js/charts/chartjs.js";
+  import { colors } from "/assets/js/charts/theme-colors.js";
+
+  /* Render the savings-rate line chart with a zero baseline so the user
+     can see months that dipped into the red. Y-axis is %, derived from
+     the row's `rate` value (null rendered as gap). */
+  function render(el, data) {
+    applyChartDefaults();
+    var c = colors();
+    var labels = data.map(function (r) { return r.month; });
+    var pct = data.map(function (r) { return r.rate === null ? null : Math.round(r.rate * 1000) / 10; });
+    var accent = c["accent"] || "#c0392b";
+    var ok     = c["ok"] || "#2f6e4d";
+    var danger = c["danger"] || "#9e2d22";
+    var borderSoft = c["border"] || "rgba(0,0,0,0.06)";
+    upsert(el, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Savings rate (%)",
+          data: pct,
+          borderColor: accent,
+          backgroundColor: accent + "22",
+          fill: true,
+          tension: 0.25,
+          spanGaps: true,
+          pointRadius: 3,
+          pointBackgroundColor: function (ctx) {
+            var v = ctx.parsed && ctx.parsed.y;
+            return (v === null || v === undefined) ? accent : (v < 0 ? danger : ok);
+          },
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var v = ctx.parsed.y;
+                return v === null ? "no income" : (v.toFixed(1) + "% saved");
+              },
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            ticks: { callback: function (v) { return v + "%"; } },
+            grid: { color: borderSoft },
+          },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  function boot() {
+    var store = Alpine.store("budget");
+    function getN() {
+      var fn = window.__pbReportState && window.__pbReportState.savingsRate;
+      return (fn && fn()) || 12;
+    }
+    var inst = mountChart("#chart-sr", render, function () { return store.reportSavingsRate(null, getN()); });
+    Alpine.effect(function () {
+      store.profile; store.currentMonth; store._listVersion;
+      var _ = getN();
+      inst.redraw();
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest(".btn--sm")) {
+        setTimeout(function () { inst.redraw(); }, 0);
+      }
+    });
+  }
+  if (window.Alpine && window.Alpine.store("budget")) boot();
+  else document.addEventListener("alpine:initialized", boot);
+</script>

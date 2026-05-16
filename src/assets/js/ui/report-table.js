@@ -86,6 +86,37 @@
       print() {
         window.print();
       },
+
+      /* Export the currently-filtered, currently-sorted rows as a CSV
+         file the user can open in Excel / Sheets / Numbers. Filename
+         carries the page slug + ISO date so multiple exports stay
+         distinct in the Downloads folder. */
+      exportCSV(filenameBase) {
+        var self = this;
+        var rows = this.rows;
+        var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");
+        var body = rows.map(function (r) {
+          return self._keys.map(function (k) {
+            var v = r[k.key];
+            if (v === null || v === undefined) return "";
+            /* Cents columns get human-friendly dollars in the CSV. */
+            if (k.numeric && Math.abs(v) >= 1000 && Number.isInteger(v)) {
+              v = (v / 100).toFixed(2);
+            }
+            return JSON.stringify(String(v));
+          }).join(",");
+        }).join("\r\n");
+        var blob = new Blob([header + "\r\n" + body], { type: "text/csv;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        var stamp = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = (filenameBase || "report") + "-" + stamp + ".csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      },
     };
   };
 })();

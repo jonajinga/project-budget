@@ -1,0 +1,147 @@
+---
+layout: layouts/app.njk
+title: "Budget vs actual"
+description: "Per-category envelope health: assigned vs spent vs remaining for a chosen month."
+permalink: /app/reports/budget-vs-actual/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page"
+     x-data="Object.assign(
+       budgetVsActualView(),
+       reportTable(
+         (self) => ($store.budget.reportBudgetVsActual(self.month) || []),
+         { keys: [
+             { key: 'category',  label: 'Category' },
+             { key: 'group',     label: 'Group' },
+             { key: 'assigned',  label: 'Assigned',  numeric: true },
+             { key: 'spent',     label: 'Spent',     numeric: true },
+             { key: 'remaining', label: 'Remaining', numeric: true },
+             { key: 'pct',       label: '% used',    numeric: true },
+             { key: 'status',    label: 'Status' },
+           ], defaultSort: { key: 'pct', dir: 'desc' } }
+       )
+     )" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Budget vs actual</h1>
+      <p class="app-page__lead">Envelope health for one month: what you assigned, what you spent, and what's left. Over-budget and unbudgeted categories surface first.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  <div class="form-row" style="margin-bottom: var(--space-md);">
+    <div class="field">
+      <label class="field__label" for="bva-month">Month</label>
+      <input class="input" id="bva-month" type="month" x-model="month">
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi">
+      <span class="kpi__label">Assigned this month</span>
+      <span class="kpi__value" x-text="fmt(kpis().assigned)"></span>
+      <span class="kpi__delta">Across all categories</span>
+    </div>
+    <div class="kpi" :class="kpis().spent > kpis().assigned ? 'kpi--danger' : 'kpi--ok'">
+      <span class="kpi__label">Spent this month</span>
+      <span class="kpi__value amount--outflow" x-text="fmt(kpis().spent)"></span>
+      <span class="kpi__delta" x-text="kpis().pctUsed.toFixed(1) + '% of assigned'"></span>
+    </div>
+    <div class="kpi" :class="kpis().remaining >= 0 ? 'kpi--ok' : 'kpi--danger'">
+      <span class="kpi__label">Remaining</span>
+      <span class="kpi__value" :class="kpis().remaining < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="fmt(kpis().remaining)"></span>
+      <span class="kpi__delta">Assigned minus spent</span>
+    </div>
+    <div class="kpi" :class="kpis().over > 0 ? 'kpi--danger' : 'kpi--ok'">
+      <span class="kpi__label">Over budget</span>
+      <span class="kpi__value" x-text="kpis().over + ' / ' + kpis().total"></span>
+      <span class="kpi__delta" x-text="kpis().unbudgeted > 0 ? (kpis().unbudgeted + ' unbudgeted with spend') : 'No unbudgeted spend'"></span>
+    </div>
+  </div>
+
+  <section class="report">
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="bva-search">Filter</label>
+        <input class="input" id="bva-search" type="search" x-model="query" placeholder="Filter by category or group…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="visibleCount"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('budget-vs-actual')">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="is-sortable"><button type="button" @click="sortBy('category')">Category <span class="sort-ind" x-text="sortIndicator('category')"></span></button></th>
+          <th class="is-sortable"><button type="button" @click="sortBy('group')">Group <span class="sort-ind" x-text="sortIndicator('group')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('assigned')">Assigned <span class="sort-ind" x-text="sortIndicator('assigned')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('spent')">Spent <span class="sort-ind" x-text="sortIndicator('spent')"></span></button></th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('remaining')">Remaining <span class="sort-ind" x-text="sortIndicator('remaining')"></span></button></th>
+          <th class="is-sortable num" style="width: 140px;"><button type="button" @click="sortBy('pct')">% used <span class="sort-ind" x-text="sortIndicator('pct')"></span></button></th>
+          <th class="is-sortable"><button type="button" @click="sortBy('status')">Status <span class="sort-ind" x-text="sortIndicator('status')"></span></button></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in rows" :key="r.categoryId">
+          <tr :class="r.status === 'over' ? 'bva-row--over' : (r.status === 'unbudgeted' ? 'bva-row--unbudgeted' : '')">
+            <td x-text="r.category"></td>
+            <td style="color: var(--fg-muted);" x-text="r.group"></td>
+            <td class="num" x-text="'$' + (r.assigned / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="'$' + (r.spent / 100).toFixed(2)"></td>
+            <td class="num" :class="r.remaining < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.remaining / 100).toFixed(2)"></td>
+            <td class="num">
+              <div class="bva-bar"
+                   :style="'--pct:' + Math.min(100, r.pct) + '%; --pct-actual:' + r.pct">
+                <span class="bva-bar__fill" :class="r.pct > 100 ? 'bva-bar__fill--over' : ''"></span>
+                <span class="bva-bar__label" x-text="r.assigned > 0 ? (r.pct + '%') : (r.spent > 0 ? '∞' : '—')"></span>
+              </div>
+            </td>
+            <td>
+              <span class="badge"
+                    :class="r.status === 'over' ? 'badge--danger' : (r.status === 'unbudgeted' ? 'badge--warn' : '')"
+                    x-text="r.status"></span>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="!rows.length" x-cloak>
+          <td colspan="7" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No categories match the filter.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+function budgetVsActualView() {
+  return {
+    month: '',
+    init() {
+      var store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+      if (store && store.currentMonth) this.month = store.currentMonth;
+      else {
+        var d = new Date();
+        this.month = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      }
+    },
+    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    kpis() {
+      var rows = this.$store.budget.reportBudgetVsActual(this.month) || [];
+      var assigned = rows.reduce(function (s, r) { return s + r.assigned; }, 0);
+      var spent    = rows.reduce(function (s, r) { return s + r.spent;    }, 0);
+      return {
+        assigned: assigned,
+        spent: spent,
+        remaining: assigned - spent,
+        pctUsed: assigned > 0 ? (spent / assigned) * 100 : (spent > 0 ? 100 : 0),
+        over: rows.filter(function (r) { return r.status === 'over'; }).length,
+        unbudgeted: rows.filter(function (r) { return r.status === 'unbudgeted'; }).length,
+        total: rows.length,
+      };
+    },
+  };
+}
+</script>

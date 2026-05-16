@@ -44,8 +44,19 @@
       }},
       { id: "act-snapshot", label: "Take snapshot of active profile", hint: "Backs up the current profile state", run: function () {
         var s = $store(); if (!s || !s.profile) return;
-        var label = prompt("Snapshot label (optional)") || "";
-        s.takeSnapshot(label);
+        if (!window.PBDialog) { s.takeSnapshot(""); return; }
+        window.PBDialog.prompt({
+          title: "Take snapshot",
+          message: "Snapshots preserve the active profile's state so you can restore it later. The label is optional.",
+          label: "Snapshot label (optional)",
+          defaultValue: "",
+          okLabel: "Take snapshot",
+        }).then(function (label) {
+          /* Cancel returns null — only abort then. Empty string is fine
+             (user opted to skip the label). */
+          if (label === null) return;
+          s.takeSnapshot(label);
+        });
       }},
       { id: "act-toggle-theme", label: "Toggle theme (light/dark)", hint: "Switches the current color scheme", run: function () {
         if (window.ProjectBudget && window.ProjectBudget.toggleTheme) window.ProjectBudget.toggleTheme();

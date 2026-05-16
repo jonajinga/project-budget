@@ -34,21 +34,22 @@
 .btn--primary { background: var(--accent); color: #fff; }
 .btn--primary:hover { background: var(--accent-hover); color: #fff; }
 
-.btn--secondary { background: var(--bg-elevated); color: var(--fg); border-color: var(--border); }
-.btn--secondary:hover { background: var(--bg-alt); color: var(--fg); }
+.btn--secondary { background: var(--bg-elevated); color: var(--fg); border-color: var(--border-strong); }
+.btn--secondary:hover { background: var(--bg-alt); color: var(--fg); border-color: var(--fg-muted); }
 
 /* Ghost keeps the lowest visual weight in a cluster but still reads as
-   a button: muted border + muted text + clear hover lift so users
-   recognize it as interactive next to a Delete-style filled button. */
+   a button: --border-strong gives ~3:1 contrast (WCAG 1.4.11 floor for
+   non-text UI). Without it the border vanishes on cream and the button
+   looks like plain text. */
 .btn--ghost {
   background: transparent;
   color: var(--fg);
-  border-color: var(--border-soft);
+  border-color: var(--border-strong);
 }
 .btn--ghost:hover {
   background: var(--bg-alt);
   color: var(--accent);
-  border-color: var(--border);
+  border-color: var(--fg-muted);
 }
 
 .btn--danger { background: var(--danger); color: #fff; }
@@ -59,6 +60,30 @@
   font-size: var(--fs-sm);
   min-height: 36px;
 }
+
+/* Icon-only square button — for tight action clusters (up/down
+   arrows, repeat / mute toggles). 32x32, no border, accent on hover.
+   Pairs with an inline SVG icon child. */
+.btn--icon {
+  padding: 0;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  border-radius: var(--radius-input);
+}
+.btn--icon:hover,
+.btn--icon:focus-visible { background: var(--bg-alt); color: var(--accent); }
+.btn--icon:disabled,
+.btn--icon[aria-disabled="true"] {
+  opacity: 0.3;
+  background: transparent;
+  pointer-events: none;
+}
+.btn--icon svg { display: block; }
 
 /* Inline-edit trigger — looks like text in a table cell but clickable to
    enter rename / annotate mode. Reused by snapshot labels and daily-backup
@@ -173,57 +198,90 @@
 [data-theme="dark"] .theme-toggle__sun { display: block; }
 [data-theme="dark"] .theme-toggle__moon { display: none; }
 
-/* Toast */
+/* Toast — stacked bottom-right with the FAB cleared (FAB sits at the
+   absolute bottom-right and is ~56px tall; lift the stack above it). */
 .toast-stack {
   position: fixed;
-  bottom: var(--space-lg);
+  bottom: calc(56px + var(--space-lg) + var(--space-sm));
   right: var(--space-lg);
   display: flex;
   flex-direction: column;
   gap: var(--space-2xs);
   z-index: 50;
-  max-width: 360px;
+  width: min(380px, calc(100vw - var(--space-lg) * 2));
+  pointer-events: none;
+}
+@media (max-width: 599px) {
+  .toast-stack { bottom: calc(56px + var(--space-md) + var(--space-2xs)); right: var(--space-md); left: var(--space-md); width: auto; }
 }
 .toast {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-sm);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-2xs) var(--space-sm) var(--space-sm);
   background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--ok);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .toast { animation: toast-in 180ms ease-out both; }
+  .toast { animation: toast-in 200ms cubic-bezier(.2,.9,.3,1) both; }
   @keyframes toast-in {
-    from { transform: translateY(8px); opacity: 0; }
-    to   { transform: translateY(0);   opacity: 1; }
+    from { transform: translateX(12px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
   }
 }
-.toast--warn { border-left-color: var(--warn); }
+.toast--warn   { border-left-color: var(--warn); }
 .toast--danger { border-left-color: var(--danger); }
-.toast__body { margin: 0; font-size: var(--fs-sm); flex: 1; }
-.toast__close {
-  font-size: 1.25rem;
-  line-height: 1;
-  color: var(--fg-muted);
-  padding: 0;
-  min-width: 32px;
-  min-height: 32px;
+
+/* Status icon — color matches the left rail. The default (info / ok)
+   uses the brand green; warn/danger override via the kind-specific
+   selectors below. 22x22 box keeps the glyph aligned with body text. */
+.toast__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--ok);
+  flex-shrink: 0;
+}
+.toast--warn   .toast__icon { color: var(--warn); }
+.toast--danger .toast__icon { color: var(--danger); }
+
+.toast__body {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+.toast__close {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-muted);
   background: transparent;
   border: 0;
   cursor: pointer;
   border-radius: var(--radius-input);
   position: relative;
+  padding: 0;
+  margin-right: var(--space-3xs);
+  transition: background var(--t-fast), color var(--t-fast);
 }
+/* Bleed the hit area out to ≥44×44 for AAA touch target. */
 .toast__close::before {
   content: "";
   position: absolute;
-  inset: -6px;
+  inset: -8px;
 }
 .toast__close:hover { color: var(--fg); background: var(--bg-alt); }
 .toast__close:focus-visible {
@@ -231,28 +289,64 @@
   outline-offset: 2px;
 }
 
-/* Group collapse/expand toggle — chevron rotates to indicate state. */
+/* Group collapse/expand toggle — chevron sits in a 32x32 hit area
+   alongside the group title so the whole row reads as one cohesive
+   control. The visible chevron is 20px; the surrounding inline-flex
+   pads the click target up to WCAG 2.2 AA (24×24 min) comfortably,
+   and the ::before bleed expands it further to 44×44 AAA. */
 .group-toggle {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2xs);
-  padding: 0;
+  padding: 4px 6px 4px 4px;
   background: none;
   border: 0;
   cursor: pointer;
   color: inherit;
   font: inherit;
   text-align: left;
-  min-height: auto;
+  min-height: 32px;
   min-width: auto;
+  position: relative;
+  border-radius: var(--radius-input);
+  transition: background var(--t-fast);
+}
+.group-toggle::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 .group-toggle:disabled { cursor: default; }
-.group-toggle:not(:disabled):hover { color: var(--accent); }
+.group-toggle:not(:disabled):hover { background: var(--bg-alt); color: var(--accent); }
+.group-toggle:not(:disabled):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .group-toggle__chevron {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
   transition: transform var(--t-fast);
-  font-size: 0.75em;
   color: var(--fg-muted);
+  font-size: 16px;
+  line-height: 1;
+  /* Replace the small text glyph with a bold SVG chevron via mask so
+     it stays crisp + uses currentColor. The text ▾ stays in the DOM
+     for screen readers but is hidden visually. */
+  font-size: 0;
+}
+.group-toggle:hover .group-toggle__chevron { color: var(--accent); }
+.group-toggle__chevron::before {
+  content: "";
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='currentColor'><path d='M4 6l4 4 4-4' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>") no-repeat center / contain;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='currentColor'><path d='M4 6l4 4 4-4' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>") no-repeat center / contain;
 }
 .group-toggle__chevron.is-collapsed { transform: rotate(-90deg); }
 

@@ -1,28 +1,57 @@
-<div class="profile-switcher" x-data="{ open: false }">
+<div class="profile-switcher"
+     x-data="{
+       open: false,
+       initials(name) {
+         /* Two-letter monogram from the profile name: 'Sample household'
+            -> 'SH'. Falls back to first 2 chars for single-word names. */
+         if (!name) return '·';
+         var parts = String(name).trim().split(/\s+/);
+         if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+         return parts[0].slice(0, 2).toUpperCase();
+       }
+     }">
   <button class="profile-switcher__current"
           type="button"
           aria-label="Switch profile"
           @click="open = !open"
-          :aria-expanded="open.toString()">
-    <span class="profile-switcher__label">Profile</span>
-    <span class="profile-switcher__name"
-          x-text="$store.budget && $store.budget.profile ? $store.budget.profile.name : 'No profile yet'"></span>
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          :aria-expanded="open.toString()"
+          data-tip="Switch profile or open profile management.">
+    <span class="profile-switcher__avatar" aria-hidden="true"
+          x-text="initials($store.budget && $store.budget.profile ? $store.budget.profile.name : '')"></span>
+    <span class="profile-switcher__text">
+      <span class="profile-switcher__label">Profile</span>
+      <span class="profile-switcher__name"
+            x-text="$store.budget && $store.budget.profile ? $store.budget.profile.name : 'No profile yet'"></span>
+    </span>
+    <span class="profile-switcher__chevron" aria-hidden="true" :class="{ 'is-open': open }">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
   </button>
 
   <ul class="profile-switcher__menu" x-show="open" @click.outside="open = false" x-cloak>
+    <li class="profile-switcher__menu-head">Switch to</li>
     <template x-for="p in ($store.budget ? $store.budget.profiles : [])" :key="p.id">
       <li>
         <button type="button"
                 class="profile-switcher__item"
+                :class="{ 'is-active': $store.budget && $store.budget.profile && p.id === $store.budget.profile.id }"
                 @click="$store.budget.switchTo(p.id); open = false">
-          <span x-text="p.name"></span>
+          <span class="profile-switcher__item-avatar" aria-hidden="true" x-text="initials(p.name)"></span>
+          <span class="profile-switcher__item-name" x-text="p.name"></span>
+          <svg class="profile-switcher__item-check"
+               x-show="$store.budget && $store.budget.profile && p.id === $store.budget.profile.id"
+               width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 8"/></svg>
         </button>
       </li>
     </template>
     <li class="profile-switcher__divider" role="separator"></li>
     <li>
-      <a class="profile-switcher__item" href="/app/profiles/">Manage profiles</a>
+      <a class="profile-switcher__item profile-switcher__item--manage" href="/app/profiles/">
+        <span class="profile-switcher__item-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+        </span>
+        <span>Manage profiles</span>
+      </a>
     </li>
   </ul>
 </div>

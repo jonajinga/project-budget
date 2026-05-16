@@ -83,6 +83,11 @@
   --fg-subtle:    #524b43;
   --border:       rgba(26, 26, 26, 0.16);
   --border-soft:  rgba(26, 26, 26, 0.08);
+  /* Stronger border tone reserved for interactive controls (buttons,
+     icon-buttons, focusable chips) so they read as clickable, not
+     decorative. ~3.2:1 against --paper — clears WCAG 1.4.11 (3:1 for
+     non-text UI components). Cards/dividers keep the softer --border. */
+  --border-strong: rgba(26, 26, 26, 0.42);
   --accent:       var(--vermillion);
   --accent-hover: var(--vermillion-d);
   --accent-soft:  rgba(192, 57, 43, 0.10);
@@ -129,8 +134,11 @@
   --fg:           var(--ink);
   --fg-muted:     var(--muted);
   --fg-subtle:    #908779;
-  --border:       rgba(232, 227, 214, 0.18);
-  --border-soft:  rgba(232, 227, 214, 0.10);
+  --border:       rgba(232, 227, 214, 0.24);
+  --border-soft:  rgba(232, 227, 214, 0.12);
+  /* Bumped from 0.42 → 0.58 — dark surfaces need more contrast on
+     button borders for WCAG 1.4.11 (3:1) to land convincingly. */
+  --border-strong: rgba(232, 227, 214, 0.58);
   --accent:       var(--vermillion);
   --accent-hover: var(--vermillion-d);
   --accent-soft:  rgba(224, 90, 75, 0.16);

@@ -1,47 +1,71 @@
 ---
 layout: layouts/app.njk
 title: "Reports"
-description: "Net worth, spending, debt, projections."
+description: "Cash flow, net worth, spending, savings rate, debt, projections."
 permalink: /app/reports/
 eleventyExcludeFromCollections: true
 ---
 <div class="app-page">
   <header class="app-page__header">
-    <h1 class="app-page__title">Reports</h1>
+    <div>
+      <h1 class="app-page__title">Reports</h1>
+      <p class="app-page__lead">Every report reads directly from the active profile. Most include KPI tiles, range controls, sortable tables, and CSV / print export.</p>
+    </div>
   </header>
 
-  <p class="app-page__lead">
-    Every report reads directly from the active profile. Print stylesheets are tuned for each one.
-  </p>
-
+  <h2 class="eyebrow" style="margin-top: var(--space-md);">Cash flow</h2>
   <div class="report-tiles">
     <a class="report report--link" href="/app/reports/income-expense/">
       <h2 class="report__title">Income vs expense</h2>
-      <p class="report__lead">Paired bars per month, last twelve months.</p>
+      <p class="report__lead">Monthly bars, avg income/expense KPIs, best & worst month.</p>
     </a>
-    <a class="report report--link" href="/app/reports/net-worth/">
-      <h2 class="report__title">Net worth over time</h2>
-      <p class="report__lead">All accounts, month-end balances.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/spending/">
-      <h2 class="report__title">Spending by category</h2>
-      <p class="report__lead">Treemap of category activity.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/trends/">
-      <h2 class="report__title">Monthly trends</h2>
-      <p class="report__lead">Small multiples per top category.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/debt/">
-      <h2 class="report__title">Debt overview</h2>
-      <p class="report__lead">Balances, payoff projections.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/assignment-history/">
-      <h2 class="report__title">Assignment history</h2>
-      <p class="report__lead">Assigned vs spent, per category.</p>
+    <a class="report report--link" href="/app/reports/savings-rate/">
+      <h2 class="report__title">Savings rate</h2>
+      <p class="report__lead">% of income saved each month — the headline wealth metric.</p>
     </a>
     <a class="report report--link" href="/app/reports/projection/">
       <h2 class="report__title">Cashflow projection</h2>
-      <p class="report__lead">3, 6, and 12 months forward.</p>
+      <p class="report__lead">3, 6, and 12 months forward with confidence band.</p>
+    </a>
+  </div>
+
+  <h2 class="eyebrow" style="margin-top: var(--space-lg);">Spending</h2>
+  <div class="report-tiles">
+    <a class="report report--link" href="/app/reports/spending/">
+      <h2 class="report__title">Spending by category</h2>
+      <p class="report__lead">Treemap, KPIs, top category share, CSV export.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/trends/">
+      <h2 class="report__title">Monthly trends</h2>
+      <p class="report__lead">Sparklines for the top 12 categories, 12 months.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/payees/">
+      <h2 class="report__title">Payee leaderboard</h2>
+      <p class="report__lead">Top merchants by total spend. Spot subscription creep.</p>
+    </a>
+  </div>
+
+  <h2 class="eyebrow" style="margin-top: var(--space-lg);">Envelope budget</h2>
+  <div class="report-tiles">
+    <a class="report report--link" href="/app/reports/budget-vs-actual/">
+      <h2 class="report__title">Budget vs actual</h2>
+      <p class="report__lead">Per-category assigned vs spent vs remaining for one month.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/assignment-history/">
+      <h2 class="report__title">Assignment history</h2>
+      <p class="report__lead">Assigned vs spent paired bars per category, last 12 months.</p>
+    </a>
+  </div>
+
+  <h2 class="eyebrow" style="margin-top: var(--space-lg);">Net worth &amp; debt</h2>
+  <div class="report-tiles">
+    <a class="report report--link" href="/app/reports/net-worth/">
+      <h2 class="report__title">Net worth over time</h2>
+      <p class="report__lead">All accounts, month-end. MoM &amp; range-growth KPIs.</p>
+    </a>
+    <a class="report report--link" href="/app/reports/debt/">
+      <h2 class="report__title">Debt overview</h2>
+      <p class="report__lead">Balances, 3-month payment avg, payoff projections.</p>
     </a>
   </div>
 </div>

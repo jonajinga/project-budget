@@ -6,9 +6,17 @@
          this.dismissed = true;
        },
        startFresh() {
-         var name = prompt('Name your new profile', 'My budget');
-         if (!name) return;
-         $store.budget.startFreshProfile(name);
+         var s = $store.budget;
+         window.PBDialog.prompt({
+           title: 'Start a fresh profile',
+           message: 'Give your new profile a name. You can rename it later from the profiles page.',
+           label: 'Profile name',
+           defaultValue: 'My budget',
+           okLabel: 'Create profile',
+         }).then(function (name) {
+           if (!name) return;
+           s.startFreshProfile(name);
+         });
        }
      }"
      x-show="$store.budget.profile && $store.budget.profile.settings && $store.budget.profile.settings.isSample && !dismissed"

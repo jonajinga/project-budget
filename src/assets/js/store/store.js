@@ -61,6 +61,7 @@ import {
 import {
   incomeVsExpense, netWorthByMonth, spendingByCategory,
   monthlyTrendsByCategory, debtOverview, assignmentHistory, projection,
+  savingsRate, payeeLeaderboard, budgetVsActual,
 } from "../domain/reports.js";
 
 import { download as downloadJSON, suggestedFilename, downloadBundle, suggestedBundleFilename } from "../io/export-json.js";
@@ -109,6 +110,82 @@ export function createStore() {
        bindings re-evaluate on next tick. */
     _listVersion: 0,
     _bumpLists() { this._listVersion += 1; },
+
+    /* ---- Undo / redo ----
+       Snapshot-based history. _recordUndo("…") deep-clones the active
+       profile and pushes it onto _undoStack BEFORE the caller mutates.
+       Any user-initiated mutation invalidates _redoStack (you can't
+       redo past a branch). undo() and redo() swap the active profile
+       with the next snapshot, bumping lists so the UI re-renders.
+       Stack capped at _UNDO_LIMIT entries; older entries drop off. */
+    _undoStack: [],
+    _redoStack: [],
+    _UNDO_LIMIT: 50,
+    _suppressUndo: false,
+
+    _snapshotProfile() {
+      if (!this.profile) return null;
+      /* JSON clone is safe + fast — profile is plain data. */
+      try { return JSON.parse(JSON.stringify(this.profile)); }
+      catch (_e) { return null; }
+    },
+    _recordUndo(label) {
+      if (this._suppressUndo || !this.profile) return;
+      var snap = this._snapshotProfile();
+      if (!snap) return;
+      this._undoStack.push({ label: label || "Action", profileId: this.active, snapshot: snap });
+      if (this._undoStack.length > this._UNDO_LIMIT) this._undoStack.shift();
+      /* New action invalidates the redo branch. */
+      this._redoStack = [];
+    },
+    _restoreSnapshot(entry) {
+      if (!entry || !entry.snapshot) return false;
+      var idx = this.profiles.findIndex(function (p) { return p.id === entry.profileId; });
+      if (idx < 0) return false;
+      this.profiles[idx] = entry.snapshot;
+      if (this.active === entry.profileId) this.profile = this.profiles[idx];
+      return true;
+    },
+    canUndo() { return this._undoStack.length > 0; },
+    canRedo() { return this._redoStack.length > 0; },
+    undoLabel() {
+      var top = this._undoStack[this._undoStack.length - 1];
+      return top ? top.label : "";
+    },
+    redoLabel() {
+      var top = this._redoStack[this._redoStack.length - 1];
+      return top ? top.label : "";
+    },
+    undo() {
+      if (!this._undoStack.length) return;
+      var entry = this._undoStack.pop();
+      /* Snapshot current state for redo BEFORE we restore. */
+      var current = this._snapshotProfile();
+      if (current) this._redoStack.push({ label: entry.label, profileId: this.active, snapshot: current });
+      this._suppressUndo = true;
+      try {
+        if (this._restoreSnapshot(entry)) {
+          this._bumpLists();
+          this._save();
+          this.pushToast("Undone: " + entry.label);
+        }
+      } finally { this._suppressUndo = false; }
+    },
+    redo() {
+      if (!this._redoStack.length) return;
+      var entry = this._redoStack.pop();
+      var current = this._snapshotProfile();
+      if (current) this._undoStack.push({ label: entry.label, profileId: this.active, snapshot: current });
+      this._suppressUndo = true;
+      try {
+        if (this._restoreSnapshot(entry)) {
+          this._bumpLists();
+          this._save();
+          this.pushToast("Redone: " + entry.label);
+        }
+      } finally { this._suppressUndo = false; }
+    },
+    _clearHistory() { this._undoStack = []; this._redoStack = []; },
 
     /* Persistence backend status. Populated during init():
        - "localStorage"  : Dexie unavailable; writes go to localStorage only
@@ -524,6 +601,7 @@ export function createStore() {
     /* ---- Accounts ---- */
     addAccountGroup(name) {
       if (!this.profile) return null;
+      this._recordUndo("Add account group");
       var g = newAccountGroup((name || "").trim() || "Group", this.profile.accountGroups.length);
       this.profile.accountGroups.push(g);
       this._save();
@@ -551,6 +629,29 @@ export function createStore() {
       var g = this.profile.categoryGroups.find(function (x) { return x.id === id; });
       if (g) { g.collapsed = next; this._save(); }
     },
+    /* Bulk collapse / expand every category group in one call.
+       Persists the collapsed flag on each group object so the state
+       survives reload, same as toggleCategoryGroupCollapsed does. */
+    setAllCatGroupsCollapsed(collapsed) {
+      if (!this.profile) return;
+      var groups = this.profile.categoryGroups || [];
+      var m = {};
+      groups.forEach(function (g) {
+        g.collapsed = !!collapsed;
+        if (collapsed) m[g.id] = true;
+      });
+      this.collapsedCatGroups = m;
+      this._save();
+    },
+    /* True iff every group is currently collapsed. Lets the toolbar
+       toggle button flip its label between "Collapse all" / "Expand all". */
+    allCatGroupsCollapsed() {
+      if (!this.profile) return false;
+      var groups = this.profile.categoryGroups || [];
+      if (!groups.length) return false;
+      var self = this;
+      return groups.every(function (g) { return !!self.collapsedCatGroups[g.id]; });
+    },
 
     isAcctGroupCollapsed(id) { return !!(id && this.collapsedAcctGroups[id]); },
     isCatGroupCollapsed(id)  { return !!(id && this.collapsedCatGroups[id]); },
@@ -559,12 +660,14 @@ export function createStore() {
       if (!this.profile) return;
       var g = this.profile.accountGroups.find(function (x) { return x.id === id; });
       if (!g) return;
+      this._recordUndo("Rename account group");
       g.name = (name || "").trim() || g.name;
       this._save();
     },
 
     deleteAccountGroup(id) {
       if (!this.profile) return;
+      this._recordUndo("Delete account group");
       /* Detach accounts but keep them. */
       this.profile.accounts.forEach(function (a) {
         if (a.groupId === id) a.groupId = null;
@@ -575,6 +678,7 @@ export function createStore() {
 
     addAccount(opts) {
       if (!this.profile) return null;
+      this._recordUndo("Add account");
       var a = newAccount({
         groupId: opts.groupId || null,
         name: (opts.name || "").trim() || "New account",
@@ -595,6 +699,7 @@ export function createStore() {
       if (!this.profile) return;
       var a = findAccount(this.profile, id);
       if (!a) return;
+      this._recordUndo("Rename account");
       a.name = (name || "").trim() || a.name;
       if (a.type === "credit") {
         syncPaymentCategoryName(this.profile, a.id, a.name);
@@ -617,6 +722,7 @@ export function createStore() {
       if (!this.profile) return null;
       var a = findAccount(this.profile, id);
       if (!a) return null;
+      this._recordUndo("Edit account");
       var oldType = a.type;
       var oldName = a.name;
       if (patch.name !== undefined) a.name = (patch.name || "").trim() || a.name;
@@ -665,6 +771,7 @@ export function createStore() {
         this.pushToast("Delete cancelled — typed name did not match.", "warn");
         return false;
       }
+      this._recordUndo("Delete account");
       if (a.type === "credit") {
         removePaymentCategory(this.profile, a.id);
       }
@@ -689,6 +796,7 @@ export function createStore() {
     /* ---- Transactions ---- */
     addTransaction(opts) {
       if (!this.profile) return null;
+      this._recordUndo("Add transaction");
       var amount = Math.round(Number(opts.amount) || 0);
       var payeeId = null;
       if (opts.payeeName) {
@@ -712,6 +820,7 @@ export function createStore() {
 
     updateTransaction(id, patch) {
       if (!this.profile) return null;
+      this._recordUndo("Edit transaction");
       if (patch.payeeName !== undefined) {
         var p = upsertPayee(this.profile, patch.payeeName, patch.categoryId || null);
         patch.payeeId = p ? p.id : null;
@@ -721,11 +830,6 @@ export function createStore() {
       var result = editTxnImpl(this.profile, id, patch);
       /* If it's part of a transfer pair, mirror the change. */
       if (result && result.transferTxnId) syncTransferPair(this.profile, id);
-      /* Force consumers (visibleTransactions in the register, ledger views,
-         charts) to re-evaluate. Direct-property mutation through the
-         Alpine proxy is reactive in theory, but x-for rows that branched
-         through an x-if (display vs edit mode) sometimes hold stale
-         bindings until the next array re-read. */
       this._bumpLists();
       this._save();
       return result;
@@ -733,6 +837,7 @@ export function createStore() {
 
     deleteTransaction(id) {
       if (!this.profile) return false;
+      this._recordUndo("Delete transaction");
       var ok = deleteTxnImpl(this.profile, id);
       if (ok) this._save();
       return ok;
@@ -740,6 +845,7 @@ export function createStore() {
 
     setSplits(id, splits) {
       if (!this.profile) return null;
+      this._recordUndo(splits ? "Edit splits" : "Clear splits");
       var t = splitTxnImpl(this.profile, id, splits);
       this._save();
       return t;
@@ -747,6 +853,7 @@ export function createStore() {
 
     transfer(opts) {
       if (!this.profile) return null;
+      this._recordUndo("Transfer");
       var pair = transferImpl(this.profile, {
         fromAccountId: opts.fromAccountId,
         toAccountId: opts.toAccountId,
@@ -789,6 +896,7 @@ export function createStore() {
     /* ---- Payee management ---- */
     renamePayee(id, newName) {
       if (!this.profile) return null;
+      this._recordUndo("Rename payee");
       var p = renamePayee(this.profile, id, newName);
       this._bumpLists();
       this._save();
@@ -796,6 +904,7 @@ export function createStore() {
     },
     setPayeeCategory(id, categoryId) {
       if (!this.profile) return null;
+      this._recordUndo("Set payee category");
       var p = setPayeeCategory(this.profile, id, categoryId);
       this._bumpLists();
       this._save();
@@ -803,6 +912,7 @@ export function createStore() {
     },
     mergePayees(sourceId, targetId) {
       if (!this.profile) return null;
+      this._recordUndo("Merge payees");
       var p = mergePayees(this.profile, sourceId, targetId);
       this._bumpLists();
       this._save();
@@ -810,6 +920,7 @@ export function createStore() {
     },
     deletePayee(id) {
       if (!this.profile) return false;
+      this._recordUndo("Delete payee");
       var ok = deletePayee(this.profile, id);
       if (ok) { this._bumpLists(); this._save(); }
       return ok;
@@ -829,18 +940,21 @@ export function createStore() {
     /* ---- Scheduled ---- */
     addSchedule(opts) {
       if (!this.profile) return null;
+      this._recordUndo("Add recurring");
       var s = addSchedule(this.profile, opts);
       this._save();
       return s;
     },
     removeSchedule(id) {
       if (!this.profile) return;
+      this._recordUndo("Remove recurring");
       removeSchedule(this.profile, id);
       this._bumpLists();
       this._save();
     },
     updateSchedule(id, patch) {
       if (!this.profile) return null;
+      this._recordUndo("Edit recurring");
       var s = updateSchedule(this.profile, id, patch);
       this._bumpLists();
       this._save();
@@ -852,6 +966,7 @@ export function createStore() {
     },
     postScheduled(id, overrides) {
       if (!this.profile) return null;
+      this._recordUndo("Post scheduled");
       /* If the template carries a payeeName (set when the user authored the
          schedule before that payee existed), upsert it on post so the
          resulting transaction has a real payeeId. */
@@ -861,12 +976,32 @@ export function createStore() {
         if (p) sched.template.payeeId = p.id;
       }
       var t = postScheduled(this.profile, id, overrides);
+      /* The domain helper mutates s.nextDate in place. Replace the
+         schedule object with a shallow clone so consumers that track the
+         array (the recurring table, the calendar projection) see a new
+         reference and re-render — otherwise the date stays stale until
+         the next manual reload. */
+      var idx = this.profile.scheduled.findIndex(function (x) { return x.id === id; });
+      if (idx >= 0) {
+        var copy = this.profile.scheduled.slice();
+        copy[idx] = Object.assign({}, copy[idx]);
+        this.profile.scheduled = copy;
+      }
+      this._bumpLists();
       this._save();
       return t;
     },
     skipScheduled(id) {
       if (!this.profile) return null;
+      this._recordUndo("Skip scheduled");
       var s = skipScheduled(this.profile, id);
+      var idx = this.profile.scheduled.findIndex(function (x) { return x.id === id; });
+      if (idx >= 0) {
+        var copy = this.profile.scheduled.slice();
+        copy[idx] = Object.assign({}, copy[idx]);
+        this.profile.scheduled = copy;
+      }
+      this._bumpLists();
       this._save();
       return s;
     },
@@ -879,6 +1014,7 @@ export function createStore() {
 
     applyReconcile(accountId) {
       if (!this.profile) return 0;
+      this._recordUndo("Reconcile account");
       var count = applyReconcile(this.profile, accountId);
       this._save();
       this.pushToast("Reconciled " + count + " transaction" + (count === 1 ? "" : "s") + ".");
@@ -887,6 +1023,7 @@ export function createStore() {
 
     addAdjustment(accountId, amountCents, dateISO, memo) {
       if (!this.profile) return null;
+      this._recordUndo("Add adjustment");
       var t = addAdjustment(this.profile, accountId, amountCents, dateISO, memo);
       this._save();
       return t;
@@ -894,47 +1031,64 @@ export function createStore() {
 
     unlockReconciled(txnId) {
       if (!this.profile) return false;
+      this._recordUndo("Unlock reconciled");
       var ok = unlockReconciled(this.profile, txnId);
       if (ok) this._save();
       return ok;
     },
 
-    /* ---- Categories ---- */
+    /* ---- Categories ----
+       Every mutator bumps _listVersion so categoryGroupsView()'s
+       reactivity tripwire fires and the budget grid re-renders
+       without a manual refresh. */
     addCategoryGroup(name) {
       if (!this.profile) return null;
+      this._recordUndo("Add group");
       var g = addCategoryGroupImpl(this.profile, name);
+      this._bumpLists();
       this._save();
       return g;
     },
     renameCategoryGroup(id, name) {
       if (!this.profile) return;
+      this._recordUndo("Rename group");
       renameCategoryGroupImpl(this.profile, id, name);
+      this._bumpLists();
       this._save();
     },
     deleteCategoryGroup(id) {
       if (!this.profile) return;
+      this._recordUndo("Delete group");
       deleteCategoryGroupImpl(this.profile, id);
+      this._bumpLists();
       this._save();
     },
     addCategory(opts) {
       if (!this.profile) return null;
+      this._recordUndo("Add category");
       var c = addCategoryImpl(this.profile, opts);
+      this._bumpLists();
       this._save();
       return c;
     },
     renameCategory(id, name) {
       if (!this.profile) return;
+      this._recordUndo("Rename category");
       renameCategoryImpl(this.profile, id, name);
+      this._bumpLists();
       this._save();
     },
     deleteCategory(id) {
       if (!this.profile) return;
+      this._recordUndo("Delete category");
       deleteCategoryImpl(this.profile, id);
+      this._bumpLists();
       this._save();
     },
     moveCategoryToGroup(id, groupId) {
       if (!this.profile) return;
       moveCategoryToGroupImpl(this.profile, id, groupId);
+      this._bumpLists();
       this._save();
     },
 
@@ -1004,7 +1158,12 @@ export function createStore() {
     },
     findCategory(id) { return this.profile ? findCategory(this.profile, id) : null; },
     findCategoryGroup(id) { return this.profile ? findCategoryGroup(this.profile, id) : null; },
-    categoryGroupsView() { return this.profile ? categoryGroupsView(this.profile) : []; },
+    categoryGroupsView() {
+      /* Reactivity tripwire — bumpLists triggers re-render even when
+         the profile object reference doesn't change. */
+      void this._listVersion;
+      return this.profile ? categoryGroupsView(this.profile) : [];
+    },
     isPaymentCategory(id) { return this.profile ? isPaymentCategory(this.profile, id) : false; },
     paymentCardId(id) { return this.profile ? paymentCardId(this.profile, id) : null; },
     categoryName(id) {
@@ -1014,6 +1173,7 @@ export function createStore() {
 
     /* All categories flat — used by dropdowns. Skips hidden by default. */
     categoriesFlat() {
+      void this._listVersion;
       if (!this.profile) return [];
       var view = categoryGroupsView(this.profile);
       var out = [];
@@ -1068,12 +1228,37 @@ export function createStore() {
     assign(categoryId, month, cents) {
       if (!this.profile) return;
       var m = month || this.currentMonth;
+      var catName = this.categoryName(categoryId) || "category";
+      this._recordUndo("Assign to " + catName);
       var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
       var nextAssigned = Object.assign({}, existing.assigned || {});
       nextAssigned[categoryId] = Math.round(Number(cents) || 0);
       this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
       this._bumpLists();
       this._save();
+    },
+
+    /* Move money from one category to another in a single transaction:
+       decrement source.assigned by cents, increment target.assigned by
+       cents. The net change to "Total assigned" is zero — the user is
+       just reallocating. Records ONE undo entry covering both legs. */
+    moveMoney(fromCategoryId, toCategoryId, cents, month) {
+      if (!this.profile) return false;
+      var amt = Math.round(Number(cents) || 0);
+      if (!fromCategoryId || !toCategoryId || amt <= 0) return false;
+      if (fromCategoryId === toCategoryId) return false;
+      var m = month || this.currentMonth;
+      var fromName = this.categoryName(fromCategoryId) || "category";
+      var toName = this.categoryName(toCategoryId) || "category";
+      this._recordUndo("Move money: " + fromName + " → " + toName);
+      var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
+      var nextAssigned = Object.assign({}, existing.assigned || {});
+      nextAssigned[fromCategoryId] = (nextAssigned[fromCategoryId] || 0) - amt;
+      nextAssigned[toCategoryId]   = (nextAssigned[toCategoryId]   || 0) + amt;
+      this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
+      this._bumpLists();
+      this._save();
+      return true;
     },
 
     /* Quick-assign helpers — they return cents; UI calls assign(). */
@@ -1094,13 +1279,17 @@ export function createStore() {
     /* ---- Goals ---- */
     addGoal(opts) {
       if (!this.profile) return null;
+      this._recordUndo("Set goal");
       var g = addGoalImpl(this.profile, opts);
+      this._bumpLists();
       this._save();
       return g;
     },
     removeGoal(categoryId) {
       if (!this.profile) return;
+      this._recordUndo("Remove goal");
       removeGoalFor(this.profile, categoryId);
+      this._bumpLists();
       this._save();
     },
     findGoal(categoryId) {
@@ -1278,6 +1467,18 @@ export function createStore() {
     },
     reportProjection(count) {
       return this.profile ? projection(this.profile, count) : [];
+    },
+    reportSavingsRate(endMonth, count) {
+      return this.profile ? savingsRate(this.profile, endMonth || this.currentMonth, count) : [];
+    },
+    reportPayeeLeaderboard(fromMonth, toMonth, limit) {
+      if (!this.profile) return [];
+      var to = toMonth || this.currentMonth;
+      var from = fromMonth || to;
+      return payeeLeaderboard(this.profile, from, to, limit);
+    },
+    reportBudgetVsActual(month) {
+      return this.profile ? budgetVsActual(this.profile, month || this.currentMonth) : [];
     },
 
     /* ---- Toast helpers ---- */

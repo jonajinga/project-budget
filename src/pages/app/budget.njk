@@ -52,25 +52,48 @@ eleventyExcludeFromCollections: true
         <button type="button" class="btn btn--ghost btn--sm"
                 @click="$store.budget.jumpToThisMonth()"
                 data-tip="Jump to the current calendar month.">This month</button>
-        <a class="btn btn--ghost btn--sm" href="/app/categories/">Manage categories</a>
+        <button type="button" class="btn btn--primary btn--sm"
+                @click="openAutoAssign({ kind: 'all', name: 'All categories', ids: null })"
+                data-tip="Fill in this month's Assigned column for every category — from goal needs, last month's plan, or recent averages.">⚡ Auto-assign</button>
+        <button type="button" class="btn btn--secondary btn--sm"
+                @click="newGroupOpen = true; newGroupName = ''"
+                data-tip="Create a new category group (e.g. Subscriptions, Reserves).">+ Group</button>
+        <button type="button" class="btn btn--ghost btn--sm"
+                @click="$store.budget.setAllCatGroupsCollapsed(!$store.budget.allCatGroupsCollapsed())"
+                :data-tip="$store.budget.allCatGroupsCollapsed() ? 'Expand every category group at once.' : 'Collapse every category group at once.'"
+                x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all' : 'Collapse all'"></button>
+        <a class="btn btn--ghost btn--sm" href="/app/categories/"
+           data-tip="Full categories admin (reorder, goals, payment categories).">Manage categories</a>
       </div>
-      <p class="budget__total-readout">
-        Total assigned this month:
-        <strong x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></strong>
-      </p>
+      <div class="cluster" style="gap: var(--space-2xs);">
+        <p class="budget__total-readout" style="margin: 0;">
+          Total assigned this month:
+          <strong x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></strong>
+        </p>
+        <button type="button" class="btn btn--icon"
+                @click="budgetCollapsed = !budgetCollapsed"
+                :aria-label="budgetCollapsed ? 'Expand budget grid' : 'Collapse budget grid'"
+                :data-tip="budgetCollapsed ? 'Show every category row again.' : 'Hide every category row and show only the Total Budget summary.'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+               :style="budgetCollapsed ? 'transform: rotate(-90deg); transition: transform 150ms ease;' : 'transition: transform 150ms ease;'">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
-    <div class="budget__group-header">
-      <span>Category</span>
-      <span class="num" data-tip="Dollars you committed to this category this month.">Assigned</span>
-      <span class="num" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
-      <span class="num" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
-    </div>
+    <div x-show="!budgetCollapsed" x-cloak>
+      <div class="budget__group-header">
+        <span>Category</span>
+        <span class="num" data-tip="Dollars you committed to this category this month.">Assigned</span>
+        <span class="num" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
+        <span class="num" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
+      </div>
 
     <div data-sortable-list data-sortable-kind="cat-group">
       <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
         <div class="budget__group cat-group" :data-sortable-id="group.group?.id">
-          <div class="budget__group-header" style="background: var(--bg-elevated);">
+          <div class="budget__group-header budget__group-header--row" style="background: var(--bg-elevated);">
             <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
               <span class="dnd-handle dnd-handle--sm"
                     :aria-label="'Drag to reorder group ' + (group.group?.name || '')"
@@ -82,9 +105,53 @@ eleventyExcludeFromCollections: true
                 <span class="group-toggle__chevron" :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
                 <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
               </button>
+              {# Inline group-edit actions. Always visible on touch, fade
+                 in on hover on desktop (via .budget__group-actions CSS). #}
+              <div class="cluster budget__group-actions" x-show="group.group" x-cloak>
+                <button type="button" class="btn btn--icon"
+                        @click="openAutoAssign({ kind: 'group', name: group.group.name, ids: group.categories.map(c => c.id) })"
+                        aria-label="Auto-assign this group"
+                        data-tip="Auto-assign just the categories in this group.">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
+                  </svg>
+                </button>
+                <button type="button" class="btn btn--icon" @click="addCategoryTo(group.group)"
+                        aria-label="Add category to group"
+                        data-tip="Add a new category to this group.">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+                <button type="button" class="btn btn--icon" @click="openRenameGroup(group.group)"
+                        aria-label="Rename group"
+                        data-tip="Rename this group.">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path>
+                    <line x1="15" y1="5" x2="19" y2="9"></line>
+                  </svg>
+                </button>
+                <button type="button" class="btn btn--icon" @click="deleteGroup(group.group)"
+                        aria-label="Delete group"
+                        data-tip="Delete this group. Categories inside become ungrouped."
+                        style="color: var(--danger);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                    <path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
             <span class="num" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
-            <span class="num" x-text="formatCents(groupTotalActivity(group.categories))"></span>
+            <span class="num">
+              <button type="button" class="budget__activity-btn"
+                      :disabled="groupTotalActivity(group.categories) === 0"
+                      @click="openActivity({ kind: 'group', id: group.group?.id || '__ungrouped', name: group.group ? group.group.name : 'Other categories', categoryIds: group.categories.map(c => c.id) })"
+                      :data-tip="groupTotalActivity(group.categories) === 0 ? '' : ('Click to see every transaction across ' + (group.group ? group.group.name : 'Other categories') + ' this month.')"
+                      x-text="formatCents(groupTotalActivity(group.categories))"></button>
+            </span>
             <span class="num" x-text="formatCents(groupTotalAvailable(group.categories))"></span>
           </div>
 
@@ -96,13 +163,70 @@ eleventyExcludeFromCollections: true
                     <div class="budget__category-row">
                       <span class="dnd-handle dnd-handle--sm"
                             :aria-label="'Drag to reorder ' + c.name">&#9776;</span>
-                      <span x-text="c.name"></span>
+                      <span class="budget__cat-name" x-text="c.name"></span>
                       <span class="goal-badge"
                             x-show="$store.budget.findGoal(c.id)"
                             x-cloak
                             :class="'goal-badge--' + ($store.budget.goalStatus(c.id) || 'needed')"
                             :title="'Goal needs ' + formatCents($store.budget.goalNeeded(c.id)) + ' this month'"
                             x-text="goalLabel(c.id)"></span>
+                      {# Per-row inline edit/delete — fades in on hover on
+                         desktop, always visible on touch. Skips payment
+                         categories (they're managed implicitly). #}
+                      <span class="budget__row-actions" x-cloak>
+                        <button type="button" class="btn btn--icon"
+                                @click="openMoveMoney(c)"
+                                aria-label="Move money to or from this category"
+                                data-tip="Move money to or from this category (reallocate this month's Assigned dollars between categories or pools).">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="17 1 21 5 17 9"/>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                            <polyline points="7 23 3 19 7 15"/>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                          </svg>
+                        </button>
+                        <template x-if="!$store.budget.isPaymentCategory(c.id)">
+                        <button type="button" class="btn btn--icon"
+                                @click="openAutoAssign({ kind: 'category', name: c.name, id: c.id })"
+                                aria-label="Auto-assign this category"
+                                data-tip="Auto-assign just this category from a goal, last month, or recent average.">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
+                          </svg>
+                        </button>
+                        </template>
+                        <template x-if="!$store.budget.isPaymentCategory(c.id)">
+                          <span style="display: contents;">
+                            <button type="button" class="btn btn--icon" @click="openGoal(c)"
+                                    aria-label="Set goal for category"
+                                    data-tip="Set, change, or remove this category's funding goal.">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
+                              </svg>
+                            </button>
+                            <button type="button" class="btn btn--icon" @click="openRename(c)"
+                                    aria-label="Rename category"
+                                    data-tip="Rename this category.">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path>
+                                <line x1="15" y1="5" x2="19" y2="9"></line>
+                              </svg>
+                            </button>
+                            <button type="button" class="btn btn--icon" @click="deleteCategoryRow(c)"
+                                    aria-label="Delete category"
+                                    data-tip="Delete this category. Activity becomes uncategorized."
+                                    style="color: var(--danger);">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                                <path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"></path>
+                              </svg>
+                            </button>
+                          </span>
+                        </template>
+                      </span>
                     </div>
                     <div class="goal-bar"
                          x-show="$store.budget.findGoal(c.id)"
@@ -127,7 +251,13 @@ eleventyExcludeFromCollections: true
                            @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
                            @keydown.enter="$event.target.blur()">
                   </div>
-                  <div class="budget__activity" x-text="formatCents($store.budget.activityFor(c.id))"></div>
+                  <div class="budget__activity">
+                    <button type="button" class="budget__activity-btn"
+                            :disabled="$store.budget.activityFor(c.id) === 0"
+                            @click="openActivity({ kind: 'category', id: c.id, name: c.name })"
+                            :data-tip="$store.budget.activityFor(c.id) === 0 ? '' : ('Click to see every transaction in ' + c.name + ' this month.')"
+                            x-text="formatCents($store.budget.activityFor(c.id))"></button>
+                  </div>
                   <div class="budget__available">
                     <span class="available-pill" :class="availablePillClass(c.id)"
                           x-text="formatCents(categoryAvailable(c.id))"></span>
@@ -144,12 +274,447 @@ eleventyExcludeFromCollections: true
       </template>
     </div>
 
+    {# Move-money modal — reallocate Assigned dollars between two
+       categories (or payment pools) in one move. Net total assigned
+       stays the same; from-row decrements, to-row increments. #}
+    <div class="modal-backdrop" x-show="moveMoneyOpen" x-cloak
+         @keydown.escape.window="moveMoneyOpen = false">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bd-mv-title"
+           @click.outside="moveMoneyOpen = false" style="max-width: 680px;">
+        <button class="modal__close" type="button" @click="moveMoneyOpen = false" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <header class="auto-assign__header">
+          <p class="eyebrow">Move money</p>
+          <h3 class="modal__title" id="bd-mv-title" style="margin: 0;">
+            Reallocate Assigned in <span x-text="monthHeaderLabel()"></span>
+          </h3>
+          <p class="auto-assign__lead">
+            Decrement one category's Assigned and increment another by the same amount. Total Assigned for the month stays the same. Works for payment pools too.
+          </p>
+        </header>
+
+        <form @submit.prevent="submitMoveMoney()">
+          <div class="form-stack">
+            <div class="field">
+              <label class="field__label" for="bd-mv-from">From</label>
+              <select class="select" id="bd-mv-from" x-model="moveMoneyForm.fromId" required>
+                <option value="">Select category</option>
+                <template x-for="opt in moveMoneyCategoryOptions()" :key="opt.id">
+                  <option :value="opt.id"
+                          x-text="opt.label + ' · Available ' + formatCents(opt.available)"></option>
+                </template>
+              </select>
+              <p class="field__hint" x-show="moveMoneyForm.fromId" x-cloak
+                 x-text="'Currently Assigned: ' + formatCents(_assignedFor(moveMoneyForm.fromId))"></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="bd-mv-to">To</label>
+              <select class="select" id="bd-mv-to" x-model="moveMoneyForm.toId" required>
+                <option value="">Select category</option>
+                <template x-for="opt in moveMoneyCategoryOptions()" :key="'to-' + opt.id">
+                  <option :value="opt.id"
+                          :disabled="opt.id === moveMoneyForm.fromId"
+                          x-text="opt.label + ' · Available ' + formatCents(opt.available)"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="bd-mv-amount">Amount</label>
+              <input class="input" id="bd-mv-amount" type="text" x-model="moveMoneyForm.amount"
+                     placeholder="0.00 · or 100+25" inputmode="decimal" required
+                     data-tip="Calculator: type expressions like 100 + 25 — they evaluate on save.">
+              <p class="field__hint calc-preview"
+                 x-show="calcPreview(moveMoneyForm.amount)" x-cloak
+                 x-text="calcPreview(moveMoneyForm.amount)"></p>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit"
+                    :disabled="!moveMoneyForm.fromId || !moveMoneyForm.toId || moveMoneyForm.fromId === moveMoneyForm.toId"
+                    data-tip="Apply the move (undoable with Cmd/Ctrl+Z).">Move money</button>
+            <button class="btn btn--ghost" type="button" @click="moveMoneyOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# Auto-assign modal — pick a strategy, see a per-strategy preview
+       total, then apply. Each strategy walks every non-payment
+       category and sets its Assigned for the active month. #}
+    <div class="modal-backdrop" x-show="autoAssignOpen" x-cloak
+         @keydown.escape.window="autoAssignOpen = false">
+      <div class="modal auto-assign" role="dialog" aria-modal="true" aria-labelledby="bd-auto-title"
+           @click.outside="autoAssignOpen = false">
+        <button class="modal__close" type="button" @click="autoAssignOpen = false" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <header class="auto-assign__header">
+          <p class="eyebrow">Auto-assign · <span x-text="autoAssignScope.name"></span></p>
+          <h3 class="modal__title" id="bd-auto-title" style="margin: 0;">
+            Fill <span x-text="monthHeaderLabel()"></span> from a template
+          </h3>
+          <p class="auto-assign__lead">
+            Pick a strategy.
+            <span x-show="autoAssignScope.kind === 'all'">Categories that don't apply are left unchanged.</span>
+            <span x-show="autoAssignScope.kind === 'group'">Only categories in <strong x-text="autoAssignScope.name"></strong> are touched.</span>
+            <span x-show="autoAssignScope.kind === 'category'">Only the <strong x-text="autoAssignScope.name"></strong> category is touched.</span>
+            You can tweak any row after.
+          </p>
+        </header>
+
+        <ul class="auto-assign__list">
+          <template x-for="opt in autoAssignStrategies()" :key="opt.id">
+            <li>
+              <button type="button"
+                      class="auto-assign__opt"
+                      :class="{
+                        'is-selected': autoAssignChoice === opt.id,
+                        'is-disabled': opt.disabled
+                      }"
+                      @click="!opt.disabled && (autoAssignChoice = opt.id)"
+                      :disabled="opt.disabled"
+                      :aria-pressed="(autoAssignChoice === opt.id).toString()">
+                <div class="auto-assign__opt-head">
+                  <span class="auto-assign__opt-radio" aria-hidden="true">
+                    <svg x-show="autoAssignChoice === opt.id" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+                  </span>
+                  <span class="auto-assign__opt-label" x-text="opt.label"></span>
+                  <span class="auto-assign__opt-total"
+                        :class="opt.disabled ? 'auto-assign__opt-total--muted' : (opt.preview < 0 ? 'amount--outflow' : 'amount--inflow')"
+                        x-text="opt.disabled ? '—' : formatCents(opt.preview)"></span>
+                </div>
+                <p class="auto-assign__opt-hint" x-text="opt.hint"></p>
+              </button>
+            </li>
+          </template>
+        </ul>
+
+        <div class="auto-assign__footer">
+          <p class="auto-assign__count" x-show="autoAssignChoice" x-cloak>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span x-text="autoAssignSummary()"></span>
+          </p>
+          <p class="auto-assign__count auto-assign__count--placeholder" x-show="!autoAssignChoice">
+            Select a strategy above to preview the impact.
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn--primary" type="button"
+                  :disabled="!autoAssignChoice"
+                  @click="applyAutoAssign()"
+                  data-tip="Apply the selected strategy to this month's Assigned column.">Apply auto-assign</button>
+          <button class="btn btn--ghost" type="button" @click="autoAssignOpen = false">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    {# Add-group modal — fired from the toolbar "+ Group" button. #}
+    <div class="modal-backdrop" x-show="newGroupOpen" x-cloak @keydown.escape.window="newGroupOpen = false">
+      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-group-title"
+           @click.outside="newGroupOpen = false">
+        <h3 class="modal__title" id="bd-group-title">New category group</h3>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);">
+          Groups organize the budget. Examples: Monthly bills, Subscriptions, Reserves.
+        </p>
+        <form @submit.prevent="submitNewGroup()">
+          <div class="field">
+            <label class="field__label" for="bd-group-name">Group name</label>
+            <input class="input" id="bd-group-name" type="text" x-model="newGroupName" required autofocus>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Create group</button>
+            <button class="btn btn--ghost" type="button" @click="newGroupOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# Add-category modal — fired from any group header "+" icon. #}
+    <div class="modal-backdrop" x-show="newCatOpen" x-cloak @keydown.escape.window="newCatOpen = false">
+      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-cat-title"
+           @click.outside="newCatOpen = false">
+        <h3 class="modal__title" id="bd-cat-title">
+          New category in <span x-text="newCatGroupName || 'group'"></span>
+        </h3>
+        <form @submit.prevent="submitNewCategory()">
+          <div class="field">
+            <label class="field__label" for="bd-cat-name">Category name</label>
+            <input class="input" id="bd-cat-name" type="text" x-model="newCatName" required autofocus
+                   placeholder="e.g. Groceries, Rent, Coffee">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Add category</button>
+            <button class="btn btn--ghost" type="button" @click="newCatOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# Delete-group confirm — replaces window.confirm() so the dialog
+       matches the rest of the app. #}
+    <div class="modal-backdrop" x-show="deleteGroupId" x-cloak @keydown.escape.window="deleteGroupId = null">
+      <div class="modal modal--sm" role="alertdialog" aria-modal="true"
+           @click.outside="deleteGroupId = null"
+           @keydown.enter.window.prevent="confirmDeleteGroup()">
+        <h3 class="modal__title">Delete this group?</h3>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
+          Categories inside <strong x-text="deleteGroupName"></strong> become ungrouped but are kept along with their activity and goals.
+        </p>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="button" @click="confirmDeleteGroup()" autofocus>Delete group</button>
+          <button class="btn btn--ghost" type="button" @click="deleteGroupId = null">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    {# Delete-category confirm — same chrome as the group variant. #}
+    <div class="modal-backdrop" x-show="deleteCatId" x-cloak @keydown.escape.window="deleteCatId = null">
+      <div class="modal modal--sm" role="alertdialog" aria-modal="true"
+           @click.outside="deleteCatId = null"
+           @keydown.enter.window.prevent="confirmDeleteCategory()">
+        <h3 class="modal__title">Delete this category?</h3>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
+          <strong x-text="deleteCatName"></strong>'s activity becomes uncategorized but stays in the register. Goals on this category are removed.
+        </p>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="button" @click="confirmDeleteCategory()" autofocus>Delete category</button>
+          <button class="btn btn--ghost" type="button" @click="deleteCatId = null">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    {# Rename modal — works for both groups and categories. #}
+    <div class="modal-backdrop" x-show="renameOpen" x-cloak @keydown.escape.window="renameOpen = false">
+      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-rename-title"
+           @click.outside="renameOpen = false">
+        <h3 class="modal__title" id="bd-rename-title">
+          Rename <span x-text="renameKind"></span>
+        </h3>
+        <form @submit.prevent="submitRename()">
+          <div class="field">
+            <label class="field__label" for="bd-rename-name">New name</label>
+            <input class="input" id="bd-rename-name" type="text" x-model="renameName" required autofocus
+                   @keydown.escape="renameOpen = false">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Save</button>
+            <button class="btn btn--ghost" type="button" @click="renameOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# Activity drill-down modal — opened by clicking any Outflow
+       number on the budget grid. Lists every contributing transaction
+       for the selected scope (category, group, or all) in the
+       currently-active month, with a total at the bottom. #}
+    <div class="modal-backdrop" x-show="activityOpen" x-cloak @keydown.escape.window="activityOpen = false">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bd-act-title"
+           @click.outside="activityOpen = false" style="max-width: 760px;">
+        <button class="modal__close" type="button" @click="activityOpen = false" aria-label="Close">&times;</button>
+        <h3 class="modal__title" id="bd-act-title">
+          <span x-text="activityScope.name"></span>
+          <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);"
+                x-text="' · ' + monthHeaderLabel()"></span>
+        </h3>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);"
+           x-text="activityTxns().length + ' transaction' + (activityTxns().length === 1 ? '' : 's')"></p>
+
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col" style="white-space: nowrap;">Date</th>
+                <th scope="col">Account</th>
+                <th scope="col">Payee</th>
+                <th scope="col" x-show="activityScope.kind !== 'category'">Category</th>
+                <th scope="col">Memo</th>
+                <th scope="col" class="num">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="t in activityTxns()" :key="t.id + '-' + (t.splitKey || '')">
+                <tr class="activity-row"
+                    @click="openInRegister(t)"
+                    :data-tip="'Open ' + ($store.budget.payeeName(t.payeeId) || 'this transaction') + ' in the register.'"
+                    tabindex="0"
+                    @keydown.enter="openInRegister(t)"
+                    @keydown.space.prevent="openInRegister(t)"
+                    role="button"
+                    :aria-label="'Open ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' from ' + t.date + ' in the register'">
+                  <td style="white-space: nowrap;" x-text="t.date"></td>
+                  <td x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></td>
+                  <td x-text="$store.budget.payeeName(t.payeeId) || '—'"></td>
+                  <td x-show="activityScope.kind !== 'category'"
+                      x-text="$store.budget.categoryName(t.categoryId) || 'Uncategorized'"
+                      style="color: var(--fg-muted);"></td>
+                  <td style="color: var(--fg-muted);" x-text="t.memo || ''"></td>
+                  <td class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(t.amount)"></td>
+                </tr>
+              </template>
+              <tr x-show="!activityTxns().length" x-cloak>
+                <td :colspan="activityScope.kind !== 'category' ? 6 : 5"
+                    style="color: var(--fg-muted); text-align: center; padding: var(--space-md);">
+                  No transactions in this scope for the active month.
+                </td>
+              </tr>
+            </tbody>
+            <tfoot x-show="activityTxns().length" x-cloak>
+              <tr style="border-top: 2px solid var(--border);">
+                <td :colspan="activityScope.kind !== 'category' ? 5 : 4"
+                    style="font-weight: 600;">Total</td>
+                <td class="num" style="font-weight: 700;"
+                    :class="activityTotal() < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(activityTotal())"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="form-actions" style="margin-top: var(--space-md);">
+          <a class="btn btn--secondary btn--sm"
+             x-show="activityScope.kind === 'category'"
+             :href="'/app/register/?category=' + activityScope.id"
+             data-tip="Open these transactions in the full register.">Open in register</a>
+          <button class="btn btn--ghost btn--sm" type="button" @click="activityOpen = false">Close</button>
+        </div>
+      </div>
+    </div>
+
+    {# Goal modal — reuses the categories-page form so users can set,
+       change, or remove a goal without leaving the budget. Shows a
+       live status panel above the form with the current funding %,
+       what's assigned this month, and what's still needed. #}
+    <div class="modal-backdrop" x-show="goalCatId" x-cloak @keydown.escape.window="goalCatId = null">
+      <div class="modal" role="dialog" aria-modal="true" @click.outside="goalCatId = null"
+           style="max-width: 620px;">
+        <button class="modal__close" type="button" @click="goalCatId = null" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <header class="auto-assign__header">
+          <p class="eyebrow">Goal</p>
+          <h3 class="modal__title" id="bd-goal-title" style="margin: 0;">
+            <span x-text="$store.budget.categoryName(goalCatId)"></span>
+            <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);">
+              · <span x-text="monthHeaderLabel()"></span>
+            </span>
+          </h3>
+        </header>
+
+        {# Current-status snapshot — only when a goal already exists.
+           Shows progress bar + 4 stat tiles (target / assigned-MTD /
+           needed-this-month / status). #}
+        <div class="goal-status" x-show="$store.budget.findGoal(goalCatId)" x-cloak>
+          <div class="goal-status__bar" :data-tip="goalStatusTooltip()"
+               role="progressbar"
+               :aria-valuenow="goalPctForModal()"
+               aria-valuemin="0" aria-valuemax="100">
+            <span class="goal-status__fill"
+                  :class="goalPctForModal() >= 100 ? 'goal-status__fill--funded' : (goalPctForModal() >= 50 ? 'goal-status__fill--partial' : 'goal-status__fill--low')"
+                  :style="'width:' + Math.min(100, goalPctForModal()) + '%'"></span>
+            <span class="goal-status__cap"
+                  x-text="goalPctForModal() >= 100 ? '✓ 100% funded' : (goalPctForModal() + '% funded')"></span>
+          </div>
+
+          <dl class="goal-status__stats">
+            <div class="goal-status__stat">
+              <dt>Target</dt>
+              <dd x-text="formatCents(goalCurrentTarget())"></dd>
+            </div>
+            <div class="goal-status__stat">
+              <dt>Assigned (this month)</dt>
+              <dd class="amount--inflow"
+                  x-text="formatCents($store.budget.assignedFor(goalCatId, $store.budget.currentMonth))"></dd>
+            </div>
+            <div class="goal-status__stat">
+              <dt>Available now</dt>
+              <dd :class="categoryAvailable(goalCatId) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(categoryAvailable(goalCatId))"></dd>
+            </div>
+            <div class="goal-status__stat goal-status__stat--needed">
+              <dt>Needed to reach target</dt>
+              <dd :class="$store.budget.goalNeeded(goalCatId) > 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="$store.budget.goalNeeded(goalCatId) > 0 ? formatCents($store.budget.goalNeeded(goalCatId)) : '✓ Funded'"></dd>
+            </div>
+          </dl>
+
+          <p class="goal-status__hint" x-text="goalNarrative()"></p>
+        </div>
+
+        <p class="goal-status__hint goal-status__hint--new"
+           x-show="!$store.budget.findGoal(goalCatId)" x-cloak>
+          No goal set yet. Pick a goal type and target below — the budget will track funding progress against it every month.
+        </p>
+
+        <form @submit.prevent="saveGoal()" style="margin-top: var(--space-md);">
+          <div class="form-stack">
+            <div class="field">
+              <label class="field__label" for="bd-g-type">Goal type</label>
+              <select class="select" id="bd-g-type" x-model="goalForm.type">
+                <template x-for="t in $store.budget.GOAL_TYPES" :key="t.value">
+                  <option :value="t.value" x-text="t.label"></option>
+                </template>
+              </select>
+              <p class="field__hint" x-text="goalTypeHint()"></p>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label class="field__label" for="bd-g-target">Target amount</label>
+                <input class="input" id="bd-g-target" type="text" x-model="goalForm.target"
+                       inputmode="decimal" placeholder="0.00" required
+                       data-tip="Calculator: type expressions like 250+75 — they evaluate on save.">
+                <p class="field__hint calc-preview" x-show="calcPreview(goalForm.target)" x-cloak
+                   x-text="calcPreview(goalForm.target)"></p>
+              </div>
+              <div class="field" x-show="goalForm.type === 'targetByDate'" x-cloak>
+                <label class="field__label" for="bd-g-date">By date</label>
+                <input class="input" id="bd-g-date" type="date" x-model="goalForm.byDate">
+                <p class="field__hint" x-show="goalForm.byDate" x-cloak
+                   x-text="goalDateHint()"></p>
+              </div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Save goal</button>
+            <button class="btn btn--ghost" type="button" @click="removeGoal()"
+                    x-show="$store.budget.findGoal(goalCatId)">Remove goal</button>
+            <button class="btn btn--ghost" type="button" @click="goalCatId = null">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    </div> {# /budgetCollapsed wrapper #}
+
     {# Total budget — bottom summary row matching the columns above. #}
     <div class="budget__group-header budget__total-row" aria-label="Totals for this month">
-      <strong>Total Budget</strong>
-      <span class="num" x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></span>
-      <span class="num" x-text="formatCents(monthlyOutflowTotal())"></span>
-      <span class="num" x-text="formatCents(monthlyAvailableTotal())"></span>
+      <div class="budget__total-label">
+        <span class="budget__total-eyebrow">Month total</span>
+        <strong x-text="monthHeaderLabel()"></strong>
+      </div>
+      <span class="num">
+        <span class="budget__total-mini-label">Assigned</span>
+        <span class="budget__total-value"
+              x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></span>
+      </span>
+      <span class="num">
+        <span class="budget__total-mini-label">Outflow</span>
+        <button type="button" class="budget__activity-btn budget__total-value"
+                :disabled="monthlyOutflowTotal() === 0"
+                @click="openActivity({ kind: 'all', id: '__all', name: 'All categories' })"
+                :data-tip="monthlyOutflowTotal() === 0 ? '' : 'Click to see every transaction this month.'"
+                :class="monthlyOutflowTotal() < 0 ? 'amount--outflow' : ''"
+                x-text="formatCents(monthlyOutflowTotal())"></button>
+      </span>
+      <span class="num">
+        <span class="budget__total-mini-label">Available</span>
+        <span class="budget__total-value"
+              :class="monthlyAvailableTotal() < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(monthlyAvailableTotal())"></span>
+      </span>
     </div>
   </section>
 
@@ -200,7 +765,504 @@ eleventyExcludeFromCollections: true
 <script>
 function budgetView() {
   return {
+    /* Inline-edit modal state — covers create / rename / delete and
+       goal-edit for both groups and categories so users don't have
+       to bounce to /app/categories/ for routine edits. */
+    newGroupOpen: false,
+    newGroupName: "",
+    newCatOpen: false,
+    newCatName: "",
+    newCatGroupId: null,
+    newCatGroupName: "",
+    deleteGroupId: null,
+    deleteGroupName: "",
+    deleteCatId: null,
+    deleteCatName: "",
+    renameOpen: false,
+    renameKind: "",      /* 'group' | 'category' */
+    renameTargetId: null,
+    renameName: "",
+    /* Goal modal state — mirrors /app/categories/'s goalCatId/goalForm
+       so the same form template renders here. */
+    goalCatId: null,
+    goalForm: { type: "monthlyFixed", target: "", byDate: "" },
+    /* Activity drill-down modal — opens when the user clicks any
+       Outflow number. activityScope tells us whether to show a single
+       category, a group of categories, or every category. */
+    activityOpen: false,
+    activityScope: { kind: "category", id: null, name: "", categoryIds: null },
+    /* Auto-assign modal — strategy picker that one-clicks the
+       Assigned column. autoAssignScope sets what gets touched:
+         { kind: 'all' }                 → every non-payment category
+         { kind: 'group', name, ids[] }  → just the categories in one group
+         { kind: 'category', name, id }  → a single category
+       Defaults to "all" when opened from the top toolbar. */
+    autoAssignOpen: false,
+    autoAssignChoice: "",
+    autoAssignScope: { kind: "all", name: "All categories", ids: null },
+    /* Section-level collapse — hides every category row and the
+       column header strip, leaving only the toolbar + Total Budget
+       summary so the user can scan the bottom line at a glance. */
+    budgetCollapsed: false,
+    /* Move-money modal — reallocate Assigned dollars between
+       categories or payment pools in the active month. */
+    moveMoneyOpen: false,
+    moveMoneyForm: { fromId: "", toId: "", amount: "" },
+
     init() {},
+
+    /* ---- Auto-assign --------------------------------------------- */
+    /* Compute per-category cents under each strategy. Returns the
+       same record shape (cats map + total) every time so the modal's
+       preview totals stay deterministic. Payment categories are
+       skipped — those track credit-card spending and shouldn't be
+       overwritten by auto-assign. */
+    _autoAssignPlan(strategy) {
+      var store = this.$store.budget;
+      if (!store.profile) return { cats: {}, total: 0 };
+      var month = store.currentMonth;
+      var self = this;
+      var cats = {};
+      var total = 0;
+      var scope = this.autoAssignScope || { kind: "all" };
+      var scopeIds = scope.kind === "category" && scope.id ? [scope.id]
+                   : scope.kind === "group" && scope.ids ? scope.ids
+                   : null;
+      var scopeSet = scopeIds ? new Set(scopeIds.filter(Boolean)) : null;
+      var allCats = (store.profile.categories || []).filter(function (c) {
+        if (store.isPaymentCategory(c.id)) return false;
+        if (scopeSet && !scopeSet.has(c.id)) return false;
+        return true;
+      });
+      function add(catId, cents) {
+        if (!cents) return;
+        cats[catId] = cents;
+        total += cents;
+      }
+      allCats.forEach(function (c) {
+        if (strategy === "goals") {
+          /* Underfunded — what each goal still needs this month. */
+          var g = store.findGoal(c.id);
+          if (!g) return;
+          var need = store.goalNeeded(c.id, month) || 0;
+          if (need > 0) add(c.id, need);
+        } else if (strategy === "last-month-assigned") {
+          var prev = self._prevMonth(month);
+          var prevAssigned = store.assignedFor(c.id, prev) || 0;
+          if (prevAssigned > 0) add(c.id, prevAssigned);
+        } else if (strategy === "last-month-spent") {
+          var prev2 = self._prevMonth(month);
+          var act = Math.abs(Math.min(0, store.activityFor(c.id, prev2) || 0));
+          if (act > 0) add(c.id, act);
+        } else if (strategy === "avg-3-spent") {
+          var sum = 0;
+          var cursor = month;
+          for (var i = 0; i < 3; i++) {
+            cursor = self._prevMonth(cursor);
+            sum += Math.abs(Math.min(0, store.activityFor(c.id, cursor) || 0));
+          }
+          var avg = Math.round(sum / 3);
+          if (avg > 0) add(c.id, avg);
+        }
+      });
+      return { cats: cats, total: total };
+    },
+    _prevMonth(iso) {
+      var parts = (iso || "").split("-").map(Number);
+      var d = new Date(parts[0], parts[1] - 2, 1);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    },
+    autoAssignStrategies() {
+      var goals = this._autoAssignPlan("goals");
+      var prevA = this._autoAssignPlan("last-month-assigned");
+      var prevS = this._autoAssignPlan("last-month-spent");
+      var avg   = this._autoAssignPlan("avg-3-spent");
+      return [
+        {
+          id: "goals",
+          label: "Underfunded (goals)",
+          hint: "Assigns exactly what each category's goal still needs to reach its target this month.",
+          preview: goals.total,
+          disabled: Object.keys(goals.cats).length === 0,
+        },
+        {
+          id: "last-month-assigned",
+          label: "Last month's assigned",
+          hint: "Copies what you assigned to each category last month. Great for steady, repeatable budgets.",
+          preview: prevA.total,
+          disabled: Object.keys(prevA.cats).length === 0,
+        },
+        {
+          id: "last-month-spent",
+          label: "Last month's spending",
+          hint: "Assigns what each category actually spent last month — useful when last month was a typical month.",
+          preview: prevS.total,
+          disabled: Object.keys(prevS.cats).length === 0,
+        },
+        {
+          id: "avg-3-spent",
+          label: "Average of last 3 months",
+          hint: "Smooths out one-off swings by averaging the last three months of spending per category.",
+          preview: avg.total,
+          disabled: Object.keys(avg.cats).length === 0,
+        },
+      ];
+    },
+    autoAssignAffectedCount() {
+      if (!this.autoAssignChoice) return 0;
+      return Object.keys(this._autoAssignPlan(this.autoAssignChoice).cats).length;
+    },
+    /* Strategy-specific footer blurb. Each one names what's actually
+       happening ("fund goals", "copy last month", etc.) instead of
+       the generic "Will set Assigned for N categories". Total is
+       calculated from the plan so the number always matches what
+       Apply will commit. */
+    autoAssignSummary() {
+      if (!this.autoAssignChoice) return "";
+      var plan = this._autoAssignPlan(this.autoAssignChoice);
+      var n = Object.keys(plan.cats).length;
+      if (n === 0) return "";
+      var total = this.formatCents(plan.total);
+      var scope = this.autoAssignScope || { kind: "all" };
+      /* Scope label is the noun phrase ("Groceries" / "Daily group" /
+         "2 categories"). Lets us name the actual target instead of
+         "1 category" when the user clicked the ⚡ on a single row. */
+      var target;
+      if (scope.kind === "category" && scope.name) {
+        target = scope.name;
+      } else if (scope.kind === "group" && scope.name) {
+        target = n + " " + (n === 1 ? "category" : "categories") +
+                 " in " + scope.name;
+      } else {
+        target = n + " " + (n === 1 ? "category" : "categories");
+      }
+      switch (this.autoAssignChoice) {
+        case "goals":
+          /* Single-category scope: only ever 1 goal. */
+          if (scope.kind === "category") {
+            return "Will fully fund the " + scope.name + " goal (" + total + ").";
+          }
+          return "Will fully fund " + n + " " + (n === 1 ? "goal" : "goals") +
+                 " across " + target + " for " + total + " total.";
+        case "last-month-assigned":
+          return "Will copy last month's plan (" + total + ") to " + target + ".";
+        case "last-month-spent":
+          return "Will mirror last month's actual spending (" + total + ") to " + target + ".";
+        case "avg-3-spent":
+          return "Will assign the 3-month average (" + total + ") to " + target + ".";
+      }
+      return "Will set Assigned for " + target + ".";
+    },
+    openAutoAssign(scope) {
+      this.autoAssignScope = scope || { kind: "all", name: "All categories", ids: null };
+      this.autoAssignChoice = "";
+      this.autoAssignOpen = true;
+    },
+
+    /* ---- Move money --------------------------------------------- */
+    /* Build the dropdown options — every non-hidden category plus
+       payment pools (which ARE categories with isPaymentCategory:
+       true). Each option shows the group prefix + the Available so
+       the user can see at a glance which categories have spare
+       dollars to move from. */
+    moveMoneyCategoryOptions() {
+      void this.$store.budget._listVersion;
+      var store = this.$store.budget;
+      if (!store.profile) return [];
+      var self = this;
+      var view = store.categoryGroupsView() || [];
+      var out = [];
+      view.forEach(function (b) {
+        (b.categories || []).forEach(function (c) {
+          out.push({
+            id: c.id,
+            label: (b.group ? b.group.name + " / " : "") + c.name,
+            available: self.categoryAvailable(c.id),
+          });
+        });
+      });
+      return out;
+    },
+    _assignedFor(catId) {
+      if (!catId) return 0;
+      return this.$store.budget.assignedFor(catId, this.$store.budget.currentMonth) || 0;
+    },
+    openMoveMoney(c) {
+      this.moveMoneyForm = { fromId: c ? c.id : "", toId: "", amount: "" };
+      this.moveMoneyOpen = true;
+    },
+    submitMoveMoney() {
+      var f = this.moveMoneyForm;
+      if (!f.fromId || !f.toId || f.fromId === f.toId) return;
+      var cents = this.parseDollars(f.amount);
+      if (cents <= 0) return;
+      var ok = this.$store.budget.moveMoney(
+        f.fromId, f.toId, cents, this.$store.budget.currentMonth
+      );
+      if (ok) {
+        var fromName = this.$store.budget.categoryName(f.fromId);
+        var toName = this.$store.budget.categoryName(f.toId);
+        this.$store.budget.pushToast(
+          "Moved " + this.formatCents(cents) + " · " + fromName + " → " + toName + "."
+        );
+        this.moveMoneyOpen = false;
+        this.moveMoneyForm = { fromId: "", toId: "", amount: "" };
+      }
+    },
+    applyAutoAssign() {
+      if (!this.autoAssignChoice) return;
+      var plan = this._autoAssignPlan(this.autoAssignChoice);
+      var ids = Object.keys(plan.cats);
+      if (!ids.length) { this.autoAssignOpen = false; return; }
+      var self = this;
+      var month = this.$store.budget.currentMonth;
+      var scope = this.autoAssignScope || { kind: "all", name: "All categories" };
+      var scopeLabel = scope.kind === "category" ? "the " + scope.name + " category"
+                     : scope.kind === "group"    ? scope.name
+                     : "every category";
+      window.PBDialog.confirm({
+        title: "Apply auto-assign?",
+        message: "This will overwrite the Assigned column for " + ids.length +
+                 " categor" + (ids.length === 1 ? "y" : "ies") +
+                 " in " + scopeLabel + " for " + this.monthHeaderLabel() +
+                 " with the chosen strategy. Your existing assignments are replaced.",
+        confirmLabel: "Apply auto-assign",
+      }).then(function (ok) {
+        if (!ok) return;
+        ids.forEach(function (catId) {
+          self.$store.budget.assign(catId, month, plan.cats[catId]);
+        });
+        self.$store.budget.pushToast("Auto-assigned " + ids.length + " categor" + (ids.length === 1 ? "y" : "ies") + ".");
+        self.autoAssignOpen = false;
+        self.autoAssignChoice = "";
+      });
+    },
+
+    /* ---- Activity drill-down ---- */
+    openActivity(scope) {
+      if (!scope) return;
+      this.activityScope = Object.assign(
+        { kind: "category", id: null, name: "", categoryIds: null },
+        scope
+      );
+      this.activityOpen = true;
+    },
+    monthHeaderLabel() {
+      var m = this.$store.budget.currentMonth || "";
+      var parts = m.split("-").map(Number);
+      if (parts.length < 2) return m;
+      var d = new Date(parts[0], parts[1] - 1, 1);
+      return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    },
+    /* Returns flat list of transactions matching the active scope and
+       the currently-active budget month. Splits are expanded so each
+       leg counts only against its own category. */
+    activityTxns() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      var month = this.$store.budget.currentMonth;
+      var scope = this.activityScope || {};
+      var wantedIds = null;
+      if (scope.kind === "category") wantedIds = [scope.id];
+      else if (scope.kind === "group") wantedIds = (scope.categoryIds || []);
+      /* kind === 'all' leaves wantedIds null = match everything. */
+      var wantedSet = wantedIds ? new Set(wantedIds.filter(Boolean)) : null;
+
+      var out = [];
+      (p.transactions || []).forEach(function (t) {
+        if ((t.date || "").slice(0, 7) !== month) return;
+        if (t.transferTxnId) return; /* skip transfer pairs */
+        if (t.splits && t.splits.length) {
+          t.splits.forEach(function (s, i) {
+            if (wantedSet && !wantedSet.has(s.categoryId)) return;
+            out.push({
+              id: t.id, splitKey: "s" + i,
+              date: t.date, accountId: t.accountId, payeeId: t.payeeId,
+              categoryId: s.categoryId, memo: s.memo || t.memo || "",
+              amount: s.amount,
+            });
+          });
+        } else {
+          if (wantedSet && !wantedSet.has(t.categoryId)) return;
+          out.push(t);
+        }
+      });
+      /* Newest first — matches register's default sort. */
+      out.sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); });
+      return out;
+    },
+    activityTotal() {
+      return this.activityTxns().reduce(function (s, t) { return s + (t.amount || 0); }, 0);
+    },
+    /* Click any row in the drill-down to jump straight to that
+       transaction in the register, filtered by account and anchored
+       by the transaction id. The register reads ?focus= and scrolls
+       the matching row into view + highlights it. */
+    openInRegister(t) {
+      if (!t || !t.id) return;
+      var qs = "?account=" + encodeURIComponent(t.accountId || "") +
+               "&focus="   + encodeURIComponent(t.id);
+      this.activityOpen = false;
+      window.location.assign("/app/register/" + qs);
+    },
+
+    /* ---- Inline group + category edits --------------------------- */
+    submitNewGroup() {
+      var name = (this.newGroupName || "").trim();
+      if (!name) return;
+      this.$store.budget.addCategoryGroup(name);
+      this.newGroupOpen = false;
+      this.newGroupName = "";
+      this.$store.budget.pushToast("Group created.");
+    },
+    addCategoryTo(group) {
+      if (!group) return;
+      this.newCatGroupId = group.id;
+      this.newCatGroupName = group.name;
+      this.newCatName = "";
+      this.newCatOpen = true;
+    },
+    submitNewCategory() {
+      var name = (this.newCatName || "").trim();
+      if (!name || !this.newCatGroupId) return;
+      this.$store.budget.addCategory({ name: name, groupId: this.newCatGroupId });
+      this.newCatOpen = false;
+      this.newCatName = "";
+      this.$store.budget.pushToast("Category added.");
+    },
+    openRenameGroup(group) {
+      if (!group) return;
+      this.renameKind = "group";
+      this.renameTargetId = group.id;
+      this.renameName = group.name;
+      this.renameOpen = true;
+    },
+    openRename(c) {
+      if (!c) return;
+      this.renameKind = "category";
+      this.renameTargetId = c.id;
+      this.renameName = c.name;
+      this.renameOpen = true;
+    },
+    submitRename() {
+      var n = (this.renameName || "").trim();
+      if (!n || !this.renameTargetId) return;
+      if (this.renameKind === "group") {
+        this.$store.budget.renameCategoryGroup(this.renameTargetId, n);
+        this.$store.budget.pushToast("Group renamed.");
+      } else {
+        this.$store.budget.renameCategory(this.renameTargetId, n);
+        this.$store.budget.pushToast("Category renamed.");
+      }
+      this.renameOpen = false;
+      this.renameTargetId = null;
+    },
+
+    deleteGroup(group) {
+      if (!group) return;
+      this.deleteGroupId = group.id;
+      this.deleteGroupName = group.name;
+    },
+    confirmDeleteGroup() {
+      if (!this.deleteGroupId) return;
+      this.$store.budget.deleteCategoryGroup(this.deleteGroupId);
+      this.$store.budget.pushToast("Group deleted.");
+      this.deleteGroupId = null;
+    },
+    deleteCategoryRow(c) {
+      if (!c) return;
+      this.deleteCatId = c.id;
+      this.deleteCatName = c.name;
+    },
+    confirmDeleteCategory() {
+      if (!this.deleteCatId) return;
+      this.$store.budget.deleteCategory(this.deleteCatId);
+      this.$store.budget.pushToast("Category deleted.");
+      this.deleteCatId = null;
+    },
+
+    /* ---- Goal modal — same form/fields as /app/categories/ ----- */
+    goalTypeHint() {
+      switch (this.goalForm.type) {
+        case "monthlyFixed": return "Assign at least this amount every month.";
+        case "monthlyTopUp": return "Add this amount on top of whatever rolled over from last month.";
+        case "refillUpTo":   return "After spending, top the category balance back up to this number.";
+        case "targetByDate": return "Save up to this number by the chosen date.";
+      }
+      return "";
+    },
+    openGoal(c) {
+      if (!c) return;
+      this.goalCatId = c.id;
+      var g = this.$store.budget.findGoal(c.id);
+      if (g) {
+        this.goalForm = {
+          type: g.type,
+          target: ((g.target || 0) / 100).toFixed(2),
+          byDate: g.byDate || "",
+        };
+      } else {
+        this.goalForm = { type: "monthlyFixed", target: "", byDate: "" };
+      }
+    },
+    saveGoal() {
+      if (!this.goalCatId) return;
+      this.$store.budget.addGoal({
+        categoryId: this.goalCatId,
+        type: this.goalForm.type,
+        target: this.parseDollars(this.goalForm.target),
+        byDate: this.goalForm.byDate || null,
+      });
+      this.$store.budget.pushToast("Goal saved.");
+      this.goalCatId = null;
+    },
+    removeGoal() {
+      if (!this.goalCatId) return;
+      this.$store.budget.removeGoal(this.goalCatId);
+      this.$store.budget.pushToast("Goal removed.");
+      this.goalCatId = null;
+    },
+
+    /* ---- Goal status helpers (data for the status panel) ---- */
+    goalCurrentTarget() {
+      var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
+      return g ? (g.target || 0) : 0;
+    },
+    goalPctForModal() {
+      var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
+      if (!g || !g.target) return 0;
+      var assigned = this.$store.budget.assignedFor(this.goalCatId, this.$store.budget.currentMonth) || 0;
+      return Math.max(0, Math.min(999, Math.round((assigned / g.target) * 100)));
+    },
+    goalStatusTooltip() {
+      var pct = this.goalPctForModal();
+      var assigned = this.$store.budget.assignedFor(this.goalCatId, this.$store.budget.currentMonth) || 0;
+      var target = this.goalCurrentTarget();
+      return pct + "% funded · " + this.formatCents(assigned) + " of " + this.formatCents(target) + " target";
+    },
+    goalNarrative() {
+      var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
+      if (!g) return "";
+      var need = this.$store.budget.goalNeeded(this.goalCatId) || 0;
+      var pct = this.goalPctForModal();
+      var name = this.$store.budget.categoryName(this.goalCatId);
+      if (need <= 0) return "Goal fully funded for this month. Nothing more needed.";
+      if (pct === 0) return "No dollars assigned yet — assign " + this.formatCents(need) + " to reach the target.";
+      return "You're " + pct + "% there. " + this.formatCents(need) + " more would reach the target for " + name + ".";
+    },
+    goalDateHint() {
+      if (this.goalForm.type !== "targetByDate" || !this.goalForm.byDate) return "";
+      var target = new Date(this.goalForm.byDate);
+      var today = new Date();
+      var monthsBetween = (target.getFullYear() - today.getFullYear()) * 12
+                       + (target.getMonth() - today.getMonth());
+      if (monthsBetween <= 0) return "Target date is in the past or this month.";
+      var amount = this.parseDollars(this.goalForm.target);
+      if (amount <= 0) return "";
+      var perMonth = Math.round(amount / monthsBetween);
+      return "~" + this.formatCents(perMonth) + " per month for " + monthsBetween + " month" + (monthsBetween === 1 ? "" : "s") + ".";
+    },
 
     /* Drag/drop handled by SortableJS via
        /assets/js/ui/sortable-bind.js. Markup carries data-sortable-*. */
@@ -232,12 +1294,17 @@ function budgetView() {
     },
 
     parseDollars(s) {
-      if (!s && s !== 0) return 0;
+      if (s == null || s === "") return 0;
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
       var clean = String(s).replace(/[$,\s]/g, "").trim();
       if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
       var n = Number(clean);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
+    calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
 
     commitAssign(catId, raw) {
       var cents = this.parseDollars(raw);

@@ -20,6 +20,10 @@ eleventyExcludeFromCollections: true
       </p>
     </div>
     <div class="cluster">
+      <button class="btn btn--primary" type="button"
+              x-show="hasAccounts" x-cloak
+              @click="showAdd = true; $nextTick(() => document.getElementById('t-date')?.focus())"
+              data-tip="Add a new transaction to the register.">+ Add transaction</button>
       <button class="btn btn--secondary" type="button" @click="showTransfer = true" :disabled="!hasAccounts"
               data-tip="Move money between two of your own accounts. Creates a paired entry on each side.">Transfer</button>
       <button class="btn btn--secondary" type="button" @click="showReconcile = true" x-show="filterAccountId" x-cloak
@@ -59,61 +63,78 @@ eleventyExcludeFromCollections: true
     </table>
   </section>
 
-  {# Add transaction #}
-  <section class="card" x-show="hasAccounts" x-cloak>
-    <h2 class="card__title">Add transaction</h2>
-    <form @submit.prevent="submitAdd()">
-      <div class="form-row register__add-grid">
-        <div class="field">
-          <label class="field__label" for="t-date">Date</label>
-          <input class="input" id="t-date" type="date" x-model="form.date" required>
-        </div>
-        <div class="field">
-          <label class="field__label" for="t-payee">Payee</label>
-          <input class="input" id="t-payee" type="text" x-model="form.payeeName"
-                 @input="updatePayeeSuggestions()" @focus="updatePayeeSuggestions()" @blur="setTimeout(() => payeeSuggestions = [], 150)"
-                 autocomplete="off">
-          <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
-            <template x-for="p in payeeSuggestions" :key="p.id">
-              <li>
-                <button type="button" @mousedown.prevent="pickPayee(p)" x-text="p.name + ' (' + p.useCount + ')'"></button>
-              </li>
-            </template>
-          </ul>
-        </div>
-        <div class="field">
-          <label class="field__label" for="t-cat">Category</label>
-          <select class="select" id="t-cat" x-model="form.categoryId">
-            <option value="">(uncategorized)</option>
-            <template x-for="c in selectableCategories" :key="c.id">
-              <option :value="c.id" x-text="c.name"></option>
-            </template>
-          </select>
-        </div>
-        <div class="field">
-          <label class="field__label" for="t-amount">Amount</label>
-          <input class="input" id="t-amount" type="text" x-model="form.amount" placeholder="-12.34" inputmode="decimal" required>
-        </div>
-        <div class="field">
-          <label class="field__label" for="t-account">Account</label>
-          <select class="select" id="t-account" x-model="form.accountId" required>
-            <template x-for="a in openAccounts" :key="a.id">
-              <option :value="a.id" x-text="a.name"></option>
-            </template>
-          </select>
-        </div>
+  {# Add transaction — hidden until the header "+ Add transaction"
+     button opens it. No redundant CTA card. #}
+  <section class="card register__add" x-show="hasAccounts && showAdd" x-cloak>
+    <div x-transition.opacity>
+      <div class="cluster" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--space-sm);">
+        <h2 class="card__title" style="margin: 0;">Add transaction</h2>
+        <button class="btn btn--ghost btn--sm" type="button" @click="showAdd = false">Cancel</button>
       </div>
-      <div class="field" style="margin-top: var(--space-sm);">
-        <label class="field__label" for="t-memo">Memo (optional)</label>
-        <input class="input" id="t-memo" type="text" x-model="form.memo">
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Add transaction</button>
-        <label class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted);">
-          <input type="checkbox" x-model="form.cleared"> Cleared
-        </label>
-      </div>
-    </form>
+      <form @submit.prevent="submitAdd(); showAdd = false">
+        <div class="form-row register__add-grid">
+          <div class="field">
+            <label class="field__label" for="t-date">Date</label>
+            <input class="input" id="t-date" type="date" x-model="form.date" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="t-payee">Payee</label>
+            <input class="input" id="t-payee" type="text" x-model="form.payeeName"
+                   @input="updatePayeeSuggestions()" @focus="updatePayeeSuggestions()" @blur="setTimeout(() => payeeSuggestions = [], 150)"
+                   autocomplete="off">
+            <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
+              <template x-for="p in payeeSuggestions" :key="p.id">
+                <li>
+                  <button type="button" @mousedown.prevent="pickPayee(p)" x-text="p.name + ' (' + p.useCount + ')'"></button>
+                </li>
+              </template>
+            </ul>
+          </div>
+          <div class="field">
+            <label class="field__label" for="t-cat">Category</label>
+            <select class="select" id="t-cat" x-model="form.categoryId">
+              <option value="">(uncategorized)</option>
+              <template x-for="c in selectableCategories" :key="c.id">
+                <option :value="c.id" x-text="c.name"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="t-amount">Amount</label>
+            <input class="input" id="t-amount" type="text" x-model="form.amount" placeholder="-12.34 · or 12+8.99"
+                   inputmode="decimal" required
+                   data-tip="Calculator: type expressions like 12.50 + 8.99 or 100 - 25 * 2 — they evaluate on save.">
+            <p class="field__hint calc-preview" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="t-account">Account</label>
+            <select class="select" id="t-account" x-model="form.accountId" required>
+              <template x-for="a in openAccounts" :key="a.id">
+                <option :value="a.id" x-text="a.name"></option>
+              </template>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-top: var(--space-sm);">
+          <label class="field__label" for="t-memo">Memo (optional)</label>
+          <input class="input" id="t-memo" type="text" x-model="form.memo">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Add transaction</button>
+          <button class="btn btn--ghost" type="button" @click="showAdd = false">Cancel</button>
+          <span class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted); align-items: center;">
+            <button type="button"
+                    class="cleared-toggle"
+                    :aria-pressed="form.cleared.toString()"
+                    @click="form.cleared = !form.cleared"
+                    :data-tip="form.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
+              <span x-show="form.cleared">&#10003;</span>
+            </button>
+            <span>Cleared</span>
+          </span>
+        </div>
+      </form>
+    </div>
   </section>
 
   {# Register table #}
@@ -140,42 +161,52 @@ eleventyExcludeFromCollections: true
     <table class="register__table" x-show="!isMobile" x-cloak>
       <thead>
         <tr>
-          <th scope="col">Date</th>
-          <th scope="col">Account</th>
-          <th scope="col">Payee</th>
-          <th scope="col">Category</th>
-          <th scope="col">Memo</th>
-          <th scope="col" class="num">Amount</th>
-          <th scope="col" class="col-cleared" data-tip="Cleared means the transaction has posted at your bank. Reconciled (R) means it's locked.">
+          <th scope="col" class="col-date" data-tip="Date the transaction occurred.">Date</th>
+          <th scope="col" data-tip="Account the entry belongs to.">Account</th>
+          <th scope="col" class="col-payee" data-tip="Payee or transfer description.">Payee</th>
+          <th scope="col" data-tip="Category assigned to this entry. Splits show a 'split (N)' badge.">Category</th>
+          <th scope="col" data-tip="Short note. Optional.">Memo</th>
+          <th scope="col" class="num" data-tip="Negative = outflow (red). Positive = inflow (green).">Amount</th>
+          <th scope="col" class="col-cleared" data-tip="Cleared = posted at your bank. Reconciled (R) means it's locked from edits.">
             <span aria-label="Cleared">C</span>
           </th>
-          <th scope="col" class="num">Actions</th>
+          <th scope="col" class="num" data-tip="Edit, split, delete, or unlock the row.">Actions</th>
         </tr>
       </thead>
       <tbody>
         <template x-for="t in visibleTransactions()" :key="t.id">
-          <tr :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id }">
+          <tr :data-txn-id="t.id"
+              :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id }">
             {# Display mode #}
             <template x-if="editingId !== t.id">
-              <td x-text="t.date"></td>
-            </template>
-            <template x-if="editingId !== t.id">
-              <td x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></td>
-            </template>
-            <template x-if="editingId !== t.id">
-              <td x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '')"></td>
-            </template>
-            <template x-if="editingId !== t.id">
-              <td>
-                <span x-show="!t.splits" x-cloak x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? '' : '—')"></span>
-                <span x-show="t.splits" x-cloak class="badge">split (<span x-text="t.splits?.length"></span>)</span>
+              <td class="col-date"
+                  :data-tip="t.date">
+                <span x-html="fmtDateCell(t.date)"></span>
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td x-text="t.memo"></td>
+              <td x-text="$store.budget.findAccount(t.accountId)?.name || '—'"
+                  :data-tip="$store.budget.findAccount(t.accountId)?.name || ''"></td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(t.amount)"></td>
+              <td class="col-payee"
+                  x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '—')"
+                  :data-tip="t.transferTxnId ? 'Paired transfer entry.' : ($store.budget.payeeName(t.payeeId) || '')"></td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td>
+                <span x-show="!t.splits" x-cloak x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? '' : '—')"
+                      :data-tip="$store.budget.categoryName(t.categoryId) || ''"></span>
+                <span x-show="t.splits" x-cloak class="badge"
+                      :data-tip="'This transaction is split across ' + (t.splits?.length || 0) + ' categories.'">split (<span x-text="t.splits?.length"></span>)</span>
+              </td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td x-text="t.memo" :data-tip="t.memo || ''" style="color: var(--fg-muted);"></td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(t.amount)"
+                  :data-tip="(t.amount < 0 ? 'Outflow ' : 'Inflow ') + formatCents(Math.abs(t.amount))"></td>
             </template>
             <template x-if="editingId !== t.id">
               <td class="col-cleared">
@@ -184,19 +215,59 @@ eleventyExcludeFromCollections: true
                         :aria-pressed="t.cleared.toString()"
                         :data-locked="t.reconciled.toString()"
                         @click="toggleCleared(t)"
-                        title="Cleared">
+                        :data-tip="t.reconciled ? 'Reconciled and locked. Unlock to change.' : (t.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).')">
                   <span x-show="t.cleared">&#10003;</span>
                 </button>
               </td>
             </template>
             <template x-if="editingId !== t.id">
               <td class="num">
-                <div class="cluster" style="justify-content: flex-end;">
-                  <button class="btn btn--ghost btn--sm" type="button" @click="startEdit(t)" x-show="!t.reconciled && !t.transferTxnId">Edit</button>
-                  <button class="btn btn--ghost btn--sm" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId"
-                          data-tip="Divide this transaction across multiple categories (groceries + household, for example).">Split</button>
-                  <button class="btn btn--ghost btn--sm" type="button" @click="unlock(t)" x-show="t.reconciled">Unlock</button>
-                  <button class="btn btn--danger btn--sm" type="button" @click="del(t)" x-show="!t.reconciled">Delete</button>
+                <div class="cluster" style="justify-content: flex-end; flex-wrap: nowrap; gap: var(--space-3xs);">
+                  <button class="btn btn--icon" type="button" @click="startEdit(t)" x-show="!t.reconciled && !t.transferTxnId"
+                          aria-label="Edit transaction"
+                          data-tip="Edit this transaction inline.">
+                    {# Lucide "pencil" — pencil with eraser end + clear
+                       angled body. Matches the trash/split weight. #}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path>
+                      <line x1="15" y1="5" x2="19" y2="9"></line>
+                    </svg>
+                  </button>
+                  <button class="btn btn--icon" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId"
+                          aria-label="Split transaction"
+                          data-tip="Divide this transaction across multiple categories (groceries + household, for example).">
+                    {# Lucide "git-fork" — one stem branching into two: the
+                       canonical split metaphor. #}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="6" cy="5" r="2"></circle>
+                      <circle cx="18" cy="5" r="2"></circle>
+                      <circle cx="12" cy="19" r="2"></circle>
+                      <path d="M6 7v3a2 2 0 002 2h8a2 2 0 002-2V7"></path>
+                      <line x1="12" y1="12" x2="12" y2="17"></line>
+                    </svg>
+                  </button>
+                  <button class="btn btn--icon" type="button" @click="unlock(t)" x-show="t.reconciled"
+                          aria-label="Unlock reconciled transaction"
+                          data-tip="Unlock this reconciled entry so you can edit it.">
+                    {# Lucide "unlock" — shackle hinged open on one side. #}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 019.9-1"></path>
+                    </svg>
+                  </button>
+                  <button class="btn btn--icon" type="button" @click="del(t)" x-show="!t.reconciled"
+                          aria-label="Delete transaction"
+                          data-tip="Permanently delete this transaction."
+                          style="color: var(--danger);">
+                    {# Lucide "trash-2" — clearer lid handle and body
+                       lines than the hand-rolled trash glyph. #}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                      <path d="M10 11v6M14 11v6"></path>
+                      <path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"></path>
+                    </svg>
+                  </button>
                 </div>
               </td>
             </template>
@@ -235,12 +306,18 @@ eleventyExcludeFromCollections: true
             </template>
             <template x-if="editingId === t.id">
               <td class="col-cleared">
-                <input type="checkbox" x-model="edit.cleared" aria-label="Cleared">
+                <button type="button"
+                        class="cleared-toggle"
+                        :aria-pressed="edit.cleared.toString()"
+                        @click="edit.cleared = !edit.cleared"
+                        :data-tip="edit.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
+                  <span x-show="edit.cleared">&#10003;</span>
+                </button>
               </td>
             </template>
             <template x-if="editingId === t.id">
               <td class="num">
-                <div class="cluster" style="justify-content: flex-end;">
+                <div class="cluster register__edit-actions">
                   <button class="btn btn--primary btn--sm" type="button" @click="saveEdit()">Save</button>
                   <button class="btn btn--ghost btn--sm" type="button" @click="cancelEdit()">Cancel</button>
                 </div>
@@ -340,10 +417,16 @@ eleventyExcludeFromCollections: true
               <label class="field__label">Memo</label>
               <input class="input" type="text" x-model="edit.memo">
             </div>
-            <label class="cluster" style="gap: var(--space-2xs);">
-              <input type="checkbox" x-model="edit.cleared">
+            <span class="cluster" style="gap: var(--space-2xs); align-items: center;">
+              <button type="button"
+                      class="cleared-toggle"
+                      :aria-pressed="edit.cleared.toString()"
+                      @click="edit.cleared = !edit.cleared"
+                      :data-tip="edit.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
+                <span x-show="edit.cleared">&#10003;</span>
+              </button>
               <span>Cleared</span>
-            </label>
+            </span>
             <div class="form-actions">
               <button class="btn btn--primary btn--sm" type="button" @click="saveEdit()">Save</button>
               <button class="btn btn--ghost btn--sm" type="button" @click="cancelEdit()">Cancel</button>
@@ -447,7 +530,9 @@ eleventyExcludeFromCollections: true
   {# Split editor modal #}
   <div class="modal-backdrop" x-show="splitTxnId" x-cloak @keydown.escape.window="splitTxnId = null">
     <div class="modal" role="dialog" aria-modal="true" @click.outside="splitTxnId = null" style="max-width: 720px;">
-      <button class="modal__close" type="button" @click="splitTxnId = null" aria-label="Close">&times;</button>
+      <button class="modal__close" type="button" @click="splitTxnId = null" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
       <h3 class="modal__title">Split transaction</h3>
       <p style="color: var(--fg-muted);">
         Divide this transaction across multiple categories. The sum of the splits becomes the transaction's amount.
@@ -479,7 +564,14 @@ eleventyExcludeFromCollections: true
               </td>
               <td><input class="input" type="text" x-model="s.memo"></td>
               <td class="num"><input class="input" type="text" x-model="s.amount" inputmode="decimal" style="text-align: right;"></td>
-              <td><button class="btn btn--ghost btn--sm" type="button" @click="splitForm.splice(i, 1)">&times;</button></td>
+              <td>
+                <button class="modal__close split-remove" type="button"
+                        @click="splitForm.splice(i, 1)"
+                        aria-label="Remove split row"
+                        data-tip="Remove this split row.">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+                </button>
+              </td>
             </tr>
           </template>
         </tbody>
@@ -509,6 +601,7 @@ function registerView() {
     splitForm: [],
     isMobile: false,
     expandedTxnId: null,
+    showAdd: false,
 
     form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false },
     edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false },
@@ -532,6 +625,23 @@ function registerView() {
       var onChange = function (e) { self.isMobile = e.matches; };
       if (mq.addEventListener) mq.addEventListener("change", onChange);
       else if (mq.addListener) mq.addListener(onChange);
+
+      /* ?focus=<txnId> — sent from the budget drill-down. Find the
+         row and scroll + flash it once Alpine has rendered. The
+         row matches via data-txn-id (added on the <tr>). */
+      var focusId = params.get("focus");
+      if (focusId) {
+        this.$nextTick(function () {
+          /* Defer one more tick so visibleTransactions() has populated. */
+          setTimeout(function () {
+            var row = document.querySelector('[data-txn-id="' + focusId + '"]');
+            if (!row) return;
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+            row.classList.add("register__row--focus");
+            setTimeout(function () { row.classList.remove("register__row--focus"); }, 2200);
+          }, 60);
+        });
+      }
     },
 
     get hasAccounts() {
@@ -613,13 +723,36 @@ function registerView() {
 
     formatCents(c) { return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
 
+    /* "May 15" big + "2026" muted on one line. Keeps the column narrow
+       and easy to scan, while exposing the full ISO via the row's
+       data-tip. Uses a span structure so we can style each part. */
+    fmtDateCell(iso) {
+      if (!iso) return "";
+      var parts = iso.split("-").map(Number);
+      var d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+      var md = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      var y  = d.getFullYear();
+      return "<strong>" + md + "</strong> " + y;
+    },
+
     parseDollars(s) {
-      if (!s && s !== 0) return 0;
+      /* Prefer the YNAB-style calculator parser if it's loaded — lets
+         users type "12.50 + 8.99", "100 - 25 * 2", "(50)" etc. and have
+         them evaluate before save. Falls back to the simple parser if
+         PBCalc hasn't booted (e.g. degraded JS environment). */
+      if (s == null || s === "") return 0;
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
       var clean = String(s).replace(/[$,\s]/g, "").trim();
       if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
       var n = Number(clean);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
+    /* "= $X.XX" hint when the user types a math expression in an
+       amount input. Empty when no operator is present. */
+    calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
 
     updateUrl() {
       var base = window.location.pathname;
@@ -694,13 +827,27 @@ function registerView() {
     },
 
     unlock(t) {
-      if (!confirm("Unlock this reconciled transaction? You will need to reconcile the account again to lock it.")) return;
-      this.$store.budget.unlockReconciled(t.id);
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Unlock this reconciled transaction?",
+        message: "Reconciled entries are locked so the cleared balance stays in sync with your statement. Unlocking means you'll need to reconcile the account again to re-lock it.",
+        confirmLabel: "Unlock transaction",
+        danger: true,
+      }).then(function (ok) {
+        if (ok) self.$store.budget.unlockReconciled(t.id);
+      });
     },
 
     del(t) {
-      if (!confirm("Delete this transaction?")) return;
-      this.$store.budget.deleteTransaction(t.id);
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Delete this transaction?",
+        message: "This permanently removes the entry from the register and adjusts the account balance. You can recover it from a profile backup if needed.",
+        confirmLabel: "Delete transaction",
+        danger: true,
+      }).then(function (ok) {
+        if (ok) self.$store.budget.deleteTransaction(t.id);
+      });
     },
 
     /* ---- Splits ---- */

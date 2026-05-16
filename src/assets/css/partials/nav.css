@@ -212,6 +212,26 @@
   border-radius: var(--radius-input);
 }
 .site-header__search:hover { background: var(--bg-alt); color: var(--accent); }
+/* Undo / redo header buttons — same chrome as search, just no
+   special class so they pick up the action cluster's gap. */
+.site-header__iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  cursor: pointer;
+  border-radius: var(--radius-input);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.site-header__iconbtn:hover { background: var(--bg-alt); color: var(--accent); }
+.site-header__iconbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 /* Search modal — lazy Pagefind UI. The [hidden] attribute is the source
    of truth; the layout rules only apply when not hidden so the modal
@@ -405,7 +425,7 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
   padding: var(--space-sm) var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 
   position: fixed;
   inset: 0 30% 0 0;
@@ -451,26 +471,61 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
     position: sticky;
     top: 0;
     inset: auto;
+    /* svh (small viewport height) accounts for mobile browser chrome;
+       falls back to vh on older browsers. min-height ensures we never
+       collapse if a parent constrains us. */
     height: 100vh;
+    height: 100svh;
+    min-height: 100vh;
     transform: none;
     padding-top: calc(4rem + var(--space-sm));
+    padding-bottom: var(--space-sm);
   }
   .app-sidebar__close { display: none; }
 }
 
+/* Make the accounts panel grab all remaining vertical space between
+   the nav block above and the footer below, and scroll internally
+   when its list overflows. Without this, the sidebar element is full
+   height but the accounts content only takes its intrinsic height —
+   leaving everything below the last visible row empty. */
+.app-sidebar__accounts {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Hide the scrollbar but keep wheel/touch scrolling. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.app-sidebar__accounts::-webkit-scrollbar { display: none; }
+
 /* Floating sidebar toggle was replaced by the header hamburger. */
 .app-sidebar-toggle { display: none; }
 
-.app-nav__list { display: flex; flex-direction: column; gap: 2px; }
+.app-nav__list { display: flex; flex-direction: column; gap: 1px; }
+/* Tighter nav rows with icons — icon-left, label-right. 0.35rem
+   vertical padding keeps the 14-ish links compact so the accounts
+   panel has room. */
 .app-nav__link {
-  display: block;
-  padding: 0.6rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: 0.35rem 0.65rem;
   color: var(--fg);
   text-decoration: none;
   border-radius: var(--radius-input);
   font-size: var(--fs-sm);
   font-weight: 500;
+  line-height: 1.3;
 }
+.app-nav__icon {
+  flex-shrink: 0;
+  color: var(--fg-muted);
+  transition: color var(--t-fast);
+}
+.app-nav__link:hover .app-nav__icon { color: var(--fg); }
+.app-nav__link[aria-current="page"] .app-nav__icon { color: var(--accent); }
+.app-nav__label { min-width: 0; }
 .app-nav__link:hover { background: var(--bg-alt); }
 .app-nav__link[aria-current="page"] {
   background: var(--accent-soft);
@@ -480,57 +535,252 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
 .app-sidebar__footer {
   margin-top: auto;
   border-top: 1px solid var(--border-soft);
-  padding-top: var(--space-sm);
+  padding-top: var(--space-2xs);
   font-size: var(--fs-xs);
   color: var(--fg-muted);
+  line-height: 1.3;
 }
-.last-saved { margin: 0 0 var(--space-2xs); }
+.last-saved { margin: 0 0 var(--space-3xs); }
 .app-sidebar__exit { color: var(--fg-muted); }
 
 /* Profile switcher */
 .profile-switcher { position: relative; }
+/* Profile pill — avatar | label+name | chevron. Avatar carries the
+   monogram (first letter of each word). Hover lifts the accent
+   border so the whole pill reads as a single tappable surface.
+
+   box-sizing + max-width keep the pill inside the sidebar even when
+   the name wraps to multiple lines and the row grows. */
 .profile-switcher__current {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "avatar text chevron";
   align-items: center;
-  gap: var(--space-2xs);
+  column-gap: var(--space-2xs);
   width: 100%;
-  padding: 0.55rem 0.7rem;
-  background: var(--bg-alt);
-  border: 1px solid var(--border-soft);
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.55rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-input);
   color: var(--fg);
   text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.profile-switcher__label { font-size: var(--fs-xs); color: var(--fg-subtle); display: block; }
-.profile-switcher__name { flex: 1; font-weight: 600; font-size: var(--fs-sm); }
-.profile-switcher__menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0; right: 0;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
-  z-index: 10;
-  padding: var(--space-2xs) 0;
+.profile-switcher__current:hover {
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+  border-color: var(--accent);
+}
+.profile-switcher__current:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.profile-switcher__current[aria-expanded="true"] {
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+  border-color: var(--accent);
+}
+
+.profile-switcher__avatar {
+  grid-area: avatar;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg,
+    var(--accent),
+    color-mix(in oklab, var(--accent), var(--ink) 30%));
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: var(--radius-input);
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+}
+
+.profile-switcher__text {
+  grid-area: text;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.profile-switcher__label {
+  font-size: 0.65rem;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  line-height: 1;
+}
+.profile-switcher__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  /* Auto-scaling — shrinks the name on narrow sidebars instead of
+     character-by-character wrapping. Maxes at 1.125rem on a wide
+     sidebar (~260px), floors at 0.85rem on a very narrow one. */
+  font-size: clamp(0.85rem, 6.5cqi, 1.125rem);
+  line-height: 1.2;
+  min-width: 0;
+  /* Wrap only at word boundaries — never break mid-word. */
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  text-wrap: balance;
+}
+/* Establish a container so the clamp above can use container query
+   units (cqi). Falls back to viewport units for browsers without
+   container query unit support. */
+.profile-switcher { container-type: inline-size; }
+
+.profile-switcher__chevron {
+  grid-area: chevron;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--fg-muted);
+  transition: transform var(--t-fast), color var(--t-fast);
+}
+.profile-switcher__chevron svg { width: 14px; height: 14px; }
+.profile-switcher__chevron.is-open { transform: rotate(180deg); color: var(--accent); }
+.profile-switcher__current:hover .profile-switcher__chevron { color: var(--accent); }
+
+/* Dropdown menu items — avatar | name | check. Active item uses
+   accent text + accent avatar + check, without a heavy bg tint so
+   the list still reads as a list rather than 1 highlighted block. */
+.profile-switcher__menu-head {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--fg-muted);
+  padding: var(--space-2xs) var(--space-sm) var(--space-3xs);
 }
 .profile-switcher__item {
-  display: block;
+  display: grid;
+  grid-template-columns: 32px 1fr 18px;
+  align-items: center;
+  column-gap: var(--space-sm);
   width: 100%;
-  padding: 0.55rem 0.85rem;
+  padding: 0.5rem var(--space-sm);
+  background: transparent;
+  border: 0;
   text-align: left;
-  color: var(--fg);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
   text-decoration: none;
-  font-size: var(--fs-sm);
+  border-left: 3px solid transparent;
+  transition: background var(--t-fast), border-color var(--t-fast);
 }
-.profile-switcher__item:hover { background: var(--bg-alt); }
+.profile-switcher__item:hover {
+  background: color-mix(in oklab, var(--accent) 5%, var(--bg-elevated));
+}
+.profile-switcher__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.profile-switcher__item.is-active {
+  background: color-mix(in oklab, var(--accent) 10%, var(--bg-elevated));
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.profile-switcher__item-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: var(--radius-input);
+  letter-spacing: 0.02em;
+}
+.profile-switcher__item.is-active .profile-switcher__item-avatar {
+  background: linear-gradient(135deg,
+    var(--accent),
+    color-mix(in oklab, var(--accent), var(--ink) 30%));
+  color: #fff;
+}
+.profile-switcher__item-name {
+  min-width: 0;
+  line-height: 1.25;
+  /* Wrap at word boundaries only, never mid-word. */
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.profile-switcher__item-check {
+  color: var(--accent);
+  flex-shrink: 0;
+  align-self: center;
+  justify-self: end;
+}
+/* Manage profiles row — full-width cog + label, sits below a divider
+   and reads as a secondary action rather than another profile. */
 .profile-switcher__divider {
   height: 1px;
-  margin: var(--space-2xs) 0;
   background: var(--border-soft);
+  margin: var(--space-2xs) 0;
+}
+.profile-switcher__item--manage {
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  grid-template-columns: 32px 1fr;
+  font-weight: 500;
+}
+/* Icon slot lines up with the avatar column in the items above so
+   the labels share a baseline. The SVG inside stays at its authored
+   size (16x16) — no auto-stretching to fill the slot. */
+.profile-switcher__item-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-muted);
+}
+.profile-switcher__item-icon svg { width: 16px; height: 16px; display: block; }
+.profile-switcher__item--manage:hover { color: var(--accent); background: var(--bg-alt); }
+.profile-switcher__item--manage:hover .profile-switcher__item-icon { color: var(--accent); }
+/* Dropdown menu container. Higher elevation than the trigger pill,
+   pulls in close so the avatars line up with the trigger's avatar. */
+.profile-switcher__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+  padding: var(--space-2xs) 0;
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .profile-switcher__menu { animation: prof-menu-in 140ms ease-out both; }
+  @keyframes prof-menu-in {
+    from { transform: translateY(-4px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
 }
 
 /* Account list in app sidebar */
-.app-sidebar__accounts { display: flex; flex-direction: column; gap: var(--space-sm); }
+.app-sidebar__accounts { display: flex; flex-direction: column; gap: var(--space-2xs); }
 .app-sidebar__heading {
   font-size: var(--fs-xs);
   text-transform: uppercase;
@@ -538,6 +788,13 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
   color: var(--fg-subtle);
   font-weight: 600;
 }
+/* Sidebar accounts panel — opt into container queries so the
+   account list layout can adapt when the sidebar is narrowed via
+   the drag handle. Keyed by inline-size of the panel itself, not
+   the viewport, so the stacked variant kicks in only when actually
+   needed. */
+.app-sidebar__accounts { container-type: inline-size; container-name: acctpanel; }
+
 .acct-group__name {
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -549,7 +806,7 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
   align-items: center;
   gap: var(--space-2xs);
   width: 100%;
-  padding: 0.25rem 0;
+  padding: 0.15rem 0;
   background: none;
   border: 0;
   color: var(--fg-muted);
@@ -559,32 +816,69 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
   letter-spacing: 0.04em;
   cursor: pointer;
   min-height: auto;
+  text-align: left;
+  line-height: 1.2;
 }
 .acct-group__head:not(:disabled):hover { color: var(--accent); }
+.acct-group__head > span:not(.group-toggle__chevron) {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
 .acct-group__list { display: flex; flex-direction: column; gap: 0; }
+
 .acct-link {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 0.35rem 0.5rem;
+  padding: 0.25rem 0.5rem;
   border-radius: var(--radius-input);
   text-decoration: none;
   color: var(--fg);
   font-size: var(--fs-sm);
   gap: var(--space-2xs);
+  line-height: 1.3;
 }
 .acct-link:hover { background: var(--bg-alt); }
-.acct-link__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-link__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
 .acct-link__balance {
   font-variant-numeric: tabular-nums;
   color: var(--fg-muted);
   font-size: var(--fs-xs);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .acct-link__balance.is-negative { color: var(--danger); }
+
+/* Thin-sidebar variant — when the panel is narrower than 220px the
+   side-by-side name/balance layout truncates names to 3-4 characters
+   ("Sav…", "4…"). Stack the balance under the name on its own line so
+   nothing gets cut and the column reads as a list. */
+@container acctpanel (max-width: 220px) {
+  .acct-link {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1px;
+    padding: 0.4rem 0.5rem;
+  }
+  .acct-link__name { white-space: normal; word-break: break-word; }
+  .acct-link__balance { font-size: 0.78rem; font-weight: 600; color: var(--fg); }
+  .acct-link__balance.is-negative { color: var(--danger); }
+  .acct-group__head {
+    white-space: normal;
+    line-height: 1.2;
+  }
+}
 .acct-totals {
-  padding-top: var(--space-2xs);
+  padding-top: var(--space-3xs);
   border-top: 1px solid var(--border-soft);
+  line-height: 1.3;
 }
 .acct-totals p {
   display: flex;

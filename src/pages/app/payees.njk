@@ -184,9 +184,17 @@ function payeesView() {
     },
 
     deletePayee(p) {
-      if (!confirm("Delete '" + p.name + "'? " + p.count + " transaction(s) will lose the payee but stay intact.")) return;
-      this.$store.budget.deletePayee(p.id);
-      this.$store.budget.pushToast("Payee deleted.");
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Delete payee '" + p.name + "'?",
+        message: p.count + " transaction" + (p.count === 1 ? "" : "s") + " will lose the payee link but stay in the register. Their categories and amounts are unchanged.",
+        confirmLabel: "Delete payee",
+        danger: true,
+      }).then(function (ok) {
+        if (!ok) return;
+        self.$store.budget.deletePayee(p.id);
+        self.$store.budget.pushToast("Payee deleted.");
+      });
     },
 
     openMerge(p) {

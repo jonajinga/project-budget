@@ -39,25 +39,35 @@ eleventyExcludeFromCollections: true
                 x-text="group.group ? group.group.name : 'Ungrouped'"></h2>
           </div>
           <div class="cluster">
-            <button class="btn btn--ghost btn--sm" type="button"
+            <button class="btn btn--icon" type="button"
                     x-show="group.group"
                     :disabled="gIdx === 0"
                     @click="$store.budget.moveCategoryGroup(group.group.id, Math.max(0, gIdx - 1))"
-                    data-tip="Move this group up.">&uarr;</button>
-            <button class="btn btn--ghost btn--sm" type="button"
+                    aria-label="Move group up"
+                    data-tip="Move this group up.">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="4 10 8 6 12 10"></polyline>
+              </svg>
+            </button>
+            <button class="btn btn--icon" type="button"
                     x-show="group.group"
                     :disabled="gIdx >= ($store.budget.profile.categoryGroups.length - 1)"
                     @click="$store.budget.moveCategoryGroup(group.group.id, gIdx + 1)"
-                    data-tip="Move this group down.">&darr;</button>
+                    aria-label="Move group down"
+                    data-tip="Move this group down.">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="4 6 8 10 12 6"></polyline>
+              </svg>
+            </button>
             <button class="btn btn--secondary btn--sm" type="button"
                     @click="addCatGroupId = group.group ? group.group.id : ''; addCatName = ''; showCat = true;"
                     :disabled="!group.group">Add category</button>
             <button class="btn btn--ghost btn--sm" type="button"
                     x-show="group.group"
-                    @click="(() => { const n = prompt('Rename group', group.group.name); if (n) $store.budget.renameCategoryGroup(group.group.id, n); })()">Rename</button>
+                    @click="PBDialog.prompt({ title: 'Rename group', label: 'Group name', defaultValue: group.group.name, okLabel: 'Rename' }).then(n => { if (n) $store.budget.renameCategoryGroup(group.group.id, n); })">Rename</button>
             <button class="btn btn--danger btn--sm" type="button"
                     x-show="group.group"
-                    @click="if (confirm('Remove this group? Categories will be unassigned but kept.')) $store.budget.deleteCategoryGroup(group.group.id);">Remove</button>
+                    @click="PBDialog.confirm({ title: 'Remove this group?', message: 'Categories inside this group will be unassigned but kept. Their activity and goals stay intact.', confirmLabel: 'Remove group', danger: true }).then(ok => { if (ok) $store.budget.deleteCategoryGroup(group.group.id); })">Remove</button>
           </div>
         </header>
 
@@ -86,20 +96,30 @@ eleventyExcludeFromCollections: true
                 <td class="num" x-text="goalTargetLabel(c.id)"></td>
                 <td class="num">
                   <div class="cluster" style="justify-content: flex-end;">
-                    <button class="btn btn--ghost btn--sm" type="button"
+                    <button class="btn btn--icon" type="button"
                             :disabled="cIdx === 0"
                             @click="$store.budget.moveCategory(c.id, group.group?.id, Math.max(0, cIdx - 1))"
-                            data-tip="Move up within this group.">&uarr;</button>
-                    <button class="btn btn--ghost btn--sm" type="button"
+                            aria-label="Move category up"
+                            data-tip="Move up within this group.">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="4 10 8 6 12 10"></polyline>
+                      </svg>
+                    </button>
+                    <button class="btn btn--icon" type="button"
                             :disabled="cIdx >= (group.categories.length - 1)"
                             @click="$store.budget.moveCategory(c.id, group.group?.id, cIdx + 1)"
-                            data-tip="Move down within this group.">&darr;</button>
+                            aria-label="Move category down"
+                            data-tip="Move down within this group.">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="4 6 8 10 12 6"></polyline>
+                      </svg>
+                    </button>
                     <button class="btn btn--ghost btn--sm" type="button" @click="openGoal(c)">Goal</button>
                     <button class="btn btn--ghost btn--sm" type="button"
-                            @click="(() => { const n = prompt('Rename category', c.name); if (n) $store.budget.renameCategory(c.id, n); })()">Rename</button>
+                            @click="PBDialog.prompt({ title: 'Rename category', label: 'Category name', defaultValue: c.name, okLabel: 'Rename' }).then(n => { if (n) $store.budget.renameCategory(c.id, n); })">Rename</button>
                     <button class="btn btn--danger btn--sm" type="button"
                             x-show="!$store.budget.isPaymentCategory(c.id)"
-                            @click="if (confirm('Delete category? Activity becomes uncategorized.')) $store.budget.deleteCategory(c.id);">Delete</button>
+                            @click="PBDialog.confirm({ title: 'Delete this category?', message: c.name + ' will be removed. Its activity becomes uncategorized but stays in the register. Goals on this category are removed.', confirmLabel: 'Delete category', danger: true }).then(ok => { if (ok) $store.budget.deleteCategory(c.id); })">Delete</button>
                   </div>
                 </td>
               </tr>
@@ -214,12 +234,17 @@ function categoriesView() {
     },
 
     parseDollars(s) {
-      if (!s && s !== 0) return 0;
+      if (s == null || s === "") return 0;
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
       var clean = String(s).replace(/[$,\s]/g, "").trim();
       if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
       var n = Number(clean);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
+    calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
 
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });

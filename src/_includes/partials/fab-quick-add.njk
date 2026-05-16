@@ -15,31 +15,34 @@
   <div class="modal-backdrop" x-show="open" x-cloak @keydown.escape.window="open = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fab-quick-add-title"
          @click.outside="open = false">
-      <button class="modal__close" type="button" @click="open = false" aria-label="Close">&times;</button>
+      <button class="modal__close" type="button" @click="open = false" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
       <h3 class="modal__title" id="fab-quick-add-title">Add transaction</h3>
       <form @submit.prevent="submit()">
         <div class="form-stack">
-          <div class="form-row">
-            <div class="field">
-              <label class="field__label" for="qa-account">Account</label>
-              <select class="select" id="qa-account" x-model="form.accountId" required>
-                <option value="">Select account</option>
-                <template x-for="a in openAccounts()" :key="a.id">
-                  <option :value="a.id" x-text="a.name"></option>
-                </template>
-              </select>
-            </div>
-            <div class="field">
-              <label class="field__label" for="qa-date">Date</label>
-              <input class="input" id="qa-date" type="date" x-model="form.date" required>
-            </div>
+          <div class="field">
+            <label class="field__label" for="qa-account">Account</label>
+            <select class="select" id="qa-account" x-model="form.accountId" required
+                    data-tip="Which account this transaction posts to. Choose the account where the money moved (e.g. Checking for a debit-card swipe).">
+              <option value="">Select account</option>
+              <template x-for="a in openAccounts()" :key="a.id">
+                <option :value="a.id" x-text="a.name"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="qa-date">Date</label>
+            <input class="input" id="qa-date" type="date" x-model="form.date" required
+                   data-tip="When the transaction actually occurred. Defaults to today.">
           </div>
           <div class="field" style="position: relative;">
             <label class="field__label" for="qa-payee">Payee</label>
             <input class="input" id="qa-payee" type="text" x-model="form.payeeName"
                    @input="refreshSuggestions()" @focus="refreshSuggestions()"
                    @blur="setTimeout(() => payeeSuggestions = [], 150)"
-                   autocomplete="off" placeholder="Trader Joe's, Acme Industries, …">
+                   autocomplete="off" placeholder="Trader Joe's, Acme Industries, …"
+                   data-tip="Who you paid (or who paid you). Auto-suggests as you type; picking a known payee pre-fills its usual category.">
             <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
               <template x-for="p in payeeSuggestions" :key="p.id">
                 <li>
@@ -49,34 +52,45 @@
               </template>
             </ul>
           </div>
-          <div class="form-row">
-            <div class="field">
-              <label class="field__label" for="qa-amount">Amount</label>
-              <input class="input" id="qa-amount" type="text" x-model="form.amount"
-                     placeholder="-12.34" inputmode="decimal" required>
-              <p class="field__hint">Negative = outflow.</p>
-            </div>
-            <div class="field">
-              <label class="field__label" for="qa-category">Category</label>
-              <select class="select" id="qa-category" x-model="form.categoryId">
-                <option value="">(uncategorized)</option>
-                <template x-for="c in selectableCategories()" :key="c.id">
-                  <option :value="c.id" x-text="c.name"></option>
-                </template>
-              </select>
-            </div>
+          <div class="field">
+            <label class="field__label" for="qa-amount">Amount</label>
+            <input class="input" id="qa-amount" type="text" x-model="form.amount"
+                   placeholder="-12.34 · or 12+8.99" inputmode="decimal" required
+                   data-tip="Calculator: type expressions like 12.50 + 8.99 or 100 - 25 * 2 — they evaluate on save.">
+            <p class="field__hint">Negative = outflow.</p>
+            <p class="field__hint calc-preview" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="qa-category">Category</label>
+            <select class="select" id="qa-category" x-model="form.categoryId"
+                    data-tip="Envelope budget category this transaction draws from. Leave uncategorized to assign later from the register.">
+              <option value="">(uncategorized)</option>
+              <template x-for="c in selectableCategories()" :key="c.id">
+                <option :value="c.id" x-text="c.name"></option>
+              </template>
+            </select>
           </div>
           <div class="field">
             <label class="field__label" for="qa-memo">Memo (optional)</label>
-            <input class="input" id="qa-memo" type="text" x-model="form.memo">
+            <input class="input" id="qa-memo" type="text" x-model="form.memo"
+                   data-tip="Short note for your future self — what the transaction was for, who you split it with, etc.">
           </div>
-          <label class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted);">
-            <input type="checkbox" x-model="form.cleared"> Cleared
-          </label>
+          <span class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted); align-items: center;">
+            <button type="button"
+                    class="cleared-toggle"
+                    :aria-pressed="form.cleared.toString()"
+                    @click="form.cleared = !form.cleared"
+                    :data-tip="form.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
+              <span x-show="form.cleared">&#10003;</span>
+            </button>
+            <span>Cleared</span>
+          </span>
         </div>
         <div class="form-actions">
-          <button class="btn btn--primary" type="submit">Add transaction</button>
-          <button class="btn btn--ghost" type="button" @click="open = false">Cancel</button>
+          <button class="btn btn--primary" type="submit"
+                  data-tip="Add this transaction to the register.">Add transaction</button>
+          <button class="btn btn--ghost" type="button" @click="open = false"
+                  data-tip="Discard the form and close.">Cancel</button>
         </div>
       </form>
     </div>
@@ -129,12 +143,17 @@ function quickAddFab() {
       this.payeeSuggestions = [];
     },
     parseDollars(s) {
-      if (!s && s !== 0) return 0;
+      if (s == null || s === "") return 0;
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
       var clean = String(s).replace(/[$,\s]/g, "").trim();
       if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
       var n = Number(clean);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
+    calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
     submit() {
       if (!this.form.accountId) return;
       this.$store.budget.addTransaction({
