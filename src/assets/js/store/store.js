@@ -886,6 +886,71 @@ export function createStore() {
       moveCategoryToGroupImpl(this.profile, id, groupId);
       this._save();
     },
+
+    /* ---- Reordering (drag & drop) ----------------------------------
+       All four helpers update sortIndex on the affected siblings so
+       categoryGroupsView / accountGroupsView render the new order on
+       next read. _bumpLists nudges any consumer that walked
+       categoryGroupsView in a prior tick. */
+    moveCategoryGroup(id, toIndex) {
+      if (!this.profile) return;
+      var arr = this.profile.categoryGroups
+        .slice()
+        .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
+      var from = arr.findIndex(function (g) { return g.id === id; });
+      if (from < 0) return;
+      var moved = arr.splice(from, 1)[0];
+      var dest = Math.max(0, Math.min(toIndex, arr.length));
+      arr.splice(dest, 0, moved);
+      arr.forEach(function (g, i) { g.sortIndex = i; });
+      this._bumpLists();
+      this._save();
+    },
+
+    moveCategory(catId, toGroupId, toIndex) {
+      if (!this.profile) return;
+      var cat = this.profile.categories.find(function (c) { return c.id === catId; });
+      if (!cat) return;
+      cat.groupId = toGroupId || null;
+      var target = this.profile.categories
+        .filter(function (c) { return c.groupId === toGroupId && c.id !== catId; })
+        .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
+      var dest = Math.max(0, Math.min(toIndex, target.length));
+      target.splice(dest, 0, cat);
+      target.forEach(function (c, i) { c.sortIndex = i; });
+      this._bumpLists();
+      this._save();
+    },
+
+    moveAccountGroup(id, toIndex) {
+      if (!this.profile) return;
+      var arr = this.profile.accountGroups
+        .slice()
+        .sort(function (a, b) { return a.sortIndex - b.sortIndex; });
+      var from = arr.findIndex(function (g) { return g.id === id; });
+      if (from < 0) return;
+      var moved = arr.splice(from, 1)[0];
+      var dest = Math.max(0, Math.min(toIndex, arr.length));
+      arr.splice(dest, 0, moved);
+      arr.forEach(function (g, i) { g.sortIndex = i; });
+      this._bumpLists();
+      this._save();
+    },
+
+    moveAccount(acctId, toGroupId, toIndex) {
+      if (!this.profile) return;
+      var a = this.profile.accounts.find(function (x) { return x.id === acctId; });
+      if (!a) return;
+      a.groupId = toGroupId || null;
+      var target = this.profile.accounts
+        .filter(function (x) { return x.groupId === toGroupId && x.id !== acctId; })
+        .sort(function (x, y) { return x.sortIndex - y.sortIndex; });
+      var dest = Math.max(0, Math.min(toIndex, target.length));
+      target.splice(dest, 0, a);
+      target.forEach(function (x, i) { x.sortIndex = i; });
+      this._bumpLists();
+      this._save();
+    },
     findCategory(id) { return this.profile ? findCategory(this.profile, id) : null; },
     findCategoryGroup(id) { return this.profile ? findCategoryGroup(this.profile, id) : null; },
     categoryGroupsView() { return this.profile ? categoryGroupsView(this.profile) : []; },
@@ -940,13 +1005,23 @@ export function createStore() {
       return budgetActivity(this.profile, categoryId, month || this.currentMonth);
     },
 
-    /* Assign a value (in cents) to a category for a month. */
+    /* Assign a value (in cents) to a category for a month.
+       Replaces the budgets[month] object (and the inner .assigned map)
+       with fresh references so every consumer that reads through the
+       Alpine proxy sees a top-level property change and re-evaluates.
+       Mutating a nested property in place is technically reactive in
+       Alpine v3, but downstream re-reads sometimes hold stale values
+       when the dependency chain crosses a function boundary
+       (categoryRow -> assigned). The fresh-reference assignment is
+       bulletproof. */
     assign(categoryId, month, cents) {
       if (!this.profile) return;
       var m = month || this.currentMonth;
-      if (!this.profile.budgets[m]) this.profile.budgets[m] = { month: m, assigned: {}, notes: {} };
-      if (!this.profile.budgets[m].assigned) this.profile.budgets[m].assigned = {};
-      this.profile.budgets[m].assigned[categoryId] = Math.round(Number(cents) || 0);
+      var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
+      var nextAssigned = Object.assign({}, existing.assigned || {});
+      nextAssigned[categoryId] = Math.round(Number(cents) || 0);
+      this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
+      this._bumpLists();
       this._save();
     },
 

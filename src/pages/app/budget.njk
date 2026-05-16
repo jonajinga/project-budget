@@ -210,6 +210,7 @@ function budgetView() {
     },
 
     categoryAvailable(catId) {
+      void this.$store.budget._listVersion;
       return this.$store.budget.categoryRow(catId).available;
     },
 
@@ -238,29 +239,38 @@ function budgetView() {
       return "available-pill--blue";
     },
 
+    /* Touching _listVersion forces these aggregations to re-evaluate
+       on any store mutation, even when the dependency chain crosses
+       a function boundary that Alpine's proxy traversal might not
+       catch (categoryRow -> assigned across multiple months). */
     groupTotalAssigned(cats) {
+      void this.$store.budget._listVersion;
       var self = this;
       return cats.reduce(function (sum, c) { return sum + self.$store.budget.assignedFor(c.id); }, 0);
     },
 
     groupTotalActivity(cats) {
+      void this.$store.budget._listVersion;
       var self = this;
       return cats.reduce(function (sum, c) { return sum + self.$store.budget.activityFor(c.id); }, 0);
     },
 
     groupTotalAvailable(cats) {
+      void this.$store.budget._listVersion;
       var self = this;
       return cats.reduce(function (sum, c) { return sum + self.$store.budget.categoryRow(c.id).available; }, 0);
     },
 
     /* Month-wide totals for the bottom summary row. */
     monthlyOutflowTotal() {
+      void this.$store.budget._listVersion;
       var p = this.$store.budget.profile;
       if (!p) return 0;
       var self = this;
       return p.categories.reduce(function (sum, c) { return sum + self.$store.budget.activityFor(c.id); }, 0);
     },
     monthlyAvailableTotal() {
+      void this.$store.budget._listVersion;
       var p = this.$store.budget.profile;
       if (!p) return 0;
       var self = this;
@@ -315,6 +325,7 @@ function budgetView() {
        the available amount (the pool), and compare to the absolute
        negative balance (the debt). */
     paymentPools() {
+      void this.$store.budget._listVersion;
       var store = this.$store.budget;
       var p = store.profile;
       if (!p) return [];

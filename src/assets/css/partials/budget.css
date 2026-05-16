@@ -63,7 +63,9 @@
   width: 100%;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  padding: 0.3rem 0;
+  /* 0.65rem right padding matches .available-pill and the group/total
+     spans so digit-right-edges line up across every row type. */
+  padding: 0.3rem 0.65rem 0.3rem 0;
   border: 1px solid transparent;
   background: transparent;
   border-radius: var(--radius-input);
@@ -71,7 +73,7 @@
 .budget__assigned input:focus {
   background: var(--bg-elevated);
   border-color: var(--accent);
-  padding: 0.3rem 0.45rem;
+  padding: 0.3rem 0.65rem;
 }
 .budget__activity, .budget__available {
   text-align: right;
@@ -242,12 +244,15 @@
   font-size: var(--fs-md);
 }
 
-/* Available column alignment fix: category rows render the value inside
-   .available-pill (which has 0.65rem internal right padding), so plain
-   spans in the group header and total row need a matching right inset
-   for their digits to right-align with the pill digits above/below. */
-.budget__group-header > .num:last-child,
-.budget__total-row    > .num:last-child {
+/* Right-edge alignment across every row type. Every number cell sits
+   0.65rem inside its column right edge so digit-right-edges line up
+   across input (cat Assigned), span (group/total), .budget__activity
+   (cat Outflow), and .available-pill (cat Available). The pill and
+   the input set their own padding-right above; .num spans and
+   .budget__activity get it here. */
+.budget__group-header .num,
+.budget__total-row    .num,
+.budget__activity {
   padding-right: 0.65rem;
 }
 
