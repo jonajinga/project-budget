@@ -5,7 +5,7 @@ description: "Balances and payoff projections for every credit and liability acc
 permalink: /app/reports/debt/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data x-init="$nextTick(() => window.pbInitDebt && window.pbInitDebt())">
+<div class="app-page" x-data>
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Debt overview</h1>
@@ -40,9 +40,11 @@ eleventyExcludeFromCollections: true
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/debt.js";
-  window.pbInitDebt = function () {
+  function boot() {
     var store = Alpine.store("budget");
     var inst = mountChart("#chart-debt", render, function () { return store.reportDebt(); });
     Alpine.effect(function () { store.profile; inst.redraw(); });
   };
+  if (window.Alpine && window.Alpine.store("budget")) boot();
+  else document.addEventListener("alpine:initialized", boot);
 </script>

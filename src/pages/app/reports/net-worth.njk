@@ -5,7 +5,7 @@ description: "Sum of all account balances at month-end."
 permalink: /app/reports/net-worth/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data x-init="$nextTick(() => window.pbInitNW && window.pbInitNW())">
+<div class="app-page" x-data>
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Net worth over time</h1>
@@ -34,9 +34,11 @@ eleventyExcludeFromCollections: true
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/net-worth.js";
-  window.pbInitNW = function () {
+  function boot() {
     var store = Alpine.store("budget");
     var inst = mountChart("#chart-nw", render, function () { return store.reportNetWorth(); });
     Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
   };
+  if (window.Alpine && window.Alpine.store("budget")) boot();
+  else document.addEventListener("alpine:initialized", boot);
 </script>

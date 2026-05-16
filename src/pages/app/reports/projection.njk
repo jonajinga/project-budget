@@ -9,16 +9,17 @@ eleventyExcludeFromCollections: true
   horizon: 12,
   init() {
     var self = this;
-    this.$nextTick(function () {
-      window.pbInitProj = function () {
-        var store = Alpine.store('budget');
-        var inst = window.pbMountChart('#chart-proj', window.pbRenderProj, function () {
-          return store.reportProjection(self.horizon);
-        });
-        Alpine.effect(function () { self.horizon; store.profile; inst.redraw(); });
-      };
-      window.pbInitProj();
-    });
+    var boot = function () {
+      var store = Alpine.store('budget');
+      var inst = window.pbMountChart('#chart-proj', window.pbRenderProj, function () {
+        return store.reportProjection(self.horizon);
+      });
+      Alpine.effect(function () { self.horizon; store.profile; inst.redraw(); });
+    };
+    var ready = function () { return window.Alpine && window.Alpine.store && window.Alpine.store('budget') && window.pbMountChart; };
+    var tries = 0;
+    var poll = function () { if (ready()) boot(); else if (++tries < 50) setTimeout(poll, 50); };
+    poll();
   },
 }">
   <header class="app-page__header">

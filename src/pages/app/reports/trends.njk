@@ -5,7 +5,7 @@ description: "Mini sparkline per top category over the last twelve months."
 permalink: /app/reports/trends/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data x-init="$nextTick(() => window.pbInitTrends && window.pbInitTrends())">
+<div class="app-page" x-data>
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Monthly trends</h1>
@@ -22,9 +22,11 @@ eleventyExcludeFromCollections: true
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/monthly-trends.js";
-  window.pbInitTrends = function () {
+  function boot() {
     var store = Alpine.store("budget");
     var inst = mountChart("#chart-trends", render, function () { return store.reportTrends(); });
     Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
   };
+  if (window.Alpine && window.Alpine.store("budget")) boot();
+  else document.addEventListener("alpine:initialized", boot);
 </script>

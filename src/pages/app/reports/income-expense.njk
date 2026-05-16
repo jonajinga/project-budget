@@ -5,7 +5,7 @@ description: "Paired income and expense bars per month, last twelve months."
 permalink: /app/reports/income-expense/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data x-init="$nextTick(() => window.pbInitIncExp && window.pbInitIncExp())">
+<div class="app-page" x-data>
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Income vs expense</h1>
@@ -36,9 +36,11 @@ eleventyExcludeFromCollections: true
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/income-expense.js";
-  window.pbInitIncExp = function () {
+  function boot() {
     var store = Alpine.store("budget");
     var inst = mountChart("#chart-ie", render, function () { return store.reportIncomeVsExpense(); });
     Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
-  };
+  }
+  if (window.Alpine && window.Alpine.store("budget")) boot();
+  else document.addEventListener("alpine:initialized", boot);
 </script>

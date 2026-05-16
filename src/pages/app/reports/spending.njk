@@ -15,16 +15,17 @@ eleventyExcludeFromCollections: true
     this.from = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
     this.to = to;
     var self = this;
-    this.$nextTick(function () {
-      window.pbInitSpending = function () {
-        var store = Alpine.store('budget');
-        var inst = window.pbMountChart('#chart-spending', window.pbRenderSpending, function () {
-          return store.reportSpending(self.from, self.to);
-        });
-        Alpine.effect(function () { self.from; self.to; store.profile; inst.redraw(); });
-      };
-      window.pbInitSpending();
-    });
+    var boot = function () {
+      var store = Alpine.store('budget');
+      var inst = window.pbMountChart('#chart-spending', window.pbRenderSpending, function () {
+        return store.reportSpending(self.from, self.to);
+      });
+      Alpine.effect(function () { self.from; self.to; store.profile; inst.redraw(); });
+    };
+    var ready = function () { return window.Alpine && window.Alpine.store && window.Alpine.store('budget') && window.pbMountChart; };
+    var tries = 0;
+    var poll = function () { if (ready()) boot(); else if (++tries < 50) setTimeout(poll, 50); };
+    poll();
   },
 }">
   <header class="app-page__header">
