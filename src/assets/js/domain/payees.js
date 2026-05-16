@@ -49,3 +49,84 @@ export function findPayee(profile, id) {
   if (!id) return null;
   return profile.payees.find(function (p) { return p.id === id; });
 }
+
+/* Rename a payee (collapsing into an existing one if the new name
+   already exists). Returns the surviving payee. */
+export function renamePayee(profile, id, newName) {
+  var clean = normalize(newName);
+  if (!clean) return null;
+  var src = findPayee(profile, id);
+  if (!src) return null;
+  var dupe = profile.payees.find(function (p) {
+    return p.id !== id && p.name.toLowerCase() === clean.toLowerCase();
+  });
+  if (dupe) {
+    /* Collapse into the existing payee: re-point every transaction
+       and schedule to the dupe's id, then drop the src. */
+    profile.transactions.forEach(function (t) {
+      if (t.payeeId === id) t.payeeId = dupe.id;
+    });
+    (profile.scheduled || []).forEach(function (s) {
+      if (s.template && s.template.payeeId === id) s.template.payeeId = dupe.id;
+    });
+    dupe.useCount = (dupe.useCount || 0) + (src.useCount || 0);
+    profile.payees = profile.payees.filter(function (p) { return p.id !== id; });
+    return dupe;
+  }
+  src.name = clean;
+  return src;
+}
+
+/* Set or clear the default category that auto-fills when this payee
+   is selected for a new transaction. */
+export function setPayeeCategory(profile, id, categoryId) {
+  var p = findPayee(profile, id);
+  if (!p) return null;
+  p.lastCategoryId = categoryId || null;
+  return p;
+}
+
+/* Merge sourceId INTO targetId — re-points every transaction and
+   scheduled template, sums useCount, drops the source payee. */
+export function mergePayees(profile, sourceId, targetId) {
+  if (!sourceId || !targetId || sourceId === targetId) return null;
+  var src = findPayee(profile, sourceId);
+  var tgt = findPayee(profile, targetId);
+  if (!src || !tgt) return null;
+  profile.transactions.forEach(function (t) {
+    if (t.payeeId === sourceId) t.payeeId = targetId;
+  });
+  (profile.scheduled || []).forEach(function (s) {
+    if (s.template && s.template.payeeId === sourceId) s.template.payeeId = targetId;
+  });
+  tgt.useCount = (tgt.useCount || 0) + (src.useCount || 0);
+  profile.payees = profile.payees.filter(function (p) { return p.id !== sourceId; });
+  return tgt;
+}
+
+/* Permanently delete a payee. Transactions that referenced it lose
+   the link (payeeId set to null); the user can re-categorize later. */
+export function deletePayee(profile, id) {
+  if (!id) return false;
+  var p = findPayee(profile, id);
+  if (!p) return false;
+  profile.transactions.forEach(function (t) {
+    if (t.payeeId === id) t.payeeId = null;
+  });
+  (profile.scheduled || []).forEach(function (s) {
+    if (s.template && s.template.payeeId === id) s.template.payeeId = null;
+  });
+  profile.payees = profile.payees.filter(function (x) { return x.id !== id; });
+  return true;
+}
+
+/* Count of transactions that reference each payee — used by the
+   management page to show usage stats. Returns { payeeId: count }. */
+export function payeeUsageCounts(profile) {
+  var out = {};
+  (profile.transactions || []).forEach(function (t) {
+    if (!t.payeeId) return;
+    out[t.payeeId] = (out[t.payeeId] || 0) + 1;
+  });
+  return out;
+}

@@ -1,0 +1,209 @@
+---
+layout: layouts/app.njk
+title: "Payees"
+description: "Rename, set default categories, merge, or delete payees. Default category auto-fills when you add a new transaction."
+permalink: /app/payees/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="payeesView()">
+  <header class="app-page__header">
+    <h1 class="app-page__title">Payees</h1>
+    <a class="btn btn--ghost btn--sm" href="/app/register/">Open register</a>
+  </header>
+
+  <p class="app-page__lead">
+    Every payee remembers a default category — when you start typing the payee on a new transaction, the category auto-fills. Edit the default here. Merging joins two payees into one (re-pointing every transaction that used the source); deleting a payee leaves its transactions intact but uncategorizes them.
+  </p>
+
+  <section class="card">
+    <header class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="pay-search">Search payees</label>
+        <input class="input" id="pay-search" type="search" x-model="query" placeholder="Search by name…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="rows.length"></span> of <span x-text="$store.budget.allPayees().length"></span> payees
+      </p>
+    </header>
+
+    <p x-show="!rows.length && !$store.budget.allPayees().length" x-cloak style="color: var(--fg-muted);">
+      No payees yet. They're created automatically when you add a transaction.
+    </p>
+
+    <table class="table" x-show="rows.length" x-cloak>
+      <thead>
+        <tr>
+          <th class="is-sortable"><button type="button" @click="sortBy('name')">Name <span class="sort-ind" x-text="sortIndicator('name')"></span></button></th>
+          <th>Default category</th>
+          <th class="is-sortable num"><button type="button" @click="sortBy('count')">Uses <span class="sort-ind" x-text="sortIndicator('count')"></span></button></th>
+          <th class="num">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="p in rows" :key="p.id">
+          <tr>
+            <td>
+              <template x-if="editingId !== p.id">
+                <button type="button" class="inline-edit-trigger"
+                        @click="startRename(p)"
+                        data-tip="Click to rename. If the new name matches another payee, they'll merge.">
+                  <span x-text="p.name"></span>
+                </button>
+              </template>
+              <template x-if="editingId === p.id">
+                <form @submit.prevent="commitRename(p.id)" class="cluster" style="gap: var(--space-2xs);">
+                  <input class="input" type="text"
+                         :ref="'name_' + p.id"
+                         x-model="editingName"
+                         @keydown.escape.prevent="cancelRename()"
+                         @blur="commitRename(p.id)">
+                </form>
+              </template>
+            </td>
+            <td>
+              <select class="select" :value="p.lastCategoryId || ''"
+                      @change="$store.budget.setPayeeCategory(p.id, $event.target.value || null)"
+                      data-tip="Auto-fills when this payee is selected on a new transaction.">
+                <option value="">(none)</option>
+                <template x-for="c in selectableCategories()" :key="c.id">
+                  <option :value="c.id" :selected="p.lastCategoryId === c.id" x-text="c.name"></option>
+                </template>
+              </select>
+            </td>
+            <td class="num" x-text="p.count"></td>
+            <td class="num">
+              <div class="cluster" style="justify-content: flex-end;">
+                <button class="btn btn--ghost btn--sm" type="button"
+                        @click="openMerge(p)"
+                        data-tip="Merge this payee into another — every transaction switches to the target.">Merge</button>
+                <button class="btn btn--danger btn--sm" type="button"
+                        @click="deletePayee(p)">Delete</button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  {# Merge modal — pick target payee #}
+  <div class="modal-backdrop" x-show="mergeSrc" x-cloak @keydown.escape.window="mergeSrc = null">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="merge-title"
+         @click.outside="mergeSrc = null">
+      <button class="modal__close" type="button" @click="mergeSrc = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="merge-title">
+        Merge <span x-text="mergeSrc?.name"></span>
+      </h3>
+      <p style="color: var(--fg-muted); margin-bottom: var(--space-sm);">
+        Every transaction that uses <strong x-text="mergeSrc?.name"></strong> will be re-pointed to the target payee below. This cannot be undone.
+      </p>
+      <form @submit.prevent="doMerge()">
+        <div class="field">
+          <label class="field__label" for="merge-target">Merge into</label>
+          <select class="select" id="merge-target" x-model="mergeTargetId" required>
+            <option value="">Select target payee</option>
+            <template x-for="p in mergeTargets()" :key="p.id">
+              <option :value="p.id" x-text="p.name + ' (' + p.count + ' uses)'"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="submit" :disabled="!mergeTargetId">Merge</button>
+          <button class="btn btn--ghost" type="button" @click="mergeSrc = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function payeesView() {
+  return {
+    query: "",
+    sortKey: "name",
+    sortDir: "asc",
+    editingId: null,
+    editingName: "",
+    mergeSrc: null,
+    mergeTargetId: "",
+
+    get rows() {
+      void this.$store.budget._listVersion;
+      var counts = this.$store.budget.payeeUsageCounts();
+      var all = this.$store.budget.allPayees().map(function (p) {
+        return { id: p.id, name: p.name, lastCategoryId: p.lastCategoryId, count: counts[p.id] || 0 };
+      });
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q
+        ? all.filter(function (p) { return p.name.toLowerCase().indexOf(q) !== -1; })
+        : all;
+      var self = this;
+      filtered.sort(function (a, b) {
+        var c;
+        if (self.sortKey === "count") c = a.count - b.count;
+        else c = String(a[self.sortKey] || "").localeCompare(String(b[self.sortKey] || ""));
+        return self.sortDir === "asc" ? c : -c;
+      });
+      return filtered;
+    },
+
+    sortBy(key) {
+      if (this.sortKey === key) this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      else { this.sortKey = key; this.sortDir = key === "count" ? "desc" : "asc"; }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+
+    selectableCategories() {
+      var s = this.$store.budget;
+      if (!s.profile) return [];
+      return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
+    },
+
+    /* Rename: click name → input, Enter/blur commits. */
+    startRename(p) {
+      this.editingId = p.id;
+      this.editingName = p.name;
+      var self = this;
+      this.$nextTick(function () {
+        var input = self.$refs["name_" + p.id];
+        if (input) { input.focus(); input.select(); }
+      });
+    },
+    cancelRename() { this.editingId = null; this.editingName = ""; },
+    commitRename(id) {
+      if (this.editingId !== id) return;
+      var trimmed = (this.editingName || "").trim();
+      if (trimmed && trimmed !== (this.$store.budget.findPayee(id)?.name || "")) {
+        this.$store.budget.renamePayee(id, trimmed);
+        this.$store.budget.pushToast("Payee renamed.");
+      }
+      this.cancelRename();
+    },
+
+    deletePayee(p) {
+      if (!confirm("Delete '" + p.name + "'? " + p.count + " transaction(s) will lose the payee but stay intact.")) return;
+      this.$store.budget.deletePayee(p.id);
+      this.$store.budget.pushToast("Payee deleted.");
+    },
+
+    openMerge(p) {
+      this.mergeSrc = p;
+      this.mergeTargetId = "";
+    },
+    mergeTargets() {
+      if (!this.mergeSrc) return [];
+      return this.rows.filter(function (p) { return p.id !== this.mergeSrc.id; }, this);
+    },
+    doMerge() {
+      if (!this.mergeSrc || !this.mergeTargetId) return;
+      this.$store.budget.mergePayees(this.mergeSrc.id, this.mergeTargetId);
+      this.$store.budget.pushToast("Payees merged.");
+      this.mergeSrc = null;
+      this.mergeTargetId = "";
+    },
+  };
+}
+</script>

@@ -14,6 +14,7 @@ export default {
     { label: "Calendar", url: "/app/calendar/" },
     { label: "Accounts", url: "/app/accounts/" },
     { label: "Categories", url: "/app/categories/" },
+    { label: "Payees", url: "/app/payees/" },
     { label: "Recurring", url: "/app/scheduled/" },
     { label: "Reports", url: "/app/reports/" },
     { label: "Import", url: "/app/import/" },
