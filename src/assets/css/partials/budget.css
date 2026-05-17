@@ -517,23 +517,23 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    every number's right edge lines up across every row type. */
 .budget__activity-btn {
   background: transparent;
-  border: 0;
-  padding: 0 0.65rem 0 0;
+  /* Hairline border at rest so the click target is obvious — pairs
+     with the Available pill's button treatment one column over. */
+  border: 1px solid var(--border-soft);
+  padding: 0.2rem 0.65rem;
   font: inherit;
   color: inherit;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   text-align: right;
   width: 100%;
-  border-radius: 2px;
-  transition: color var(--t-fast), background var(--t-fast);
+  border-radius: 999px;
+  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
 }
 .budget__activity-btn:not(:disabled):hover {
   color: var(--accent);
   background: color-mix(in oklab, var(--accent) 10%, transparent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1.5px;
+  border-color: var(--accent);
 }
 .budget__activity-btn:not(:disabled):focus-visible {
   outline: 2px solid var(--accent);
@@ -543,6 +543,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 .budget__activity-btn:disabled {
   cursor: default;
   color: var(--fg-muted);
+  border-color: transparent;
 }
 .budget__group-header .budget__activity-btn,
 .budget__total-row    .budget__activity-btn {
