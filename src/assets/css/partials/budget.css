@@ -116,11 +116,22 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 @media (min-width: 600px) {
   .budget__group-header,
   .budget__row {
-    grid-template-columns: minmax(0, 1fr) 6.5rem 6.5rem 6.5rem;
+    /* Number columns sized so a five-figure signed pill ("-$25,662.50")
+       plus the pill chrome fits without overflowing the grid cell.
+       Earlier 6.5rem was tight for negative four-figure amounts and
+       any five-figure values clipped/spilled into the next column. */
+    grid-template-columns: minmax(0, 1fr) 8.5rem 8.5rem 8.5rem;
     gap: var(--space-sm);
   }
   .budget__activity { display: block; text-align: right; font-variant-numeric: tabular-nums; }
   .budget__group-header > :nth-child(3) { display: block; }
+}
+@media (min-width: 1180px) {
+  .budget__group-header,
+  .budget__row {
+    /* Roomier columns on wide desktops where there's plenty of space. */
+    grid-template-columns: minmax(0, 1fr) 9.5rem 9.5rem 9.5rem;
+  }
 }
 .budget__category {
   font-weight: 500;
@@ -356,8 +367,9 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 5rem;
-  padding: 0.2rem 0.65rem;
+  min-width: 6rem;
+  max-width: 100%;
+  padding: 0.25rem 0.85rem;
   border-radius: 999px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -533,8 +545,9 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 5rem;
-  padding: 0.2rem 0.65rem;
+  min-width: 6rem;
+  max-width: 100%;
+  padding: 0.25rem 0.85rem;
   background: transparent;
   border: 1px solid var(--border-soft);
   border-radius: 999px;

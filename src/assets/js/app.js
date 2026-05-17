@@ -19,7 +19,48 @@ function tooltipsEnabled() {
   catch (_e) { return true; }
 }
 
+/* Touch-only devices (phones, tablets without a mouse) get tippy
+   skipped — the long-press affordance conflicts with text selection
+   and the native context menu, and the data-tip content is already
+   echoed in aria-label for AT users. CSS media query `(any-hover:
+   none)` is the canonical way to detect a primary-pointer-less
+   device. Saves the runtime cost on those devices entirely. */
+function isTouchOnly() {
+  try {
+    return window.matchMedia && window.matchMedia("(any-hover: none)").matches;
+  } catch (_e) { return false; }
+}
+
+/* Touch-only fallback — mirror data-tip into the native `title`
+   attribute so the OS long-press tooltip surfaces the same content
+   tippy would show. Desktop is unaffected (tippy intercepts the
+   hover before the native title triggers). Runs in addition to the
+   tippy init below; on touch-only devices it runs alone. */
+function mirrorDataTipToTitle(scope) {
+  var root = scope || document;
+  if (!root.querySelectorAll) return;
+  root.querySelectorAll("[data-tip]:not([title])").forEach(function (el) {
+    var v = el.getAttribute("data-tip");
+    if (v) el.setAttribute("title", v);
+  });
+}
+
 document.addEventListener("alpine:initialized", function () {
+  /* Touch path — no tippy, native title tooltip + aria-label cover it. */
+  if (isTouchOnly()) {
+    mirrorDataTipToTitle();
+    new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        if (m.type === "childList") {
+          m.addedNodes.forEach(function (n) { if (n.nodeType === 1) mirrorDataTipToTitle(n); });
+        } else if (m.type === "attributes" && m.attributeName === "data-tip") {
+          var v = m.target.getAttribute("data-tip");
+          if (v && !m.target.hasAttribute("title")) m.target.setAttribute("title", v);
+        }
+      });
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-tip"] });
+    return;
+  }
   if (typeof window.tippy !== "function") return;
 
   function attachOne(el) {
