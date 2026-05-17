@@ -1035,6 +1035,23 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   gap: var(--space-2xs);
   flex-wrap: wrap;
 }
+/* Right-aligned actions cluster on the top toolbar row — Save view
+   button + per-view display toggles. margin-left: auto pushes it
+   away from the title; gap keeps its own items breathing. */
+.cal-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+@media (max-width: 599px) {
+  .cal-toolbar__actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
 .cal-toolbar__title {
   font-size: var(--fs-xl);
   margin: 0 0 0 var(--space-2xs);

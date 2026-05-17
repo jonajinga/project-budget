@@ -33,27 +33,35 @@ eleventyExcludeFromCollections: true
            crawlers always see a page heading. Alpine swaps in the
            dynamic label (e.g. "May 2026") once hydrated. #}
         <h1 class="cal-toolbar__title" x-text="anchorLabel() || 'Calendar'">Calendar</h1>
-        <button type="button" class="btn btn--ghost btn--sm" @click="saveCurrentView()"
-                style="margin-left: auto;"
-                data-tip="Save this month + view as a recall-able view in /app/templates/.">Save view</button>
       </div>
 
-      {# Year-view display toggle — swaps each cell's date number for
-         its net $ so users can scan a 12-month cash-flow heatmap.
-         Lives on the same row as the view/nav cluster (margin-left:
-         auto pushes it to the right edge) and only renders for the
-         year view via x-show. #}
-      <label class="cal-toolbar__toggle"
-             :class="yearShowNet ? 'is-on' : ''"
-             style="margin-left: auto;"
-             x-show="view === 'year'" x-cloak
-             data-tip="Replace each day's date number with its net $ for the day. Week-number column hides so the cell has room for the amount. Toggle off to return to date numbers.">
-        <input type="checkbox" x-model="yearShowNet" class="visually-hidden">
-        <span class="cal-toolbar__toggle-switch" aria-hidden="true">
-          <span class="cal-toolbar__toggle-knob"></span>
-        </span>
-        <span class="cal-toolbar__toggle-label">Show net $ instead of dates</span>
-      </label>
+      {# Right-aligned actions cluster — display toggles + Save view.
+         Per-view toggles swap in/out via x-show; Save view is always
+         visible. Lives in its own slot so it doesn't crowd the title. #}
+      <div class="cal-toolbar__actions">
+        <label class="cal-toolbar__toggle"
+               :class="showDayTotals ? 'is-on' : ''"
+               x-show="view === 'month' || view === 'week' || view === 'day'" x-cloak
+               data-tip="Show inline In / Out / Net rollups inside each day cell and each week-number column.">
+          <input type="checkbox" x-model="showDayTotals" class="visually-hidden">
+          <span class="cal-toolbar__toggle-switch" aria-hidden="true">
+            <span class="cal-toolbar__toggle-knob"></span>
+          </span>
+          <span class="cal-toolbar__toggle-label">Grid totals</span>
+        </label>
+        <label class="cal-toolbar__toggle"
+               :class="yearShowNet ? 'is-on' : ''"
+               x-show="view === 'year'" x-cloak
+               data-tip="Replace each day's date number with its net $ for the day. Week-number column hides so the cell has room for the amount. Toggle off to return to date numbers.">
+          <input type="checkbox" x-model="yearShowNet" class="visually-hidden">
+          <span class="cal-toolbar__toggle-switch" aria-hidden="true">
+            <span class="cal-toolbar__toggle-knob"></span>
+          </span>
+          <span class="cal-toolbar__toggle-label">Net $ instead of dates</span>
+        </label>
+        <button type="button" class="btn btn--ghost btn--sm" @click="saveCurrentView()"
+                data-tip="Save this month + view as a recall-able view in /app/templates/.">Save view</button>
+      </div>
     </div>
 
     {# ---- View controls — span selector + display toggles on the
@@ -80,15 +88,6 @@ eleventyExcludeFromCollections: true
                  data-tip="Type any number from 1 to 60.">
         </label>
       </div>
-      <label class="cal-toolbar__toggle"
-             :class="showDayTotals ? 'is-on' : ''"
-             data-tip="Show inline In / Out / Net rollups inside each day cell and each week-number column. Toggle off for a cleaner grid (the period header totals at the top of the view always stay visible).">
-        <input type="checkbox" x-model="showDayTotals" class="visually-hidden">
-        <span class="cal-toolbar__toggle-switch" aria-hidden="true">
-          <span class="cal-toolbar__toggle-knob"></span>
-        </span>
-        <span class="cal-toolbar__toggle-label">Show grid totals</span>
-      </label>
     </div>
 
     {# Mobile disclosure — hides the search + filter row behind a

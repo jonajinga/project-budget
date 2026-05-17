@@ -260,6 +260,17 @@ eleventyExcludeFromCollections: true
                       <path d="M7 11V7a5 5 0 019.9-1"></path>
                     </svg>
                   </button>
+                  <button class="btn btn--icon" type="button" @click="openMakeRecurring(t)"
+                          x-show="!t.reconciled && !t.transferTxnId && !t.splits"
+                          aria-label="Make this a recurring transaction"
+                          data-tip="Use this entry as a template for a recurring transaction (rent, subscription, paycheck).">
+                    {# Lucide "refresh-cw" — circular arrows = recurring. #}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <polyline points="1 20 1 14 7 14"></polyline>
+                      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                    </svg>
+                  </button>
                   <button class="btn btn--icon" type="button" @click="del(t)" x-show="!t.reconciled"
                           aria-label="Delete transaction"
                           data-tip="Permanently delete this transaction."
@@ -535,6 +546,61 @@ eleventyExcludeFromCollections: true
     </div>
   </div>
 
+  {# Make recurring modal — turn an existing transaction into a
+     recurring template. Pre-populates from the source row; user
+     just picks frequency + next date. #}
+  <div class="modal-backdrop" x-show="showMakeRecurring" x-cloak @keydown.escape.window="showMakeRecurring = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mr-title" @click.outside="showMakeRecurring = false" style="max-width: 540px;">
+      <button class="modal__close" type="button" @click="showMakeRecurring = false" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="mr-title">Make recurring</h3>
+      <p style="color: var(--fg-muted); margin-top: var(--space-2xs);">
+        <strong x-text="recurringForm.payeeName || '(no payee)'"></strong>
+        · <span x-text="formatCents(recurringForm.amount)"></span>
+        · <span x-text="$store.budget.findAccount(recurringForm.accountId)?.name || ''"></span>
+      </p>
+      <form @submit.prevent="submitMakeRecurring()">
+        <div class="form-stack">
+          <div class="field">
+            <label class="field__label" for="mr-frequency">How often?</label>
+            <select class="select" id="mr-frequency" x-model="recurringForm.frequency"
+                    @change="onRecurringFreqChange()">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Every two weeks</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </div>
+          <div class="field" x-show="recurringForm.frequency === 'custom'" x-cloak>
+            <label class="field__label" for="mr-custom-interval">Every</label>
+            <div class="cluster" style="gap: var(--space-2xs);">
+              <input class="input" id="mr-custom-interval" type="number" min="1" step="1"
+                     x-model.number="recurringForm.customInterval" style="max-width: 6rem;">
+              <select class="select" x-model="recurringForm.customUnit" style="max-width: 10rem;">
+                <option value="days">days</option>
+                <option value="weeks">weeks</option>
+                <option value="months">months</option>
+                <option value="years">years</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="mr-next-date">Next occurrence</label>
+            <input class="input" id="mr-next-date" type="date" x-model="recurringForm.nextDate" required>
+            <p class="field__hint">Defaults to one frequency after the source transaction's date. Adjust if needed.</p>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Create recurring template</button>
+          <button class="btn btn--ghost" type="button" @click="showMakeRecurring = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   {# Split editor modal #}
   <div class="modal-backdrop" x-show="splitTxnId" x-cloak @keydown.escape.window="splitTxnId = null">
     <div class="modal" role="dialog" aria-modal="true" @click.outside="splitTxnId = null" style="max-width: 720px;">
@@ -615,6 +681,12 @@ function registerView() {
     edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false },
     transferForm: { fromAccountId: "", toAccountId: "", amount: "", date: "", memo: "" },
     reconcileForm: { statementBalance: "", checked: false, diff: 0 },
+    showMakeRecurring: false,
+    recurringForm: {
+      sourceId: null, accountId: "", payeeName: "", payeeId: null, categoryId: null,
+      amount: 0, memo: "", cleared: false,
+      frequency: "monthly", customInterval: 1, customUnit: "months", nextDate: "",
+    },
 
     init() {
       var params = new URL(window.location.href).searchParams;
@@ -676,6 +748,81 @@ function registerView() {
 
     refreshDue() { this.due = this.$store.budget.dueScheduled(); },
     postNow(id) { this.$store.budget.postScheduled(id); this.refreshDue(); },
+
+    /* Roll the source transaction's date forward by one occurrence to
+       seed the "Next occurrence" picker. The user can override before
+       submitting. */
+    _nextDateFor(srcDate, freq, interval, unit) {
+      var d = srcDate ? new Date(srcDate + "T00:00:00") : new Date();
+      var step = function (n, u) {
+        if (u === "days")   d.setDate(d.getDate() + n);
+        if (u === "weeks")  d.setDate(d.getDate() + n * 7);
+        if (u === "months") d.setMonth(d.getMonth() + n);
+        if (u === "years")  d.setFullYear(d.getFullYear() + n);
+      };
+      if (freq === "daily")    step(1, "days");
+      else if (freq === "weekly")   step(1, "weeks");
+      else if (freq === "biweekly") step(2, "weeks");
+      else if (freq === "monthly")  step(1, "months");
+      else if (freq === "yearly")   step(1, "years");
+      else if (freq === "custom")   step(interval || 1, unit || "months");
+      return d.toISOString().slice(0, 10);
+    },
+
+    openMakeRecurring(t) {
+      var payeeName = (this.$store.budget.payeeName(t.payeeId) || "").trim();
+      this.recurringForm = {
+        sourceId: t.id,
+        accountId: t.accountId,
+        payeeName: payeeName,
+        payeeId: t.payeeId || null,
+        categoryId: t.categoryId || null,
+        amount: t.amount,
+        memo: t.memo || "",
+        cleared: false,
+        frequency: "monthly",
+        customInterval: 1,
+        customUnit: "months",
+        nextDate: this._nextDateFor(t.date, "monthly"),
+        sourceDate: t.date,
+      };
+      this.showMakeRecurring = true;
+    },
+    onRecurringFreqChange() {
+      this.recurringForm.nextDate = this._nextDateFor(
+        this.recurringForm.sourceDate,
+        this.recurringForm.frequency,
+        this.recurringForm.customInterval,
+        this.recurringForm.customUnit
+      );
+    },
+    submitMakeRecurring() {
+      var f = this.recurringForm;
+      if (!f.accountId || !f.nextDate) return;
+      var template = {
+        accountId: f.accountId,
+        payeeId: f.payeeId || null,
+        payeeName: f.payeeName || "",
+        categoryId: f.categoryId || null,
+        amount: f.amount,
+        memo: f.memo || "",
+        cleared: false,
+      };
+      var s = this.$store.budget.addSchedule({
+        template: template,
+        frequency: f.frequency,
+        customInterval: f.frequency === "custom" ? (f.customInterval || 1) : null,
+        customUnit:     f.frequency === "custom" ? (f.customUnit || "months") : null,
+        nextDate: f.nextDate,
+      });
+      if (s) {
+        this.$store.budget.pushToast("Recurring template created. Manage at /app/scheduled/.", "ok");
+        this.refreshDue();
+      } else {
+        this.$store.budget.pushToast("Could not create recurring template.", "danger");
+      }
+      this.showMakeRecurring = false;
+    },
 
     visibleTransactions() {
       /* Touch the list-version counter so Alpine re-runs this when a
