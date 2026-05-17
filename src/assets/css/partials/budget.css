@@ -498,7 +498,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 .budget__group-header .num,
 .budget__total-row    .num,
 .budget__activity {
-  padding-right: 0.65rem;
   /* Without text-align:right, the inline span content floats at the
      left edge of its grid cell — so group Assigned + Available end up
      left-flush while the per-category input/pill below right-aligns.
@@ -506,6 +505,16 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      digit's right-edge up across group, total, and category rows. */
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+/* Group/total header outflow + assigned spans keep their 0.65rem
+   right pad so their digits align with the .available-pill +
+   .budget__activity-btn pills in cat rows (which carry their own
+   0.65rem padding-right). .budget__activity cells with the pill
+   button inside don't need extra cell padding — the pill provides
+   it. */
+.budget__group-header .num,
+.budget__total-row    .num {
+  padding-right: 0.65rem;
 }
 
 /* Clickable Outflow cell — renders as a transparent button that
@@ -516,18 +525,24 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    .num spans, the available-pill, and .budget__assigned input — so
    every number's right edge lines up across every row type. */
 .budget__activity-btn {
-  background: transparent;
-  /* Hairline border at rest so the click target is obvious — pairs
-     with the Available pill's button treatment one column over. */
-  border: 1px solid var(--border-soft);
+  /* Pill shape mirrors .available-pill one column over so both
+     clickable numbers read as buttons with the same chrome. The
+     parent cell has text-align: right, so an inline-flex element
+     with min-width settles flush at the right edge instead of
+     stretching across the entire grid column. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 5rem;
   padding: 0.2rem 0.65rem;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
   font: inherit;
   color: inherit;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  text-align: right;
-  width: 100%;
-  border-radius: 999px;
+  line-height: 1.4;
   transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
 }
 .budget__activity-btn:not(:disabled):hover {
