@@ -90,6 +90,23 @@
   flex: 1 1 220px;
   min-width: 0;
 }
+/* Phone: search box takes full row, buttons stack below in a tidy
+   horizontal cluster instead of fighting for line space. */
+@media (max-width: 599px) {
+  .report-toolbar__search { flex-basis: 100%; }
+  .report-toolbar .btn { flex: 0 1 auto; }
+}
+/* Table inside .report gets horizontal scroll on phones (the
+   parent .report already has overflow-x:auto). Add a subtle
+   right-edge fade so users know there's more content offscreen. */
+@media (max-width: 599px) {
+  .report {
+    position: relative;
+  }
+  .report > .table {
+    min-width: max-content;
+  }
+}
 .report-toolbar__count {
   margin: 0;
   color: var(--fg-muted);
@@ -140,6 +157,20 @@
   align-items: center;
   gap: var(--space-sm);
   margin: 0 0 var(--space-sm);
+  flex-wrap: wrap;
+}
+@media (max-width: 599px) {
+  .chart-toolbar { gap: var(--space-2xs); }
+  /* Picker becomes scrollable instead of wrapping its options to
+     two rows — keeps the toolbar one row tall on phones. */
+  .chart-picker {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    scrollbar-width: none;
+  }
+  .chart-picker::-webkit-scrollbar { display: none; }
+  .chart-picker__btn { flex-shrink: 0; padding: 6px 8px; }
 }
 .chart-toolbar__label {
   font-family: var(--font-ui);
