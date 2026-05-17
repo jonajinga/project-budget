@@ -144,6 +144,13 @@
   font-variant-numeric: tabular-nums;
   padding-right: 0.85rem;
   text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 599px) {
+  .budget__group-total {
+    font-size: var(--fs-sm);
+    padding-right: 0.4rem;
+  }
 }
 .budget__group-total--neg {
   color: var(--danger);
@@ -617,6 +624,10 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-xs);
   line-height: 1.4;
+  /* Keep the value on a single line — long signed numbers
+     ("-$1,944.27") were wrapping inside the pill on phones,
+     making each row two lines tall. */
+  white-space: nowrap;
 }
 @media (min-width: 600px) {
   .available-pill {
@@ -747,6 +758,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   line-height: 1.1;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 /* Phone: shrink the big numeric so five-figure values fit in a
    1/3-column cell. Mini-label stays the same micro size. */
@@ -841,6 +853,9 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   border: 1px solid var(--border-soft);
   border-radius: 999px;
   font: inherit;
+  /* Keep value on a single line — long signed numbers were
+     wrapping inside the pill on phones. */
+  white-space: nowrap;
   color: inherit;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
@@ -1653,13 +1668,12 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   gap: 4px;
   text-align: right;
   padding: var(--space-2xs) var(--space-sm);
-  /* flex: 0 0 auto stops the tile from shrinking below its content
-     size when the parent flex container is squeezed. The previous
-     `min-width: 90px` was being overridden by the flex layout and
-     letting tiles collapse, truncating "$0.00" → "$0.0". Removing
-     container-type (only needed when a child uses cqi units) also
-     restores normal sizing behavior. */
-  flex: 0 0 auto;
+  /* flex: 1 1 5.5rem so every tile grows equally to fill the row.
+     Earlier `flex: 0 0 auto` made each tile size to its content,
+     which left the Entries tile (value "21") narrower than the
+     currency-value tiles. Equal-width reads as a deliberate 4-up
+     stat strip. */
+  flex: 1 1 5.5rem;
   min-width: 5.5rem;
   border: 1px solid var(--border-strong);
   border-left: 3px solid var(--border-strong);
