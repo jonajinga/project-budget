@@ -670,7 +670,6 @@ function registerView() {
     showReconcile: false,
     editingId: null,
     payeeSuggestions: [],
-    due: [],
     splitTxnId: null,
     splitForm: [],
     isMobile: false,
@@ -746,8 +745,17 @@ function registerView() {
       return this.$store.budget.categoriesFlat().filter(c => !self.$store.budget.isPaymentCategory(c.id));
     },
 
-    refreshDue() { this.due = this.$store.budget.dueScheduled(); },
-    postNow(id) { this.$store.budget.postScheduled(id); this.refreshDue(); },
+    /* `due` was a local snapshot populated by refreshDue() at init —
+       so when scheduled txns finished loading asynchronously (Dexie
+       restore), the "due transactions" banner stayed empty. Read
+       live from the store via _listVersion tracking; mutators no
+       longer need to call refreshDue(). */
+    get due() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.dueScheduled();
+    },
+    refreshDue() { /* no-op shim — kept for callsites; getter is live. */ },
+    postNow(id) { this.$store.budget.postScheduled(id); },
 
     /* Roll the source transaction's date forward by one occurrence to
        seed the "Next occurrence" picker. The user can override before

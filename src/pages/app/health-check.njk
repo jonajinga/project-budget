@@ -5,7 +5,7 @@ description: "Run deterministic checks against your profile — orphaned transac
 permalink: /app/health-check/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="healthCheckView()" x-init="run()">
+<div class="app-page" x-data="healthCheckView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <p class="eyebrow">Health</p>
@@ -76,6 +76,21 @@ function healthCheckView() {
 
     iconFor(sev) {
       return sev === "ok" ? "✓" : (sev === "warn" ? "!" : "✗");
+    },
+
+    /* run() builds `checks` against the live profile. Previously
+       called only once at x-init — so when Dexie's async restore
+       finished after Alpine init, the checks reflected an empty
+       profile forever. init() wires an Alpine.effect that re-runs
+       whenever the profile or _listVersion changes, picking up the
+       async restore and every subsequent mutation. */
+    init() {
+      var self = this;
+      Alpine.effect(function () {
+        var s = self.$store.budget;
+        s.profile; s._listVersion;
+        self.run();
+      });
     },
 
     run() {

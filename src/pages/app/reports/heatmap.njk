@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Category heatmap</h1>
       <p class="app-page__lead">Each row is a category, each column a month. Cells get darker the more you spent — spot seasonal patterns (heating bills, holiday gifts) and one-off spikes (an unexpected vet visit) without digging through the register.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this range + top-N as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   {# ---- KPI strip ---- #}
@@ -133,8 +137,32 @@ function heatmapView() {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
     },
 
+    /* URL state sync — write rangeMonths + topN back to the address
+       bar so the view is shareable + save-able. */
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.rangeMonths !== 12) parts.push("range=" + this.rangeMonths);
+        if (this.topN        !== 15) parts.push("top="   + this.topN);
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "heatmap", name: "" });
+    },
+
     init() {
       var self = this;
+      /* Honor incoming URL params from a recalled saved view. */
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var r = Number(p.get("range"));
+        if (r && [3,6,12,24].indexOf(r) !== -1) self.rangeMonths = r;
+        var n = Number(p.get("top"));
+        if (n && [10,15,20,30].indexOf(n) !== -1) self.topN = n;
+      } catch (_e) {}
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderHeatmap && window.d3;
@@ -143,8 +171,8 @@ function heatmapView() {
         self.chart = window.pbMountChart("#chart-heatmap", window.pbRenderHeatmap, function () {
           return store.reportHeatmap(null, self.rangeMonths, self.topN);
         });
-        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
-        self.$watch("topN",        function () { self.chart && self.chart.redraw(); });
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("topN",        function () { self.chart && self.chart.redraw(); self._syncUrl(); });
         Alpine.effect(function () {
           store.profile; store.currentMonth; store._listVersion;
           if (self.chart) self.chart.redraw();

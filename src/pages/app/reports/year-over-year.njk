@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Year over year</h1>
       <p class="app-page__lead">Pick two periods to compare. Defaults to the last 12 months vs the 12 months before that. Switch between by-month, by-category, and by-payee views to find the swings.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this view + current/prior ranges as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   {# ---- KPI strip — current vs prior deltas ---- #}
@@ -205,9 +209,41 @@ function yoyView() {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
     },
 
+    /* URL state sync — write view + nested current/prior ranges back
+       to the address bar so the view is shareable + save-able. Uses
+       short param names: cur_from, cur_to, pri_from, pri_to. */
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.view !== "byMonth")  parts.push("view="     + encodeURIComponent(this.view));
+        if (this.current.from)        parts.push("cur_from=" + encodeURIComponent(this.current.from));
+        if (this.current.to)          parts.push("cur_to="   + encodeURIComponent(this.current.to));
+        if (this.prior.from)          parts.push("pri_from=" + encodeURIComponent(this.prior.from));
+        if (this.prior.to)            parts.push("pri_to="   + encodeURIComponent(this.prior.to));
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "year-over-year", name: "" });
+    },
+
     init() {
       this.resetRanges();
       var self = this;
+      /* Honor incoming URL params from a recalled saved view. Apply
+         AFTER resetRanges so URL values override the auto-computed
+         defaults. */
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var v = p.get("view");
+        if (v && ["byMonth","byCategory","byPayee"].indexOf(v) !== -1) self.view = v;
+        var cf = p.get("cur_from"); if (cf) self.current.from = cf;
+        var ct = p.get("cur_to");   if (ct) self.current.to   = ct;
+        var pf = p.get("pri_from"); if (pf) self.prior.from   = pf;
+        var pt = p.get("pri_to");   if (pt) self.prior.to     = pt;
+      } catch (_e) {}
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderYoY;
@@ -216,11 +252,11 @@ function yoyView() {
         self.chart = window.pbMountChart("#chart-yoy", window.pbRenderYoY, function () {
           return store.reportYearOverYear(self.current, self.prior);
         });
-        self.$watch("view",            function () { self.chart && self.chart.redraw(); });
-        self.$watch("current.from",    function () { self.chart && self.chart.redraw(); });
-        self.$watch("current.to",      function () { self.chart && self.chart.redraw(); });
-        self.$watch("prior.from",      function () { self.chart && self.chart.redraw(); });
-        self.$watch("prior.to",        function () { self.chart && self.chart.redraw(); });
+        self.$watch("view",            function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("current.from",    function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("current.to",      function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("prior.from",      function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("prior.to",        function () { self.chart && self.chart.redraw(); self._syncUrl(); });
         Alpine.effect(function () {
           store.profile; store.currentMonth; store._listVersion;
           if (self.chart) self.chart.redraw();

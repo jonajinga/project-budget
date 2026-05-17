@@ -170,7 +170,15 @@ eleventyExcludeFromCollections: true
 <script>
 function trashView() {
   return {
-    items: [],
+    /* `items` was previously a snapshot populated by refresh() at
+       init — which fired before Dexie's async profile restore, so
+       the trash table stayed empty even with deleted transactions
+       waiting. Read live via _listVersion so Alpine re-renders on
+       restore/delete/undo. */
+    get items() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.listTrashedTransactions();
+    },
 
     /* Profile trash purge confirm modal state — was previously on
        /app/settings/, now lives here so all trash management is on
@@ -179,9 +187,7 @@ function trashView() {
     purgeName: "",
     purgeValue: "",
 
-    refresh() {
-      this.items = this.$store.budget.listTrashedTransactions();
-    },
+    refresh() { /* no-op shim — getter is live. */ },
 
     trashedProfiles() {
       void this.$store.budget._listVersion;

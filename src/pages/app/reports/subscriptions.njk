@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Subscription audit</h1>
       <p class="app-page__lead">Walks the last 12 months of transactions looking for cadence patterns — same payee, roughly the same amount, charged on a regular interval. Each detected subscription shows its typical amount, cadence, and projected annual cost.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this lookback + filter as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   {# ---- KPI strip ---- #}
@@ -173,9 +177,34 @@ function subscriptionsView() {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
     },
 
+    /* URL state sync — write lookbackMonths + query back to the
+       address bar so the view is shareable + save-able. */
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.lookbackMonths !== 12) parts.push("range=" + this.lookbackMonths);
+        if (this.query)                 parts.push("q="     + encodeURIComponent(this.query));
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "subscriptions", name: "" });
+    },
+
     init() {
-      /* No chart on this report; just a polling sentinel to confirm
-         Alpine + store ready. */
+      /* No chart on this report; honor incoming URL params from a
+         recalled saved view, then watch for changes. */
+      var self = this;
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var r = Number(p.get("range"));
+        if (r && [3,6,12,24].indexOf(r) !== -1) self.lookbackMonths = r;
+        var q = p.get("q"); if (q) self.query = q;
+      } catch (_e) {}
+      self.$watch("lookbackMonths", function () { self._syncUrl(); });
+      self.$watch("query",          function () { self._syncUrl(); });
     },
 
     print() { window.print(); },

@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Cash flow</h1>
       <p class="app-page__lead">Where money came from and where it went over the selected period. Each band's thickness is proportional to the dollar amount. Transfers between accounts and credit-card payments route through the central pivot rather than getting double-counted.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this period as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   {# ---- KPI strip ---- #}
@@ -192,9 +196,47 @@ function sankeyView() {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
     },
 
+    /* URL state sync — write preset OR explicit from/to back to the
+       address bar. When preset is "thisMonth" (default) skip the
+       from/to params; if the user picked a different preset write it;
+       if they typed custom dates (which set preset to "") write the
+       dates directly. */
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.preset && this.preset !== "thisMonth") {
+          parts.push("preset=" + encodeURIComponent(this.preset));
+        } else if (!this.preset) {
+          if (this.from) parts.push("from=" + encodeURIComponent(this.from));
+          if (this.to)   parts.push("to="   + encodeURIComponent(this.to));
+        }
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "sankey", name: "" });
+    },
+
     init() {
       this.applyPreset("thisMonth");
       var self = this;
+      /* Honor incoming URL params from a recalled saved view. Apply
+         AFTER applyPreset so custom from/to override the default. */
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var pr = p.get("preset");
+        if (pr && ["thisMonth","last3","last6","last12"].indexOf(pr) !== -1) {
+          self.applyPreset(pr);
+        }
+        var pf = p.get("from"), pt = p.get("to");
+        if (pf || pt) {
+          if (pf) self.from = pf;
+          if (pt) self.to = pt;
+          self.preset = "";
+        }
+      } catch (_e) {}
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderSankey && window.d3 && window.d3.sankey;
@@ -203,8 +245,9 @@ function sankeyView() {
         self.chart = window.pbMountChart("#chart-sankey", window.pbRenderSankey, function () {
           return store.reportSankey(self.from, self.to);
         });
-        self.$watch("from", function () { self.chart && self.chart.redraw(); });
-        self.$watch("to",   function () { self.chart && self.chart.redraw(); });
+        self.$watch("from",   function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("to",     function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("preset", function () { self._syncUrl(); });
         Alpine.effect(function () {
           store.profile; store.currentMonth; store._listVersion;
           if (self.chart) self.chart.redraw();

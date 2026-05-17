@@ -74,6 +74,9 @@ eleventyExcludeFromCollections: true
                 x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all' : 'Collapse all'"></button>
         <a class="btn btn--ghost btn--sm" href="/app/categories/"
            data-tip="Full categories admin (reorder, goals, payment categories).">Manage categories</a>
+        <button type="button" class="btn btn--ghost btn--sm"
+                @click="saveCurrentView()"
+                data-tip="Save this month as a recall-able view in /app/templates/.">Save view</button>
       </div>
       <div class="cluster" style="gap: var(--space-2xs);">
         <p class="budget__total-readout" style="margin: 0;">
@@ -215,6 +218,12 @@ eleventyExcludeFromCollections: true
                       {# Per-row inline edit/delete — fades in on hover on
                          desktop, always visible on touch. Skips payment
                          categories (they're managed implicitly). #}
+                      {# Per-cat row actions. Order mirrors the per-group
+                         actions cluster — Auto-assign, Rename, Clear
+                         assigned, Clear available, Delete — with the
+                         cat-only Move money + Goal slotted at the
+                         front so users find the shared icons in the
+                         same positions across both rows. #}
                       <span class="budget__row-actions" x-cloak>
                         <button type="button" class="btn btn--icon"
                                 @click="openMoveMoney(c)"
@@ -228,17 +237,15 @@ eleventyExcludeFromCollections: true
                           </svg>
                         </button>
                         <template x-if="!$store.budget.isPaymentCategory(c.id)">
-                        <button type="button" class="btn btn--icon"
-                                @click="openAutoAssign({ kind: 'category', name: c.name, id: c.id })"
-                                aria-label="Auto-assign this category"
-                                data-tip="Auto-assign just this category from a goal, last month, or recent average.">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
-                          </svg>
-                        </button>
-                        </template>
-                        <template x-if="!$store.budget.isPaymentCategory(c.id)">
                           <span style="display: contents;">
+                            <button type="button" class="btn btn--icon"
+                                    @click="openAutoAssign({ kind: 'category', name: c.name, id: c.id })"
+                                    aria-label="Auto-assign this category"
+                                    data-tip="Auto-assign just this category from a goal, last month, or recent average.">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
+                              </svg>
+                            </button>
                             <button type="button" class="btn btn--icon" @click="openGoal(c)"
                                     aria-label="Set goal for category"
                                     data-tip="Set, change, or remove this category's funding goal.">
@@ -254,6 +261,23 @@ eleventyExcludeFromCollections: true
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path>
                                 <line x1="15" y1="5" x2="19" y2="9"></line>
+                              </svg>
+                            </button>
+                            <button type="button" class="btn btn--icon"
+                                    @click="catClearAssigned(c)"
+                                    aria-label="Clear assigned for this category"
+                                    data-tip="Set Assigned to $0 for this category in this month.">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9"/><line x1="8" y1="12" x2="16" y2="12"/>
+                              </svg>
+                            </button>
+                            <button type="button" class="btn btn--icon"
+                                    @click="catClearAvailable(c)"
+                                    aria-label="Clear available for this category"
+                                    data-tip="Push Available to $0 for this category — pulls money back to Ready to Assign.">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="1 4 1 10 7 10"/>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                               </svg>
                             </button>
                             <button type="button" class="btn btn--icon" @click="deleteCategoryRow(c)"
@@ -401,6 +425,7 @@ eleventyExcludeFromCollections: true
             <span x-show="autoAssignScope.kind === 'all'">Categories that don't apply are left unchanged.</span>
             <span x-show="autoAssignScope.kind === 'group'">Only categories in <strong x-text="autoAssignScope.name"></strong> are touched.</span>
             <span x-show="autoAssignScope.kind === 'category'">Only the <strong x-text="autoAssignScope.name"></strong> category is touched.</span>
+            <span x-show="autoAssignScope.kind === 'selection'">Only the <strong x-text="autoAssignScope.name"></strong> are touched.</span>
             You can tweak any row after.
           </p>
         </header>
@@ -815,6 +840,8 @@ eleventyExcludeFromCollections: true
       <span x-text="selectedCatIds.length === 1 ? 'category selected' : 'categories selected'"></span>
     </div>
     <div class="cluster" style="gap: var(--space-2xs);">
+      <button type="button" class="btn btn--primary btn--sm" @click="bulkAutoAssign()"
+              data-tip="Open the auto-assign strategy picker for every selected category.">⚡ Auto-assign</button>
       <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAssigned('selection')"
               data-tip="Reset Assigned to $0 for every selected category in this month.">Clear assigned</button>
       <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAvailable('selection')"
@@ -909,6 +936,48 @@ function budgetView() {
       this.selectedCatIds = (group.categories || []).map(function (c) { return c.id; });
       await this.bulkClearAvailable("selection");
     },
+    /* Per-category Clear helpers — single-cat path with the same
+       confirm UX as the bulk version, no selection side effects. */
+    async catClearAssigned(c) {
+      var s = this.$store.budget;
+      var label = "'" + (c.name || "this category") + "'";
+      if (window.PBDialog) {
+        var ok = await window.PBDialog.confirm({
+          title: "Clear assigned to $0?",
+          message: "Reset Assigned to $0 for " + label + " in this month. Activity and carry-in stay put. Cmd/Ctrl+Z undoes.",
+          confirmLabel: "Clear assigned",
+        });
+        if (!ok) return;
+      }
+      s.clearAssignedForCategories([c.id], s.currentMonth, "Clear assigned · " + label);
+      s.pushToast("Cleared assigned for " + (c.name || "category") + ".", "ok");
+    },
+    async catClearAvailable(c) {
+      var s = this.$store.budget;
+      var label = "'" + (c.name || "this category") + "'";
+      if (window.PBDialog) {
+        var ok = await window.PBDialog.confirm({
+          title: "Clear available to $0?",
+          message: "Push Available to $0 for " + label + " in this month — pulls money back to Ready to Assign by lowering Assigned. Cmd/Ctrl+Z undoes.",
+          confirmLabel: "Clear available",
+        });
+        if (!ok) return;
+      }
+      s.clearAvailableForCategories([c.id], s.currentMonth, "Clear available · " + label);
+      s.pushToast("Cleared available for " + (c.name || "category") + ".", "ok");
+    },
+    /* Auto-assign from the bulk-actions bar — re-uses the existing
+       modal with kind: 'selection' so the copy reads "Only the N
+       selected categories are touched." */
+    bulkAutoAssign() {
+      if (!this.selectedCatIds.length) return;
+      var n = this.selectedCatIds.length;
+      this.openAutoAssign({
+        kind: "selection",
+        name: n + " selected categor" + (n === 1 ? "y" : "ies"),
+        ids: this.selectedCatIds.slice(),
+      });
+    },
 
     /* Inline-edit modal state — covers create / rename / delete and
        goal-edit for both groups and categories so users don't have
@@ -954,7 +1023,55 @@ function budgetView() {
     moveMoneyOpen: false,
     moveMoneyForm: { fromId: "", toId: "", amount: "" },
 
-    init() {},
+    /* URL state sync — currentMonth lives on the budget store rather
+       than this factory, so writes happen via Alpine.effect (not
+       $watch) and reads happen at init time before the store is
+       guaranteed ready (a polling retry handles late readiness). */
+    _syncUrl() {
+      try {
+        var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+        var m = s && s.currentMonth;
+        var parts = [];
+        if (m) parts.push("m=" + encodeURIComponent(m));
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "budget", name: "" });
+    },
+
+    init() {
+      var self = this;
+      /* Honor incoming `?m=YYYY-MM` from a recalled saved view. The
+         store may not be ready yet — poll until it is, then apply. */
+      var requestedMonth = null;
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var m = p.get("m");
+        if (m && /^\d{4}-\d{2}$/.test(m)) requestedMonth = m;
+      } catch (_e) {}
+      var tries = 0;
+      var apply = function () {
+        var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+        if (!s || !s.setMonth) {
+          if (++tries < 100) setTimeout(apply, 50);
+          return;
+        }
+        if (requestedMonth) s.setMonth(requestedMonth);
+        /* Write URL whenever the store's currentMonth changes. Using
+           Alpine.effect because it's a store value, not a local
+           reactive field — $watch would miss it. */
+        if (window.Alpine && window.Alpine.effect) {
+          window.Alpine.effect(function () {
+            void s.currentMonth;
+            self._syncUrl();
+          });
+        }
+      };
+      apply();
+    },
 
     /* ---- Auto-assign --------------------------------------------- */
     /* Compute per-category cents under each strategy. Returns the
@@ -971,7 +1088,7 @@ function budgetView() {
       var total = 0;
       var scope = this.autoAssignScope || { kind: "all" };
       var scopeIds = scope.kind === "category" && scope.id ? [scope.id]
-                   : scope.kind === "group" && scope.ids ? scope.ids
+                   : (scope.kind === "group" || scope.kind === "selection") && scope.ids ? scope.ids
                    : null;
       var scopeSet = scopeIds ? new Set(scopeIds.filter(Boolean)) : null;
       var allCats = (store.profile.categories || []).filter(function (c) {

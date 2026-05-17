@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Debt overview</h1>
       <p class="app-page__lead">Balances on every credit card and tracking liability. Payoff months estimate based on the average payment over the last three months.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this chart type + filter + sort as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   <section class="report">
@@ -191,8 +195,35 @@ function debtView() {
       });
     },
 
+    /* URL state sync — write chartType + query + sort back to the
+       address bar so the view is shareable + save-able. */
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.chartType !== "bar")       parts.push("type="  + encodeURIComponent(this.chartType));
+        if (this.query)                     parts.push("q="     + encodeURIComponent(this.query));
+        if (this.sortKey !== "balance")     parts.push("sort="  + encodeURIComponent(this.sortKey));
+        if (this.sortDir !== "desc")        parts.push("dir="   + encodeURIComponent(this.sortDir));
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "debt", name: "" });
+    },
+
     init() {
       var self = this;
+      /* Honor incoming URL params from a recalled saved view. */
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var t = p.get("type");
+        if (t && ["bar","donut"].indexOf(t) !== -1) self.chartType = t;
+        var q = p.get("q"); if (q) self.query = q;
+        var sk = p.get("sort"); if (sk) self.sortKey = sk;
+        var sd = p.get("dir");  if (sd && (sd === "asc" || sd === "desc")) self.sortDir = sd;
+      } catch (_e) {}
       var chart = null;
       var tries = 0;
       var poll = function () {
@@ -202,7 +233,10 @@ function debtView() {
         chart = window.pbMountChart("#chart-debt", window.pbRenderDebt, function () {
           return store.reportDebt();
         });
-        self.$watch("chartType", function () { chart && chart.redraw(); });
+        self.$watch("chartType", function () { chart && chart.redraw(); self._syncUrl(); });
+        self.$watch("query",     function () { self._syncUrl(); });
+        self.$watch("sortKey",   function () { self._syncUrl(); });
+        self.$watch("sortDir",   function () { self._syncUrl(); });
         Alpine.effect(function () {
           store.profile; store._listVersion;
           if (chart) chart.redraw();
