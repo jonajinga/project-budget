@@ -85,6 +85,13 @@ export function createStore() {
     lastSavedAt: null,
     toasts: [],
     privateBrowsing: false,
+    /* True while the initial profile load is in flight. Pages can
+       x-show a loading overlay until this flips false in init()'s
+       finally block. */
+    loading: true,
+    /* Populated with the error message if init() throws — surfaces
+       in the toast + lets the diagnostics page show context. */
+    loadError: null,
 
     /* Collapsed-state maps live directly on the Alpine store (not on the
        profile schema) so reactivity is rock-solid: x-for/x-show bindings
@@ -197,6 +204,8 @@ export function createStore() {
     storageMigration: null,    /* result of the one-time LS -> Dexie scan */
 
     init() {
+      this.loading = true;
+      this.loadError = null;
       this.privateBrowsing = isPrivateBrowsing();
       if (this.privateBrowsing) {
         this.pushToast(
@@ -205,7 +214,7 @@ export function createStore() {
           true
         );
       }
-      pruneTrash();
+      try { pruneTrash(); } catch (e) { console.warn("pruneTrash failed:", e); }
 
       /* Boot order:
          1. Check whether Dexie is usable. Sets storageBackend.
@@ -214,12 +223,28 @@ export function createStore() {
          3. If localStorage has no profiles but Dexie does, restore from
             Dexie (covers users whose localStorage was wiped while
             IndexedDB persisted).
-         4. Then run the normal in-memory boot from localStorage. */
+         4. Then run the normal in-memory boot from localStorage.
+
+         Each step is wrapped — total init failure surfaces as a sticky
+         danger toast so the user knows something's wrong instead of
+         silently sitting with an empty UI. */
       var self = this;
       this._bootDexie().catch(function (e) {
         console.warn("Dexie boot failed (will keep using localStorage):", e);
       }).finally(function () {
-        self._bootFromLocalStorage();
+        try {
+          self._bootFromLocalStorage();
+        } catch (err) {
+          console.error("Profile load failed:", err);
+          self.loadError = (err && err.message) || String(err);
+          self.pushToast(
+            "Couldn't load your data. " + self.loadError + " Open Diagnostics for details.",
+            "danger",
+            true
+          );
+        } finally {
+          self.loading = false;
+        }
       });
     },
 

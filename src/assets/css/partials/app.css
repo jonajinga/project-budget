@@ -7,6 +7,41 @@
 .app-page > * { min-width: 0; max-width: 100%; }
 .app-main { min-width: 0; overflow-x: hidden; }
 
+/* Initial-load overlay — covers the whole viewport while the
+   store is restoring data on first paint. Self-hides on
+   $store.budget.loading flip. */
+.app-loading {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  z-index: 200;
+  pointer-events: none;
+}
+.app-loading__spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid var(--border-soft);
+  border-top-color: var(--accent);
+  animation: app-loading-spin 800ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-loading__spinner { animation-duration: 2500ms; }
+}
+@keyframes app-loading-spin {
+  to { transform: rotate(360deg); }
+}
+.app-loading__label {
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.02em;
+}
+
 .kpi-grid {
   display: grid;
   gap: var(--space-md);

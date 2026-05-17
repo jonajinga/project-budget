@@ -49,6 +49,15 @@
     {% include "partials/sample-banner.njk" %}
     {{ content | safe }}
   </section>
+  {# Loading overlay — visible only while the store is restoring
+     data on first paint. Self-cleans the moment the store flips
+     loading=false. x-cloak hides it until Alpine boots so static
+     HTML doesn't flash the spinner. #}
+  <div class="app-loading" x-show="$store.budget && $store.budget.loading" x-cloak
+       role="status" aria-live="polite" aria-label="Loading your data">
+    <span class="app-loading__spinner" aria-hidden="true"></span>
+    <span class="app-loading__label">Loading…</span>
+  </div>
 </div>
 {% include "partials/fab-quick-add.njk" %}
 {% include "partials/toast.njk" %}
