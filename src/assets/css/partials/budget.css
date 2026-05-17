@@ -61,7 +61,6 @@
   padding-top: 0.85rem;
   padding-bottom: 0.85rem;
   border-top: 2px solid var(--border-strong, var(--border));
-  box-shadow: inset 4px 0 0 var(--accent);
 }
 .budget__group-header strong {
   font-size: var(--fs-md);
