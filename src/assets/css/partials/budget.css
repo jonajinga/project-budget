@@ -266,15 +266,19 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 .budget__group-header .group-toggle {
   min-width: 0;
-  /* Allow the title to wrap to a second line on narrow viewports
-     rather than truncate with an ellipsis — the header grows
-     taller instead of swallowing characters. */
   text-align: left;
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .budget__group-header .group-toggle strong {
   min-width: 0;
-  white-space: normal;
+  white-space: nowrap;
+  /* Fluid font-size — full size at wide viewports, shrinks
+     smoothly down to 0.75rem on phone-width so long names like
+     "Immediate obligations" stay on one line without ellipsis or
+     wrapping. Uses vw so it tracks viewport width directly; the
+     parent budget cluster is roughly viewport-width. */
+  font-size: clamp(0.75rem, 1.8vw, var(--fs-md));
 }
 /* Same fade-in pattern for the group header's inline actions.
    nowrap + flex-shrink: 0 keeps the cluster pinned next to the
