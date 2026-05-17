@@ -31,8 +31,15 @@ export const reconcileSlice = {
     if (!this.profile) return 0;
     this._recordUndo("Reconcile account");
     var count = applyReconcileImpl(this.profile, accountId);
+    this._bumpLists();
     this._save();
-    this.pushToast("Reconciled " + count + " transaction" + (count === 1 ? "" : "s") + ".");
+    /* Only toast when something actually happened — a 0-count
+       reconcile usually means the user clicked Apply without any
+       cleared rows pending, and "Reconciled 0 transactions" reads
+       as noise. */
+    if (count > 0) {
+      this.pushToast("Reconciled " + count + " transaction" + (count === 1 ? "" : "s") + ".");
+    }
     return count;
   },
 
@@ -49,6 +56,7 @@ export const reconcileSlice = {
     if (!this.profile) return null;
     this._recordUndo("Add adjustment");
     var t = addAdjustmentImpl(this.profile, accountId, amountCents, dateISO, memo);
+    this._bumpLists();
     this._save();
     return t;
   },
@@ -63,7 +71,7 @@ export const reconcileSlice = {
     if (!this.profile) return false;
     this._recordUndo("Unlock reconciled");
     var ok = unlockReconciledImpl(this.profile, txnId);
-    if (ok) this._save();
+    if (ok) { this._bumpLists(); this._save(); }
     return ok;
   },
 };

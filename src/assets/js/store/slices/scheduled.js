@@ -24,6 +24,7 @@ export const scheduledSlice = {
     if (!this.profile) return null;
     this._recordUndo("Add recurring");
     var s = addScheduleImpl(this.profile, opts);
+    this._bumpLists();
     this._save();
     return s;
   },

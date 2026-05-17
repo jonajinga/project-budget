@@ -32,8 +32,10 @@ function registerView() {
     acctQuery: "",
     showBulkRecat: false,
     showBulkRename: false,
+    showBulkShift: false,
     bulkRecatTarget: "",
     bulkRenameTarget: "",
+    bulkShiftDelta: 0,
 
     form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false },
     edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false },
@@ -629,6 +631,29 @@ function registerView() {
         "ok"
       );
       this.showBulkRename = false;
+      this.clearTxnSelection();
+    },
+
+    openBulkShift() {
+      this.bulkShiftDelta = 0;
+      this.showBulkShift = true;
+      var self = this;
+      this.$nextTick(function () {
+        var el = document.getElementById("bulk-shift-input");
+        if (el) el.focus();
+      });
+    },
+    applyBulkShift() {
+      var d = Number(this.bulkShiftDelta);
+      if (!Number.isFinite(d) || d === 0) return;
+      var ids = this.selectedTxnIds.slice();
+      if (!ids.length) { this.showBulkShift = false; return; }
+      var n = this.$store.budget.bulkShiftDates(ids, d);
+      this.$store.budget.pushToast(
+        "Shifted " + n + " transaction" + (n === 1 ? "" : "s") + " by " + d + " day" + (Math.abs(d) === 1 ? "" : "s") + ".",
+        "ok"
+      );
+      this.showBulkShift = false;
       this.clearTxnSelection();
     },
 

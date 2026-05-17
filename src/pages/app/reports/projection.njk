@@ -51,7 +51,7 @@ eleventyExcludeFromCollections: true
   </div>
 
   <section class="report">
-    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs); flex-wrap: wrap;">
       <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Horizon:</span>
       <template x-for="r in ranges" :key="r.value">
         <button type="button" class="btn btn--sm"
@@ -60,6 +60,38 @@ eleventyExcludeFromCollections: true
                 x-text="r.label"></button>
       </template>
     </div>
+
+    {# ---- What-if scenario controls ---- #}
+    <fieldset class="whatif">
+      <legend class="whatif__legend">What-if</legend>
+      <div class="whatif__row">
+        <label class="whatif__field">
+          <span class="whatif__label">Income</span>
+          <span class="whatif__control">
+            <input type="range" min="-50" max="50" step="5" x-model.number="whatIfIncomePct">
+            <output x-text="(whatIfIncomePct >= 0 ? '+' : '') + whatIfIncomePct + '%'"></output>
+          </span>
+        </label>
+        <label class="whatif__field">
+          <span class="whatif__label">Expenses</span>
+          <span class="whatif__control">
+            <input type="range" min="-50" max="50" step="5" x-model.number="whatIfExpensePct">
+            <output x-text="(whatIfExpensePct >= 0 ? '+' : '') + whatIfExpensePct + '%'"></output>
+          </span>
+        </label>
+        <button type="button" class="btn btn--ghost btn--sm"
+                :disabled="whatIfIncomePct === 0 && whatIfExpensePct === 0"
+                @click="whatIfIncomePct = 0; whatIfExpensePct = 0"
+                data-tip="Reset both sliders to 0%.">Reset</button>
+      </div>
+      <p class="whatif__hint" x-show="whatIfIncomePct !== 0 || whatIfExpensePct !== 0" x-cloak>
+        Showing a hypothetical projection — income scaled by
+        <strong x-text="(whatIfIncomePct >= 0 ? '+' : '') + whatIfIncomePct + '%'"></strong>,
+        expenses scaled by
+        <strong x-text="(whatIfExpensePct >= 0 ? '+' : '') + whatIfExpensePct + '%'"></strong>.
+        Underlying data is unchanged.
+      </p>
+    </fieldset>
 
     <div class="chart" id="chart-proj" style="min-height: 320px;"
          role="img" aria-label="Cashflow projection chart"
@@ -129,6 +161,32 @@ function projectionView() {
       { value: 12, label: "12 mo" },
       { value: 24, label: "24 mo" },
     ],
+    /* What-if sliders — scale the monthly net cash-generation
+       implied by the projection by (1 + incomePct/100 - expensePct/100).
+       Approximation: applied uniformly to the delta-from-start
+       balance at each step, not decomposed per income/expense leg,
+       because reportProjection() emits aggregated balance series
+       rather than separate inflow/outflow components. Directionally
+       correct; precise mode would require a new domain helper. */
+    whatIfIncomePct: 0,
+    whatIfExpensePct: 0,
+    _scaleFactor() {
+      return 1 + (this.whatIfIncomePct / 100) - (this.whatIfExpensePct / 100);
+    },
+    _scaleProjection(src) {
+      var k = this._scaleFactor();
+      if (k === 1 || !src || !src.length) return src;
+      var start = src[0];
+      var startExpected = start.expected != null ? start.expected : (start.low || 0);
+      return src.map(function (r, i) {
+        if (i === 0) return r;
+        var clone = Object.assign({}, r);
+        if (r.low      != null) clone.low      = startExpected + (r.low      - startExpected) * k;
+        if (r.expected != null) clone.expected = startExpected + (r.expected - startExpected) * k;
+        if (r.high     != null) clone.high     = startExpected + (r.high     - startExpected) * k;
+        return clone;
+      });
+    },
 
     query: "",
     sortKey: "month",
@@ -141,7 +199,8 @@ function projectionView() {
     ],
     get rows() {
       void this.$store.budget._listVersion;
-      var src = this.$store.budget.reportProjection(this.horizon || 12) || [];
+      var raw = this.$store.budget.reportProjection(this.horizon || 12) || [];
+      var src = this._scaleProjection(raw);
       var q = (this.query || "").trim().toLowerCase();
       var filtered = q ? src.filter(function (r) { return String(r.month).toLowerCase().indexOf(q) !== -1; }) : src;
       var key = this.sortKey, dir = this.sortDir;
@@ -182,7 +241,8 @@ function projectionView() {
        user sorts the table. */
     kpis() {
       void this.$store.budget._listVersion;
-      var src = this.$store.budget.reportProjection(this.horizon || 12) || [];
+      var raw = this.$store.budget.reportProjection(this.horizon || 12) || [];
+      var src = this._scaleProjection(raw);
       if (!src.length) return { startBalance: 0, endExpected: 0, netChange: 0, lowestLow: 0, lowestMonth: "" };
       var start = src[0];
       var end = src[src.length - 1];
@@ -260,10 +320,12 @@ function projectionView() {
         if (!ready) { if (++tries < 600) setTimeout(poll, 50); return; }
         var store = Alpine.store("budget");
         chart = window.pbMountChart("#chart-proj", window.pbRenderProj, function () {
-          return store.reportProjection(self.horizon);
+          return self._scaleProjection(store.reportProjection(self.horizon));
         });
         self.$watch("horizon", function () { chart && chart.redraw(); self._syncUrl(); });
         self.$watch("query",   function () { self._syncUrl(); });
+        self.$watch("whatIfIncomePct",  function () { chart && chart.redraw(); });
+        self.$watch("whatIfExpensePct", function () { chart && chart.redraw(); });
         Alpine.effect(function () {
           store.profile; store._listVersion;
           if (chart) chart.redraw();

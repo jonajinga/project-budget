@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  {# Opt into the cross-document View Transitions API. Browsers that
+     support it (Chrome 126+, Edge 126+) wrap full-page navigations
+     between same-origin documents in a smooth root-element
+     transition; everywhere else this meta tag is a no-op. Honors
+     prefers-reduced-motion automatically via the UA. #}
+  <meta name="view-transition" content="same-origin">
+
   {% include "partials/theme-script.njk" %}
 
   {# Bunny Fonts — preconnect + stylesheet. font-display=swap is baked in.

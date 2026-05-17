@@ -775,6 +775,8 @@ eleventyExcludeFromCollections: true
               data-tip="Reassign every selected transaction to one category.">Recategorize</button>
       <button type="button" class="btn btn--secondary btn--sm" @click="openBulkRename()"
               data-tip="Set the payee on every selected transaction.">Rename payee</button>
+      <button type="button" class="btn btn--secondary btn--sm" @click="openBulkShift()"
+              data-tip="Shift every selected transaction's date by a number of days.">Shift dates</button>
       <button type="button" class="btn btn--danger btn--sm" @click="bulkDelete()"
               data-tip="Move every selected transaction to Trash. Recoverable for 30 days.">Delete</button>
       <button type="button" class="btn btn--ghost btn--sm" @click="clearTxnSelection()"
@@ -829,6 +831,33 @@ eleventyExcludeFromCollections: true
         <button class="btn btn--primary" type="button" @click="applyBulkRename()"
                 :disabled="!bulkRenameTarget.trim()">Apply</button>
         <button class="btn btn--ghost" type="button" @click="showBulkRename = false">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  {# Bulk date-shift modal #}
+  <div class="modal-backdrop" x-show="showBulkShift" x-cloak @keydown.escape.window="showBulkShift = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bulk-shift-title"
+         @click.outside="showBulkShift = false" style="max-width: 480px;">
+      <button class="modal__close" type="button" @click="showBulkShift = false" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="bulk-shift-title">Shift dates</h3>
+      <p style="color: var(--fg-muted);">
+        Move every selected transaction by a number of days. Positive
+        shifts forward, negative shifts backward. Reconciled rows are
+        skipped.
+      </p>
+      <div class="field" style="margin-top: var(--space-sm);">
+        <label class="field__label" for="bulk-shift-input">Days (positive or negative)</label>
+        <input class="input" id="bulk-shift-input" type="number" step="1"
+               x-model.number="bulkShiftDelta"
+               placeholder="e.g. -7 to move back one week">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="applyBulkShift()"
+                :disabled="!Number.isFinite(bulkShiftDelta) || bulkShiftDelta === 0">Apply</button>
+        <button class="btn btn--ghost" type="button" @click="showBulkShift = false">Cancel</button>
       </div>
     </div>
   </div>

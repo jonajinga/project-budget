@@ -30,6 +30,44 @@ eleventyExcludeFromCollections: true
 
   <div x-show="$store.budget.profile" x-cloak>
 
+    {# ==== Quick-add transaction (inline, dashboard) ==== #}
+    <section class="card dash-quick" x-show="quickHasAccounts()" x-cloak>
+      <form class="dash-quick__form" @submit.prevent="quickAddSubmit()">
+        <div class="dash-quick__field">
+          <label class="field__label" for="qa-date">Date</label>
+          <input class="input" id="qa-date" type="date" x-model="quickForm.date" required>
+        </div>
+        <div class="dash-quick__field dash-quick__field--wide">
+          <label class="field__label" for="qa-payee">Payee</label>
+          <input class="input" id="qa-payee" type="text" x-model="quickForm.payeeName"
+                 placeholder="e.g. Whole Foods" autocomplete="off">
+        </div>
+        <div class="dash-quick__field">
+          <label class="field__label" for="qa-amount">Amount</label>
+          <input class="input" id="qa-amount" type="text" x-model="quickForm.amount"
+                 placeholder="-25.00" inputmode="decimal" required>
+        </div>
+        <div class="dash-quick__field">
+          <label class="field__label" for="qa-account">Account</label>
+          <select class="select" id="qa-account" x-model="quickForm.accountId" required>
+            <template x-for="a in quickAccounts()" :key="a.id">
+              <option :value="a.id" x-text="a.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="dash-quick__field">
+          <label class="field__label" for="qa-cat">Category</label>
+          <select class="select" id="qa-cat" x-model="quickForm.categoryId">
+            <option value="">(auto)</option>
+            <template x-for="c in $store.budget.categoriesFlat()" :key="c.id">
+              <option :value="c.id" x-text="c.name"></option>
+            </template>
+          </select>
+        </div>
+        <button class="btn btn--primary dash-quick__submit" type="submit">Add</button>
+      </form>
+    </section>
+
     {# ==== Hero band: greeting, month, and a one-line insight ==== #}
     <section class="dash-hero" aria-label="Today's summary">
       <div class="dash-hero__greeting">
@@ -117,6 +155,26 @@ eleventyExcludeFromCollections: true
               x-text="overspent().count"></span>
         <span class="dashboard__kpi-sub" x-text="overspent().count > 0 ? ('Deficit ' + fmtCompact(overspent().totalDeficit)) : 'Everything covered'"></span>
       </a>
+    </section>
+
+    {# ==== Smart insights ==== #}
+    <section class="card" x-show="insights().length" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Insights</h2>
+        <span style="color: var(--fg-muted); font-size: var(--fs-xs);" x-text="insights().length + ' signal' + (insights().length === 1 ? '' : 's')"></span>
+      </div>
+      <ul class="dash-insights">
+        <template x-for="ins in insights()" :key="ins.id">
+          <li class="dash-insight" :class="'dash-insight--' + ins.severity">
+            <span class="dash-insight__icon" aria-hidden="true" x-text="ins.icon"></span>
+            <div class="dash-insight__body">
+              <p class="dash-insight__title" x-text="ins.title"></p>
+              <p class="dash-insight__detail" x-text="ins.detail"></p>
+            </div>
+            <a class="dash-insight__cta" x-show="ins.href" x-cloak :href="ins.href" x-text="ins.cta || 'View'"></a>
+          </li>
+        </template>
+      </ul>
     </section>
 
     {# ==== Account balances grid ==== #}
@@ -293,16 +351,24 @@ function dashboardView() {
   return {
     chartIE: null,
     chartProj: null,
+    /* Inline quick-add state. Pre-populated with today's date + the
+       first open account once the profile loads via the quickAccounts
+       getter. Auto-rules fire on submit (categorize / normalize-payee)
+       so manual entries are normalized just like imports. */
+    quickForm: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "" },
 
     init() {
       var self = this;
+      /* Seed the inline quick-add form. Account is filled in lazily
+         via the quickAccounts() getter once the profile loads. */
+      this.quickForm.date = new Date().toISOString().slice(0, 10);
       /* Wait for the budget store + chart bootstrap script-modules to
          finish loading, then mount the two sparklines. Same polling
          pattern as the report pages so the timing is predictable. */
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbDashRenderIE && window.pbDashRenderProj;
-        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        if (!ready) { if (++tries < 600) setTimeout(poll, 50); return; }
         var store = Alpine.store("budget");
         self.chartIE = window.pbMountChart("#dash-chart-ie", window.pbDashRenderIE, function () {
           return store.reportIncomeVsExpense(null, 6);
@@ -318,6 +384,63 @@ function dashboardView() {
         });
       };
       poll();
+    },
+
+    /* ---- Quick-add ---- */
+    quickHasAccounts() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      return !!(p && (p.accounts || []).some(function (a) { return !a.closedAt; }));
+    },
+    quickAccounts() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      var open = (p.accounts || [])
+        .filter(function (a) { return !a.closedAt; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+      /* Seed accountId on the form once accounts exist. */
+      if (open.length && !this.quickForm.accountId) {
+        this.quickForm.accountId = open[0].id;
+      }
+      return open;
+    },
+    _parseQuickAmount(s) {
+      if (s == null || s === "") return 0;
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
+      var clean = String(s).replace(/[$,\s]/g, "").trim();
+      if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
+      var n = Number(clean);
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+    quickAddSubmit() {
+      var f = this.quickForm;
+      if (!f.accountId) return;
+      var amount = this._parseQuickAmount(f.amount);
+      if (!amount) { this.$store.budget.pushToast("Amount is required.", "warn"); return; }
+      this.$store.budget.addTransaction({
+        accountId: f.accountId,
+        date: f.date || new Date().toISOString().slice(0, 10),
+        payeeName: f.payeeName,
+        categoryId: f.categoryId || null,
+        amount: amount,
+        memo: "",
+        cleared: false,
+      });
+      this.$store.budget.pushToast("Added transaction.", "ok");
+      /* Reset just the per-row inputs, preserve account + date so
+         entering a batch is fast. */
+      this.quickForm.payeeName = "";
+      this.quickForm.amount = "";
+      this.quickForm.categoryId = "";
+      var self = this;
+      this.$nextTick(function () {
+        var el = document.getElementById("qa-payee");
+        if (el) el.focus();
+      });
     },
 
     /* ---- Hero band ---- */
@@ -367,6 +490,125 @@ function dashboardView() {
       var from = fromRow && typeof fromRow.netWorth === "number" ? fromRow.netWorth : (fromRow && fromRow.total) || to;
       var pct = from !== 0 ? ((to - from) / Math.abs(from)) * 100 : 0;
       return { from: from, to: to, pct: pct };
+    },
+
+    /* ---- Smart insights ---- */
+    /* Walks the recent activity + budget to surface 0–6 plain-
+       English signals. Each insight returns
+         { id, severity, icon, title, detail, href?, cta? }
+       severity = ok | info | warn | danger drives the color rail. */
+    insights() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      if (!s.profile) return [];
+      var out = [];
+      var self = this;
+
+      /* (1) Category whose spending is up >25% vs the prior month
+         and is among the top-5 expenses this month. */
+      var top = this.topCategoriesRows();
+      if (top.length) {
+        var thisMonth = s.currentMonth;
+        var parts = thisMonth.split("-").map(Number);
+        var prevDate = new Date(parts[0], (parts[1] || 1) - 2, 1);
+        var prevMonth = prevDate.getFullYear() + "-" + String(prevDate.getMonth() + 1).padStart(2, "0");
+        var prevSpending = s.reportSpending(prevMonth, prevMonth) || [];
+        var prevByCat = {};
+        prevSpending.forEach(function (r) { prevByCat[r.categoryId] = r.value; });
+        var biggestMover = null;
+        top.forEach(function (r) {
+          var prev = prevByCat[r.categoryId] || 0;
+          if (prev <= 0) return;
+          var pctChange = ((r.value - prev) / prev) * 100;
+          if (pctChange > 25 && (!biggestMover || pctChange > biggestMover.pctChange)) {
+            biggestMover = { row: r, prev: prev, pctChange: pctChange };
+          }
+        });
+        if (biggestMover) {
+          out.push({
+            id: "spike-" + biggestMover.row.categoryId,
+            severity: "warn",
+            icon: "↑",
+            title: biggestMover.row.category + " is up " + Math.round(biggestMover.pctChange) + "% vs last month",
+            detail: self.fmt(biggestMover.row.value) + " this month, " + self.fmt(biggestMover.prev) + " last.",
+            href: "/app/register/?q=" + encodeURIComponent(biggestMover.row.category),
+            cta: "View",
+          });
+        }
+      }
+
+      /* (2) Trailing 3-month savings rate trend. */
+      var sr = s.reportSavingsRate(null, 3) || [];
+      if (sr.length >= 3) {
+        var sumInc = 0, sumExp = 0;
+        sr.forEach(function (m) { sumInc += m.income || 0; sumExp += m.expense || 0; });
+        if (sumInc > 0) {
+          var rate = ((sumInc - sumExp) / sumInc) * 100;
+          if (rate >= 20) {
+            out.push({
+              id: "savings-strong",
+              severity: "ok",
+              icon: "★",
+              title: "Saving " + Math.round(rate) + "% of income on average",
+              detail: "3-month trailing rate. Keep it going.",
+              href: "/app/reports/savings-rate/",
+              cta: "Trend",
+            });
+          } else if (rate < 0) {
+            out.push({
+              id: "savings-negative",
+              severity: "danger",
+              icon: "↓",
+              title: "Spending exceeds income on a 3-month rolling basis",
+              detail: "Trailing savings rate is " + Math.round(rate) + "%. Review the budget.",
+              href: "/app/reports/savings-rate/",
+              cta: "Open",
+            });
+          }
+        }
+      }
+
+      /* (3) Subscriptions detector. */
+      var subs = s.reportSubscriptions(6) || [];
+      if (subs.length) {
+        var monthly = subs.reduce(function (acc, sub) {
+          return acc + (sub.monthlyEstimate || 0);
+        }, 0);
+        if (monthly > 0) {
+          out.push({
+            id: "subs-summary",
+            severity: "info",
+            icon: "↻",
+            title: subs.length + " recurring charge" + (subs.length === 1 ? "" : "s") + " detected",
+            detail: self.fmt(monthly) + " / month estimated — review for anything you don't need.",
+            href: "/app/reports/subscriptions/",
+            cta: "Audit",
+          });
+        }
+      }
+
+      /* (4) Largest single expense in the current month. */
+      var monthTxns = (s.profile.transactions || []).filter(function (t) {
+        return t.date && t.date.slice(0, 7) === s.currentMonth && t.amount < 0 && !t.transferTxnId;
+      });
+      if (monthTxns.length) {
+        var biggest = monthTxns.reduce(function (max, t) {
+          return Math.abs(t.amount) > Math.abs(max.amount) ? t : max;
+        }, monthTxns[0]);
+        if (Math.abs(biggest.amount) >= 20000) {
+          out.push({
+            id: "big-" + biggest.id,
+            severity: "info",
+            icon: "$",
+            title: "Largest expense this month: " + (s.payeeName(biggest.payeeId) || "Unknown"),
+            detail: self.fmt(Math.abs(biggest.amount)) + " on " + self.shortDate(biggest.date) + " (" + (s.categoryName(biggest.categoryId) || "Uncategorized") + ").",
+            href: "/app/register/?focus=" + biggest.id,
+            cta: "Open",
+          });
+        }
+      }
+
+      return out.slice(0, 6);
     },
 
     /* ---- Account balances grid ---- */

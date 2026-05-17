@@ -56,6 +56,7 @@ export const transactionsSlice = {
       memo: opts.memo || "",
       cleared: !!opts.cleared,
     });
+    this._bumpLists();
     this._save();
     return t;
   },
@@ -151,6 +152,34 @@ export const transactionsSlice = {
     }, "Bulk rename payee");
   },
 
+  /** Shift the date of every transaction in `ids` by the given
+   *  number of days (positive = forward, negative = backward).
+   *  Reconciled rows are skipped. Atomic via batchMutate. */
+  bulkShiftDates(ids, deltaDays) {
+    if (!this.profile || !Array.isArray(ids) || !ids.length) return 0;
+    var d = Math.round(Number(deltaDays) || 0);
+    if (d === 0) return 0;
+    var self = this;
+    return this.batchMutate(function () {
+      var n = 0;
+      ids.forEach(function (id) {
+        var t = self.profile.transactions.find(function (x) { return x.id === id; });
+        if (!t || t.reconciled || !t.date) return;
+        /* Parse the ISO date as local-noon to dodge timezone
+           rollovers on the shift. */
+        var parts = t.date.split("-").map(Number);
+        var dt = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1, 12, 0, 0);
+        dt.setDate(dt.getDate() + d);
+        var iso = dt.getFullYear() + "-" +
+          String(dt.getMonth() + 1).padStart(2, "0") + "-" +
+          String(dt.getDate()).padStart(2, "0");
+        editTxnImpl(self.profile, id, { date: iso });
+        n += 1;
+      });
+      return n;
+    }, "Bulk shift dates");
+  },
+
   /** Move every transaction in `ids` to the trash. Skips reconciled
    *  rows. Transfers cascade via the existing deleteTxnImpl logic. */
   bulkDeleteTransactions(ids) {
@@ -233,6 +262,7 @@ export const transactionsSlice = {
     if (!this.profile) return null;
     this._recordUndo(splits ? "Edit splits" : "Clear splits");
     var t = splitTxnImpl(this.profile, id, splits);
+    this._bumpLists();
     this._save();
     return t;
   },
@@ -255,6 +285,7 @@ export const transactionsSlice = {
       memo: opts.memo,
     });
     if (!pair) return null;
+    this._bumpLists();
     this._save();
     return pair;
   },

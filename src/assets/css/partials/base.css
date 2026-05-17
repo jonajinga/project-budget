@@ -384,3 +384,20 @@ sup {
 .sitemap-column li { padding: 0.2rem 0; }
 .sitemap-column a { color: var(--fg); text-decoration: none; font-size: var(--fs-sm); }
 .sitemap-column a:hover { color: var(--accent); }
+
+/* View Transitions — keep the cross-document transition simple
+   (180ms cross-fade) so app pages feel fluid without distracting
+   sliding artifacts. Browsers without support ignore these rules. */
+@view-transition { navigation: auto; }
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Reduced-motion users get no transition at all. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
