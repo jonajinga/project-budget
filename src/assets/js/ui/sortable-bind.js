@@ -75,8 +75,22 @@
       group: groupName,
       fallbackOnBody: true,
       swapThreshold: 0.6,
-      /* HTML5 D&D is fine on desktop; the JS fallback handles touch. */
-      forceFallback: false,
+      /* Always use SortableJS's JS-driven implementation. The HTML5
+         D&D fallback has poor + inconsistent touch support — drags
+         would start but freeze mid-gesture on iOS Safari + Chrome
+         mobile. JS fallback works uniformly on mouse + touch + pen. */
+      forceFallback: true,
+      /* Longer touch-hold delay only on touch devices (mouse stays
+         instant) so accidental finger drags during normal scroll
+         don't trigger a reorder. 200ms is the iOS standard for
+         distinguishing tap-vs-drag. */
+      delay: 200,
+      delayOnTouchOnly: true,
+      /* Scroll the viewport while dragging near the edges. Required
+         for long lists where the drop target is offscreen. */
+      scroll: true,
+      scrollSensitivity: 60,
+      scrollSpeed: 12,
       onStart: function () { document.body.classList.add("pb-dragging"); },
       onEnd: function (evt) {
         document.body.classList.remove("pb-dragging");

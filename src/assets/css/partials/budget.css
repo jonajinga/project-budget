@@ -1385,6 +1385,24 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 /* During any active drag, force the cursor across the whole document. */
 body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
+/* While a Sortable drag is active, lift the document-root overflow
+   clip so the dragged ghost element can render outside the
+   viewport without being cut off. Especially important on phones
+   where the user's finger naturally drags past viewport edges. */
+html:has(body.pb-dragging),
+body.pb-dragging { overflow: visible !important; }
+/* Bigger touch target on the drag handle when actual touch is
+   detected — 22-28px is too small for a finger but right for
+   mouse precision. Hit area expands via ::before pseudo-element
+   so the visual stays unchanged. */
+@media (any-hover: none) {
+  .dnd-handle { position: relative; }
+  .dnd-handle::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
+  }
+}
 
 /* ---- Calendar page -----------------------------------------------
    Day / Week / Month / Year views share the same toolbar and one
