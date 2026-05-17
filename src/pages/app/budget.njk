@@ -330,8 +330,13 @@ eleventyExcludeFromCollections: true
                             x-text="formatCents($store.budget.activityFor(c.id))"></button>
                   </div>
                   <div class="budget__available">
-                    <span class="available-pill" :class="availablePillClass(c.id)"
-                          x-text="formatCents(categoryAvailable(c.id))"></span>
+                    <button type="button"
+                            class="available-pill available-pill--btn"
+                            :class="availablePillClass(c.id)"
+                            @click="openMoveMoney(c)"
+                            :aria-label="'Move money to or from ' + c.name + ' (available: ' + formatCents(categoryAvailable(c.id)) + ')'"
+                            data-tip="Click to move money to or from this category."
+                            x-text="formatCents(categoryAvailable(c.id))"></button>
                   </div>
                 </div>
               </template>
