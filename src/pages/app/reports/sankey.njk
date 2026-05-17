@@ -59,14 +59,16 @@ eleventyExcludeFromCollections: true
       <input class="input" type="month" x-model="to" @change="preset = ''" style="max-width: 11rem;">
     </div>
 
-    <div class="chart" id="chart-sankey" style="min-height: 420px;"></div>
+    <div class="chart" id="chart-sankey" style="min-height: 420px;"
+         role="img" aria-label="Cash-flow Sankey diagram"
+         aria-describedby="data-table-sankey"></div>
 
     {# ---- Detail table ---- #}
     <details class="report__details" style="margin-top: var(--space-md);">
       <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
         View as table
       </summary>
-      <table class="table" style="margin-top: var(--space-sm);">
+      <table class="table" id="data-table-sankey" style="margin-top: var(--space-sm);">
         <thead>
           <tr>
             <th>Source</th>

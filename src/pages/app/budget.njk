@@ -124,8 +124,12 @@ eleventyExcludeFromCollections: true
                      :aria-label="'Select all categories in ' + (group.group?.name || 'Other')"
                      :data-tip="'Select / deselect every category in ' + (group.group?.name || 'Other categories') + ' for bulk actions.'">
               <span class="dnd-handle dnd-handle--sm"
-                    :aria-label="'Drag to reorder group ' + (group.group?.name || '')"
-                    x-show="group.group">&#9776;</span>
+                    :aria-label="'Reorder group ' + (group.group?.name || '') + '. Drag, or use arrow keys.'"
+                    role="button"
+                    tabindex="0"
+                    x-show="group.group"
+                    @keydown.up.prevent="keyboardMoveGroup(group.group, -1)"
+                    @keydown.down.prevent="keyboardMoveGroup(group.group, 1)">&#9776;</span>
               <button type="button" class="group-toggle"
                       @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
                       :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
@@ -222,7 +226,11 @@ eleventyExcludeFromCollections: true
                              :aria-label="'Select ' + c.name + ' for bulk actions'"
                              :data-tip="'Select this category for bulk Clear assigned / Clear available.'">
                       <span class="dnd-handle dnd-handle--sm"
-                            :aria-label="'Drag to reorder ' + c.name">&#9776;</span>
+                            :aria-label="'Reorder ' + c.name + '. Drag, or use arrow keys.'"
+                            role="button"
+                            tabindex="0"
+                            @keydown.up.prevent="keyboardMoveCat(c, group, -1)"
+                            @keydown.down.prevent="keyboardMoveCat(c, group, 1)">&#9776;</span>
                       <span class="budget__cat-name" x-text="c.name"></span>
                       <span class="goal-badge"
                             x-show="$store.budget.findGoal(c.id)"
@@ -913,6 +921,41 @@ function budgetView() {
       }
     },
     clearSelection() { this.selectedCatIds = []; },
+
+    /* Keyboard alternative to drag-and-drop (WCAG 2.5.7). Arrow keys
+       on the .dnd-handle reorder the row/group up or down by one
+       position, then restore focus to the same handle so the user
+       can keep pressing. Uses the same store mutators Sortable's
+       onEnd dispatches. */
+    keyboardMoveGroup(group, delta) {
+      if (!group || !group.id) return;
+      var view = this.$store.budget.categoryGroupsView();
+      var groupBuckets = view.filter(function (b) { return b.group; });
+      var idx = groupBuckets.findIndex(function (b) { return b.group.id === group.id; });
+      if (idx < 0) return;
+      var next = Math.max(0, Math.min(groupBuckets.length - 1, idx + delta));
+      if (next === idx) return;
+      this.$store.budget.moveCategoryGroup(group.id, next);
+      var self = this;
+      this.$nextTick(function () {
+        var el = document.querySelector('[data-sortable-id="' + group.id + '"] .dnd-handle');
+        if (el) el.focus();
+      });
+    },
+    keyboardMoveCat(c, groupBucket, delta) {
+      if (!c || !c.id) return;
+      var groupId = (groupBucket && groupBucket.group) ? groupBucket.group.id : null;
+      var cats = (groupBucket && groupBucket.categories) || [];
+      var idx = cats.findIndex(function (x) { return x.id === c.id; });
+      if (idx < 0) return;
+      var next = Math.max(0, Math.min(cats.length - 1, idx + delta));
+      if (next === idx) return;
+      this.$store.budget.moveCategory(c.id, groupId, next);
+      this.$nextTick(function () {
+        var el = document.querySelector('[data-sortable-id="' + c.id + '"] .dnd-handle');
+        if (el) el.focus();
+      });
+    },
     /* Bulk-clear handlers — all run through the new store methods with
        PBDialog confirmation for the irreversible-ish operations.
        Toasts the row count + a Cmd-Z hint. */

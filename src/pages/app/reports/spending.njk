@@ -67,7 +67,9 @@ eleventyExcludeFromCollections: true
         </template>
       </span>
     </div>
-    <div class="chart" id="chart-spending" style="min-height: 420px;"></div>
+    <div class="chart" id="chart-spending" style="min-height: 420px;"
+         role="img" aria-label="Spending by category chart"
+         aria-describedby="data-table-spending"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -85,7 +87,7 @@ eleventyExcludeFromCollections: true
               data-tip="Open the browser print dialog.">Print</button>
     </div>
 
-    <table class="table">
+    <table class="table" id="data-table-spending">
       <thead>
         <tr>
           <th class="is-sortable"><button type="button" @click="sortBy('group')">Group <span class="sort-ind" x-text="sortIndicator('group')"></span></button></th>

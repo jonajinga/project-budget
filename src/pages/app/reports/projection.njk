@@ -61,7 +61,9 @@ eleventyExcludeFromCollections: true
       </template>
     </div>
 
-    <div class="chart" id="chart-proj" style="min-height: 320px;"></div>
+    <div class="chart" id="chart-proj" style="min-height: 320px;"
+         role="img" aria-label="Cashflow projection chart"
+         aria-describedby="data-table-proj"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -79,7 +81,7 @@ eleventyExcludeFromCollections: true
               data-tip="Open the browser print dialog.">Print</button>
     </div>
 
-    <table class="table">
+    <table class="table" id="data-table-proj">
       <thead>
         <tr>
           <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>

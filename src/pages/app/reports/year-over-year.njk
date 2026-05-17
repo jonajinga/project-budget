@@ -74,14 +74,16 @@ eleventyExcludeFromCollections: true
       </span>
     </div>
 
-    <div class="chart" id="chart-yoy" style="min-height: 420px;"></div>
+    <div class="chart" id="chart-yoy" style="min-height: 420px;"
+         role="img" aria-label="Year-over-year comparison chart"
+         aria-describedby="data-table-yoy"></div>
 
     {# ---- Table view — driven by selected view ---- #}
     <details class="report__details" style="margin-top: var(--space-md);">
       <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
         View as table
       </summary>
-      <table class="table" style="margin-top: var(--space-sm);">
+      <table class="table" id="data-table-yoy" style="margin-top: var(--space-sm);">
         <thead>
           <tr>
             <th x-text="firstColLabel()"></th>

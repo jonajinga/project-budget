@@ -476,10 +476,14 @@ body:has(.bulk-actions-bar:not([style*="display: none"])) .toast-stack {
 }
 
 .toast__close {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
+  /* WCAG 2.5.5: 36×36 visible (was 28). The ::before bleed below
+     extends hit area to 44+ for belt-and-suspenders; visible button
+     itself is now generously tappable on touch devices that ignore
+     pseudo-element hit areas. */
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -493,11 +497,12 @@ body:has(.bulk-actions-bar:not([style*="display: none"])) .toast-stack {
   margin-right: var(--space-3xs);
   transition: background var(--t-fast), color var(--t-fast);
 }
-/* Bleed the hit area out to ≥44×44 for AAA touch target. */
+/* Bleed the hit area out to ≥44×44 — backup for touch devices that
+   don't reliably honor pseudo-element hit areas. */
 .toast__close::before {
   content: "";
   position: absolute;
-  inset: -8px;
+  inset: -6px;
 }
 .toast__close:hover { color: var(--fg); background: var(--bg-alt); }
 .toast__close:focus-visible {

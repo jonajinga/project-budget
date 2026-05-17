@@ -78,7 +78,9 @@ eleventyExcludeFromCollections: true
         </template>
       </span>
     </div>
-    <div class="chart" id="chart-sr" style="min-height: 420px;"></div>
+    <div class="chart" id="chart-sr" style="min-height: 420px;"
+         role="img" aria-label="Savings rate chart"
+         aria-describedby="data-table-sr"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -94,7 +96,7 @@ eleventyExcludeFromCollections: true
       <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
     </div>
 
-    <table class="table">
+    <table class="table" id="data-table-sr">
       <thead>
         <tr>
           <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>

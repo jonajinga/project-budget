@@ -33,7 +33,9 @@ eleventyExcludeFromCollections: true
         </template>
       </span>
     </div>
-    <div class="chart" id="chart-debt" style="min-height: 220px;"></div>
+    <div class="chart" id="chart-debt" style="min-height: 220px;"
+         role="img" aria-label="Debt overview chart"
+         aria-describedby="data-table-debt"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -51,7 +53,7 @@ eleventyExcludeFromCollections: true
               data-tip="Open the browser print dialog.">Print</button>
     </div>
 
-    <table class="table">
+    <table class="table" id="data-table-debt">
       <thead>
         <tr>
           <th class="is-sortable"><button type="button" @click="sortBy('account')">Account <span class="sort-ind" x-text="sortIndicator('account')"></span></button></th>

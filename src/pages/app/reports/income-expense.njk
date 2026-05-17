@@ -80,7 +80,9 @@ eleventyExcludeFromCollections: true
         </template>
       </span>
     </div>
-    <div class="chart" id="chart-ie" style="min-height: 420px;"></div>
+    <div class="chart" id="chart-ie" style="min-height: 420px;"
+         role="img" aria-label="Income vs expense chart"
+         aria-describedby="data-table-ie"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -98,7 +100,7 @@ eleventyExcludeFromCollections: true
               data-tip="Open the browser print dialog.">Print</button>
     </div>
 
-    <table class="table">
+    <table class="table" id="data-table-ie">
       <thead>
         <tr>
           <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>

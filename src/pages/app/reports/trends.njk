@@ -61,14 +61,16 @@ eleventyExcludeFromCollections: true
       </template>
     </div>
 
-    <div class="chart" id="chart-trends" style="min-height: 240px;"></div>
+    <div class="chart" id="chart-trends" style="min-height: 240px;"
+         role="img" aria-label="Monthly trends chart"
+         aria-describedby="data-table-trends"></div>
 
     {# ---- View as table (collapsed by default) + actions ---- #}
     <details class="report__details" style="margin-top: var(--space-md);">
       <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
         View as table
       </summary>
-      <table class="table" style="margin-top: var(--space-sm);">
+      <table class="table" id="data-table-trends" style="margin-top: var(--space-sm);">
         <thead>
           <tr>
             <th>Group</th>

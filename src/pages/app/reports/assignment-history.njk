@@ -59,14 +59,16 @@ eleventyExcludeFromCollections: true
       </template>
     </div>
 
-    <div class="chart" id="chart-ah" style="min-height: 260px;"></div>
+    <div class="chart" id="chart-ah" style="min-height: 260px;"
+         role="img" aria-label="Assignment history chart"
+         aria-describedby="data-table-ah"></div>
 
     {# ---- View as table (collapsed) ---- #}
     <details class="report__details" style="margin-top: var(--space-md);">
       <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
         View as table
       </summary>
-      <table class="table" style="margin-top: var(--space-sm);">
+      <table class="table" id="data-table-ah" style="margin-top: var(--space-sm);">
         <thead>
           <tr>
             <th>Group</th>
