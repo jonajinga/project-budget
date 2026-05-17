@@ -5,9 +5,26 @@
 
 export const SCHEMA_VERSION = 1;
 
+/* Base-62 short IDs — 12 chars give 62^12 ≈ 3.2 × 10^21 possible
+   values, plenty of uniqueness for any realistic single-profile
+   usage and ~24 chars (66%) shorter than the 36-char UUIDs we used
+   to emit. Saves ~100 bytes per transaction at scale. Old UUIDs
+   keep working because every consumer treats IDs as opaque strings;
+   no migration needed. */
+var _ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export function newId() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  return "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var out = "";
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    var buf = new Uint8Array(12);
+    crypto.getRandomValues(buf);
+    for (var i = 0; i < 12; i++) out += _ID_ALPHABET[buf[i] % 62];
+    return out;
+  }
+  /* Math.random fallback for older environments. */
+  for (var j = 0; j < 12; j++) {
+    out += _ID_ALPHABET[Math.floor(Math.random() * 62)];
+  }
+  return out;
 }
 
 function nowISO() { return new Date().toISOString(); }

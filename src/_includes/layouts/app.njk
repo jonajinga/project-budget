@@ -68,6 +68,10 @@
      boots, so the store is set up by the time x-data binds. Popper must
      load before tippy. #}
   <script src="/assets/js/app.js?v={{ build.hash }}" type="module"></script>
+  {# lz-string for localStorage compression — loaded synchronously
+     (no defer) so the persist layer can use it immediately on first
+     paint. Only ~5 KB. #}
+  <script src="/assets/js/vendor/lz-string.min.js"></script>
   <script src="/assets/js/vendor/dexie.min.js" defer></script>
   {# Chart.js is used by every page that draws a chart — reports + the
      dashboard sparklines. D3 is only used by the spending treemap, so

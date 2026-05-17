@@ -486,11 +486,13 @@ export function createStore() {
         function () {
           self.lastSavedAt = new Date();
           self.refreshProfiles();
-          /* Mirror to Dexie. Fire-and-forget — localStorage already
-             committed, Dexie failure is non-fatal. Clone via JSON
+          /* Always mirror to Dexie when it's available — Dexie is
+             the canonical store at large profile sizes (localStorage
+             skips above ~500 KB compressed). Fire-and-forget; Dexie
+             failures don't surface to the user. Clone via JSON
              round-trip so we hand IndexedDB a plain object instead of
              Alpine's reactive Proxy (structured-clone can't handle it). */
-          if (self.storageBackend === "mirrored") {
+          if (self.storageBackend === "mirrored" || self.storageBackend === "dexie") {
             dexie.putProfile(unwrap(self.profile)).catch(function (e) {
               console.warn("Dexie putProfile failed:", e);
             });

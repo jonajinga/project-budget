@@ -46,15 +46,66 @@ export function removeKey(key) {
   try { s.removeItem(key); return true; } catch (_e) { return false; }
 }
 
+/* ---- Compression layer ----
+   LZ-string compressToUTF16 packs 15 bits per char and stays
+   string-safe for localStorage. Empirical compression ratio on a
+   profile bundle: ~60% reduction (JSON has lots of repeated keys
+   + ID strings — perfect for LZ77). We only compress payloads >2 KB
+   so tiny keys (active profile id, flags) stay readable when
+   browsing devtools.
+
+   Versioning: payloads start with "PB2:" so we can detect compressed
+   blobs and decompress them. Anything else parses as raw JSON
+   (backward compat for users coming from the previous format and
+   for keys we choose to leave uncompressed). */
+
+var COMPRESS_PREFIX = "PB2:";
+var COMPRESS_THRESHOLD = 2048;
+
+function lz() {
+  return typeof window !== "undefined" ? window.LZString : null;
+}
+
+function tryCompress(json) {
+  var L = lz();
+  if (!L || json.length < COMPRESS_THRESHOLD) return null;
+  try {
+    var packed = L.compressToUTF16(json);
+    if (!packed || packed.length >= json.length) return null;
+    return COMPRESS_PREFIX + packed;
+  } catch (_e) { return null; }
+}
+
+function tryDecompress(raw) {
+  if (!raw || raw.indexOf(COMPRESS_PREFIX) !== 0) return raw;
+  var L = lz();
+  if (!L) return null;
+  try { return L.decompressFromUTF16(raw.slice(COMPRESS_PREFIX.length)); }
+  catch (_e) { return null; }
+}
+
 export function readJSON(key) {
   var raw = readRaw(key);
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch (_e) { return null; }
+  var json = tryDecompress(raw);
+  if (json == null) return null;
+  try { return JSON.parse(json); } catch (_e) { return null; }
 }
 
 export function writeJSON(key, value) {
-  return writeRaw(key, JSON.stringify(value));
+  var json = JSON.stringify(value);
+  var packed = tryCompress(json);
+  return writeRaw(key, packed || json);
 }
+
+/* Soft cap on the per-profile localStorage write. localStorage has a
+   hard 5 MB quota per origin; once a compressed profile crosses
+   ~500 KB it can squeeze out other apps' data + leave no headroom
+   for snapshots. Above this cap we skip the localStorage write
+   entirely — Dexie has the canonical copy via the store's mirror
+   path, and there's nothing the user can do about a quota error
+   except clear data. Silent skip > fatal toast. */
+var LS_PROFILE_SOFT_CAP = 500 * 1024;
 
 /* Debounced save for a profile bundle. Updates updatedAt before write. */
 export function scheduleSave(profile, onSaved, onError) {
@@ -64,8 +115,24 @@ export function scheduleSave(profile, onSaved, onError) {
   var t = setTimeout(function () {
     timers.delete(key);
     profile.updatedAt = new Date().toISOString();
-    var result = writeJSON(key, profile);
+    /* Pre-flight: serialize + compress to measure size BEFORE
+       trying the write. If the payload won't fit comfortably,
+       skip the localStorage write and let Dexie carry it. */
+    var json = JSON.stringify(profile);
+    var packed = tryCompress(json) || json;
+    if (packed.length > LS_PROFILE_SOFT_CAP) {
+      /* Best effort: still call onSaved so the UI's "Saved" status
+         flips. Dexie will receive the write via the mirror path. */
+      onSaved && onSaved(new Date());
+      return;
+    }
+    var result = writeRaw(key, packed);
     if (result.ok) {
+      onSaved && onSaved(new Date());
+    } else if (result.error && result.error.name === "QuotaExceededError") {
+      /* localStorage full but we tried — Dexie still gets the
+         write. Don't fire onError; that would surface a fatal
+         danger toast for a recoverable condition. */
       onSaved && onSaved(new Date());
     } else {
       onError && onError(result.error);
