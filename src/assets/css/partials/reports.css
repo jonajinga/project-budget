@@ -320,3 +320,15 @@
   font-variant-numeric: tabular-nums;
   color: var(--accent);
 }
+
+/* Reports hub — eyebrow headings sit flush against their tile grid
+   without help. Add explicit breathing room so "CASH FLOW" /
+   "PINNED" / etc. don't crowd the cards beneath. */
+.app-page .eyebrow + .report-tiles,
+.app-page .eyebrow + .report-recents,
+.app-page section > .eyebrow {
+  margin-top: var(--space-sm);
+}
+.app-page section > .eyebrow {
+  margin-bottom: var(--space-sm);
+}

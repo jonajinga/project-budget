@@ -469,9 +469,11 @@ button.search-result:focus-visible {
 .site-footer__nav { width: 100%; }
 .site-footer__nav ul,
 .site-footer__links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  /* Grid so the 12 utility links land on a tidy 6-per-row at desktop
+     widths (two clean rows) instead of flex-wrapping unevenly (10 + 2). */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-items: center;
   align-items: center;
   gap: var(--space-2xs) var(--space-md);
   list-style: none;
@@ -480,11 +482,19 @@ button.search-result:focus-visible {
   border-top: 1px solid var(--border-soft);
   border-bottom: 1px solid var(--border-soft);
 }
+@media (min-width: 480px) {
+  .site-footer__nav ul,
+  .site-footer__links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (min-width: 768px) {
   .site-footer__nav ul,
-  .site-footer__links { gap: var(--space-sm) var(--space-lg); padding-block: var(--space-md); }
+  .site-footer__links {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-sm) var(--space-lg);
+    padding-block: var(--space-md);
+  }
 }
-.site-footer__nav li { flex: 0 0 auto; }
+.site-footer__nav li { width: 100%; text-align: center; }
 .site-footer__nav a {
   display: inline-block;
   color: var(--fg);

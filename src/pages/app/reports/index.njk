@@ -239,20 +239,20 @@ function reportsHubView() {
         sections.push("");
       };
       try {
-        var ie = s.reportIncomeExpense(null, 12) || [];
+        var ie = s.reportIncomeVsExpense(null, 12) || [];
         push("Income vs expense (12 mo)", ie, [
           { key: "month", label: "Month" }, { key: "income", label: "Income" },
           { key: "expense", label: "Expense" }, { key: "net", label: "Net" },
         ]);
-        var nw = s.reportNetWorth(12) || [];
+        var nw = s.reportNetWorth(null, 12) || [];
         push("Net worth (12 mo)", nw, [
-          { key: "month", label: "Month" }, { key: "assets", label: "Assets" },
-          { key: "liabilities", label: "Liabilities" }, { key: "net", label: "Net" },
+          { key: "month", label: "Month-end" }, { key: "value", label: "Net worth" },
         ]);
-        var sr = s.reportSavingsRate(12) || [];
+        var sr = s.reportSavingsRate(null, 12) || [];
         push("Savings rate (12 mo)", sr, [
           { key: "month", label: "Month" }, { key: "income", label: "Income" },
-          { key: "expense", label: "Expense" }, { key: "savingsRate", label: "Savings rate %" },
+          { key: "expense", label: "Expense" }, { key: "savings", label: "Saved" },
+          { key: "rate", label: "Rate" },
         ]);
         var subs = s.reportSubscriptions(12) || [];
         push("Subscriptions (12 mo lookback)", subs, [
@@ -422,7 +422,7 @@ function reportsHubView() {
         doc.addPage(); y = header("Income vs expense", "Trailing 12 months");
         var ieCap = await captureRemoteChart("/app/reports/income-expense/", "#chart-ie", 8000);
         y = placeChart(ieCap, y);
-        var ie = s.reportIncomeExpense(null, 12) || [];
+        var ie = s.reportIncomeVsExpense(null, 12) || [];
         y = tableRows(y, [
           { key: "month", label: "Month" },
           { key: "income", label: "Income", cents: true },
@@ -441,12 +441,10 @@ function reportsHubView() {
         doc.addPage(); y = header("Net worth", "Trailing 12 months");
         var nwCap = await captureRemoteChart("/app/reports/net-worth/", "#chart-nw", 8000);
         y = placeChart(nwCap, y);
-        var nw = s.reportNetWorth(12) || [];
+        var nw = s.reportNetWorth(null, 12) || [];
         y = tableRows(y, [
-          { key: "month", label: "Month" },
-          { key: "assets", label: "Assets", cents: true },
-          { key: "liabilities", label: "Liabilities", cents: true },
-          { key: "net", label: "Net", cents: true },
+          { key: "month", label: "Month-end" },
+          { key: "value", label: "Net worth", cents: true },
         ], nw, 10);
 
         /* --- Projection --- */
