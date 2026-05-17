@@ -299,6 +299,12 @@ function welcomeWizard() {
     margin-top: var(--space-sm);
   }
   @media (max-width: 899px) { .welcome-templates { grid-template-columns: 1fr; } }
+  @media (max-width: 479px) {
+    .welcome-step { padding: var(--space-sm); }
+    .welcome-step__head { grid-template-columns: 28px minmax(0, 1fr) auto; gap: var(--space-2xs); }
+    .welcome-step__num { width: 28px; height: 28px; font-size: 0.9rem; }
+    .welcome-step__title { font-size: var(--fs-md); }
+  }
   .welcome-template {
     text-align: left;
     background: var(--bg);
