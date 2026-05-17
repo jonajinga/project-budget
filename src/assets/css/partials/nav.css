@@ -1212,10 +1212,17 @@ button.search-result:focus-visible {
   letter-spacing: 0;
 }
 .acct-group__total.is-negative { color: var(--danger); }
-/* Count pill — shown only when the group is collapsed so the user
-   knows there's content to expand. Sits where the total used to. */
-.acct-group__count {
+/* Right-side meta cluster — count pill + group total, both always
+   visible so users see "Daily 3 $4.5k" / "Retirement 0 $0" / etc.
+   without having to expand each group. */
+.acct-group__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
   flex-shrink: 0;
+  margin-left: auto;
+}
+.acct-group__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1233,10 +1240,16 @@ button.search-result:focus-visible {
   text-transform: none;
   letter-spacing: 0;
 }
-/* Indent the account list one level below the group header so the
-   sidebar reads top-to-bottom as Section → Group → Account.
-   The left padding lines up with the start of the group name (after
-   the chevron). */
+/* Indent the BALANCES subsections (groups) one level under the
+   section header. Each group's own account list indents one more
+   level via .acct-group__list below, so the sidebar reads cleanly
+   as Section → Group → Account. */
+.app-sidebar__accounts .acct-group {
+  padding-left: 0.85rem;
+  border-left: 2px solid var(--border-soft);
+  margin-left: 0.4rem;
+}
+/* Account list — second-level indent (under its group header). */
 .acct-group__list {
   display: flex;
   flex-direction: column;

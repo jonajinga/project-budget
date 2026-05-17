@@ -46,6 +46,10 @@ export function registerBrush() {
       from: null,
       to: null,
       handlers: null,
+      /* Set true briefly after a drag-release so the click event
+         the browser fires next can be suppressed. Cleared on the
+         next requestAnimationFrame so genuine clicks still fire. */
+      suppressNextClick: false,
     };
     return chart.__pbBrush;
   }
@@ -100,18 +104,35 @@ export function registerBrush() {
       if (!opts) return;
       var a = xToIndex(chart, s.dragStartX);
       var b = xToIndex(chart, s.dragCurrentX);
+      var dragDistance = Math.abs((s.dragCurrentX || 0) - (s.dragStartX || 0));
       /* Click without drag (|dx| < 4px) = clear. */
-      if (Math.abs((s.dragCurrentX || 0) - (s.dragStartX || 0)) < 4) {
+      if (dragDistance < 4) {
         s.from = null; s.to = null;
         if (opts.onChange) opts.onChange({ from: null, to: null });
         chart.draw();
         return;
       }
       if (a == null || b == null) return;
+      /* The browser will fire a click event right after mouseup;
+         arm the suppressor so the chart's onClick handler (often a
+         drill-through to /app/calendar/?m=…) doesn't fire when the
+         user only meant to brush-select a range. Cleared on the
+         next animation frame so genuine clicks still work. */
+      s.suppressNextClick = true;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { s.suppressNextClick = false; });
+      });
       s.from = Math.min(a, b);
       s.to   = Math.max(a, b);
       if (opts.onChange) opts.onChange({ from: s.from, to: s.to });
       chart.draw();
+    }
+    function onClickCapture(evt) {
+      if (s.suppressNextClick) {
+        evt.stopPropagation();
+        evt.stopImmediatePropagation();
+        evt.preventDefault();
+      }
     }
     function onKey(evt) {
       if (evt.key !== "Escape") return;
@@ -124,16 +145,21 @@ export function registerBrush() {
     }
 
     canvas.addEventListener("mousedown", onDown);
+    /* Capture-phase click handler so we beat Chart.js's own click
+       dispatcher to the canvas. Without `true` here, the chart's
+       onClick fires before we can stopImmediatePropagation it. */
+    canvas.addEventListener("click",     onClickCapture, true);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup",   onUp);
     window.addEventListener("keydown",   onKey);
-    s.handlers = { onDown: onDown, onMove: onMove, onUp: onUp, onKey: onKey };
+    s.handlers = { onDown: onDown, onMove: onMove, onUp: onUp, onKey: onKey, onClickCapture: onClickCapture };
   }
 
   function detach(chart) {
     var s = chart.__pbBrush;
     if (!s || !s.handlers) return;
     chart.canvas && chart.canvas.removeEventListener("mousedown", s.handlers.onDown);
+    chart.canvas && chart.canvas.removeEventListener("click", s.handlers.onClickCapture, true);
     window.removeEventListener("mousemove", s.handlers.onMove);
     window.removeEventListener("mouseup",   s.handlers.onUp);
     window.removeEventListener("keydown",   s.handlers.onKey);

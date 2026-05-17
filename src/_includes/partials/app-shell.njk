@@ -93,20 +93,19 @@
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </span>
                     <span class="acct-group__name" x-text="group.group ? group.group.name : 'Other'"></span>
-                    {# Account-count pill — visible only when this group is
-                       collapsed, so the user knows there's content hidden.
-                       Replaces the previous "compact group total" pill
-                       (which read as "$12.5k" and looked like a static
-                       label, not an expand affordance). Total now lives
-                       in the totals row at the bottom of the section. #}
-                    <span class="acct-group__count"
-                          x-show="group.group && $store.budget.isAcctGroupCollapsed(group.group.id)" x-cloak
-                          x-text="group.accounts.length"
-                          :data-tip="group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' hidden — tap to expand'"></span>
-                    <span class="acct-group__total"
-                          x-show="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id)" x-cloak
-                          :class="acctGroupTotal(group) < 0 ? 'is-negative' : ''"
-                          x-text="fmtCompactCents(acctGroupTotal(group))"></span>
+                    {# Right-side meta cluster: count pill + group total.
+                       Both are always visible so the user always sees
+                       (a) how many accounts live in this group and
+                       (b) the rolled-up balance for the group, whether
+                       expanded or collapsed. #}
+                    <span class="acct-group__meta" x-show="group.group" x-cloak>
+                      <span class="acct-group__count"
+                            x-text="group.accounts.length"
+                            :data-tip="group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' in this group'"></span>
+                      <span class="acct-group__total"
+                            :class="acctGroupTotal(group) < 0 ? 'is-negative' : ''"
+                            x-text="fmtCompactCents(acctGroupTotal(group))"></span>
+                    </span>
                   </button>
                   <ul class="acct-group__list" x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak>
                     <template x-for="a in group.accounts" :key="a.id">
