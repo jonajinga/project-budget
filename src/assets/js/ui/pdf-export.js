@@ -232,6 +232,12 @@
     }
   }
 
+  /* Expose the capture helpers so the hub's bundle-PDF can iframe a
+     report, pull its rendered chart, and assemble multi-report docs
+     without duplicating the SVG/canvas pipeline. */
+  window.pbCaptureChart = captureChart;
+  window.pbSvgToPNG = svgToPNG;
+
   /* The main entry point. Returns a Promise that resolves when the
      PDF has been triggered for download. */
   window.pbExportReportPDF = function (opts) {

@@ -23,6 +23,16 @@ eleventyExcludeFromCollections: true
               @click="rangeMonths = r.value"
               x-text="r.label"></button>
     </template>
+    <template x-if="brushFrom !== null">
+      <span class="brush-indicator">
+        Brushed: <strong x-text="brushFrom + ' → ' + brushTo"></strong>
+        <button type="button" class="btn btn--ghost btn--sm" @click="clearBrush()"
+                data-tip="Clear the chart selection.">Clear</button>
+      </span>
+    </template>
+    <span x-show="brushFrom === null" x-cloak style="color: var(--fg-subtle); font-size: var(--fs-xs); margin-left: var(--space-sm);">
+      Tip: drag across the chart to filter the table to a date range.
+    </span>
   </div>
 
   {# ---- KPI strip ---- #}
@@ -160,6 +170,20 @@ function incomeExpenseView() {
 
     /* ---- Report table (inlined fields + getters) ---- */
     query: "",
+    /* Brushed range — month strings (YYYY-MM) or null. The chart's
+       brush plugin onChange writes these via window.pbOnBrush. */
+    brushFrom: null,
+    brushTo: null,
+    clearBrush() {
+      this.brushFrom = null; this.brushTo = null;
+      /* Also clear the chart's overlay. */
+      var canvas = document.querySelector("#chart-ie canvas");
+      if (canvas && canvas.__pbChart && canvas.__pbChart.__pbBrush) {
+        canvas.__pbChart.__pbBrush.from = null;
+        canvas.__pbChart.__pbBrush.to = null;
+        canvas.__pbChart.draw();
+      }
+    },
     sortKey: "month",
     sortDir: "asc",
     _keys: [
@@ -171,6 +195,12 @@ function incomeExpenseView() {
     get rows() {
       void this.$store.budget._listVersion;
       var src = this.$store.budget.reportIncomeVsExpense(null, this.rangeMonths) || [];
+      /* Brush filter — applied before the text query so the count
+         reflects the brushed window. */
+      if (this.brushFrom !== null && this.brushTo !== null) {
+        var bf = this.brushFrom, bt = this.brushTo;
+        src = src.filter(function (r) { return r.month >= bf && r.month <= bt; });
+      }
       var q = (this.query || "").trim().toLowerCase();
       var filtered = q ? src.filter(function (r) { return String(r.month).toLowerCase().indexOf(q) !== -1; }) : src;
       var key = this.sortKey, dir = this.sortDir;
@@ -246,6 +276,18 @@ function incomeExpenseView() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.incomeExpense = function () { return self.rangeMonths; };
+      /* Brush plugin callback — translate index range to month range
+         (from the chart's source data) and stash on this component. */
+      window.pbOnBrush = window.pbOnBrush || {};
+      window.pbOnBrush.incomeExpense = function (range, data) {
+        if (!range || range.from == null || range.to == null) {
+          self.brushFrom = null; self.brushTo = null;
+          return;
+        }
+        var f = data[range.from] && data[range.from].month;
+        var t = data[range.to]   && data[range.to].month;
+        if (f && t) { self.brushFrom = f; self.brushTo = t; }
+      };
 
       /* Mount the chart from inside the Alpine factory so we can wire
          redraws via $watch on this component's own reactive state.
@@ -280,6 +322,10 @@ function incomeExpenseView() {
     rangeLabel() { return "Trailing " + this.rangeMonths + " mo"; },
     kpis() {
       var rows = this.$store.budget.reportIncomeVsExpense(null, this.rangeMonths) || [];
+      if (this.brushFrom !== null && this.brushTo !== null) {
+        var bf = this.brushFrom, bt = this.brushTo;
+        rows = rows.filter(function (r) { return r.month >= bf && r.month <= bt; });
+      }
       if (!rows.length) {
         return { avgIncome: 0, avgExpense: 0, netAvg: 0, savingsRate: null, bestMonth: "", worstMonth: "" };
       }

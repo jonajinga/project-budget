@@ -77,6 +77,14 @@ export function render(el, data) {
         },
       },
       plugins: {
+        pbBrush: {
+          enabled: true,
+          onChange: function (range) {
+            if (window.pbOnBrush && window.pbOnBrush.netWorth) {
+              window.pbOnBrush.netWorth(range, data);
+            }
+          },
+        },
         legend: { display: false },
         tooltip: {
           callbacks: {

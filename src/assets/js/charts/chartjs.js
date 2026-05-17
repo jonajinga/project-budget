@@ -5,6 +5,7 @@
    visual flash + DOM churn of destroying on every re-render. */
 
 import { colors } from "./theme-colors.js";
+import { registerBrush } from "./brush.js";
 
 const HOLDER_KEY = "__pbChart";
 
@@ -44,6 +45,9 @@ export function applyChartDefaults() {
   if (Chart.defaults.plugins && Chart.defaults.plugins.datalabels) {
     Chart.defaults.plugins.datalabels.display = false;
   }
+  /* Brush plugin — registers once globally; charts opt in by setting
+     options.plugins.pbBrush.enabled = true and supplying an onChange. */
+  registerBrush();
   Chart.defaults.font.family = getComputedStyle(document.documentElement)
     .getPropertyValue("--font-ui").trim() || "system-ui, sans-serif";
   Chart.defaults.color = c["fg-muted"];

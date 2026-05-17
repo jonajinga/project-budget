@@ -274,17 +274,21 @@ function reportsHubView() {
       }
     },
 
-    /* Run all → PDF — renders each report's data (without
-       round-tripping through the live page) into a single jsPDF doc. */
+    /* Run all → PDF — opens each report in a hidden iframe, waits for
+       its chart to render, captures it, and assembles one PDF with
+       one page per report (title + chart image + small summary).
+       Sequential to keep memory + iframe count bounded. */
     async runAllPDF() {
       if (this.bundling) return;
       if (!window.jspdf || !window.jspdf.jsPDF) { alert("PDF library not loaded."); return; }
+      if (!window.pbCaptureChart) { alert("Chart capture helper not loaded."); return; }
       this.bundling = "pdf"; this.bundlingMsg = "Building PDF bundle…";
-      var s = this.$store.budget;
+      var self = this;
       var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter", orientation: "portrait" });
       var W = doc.internal.pageSize.getWidth();
       var H = doc.internal.pageSize.getHeight();
-      var marginX = 48, y;
+      var marginX = 48;
+      var s = this.$store.budget;
 
       function header(title, subtitle) {
         doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(20);
@@ -293,89 +297,220 @@ function reportsHubView() {
           doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(120);
           doc.text(subtitle, marginX, 82);
         }
-        y = 110;
+        doc.setDrawColor(220); doc.setLineWidth(0.5);
+        doc.line(marginX, 96, W - marginX, 96);
+        return 116;
       }
-      function tableRows(cols, rows, maxRows) {
-        var n = Math.min(rows.length, maxRows || 30);
+      function footer() {
+        var pageCount = doc.internal.getNumberOfPages();
+        var stamp = "Generated " + new Date().toLocaleString();
+        for (var p = 1; p <= pageCount; p++) {
+          doc.setPage(p);
+          doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140);
+          doc.text("Project Budget · projectbudget.org", marginX, H - 18);
+          doc.text(stamp, marginX, H - 8);
+          doc.text("Page " + p + " of " + pageCount, W - marginX, H - 8, { align: "right" });
+        }
+      }
+      function summaryLines(y, lines) {
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(70);
+        lines.forEach(function (line) { doc.text(String(line || ""), marginX, y); y += 14; });
+        return y;
+      }
+      function tableRows(y, cols, rows, maxRows) {
+        var n = Math.min(rows.length, maxRows || 18);
         var colW = (W - 2 * marginX) / cols.length;
+        doc.setFillColor(245); doc.rect(marginX, y - 12, W - 2 * marginX, 18, "F");
         doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(40);
-        cols.forEach(function (c, i) { doc.text(String(c.label), marginX + i * colW, y); });
+        cols.forEach(function (c, i) { doc.text(String(c.label), marginX + i * colW + 4, y); });
         y += 14;
         doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(60);
+        var alt = false;
         for (var i = 0; i < n; i++) {
-          if (y > H - 60) { doc.addPage(); y = 60; }
+          if (y > H - 50) { doc.addPage(); y = 60; }
+          if (alt) { doc.setFillColor(250); doc.rect(marginX, y - 10, W - 2 * marginX, 14, "F"); }
+          alt = !alt;
           var row = rows[i];
           cols.forEach(function (c, ci) {
             var v = row[c.key]; if (v == null) v = "";
             if (typeof v === "number" && c.cents) v = "$" + (v / 100).toLocaleString();
-            doc.text(String(v).slice(0, 30), marginX + ci * colW, y);
+            var str = String(v); if (str.length > 28) str = str.slice(0, 27) + "…";
+            doc.text(str, marginX + ci * colW + 4, y);
           });
-          y += 12;
+          y += 14;
         }
         if (rows.length > n) {
-          y += 8;
-          doc.setTextColor(140);
-          doc.text("(showing " + n + " of " + rows.length + " rows — full data in the CSV)", marginX, y);
-          doc.setTextColor(60);
+          y += 6; doc.setTextColor(140);
+          doc.text("(showing " + n + " of " + rows.length + " rows)", marginX, y);
+          doc.setTextColor(60); y += 12;
         }
+        return y;
       }
-      function footer() {
-        var pageCount = doc.internal.getNumberOfPages();
-        for (var p = 1; p <= pageCount; p++) {
-          doc.setPage(p);
-          doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140);
-          doc.text("Project Budget · projectbudget.org", marginX, H - 24);
-          doc.text("Page " + p + " of " + pageCount, W - marginX, H - 24, { align: "right" });
-        }
+
+      /* Iframe-load a report URL, wait for its chart container to be
+         populated with a canvas or svg, then capture it via the
+         pdf-export pipeline. Resolves with { dataUrl, aspectRatio } or
+         null if no chart shows up before the timeout. */
+      function captureRemoteChart(url, selector, timeoutMs) {
+        return new Promise(function (resolve) {
+          var ifr = document.createElement("iframe");
+          ifr.setAttribute("aria-hidden", "true");
+          ifr.style.cssText = "position:fixed;left:-10000px;top:0;width:1024px;height:760px;border:0;visibility:hidden;";
+          ifr.src = url;
+          document.body.appendChild(ifr);
+          var deadline = Date.now() + (timeoutMs || 6000);
+          var done = false;
+          function cleanup(result) {
+            if (done) return; done = true;
+            try { ifr.remove(); } catch (_e) {}
+            resolve(result);
+          }
+          ifr.addEventListener("load", function () {
+            var poll = function () {
+              if (done) return;
+              if (Date.now() > deadline) return cleanup(null);
+              try {
+                var doc2 = ifr.contentDocument;
+                var el = doc2 && doc2.querySelector(selector);
+                var canvas = el && el.querySelector("canvas");
+                var svg = el && el.querySelector("svg");
+                /* Ready when either: canvas with a tracked Chart.js
+                   instance, or a real SVG with width > 0. */
+                if (canvas && canvas.__pbChart && canvas.width > 0) {
+                  return window.pbCaptureChart(el).then(cleanup, function () { cleanup(null); });
+                }
+                if (svg && svg.getBoundingClientRect().width > 0) {
+                  return window.pbCaptureChart(el).then(cleanup, function () { cleanup(null); });
+                }
+              } catch (_e) { /* cross-origin shouldn't happen — same origin app */ }
+              setTimeout(poll, 200);
+            };
+            /* First poll: give the chart bootstrap a moment to mount. */
+            setTimeout(poll, 350);
+          });
+        });
+      }
+
+      /* The ordered run. Each entry: title, subtitle, URL, chart
+         selector (null = no chart, table-only report), and an
+         optional summary builder. */
+      var totalCount = (12);
+      var step = 0;
+      function progress(label) { step++; self.bundlingMsg = "(" + step + "/" + totalCount + ") " + label; }
+
+      function placeChart(capture, y) {
+        if (!capture || !capture.dataUrl) return y;
+        var imgW = W - 2 * marginX;
+        var imgH = Math.min(320, imgW / (capture.aspectRatio || 2));
+        try { doc.addImage(capture.dataUrl, "PNG", marginX, y, imgW, imgH); } catch (_e) {}
+        return y + imgH + 16;
       }
 
       try {
         /* Cover. */
-        header("Reports bundle", new Date().toLocaleString());
-        doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(60);
-        doc.text("This document contains a summary table for every report on Project Budget.", marginX, y); y += 18;
-        doc.text("Open the individual reports for charts and drill-down.", marginX, y); y += 18;
+        var y = header("Reports bundle", new Date().toLocaleString());
+        y = summaryLines(y, [
+          "One page per report with the live chart embedded.",
+          "Tables on each page show the first ~18 rows; export the CSV bundle for full data.",
+          "",
+          "Reports included: income vs expense, savings rate, net worth, projection,",
+          "spending, trends, payees, sankey, heatmap, year-over-year, debt, subscriptions.",
+        ]);
 
-        /* Income vs expense. */
-        doc.addPage(); header("Income vs expense", "12-month summary");
-        tableRows([
+        /* --- Income vs expense --- */
+        progress("Income vs expense");
+        doc.addPage(); y = header("Income vs expense", "Trailing 12 months");
+        var ieCap = await captureRemoteChart("/app/reports/income-expense/", "#chart-ie", 8000);
+        y = placeChart(ieCap, y);
+        var ie = s.reportIncomeExpense(null, 12) || [];
+        y = tableRows(y, [
           { key: "month", label: "Month" },
           { key: "income", label: "Income", cents: true },
           { key: "expense", label: "Expense", cents: true },
           { key: "net", label: "Net", cents: true },
-        ], s.reportIncomeExpense(null, 12) || [], 24);
+        ], ie, 10);
 
-        /* Net worth. */
-        doc.addPage(); header("Net worth", "12-month summary");
-        tableRows([
+        /* --- Savings rate --- */
+        progress("Savings rate");
+        doc.addPage(); y = header("Savings rate", "Trailing 12 months");
+        var srCap = await captureRemoteChart("/app/reports/savings-rate/", "#chart-sr", 8000);
+        y = placeChart(srCap, y);
+
+        /* --- Net worth --- */
+        progress("Net worth");
+        doc.addPage(); y = header("Net worth", "Trailing 12 months");
+        var nwCap = await captureRemoteChart("/app/reports/net-worth/", "#chart-nw", 8000);
+        y = placeChart(nwCap, y);
+        var nw = s.reportNetWorth(12) || [];
+        y = tableRows(y, [
           { key: "month", label: "Month" },
           { key: "assets", label: "Assets", cents: true },
           { key: "liabilities", label: "Liabilities", cents: true },
           { key: "net", label: "Net", cents: true },
-        ], s.reportNetWorth(12) || [], 24);
+        ], nw, 10);
 
-        /* Savings rate. */
-        doc.addPage(); header("Savings rate", "12-month summary");
-        tableRows([
-          { key: "month", label: "Month" },
-          { key: "income", label: "Income", cents: true },
-          { key: "expense", label: "Expense", cents: true },
-          { key: "savingsRate", label: "Savings %" },
-        ], s.reportSavingsRate(12) || [], 24);
+        /* --- Projection --- */
+        progress("Cashflow projection");
+        doc.addPage(); y = header("Cashflow projection", "12 months forward");
+        var prCap = await captureRemoteChart("/app/reports/projection/", "#chart-proj", 8000);
+        y = placeChart(prCap, y);
 
-        /* Subscriptions. */
-        doc.addPage(); header("Subscription audit", "12-month lookback");
-        tableRows([
+        /* --- Spending by category --- */
+        progress("Spending");
+        doc.addPage(); y = header("Spending by category", "Current month");
+        var spCap = await captureRemoteChart("/app/reports/spending/", "#chart-spending", 8000);
+        y = placeChart(spCap, y);
+
+        /* --- Trends --- */
+        progress("Monthly trends");
+        doc.addPage(); y = header("Monthly trends", "Top categories, trailing 12 months");
+        var tCap = await captureRemoteChart("/app/reports/trends/", "#chart-trends", 8000);
+        y = placeChart(tCap, y);
+
+        /* --- Payees --- */
+        progress("Payee leaderboard");
+        doc.addPage(); y = header("Payee leaderboard", "Top merchants by total spend");
+        y = summaryLines(y, ["Open the payees report for the full sortable table."]);
+
+        /* --- Sankey --- */
+        progress("Cash-flow Sankey");
+        doc.addPage(); y = header("Cash-flow Sankey", "Where every dollar went");
+        var skCap = await captureRemoteChart("/app/reports/sankey/", "#chart-sankey", 9000);
+        y = placeChart(skCap, y);
+
+        /* --- Heatmap --- */
+        progress("Category heatmap");
+        doc.addPage(); y = header("Category heatmap", "Top categories × months");
+        var hmCap = await captureRemoteChart("/app/reports/heatmap/", "#chart-heatmap", 9000);
+        y = placeChart(hmCap, y);
+
+        /* --- Year-over-year --- */
+        progress("Year-over-year");
+        doc.addPage(); y = header("Year-over-year", "Current vs prior period");
+        var yoyCap = await captureRemoteChart("/app/reports/year-over-year/", "#chart-yoy", 8000);
+        y = placeChart(yoyCap, y);
+
+        /* --- Debt --- */
+        progress("Debt overview");
+        doc.addPage(); y = header("Debt overview", "Balances + payoff projections");
+        var dbCap = await captureRemoteChart("/app/reports/debt/", "#chart-debt", 8000);
+        y = placeChart(dbCap, y);
+
+        /* --- Subscriptions (table-only) --- */
+        progress("Subscriptions");
+        doc.addPage(); y = header("Subscription audit", "Detected recurring charges, 12-mo lookback");
+        var subs = s.reportSubscriptions(12) || [];
+        y = tableRows(y, [
           { key: "payee", label: "Payee" },
           { key: "cadence", label: "Cadence" },
           { key: "typicalAmount", label: "Typical amt", cents: true },
           { key: "annualCost", label: "Annual", cents: true },
           { key: "occurrences", label: "Count" },
           { key: "lastCharge", label: "Last" },
-        ], s.reportSubscriptions(12) || [], 30);
+        ], subs, 20);
 
         footer();
-        doc.save("project-budget-reports-bundle.pdf");
+        doc.save("project-budget-reports-bundle-" + new Date().toISOString().slice(0, 10) + ".pdf");
       } catch (e) {
         console.error(e);
         alert("Could not build PDF bundle: " + (e && e.message ? e.message : e));

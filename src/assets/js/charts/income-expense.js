@@ -89,6 +89,14 @@ export function render(el, data) {
         evt.native.target.style.cursor = els.length ? "pointer" : "default";
       },
       plugins: {
+        pbBrush: {
+          enabled: true,
+          onChange: function (range) {
+            if (window.pbOnBrush && window.pbOnBrush.incomeExpense) {
+              window.pbOnBrush.incomeExpense(range, data);
+            }
+          },
+        },
         tooltip: {
           callbacks: {
             label: function (ctx) { return ctx.dataset.label + ": " + fmtCentsPrecise(Math.abs(ctx.parsed.y)); },

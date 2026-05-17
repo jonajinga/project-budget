@@ -22,6 +22,16 @@ eleventyExcludeFromCollections: true
               @click="rangeMonths = r.value"
               x-text="r.label"></button>
     </template>
+    <template x-if="brushFrom !== null">
+      <span class="brush-indicator">
+        Brushed: <strong x-text="brushFrom + ' → ' + brushTo"></strong>
+        <button type="button" class="btn btn--ghost btn--sm" @click="clearBrush()"
+                data-tip="Clear the chart selection.">Clear</button>
+      </span>
+    </template>
+    <span x-show="brushFrom === null" x-cloak style="color: var(--fg-subtle); font-size: var(--fs-xs); margin-left: var(--space-sm);">
+      Drag across the chart to filter to a date range.
+    </span>
   </div>
 
   <div class="kpi-strip">
@@ -146,6 +156,17 @@ function savingsRateView() {
     },
 
     query: "",
+    brushFrom: null,
+    brushTo: null,
+    clearBrush() {
+      this.brushFrom = null; this.brushTo = null;
+      var canvas = document.querySelector("#chart-sr canvas");
+      if (canvas && canvas.__pbChart && canvas.__pbChart.__pbBrush) {
+        canvas.__pbChart.__pbBrush.from = null;
+        canvas.__pbChart.__pbBrush.to = null;
+        canvas.__pbChart.draw();
+      }
+    },
     sortKey: "month",
     sortDir: "asc",
     _keys: [
@@ -158,6 +179,10 @@ function savingsRateView() {
     get rows() {
       void this.$store.budget._listVersion;
       var src = this.$store.budget.reportSavingsRate(null, this.rangeMonths) || [];
+      if (this.brushFrom !== null && this.brushTo !== null) {
+        var bf = this.brushFrom, bt = this.brushTo;
+        src = src.filter(function (r) { return r.month >= bf && r.month <= bt; });
+      }
       var q = (this.query || "").trim().toLowerCase();
       var filtered = q ? src.filter(function (r) { return String(r.month).toLowerCase().indexOf(q) !== -1; }) : src;
       var key = this.sortKey, dir = this.sortDir;
@@ -232,6 +257,16 @@ function savingsRateView() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.savingsRate = function () { return self.rangeMonths; };
+      window.pbOnBrush = window.pbOnBrush || {};
+      window.pbOnBrush.savingsRate = function (range, data) {
+        if (!range || range.from == null || range.to == null) {
+          self.brushFrom = null; self.brushTo = null;
+          return;
+        }
+        var f = data[range.from] && data[range.from].month;
+        var t = data[range.to]   && data[range.to].month;
+        if (f && t) { self.brushFrom = f; self.brushTo = t; }
+      };
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderSR;
@@ -252,6 +287,10 @@ function savingsRateView() {
     fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     kpis() {
       var rows = this.$store.budget.reportSavingsRate(null, this.rangeMonths) || [];
+      if (this.brushFrom !== null && this.brushTo !== null) {
+        var bf = this.brushFrom, bt = this.brushTo;
+        rows = rows.filter(function (r) { return r.month >= bf && r.month <= bt; });
+      }
       if (!rows.length) return { rate: null, totalSavings: 0, avgSavings: 0, bestMonth: "", bestRate: null, negCount: 0, totalCount: 0 };
       var sumI = rows.reduce(function (s, r) { return s + r.income; }, 0);
       var sumE = rows.reduce(function (s, r) { return s + r.expense; }, 0);
@@ -335,6 +374,14 @@ function savingsRateView() {
           evt.native.target.style.cursor = els.length ? "pointer" : "default";
         },
         plugins: {
+          pbBrush: {
+            enabled: true,
+            onChange: function (range) {
+              if (window.pbOnBrush && window.pbOnBrush.savingsRate) {
+                window.pbOnBrush.savingsRate(range, data);
+              }
+            },
+          },
           legend: { display: false },
           tooltip: {
             callbacks: {
