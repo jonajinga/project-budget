@@ -38,10 +38,11 @@ function registerView() {
     bulkShiftDelta: 0,
 
     form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false, type: "outflow" },
-    /* `amount` (positive number) + `type` drive the mobile-card edit;
-       `amountSigned` is the literal signed string the desktop inline
-       row uses. saveEdit picks whichever field is non-empty. */
-    edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", amountSigned: "", cleared: false, type: "outflow" },
+    /* `amount` is always positive; `type` ("outflow" | "inflow") drives
+       the sign on save. Same pattern in the desktop inline row + the
+       mobile card edit so the user sees the toggle wherever they
+       edit a transaction. */
+    edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false, type: "outflow" },
     transferForm: { fromAccountId: "", toAccountId: "", amount: "", date: "", memo: "" },
     reconcileForm: { statementBalance: "", checked: false, diff: 0 },
     showMakeRecurring: false,
@@ -384,9 +385,8 @@ function registerView() {
 
     startEdit(t) {
       this.editingId = t.id;
-      /* Two parallel amount fields: amountSigned (signed string) for
-         the compact desktop inline edit, amount (positive) + type for
-         the mobile card edit. saveEdit picks whichever is non-empty. */
+      /* Derive the toggle from the existing amount sign; amount field
+         shows the absolute value so the toggle is unambiguous. */
       var amt = t.amount || 0;
       this.edit = {
         date: t.date,
@@ -395,7 +395,6 @@ function registerView() {
         categoryId: t.categoryId || "",
         memo: t.memo,
         amount: (Math.abs(amt) / 100).toFixed(2),
-        amountSigned: (amt / 100).toFixed(2),
         cleared: t.cleared,
         type: amt >= 0 ? "inflow" : "outflow",
       };
@@ -403,17 +402,10 @@ function registerView() {
 
     saveEdit() {
       if (!this.editingId) return;
-      /* Prefer the literal signed input when the desktop inline row
-         touched it; otherwise the mobile card edit toggle + positive
-         amount applies. Either way the store receives a signed
-         integer-cents amount. */
-      var signed;
-      if (this.edit.amountSigned !== "" && this.edit.amountSigned != null) {
-        signed = this.parseDollars(this.edit.amountSigned);
-      } else {
-        var raw = this.parseDollars(this.edit.amount);
-        signed = Math.abs(raw) * (this.edit.type === "inflow" ? 1 : -1);
-      }
+      /* Both inline (desktop) and mobile card edit use the toggle +
+         positive amount pattern. parse → abs → flip sign by toggle. */
+      var raw = this.parseDollars(this.edit.amount);
+      var signed = Math.abs(raw) * (this.edit.type === "inflow" ? 1 : -1);
       this.$store.budget.updateTransaction(this.editingId, {
         date: this.edit.date,
         accountId: this.edit.accountId,

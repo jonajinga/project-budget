@@ -429,13 +429,30 @@ eleventyExcludeFromCollections: true
             </template>
             <template x-if="editingId === t.id">
               <td class="num">
-                {# Inline desktop edit keeps it compact: a single signed
-                   amount input. The Outflow/Inflow toggle lives on the
-                   add form + mobile card edit where there's room. #}
-                <input class="input" type="text" x-model="edit.amountSigned"
-                       inputmode="decimal" aria-label="Amount"
-                       style="text-align: right;"
-                       placeholder="-12.34">
+                {# Stack the Outflow/Inflow toggle ABOVE the amount
+                   input so the column stays narrow but the sign
+                   indicator is always visible. The amount field is
+                   always positive; the toggle drives the sign. #}
+                <div class="register__edit-amount-stack">
+                  <div class="txn-type-toggle txn-type-toggle--sm" role="radiogroup" aria-label="Type">
+                    <button type="button" class="txn-type-toggle__opt"
+                            :class="edit.type === 'outflow' ? 'is-active' : ''"
+                            :aria-pressed="(edit.type === 'outflow').toString()"
+                            @click="edit.type = 'outflow'">
+                      <span aria-hidden="true">−</span> Out
+                    </button>
+                    <button type="button" class="txn-type-toggle__opt"
+                            :class="edit.type === 'inflow' ? 'is-active' : ''"
+                            :aria-pressed="(edit.type === 'inflow').toString()"
+                            @click="edit.type = 'inflow'">
+                      <span aria-hidden="true">+</span> In
+                    </button>
+                  </div>
+                  <input class="input" type="text" x-model="edit.amount"
+                         inputmode="decimal" aria-label="Amount"
+                         style="text-align: right;"
+                         placeholder="0.00">
+                </div>
               </td>
             </template>
             <template x-if="editingId === t.id">

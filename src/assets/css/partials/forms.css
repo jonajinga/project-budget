@@ -205,11 +205,15 @@
   background: color-mix(in oklab, var(--ok) 20%, var(--bg-elevated));
   color: var(--ok);
 }
-/* Small variant for table-row inline edit (less vertical room). */
+/* Small variant for table-row inline edit (less vertical room).
+   Tighter min-width so two pills can fit inside a narrow Amount
+   table column. "Out" / "In" labels are abbreviated to keep the
+   pill content compact. */
 .txn-type-toggle--sm .txn-type-toggle__opt {
-  padding: 0.2rem 0.55rem;
-  min-height: 28px;
+  padding: 0.2rem 0.45rem;
+  min-height: 26px;
   font-size: var(--fs-xs);
+  min-width: 3.5rem;
 }
 .register__edit-amount {
   display: flex;
@@ -218,3 +222,17 @@
   gap: var(--space-2xs);
 }
 .register__edit-amount .input { max-width: 8rem; }
+/* Inline edit row: toggle stacks above the amount input so the
+   table column stays narrow but the sign indicator is always
+   visible without horizontal squeeze. */
+.register__edit-amount-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+.register__edit-amount-stack .txn-type-toggle { width: 100%; }
+.register__edit-amount-stack .input {
+  width: 100%;
+  min-width: 0;
+}
