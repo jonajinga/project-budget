@@ -2011,6 +2011,14 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   min-height: 6.5rem;
   position: relative;
 }
+/* Phone: shrink cell min-height so a 5-week month grid fits the
+   visible viewport without forcing the user to scroll through
+   400px of mostly-empty cells. Entry-card overflow stays handled
+   by the scrollable cell-inner. */
+@media (max-width: 599px) {
+  .cal__cell { min-height: 3.5rem; }
+  .cal__cell-inner { padding: 0.15rem 0.2rem; gap: 0.1rem; }
+}
 .cal__cell--blank { background: var(--bg-alt); }
 /* Days from the previous/next month shown as dim context. */
 .cal__cell--other-month .cal__day-num { color: var(--fg-subtle); font-weight: 500; }

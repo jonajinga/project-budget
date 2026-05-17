@@ -12,8 +12,10 @@
   margin-bottom: var(--space-lg);
 }
 @media (max-width: 1279px) { .dashboard__kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 599px)  { .dashboard__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 359px)  { .dashboard__kpis { grid-template-columns: 1fr; } }
+@media (max-width: 767px)  { .dashboard__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Single column under 480px — at 2 cols on a 360px phone each
+   tile is ~165px which crowds five-figure currency values. */
+@media (max-width: 479px)  { .dashboard__kpis { grid-template-columns: 1fr; } }
 
 /* KPI tile reuses .rec-summary__tile chrome from budget.css, but the
    dashboard needs a smaller value font so longer currency strings
