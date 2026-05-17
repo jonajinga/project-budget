@@ -40,6 +40,15 @@
 }
 @media (min-width: 1024px) {
   .app-shell { grid-template-columns: var(--app-sidebar-width) 6px 1fr; }
+  /* Desktop sidebar can be collapsed too — the hamburger toggle now
+     works on every viewport. When closed on desktop, drop the
+     sidebar + resize-handle columns so the main area takes the full
+     width. The slide-in transition the mobile drawer uses is
+     suppressed here because grid-template changes don't animate
+     cleanly; the column just vanishes instantly. */
+  .app-shell.app-shell--sidebar-closed { grid-template-columns: 1fr; }
+  .app-shell.app-shell--sidebar-closed .app-sidebar,
+  .app-shell.app-shell--sidebar-closed .app-sidebar-handle { display: none; }
 }
 
 .app-sidebar-handle { display: none; }

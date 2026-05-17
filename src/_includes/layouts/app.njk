@@ -3,10 +3,38 @@
 {% block bodyClass %}layout-app{% endblock %}
 
 {% block content %}
-<div class="app-shell" x-data="{ sidebarOpen: false }"
-     @open-sidebar.window="sidebarOpen = true"
-     @close-sidebar.window="sidebarOpen = false"
-     @toggle-sidebar.window="sidebarOpen = !sidebarOpen">
+<div class="app-shell"
+     x-data="{
+       /* Default: closed on mobile (drawer hidden behind hamburger),
+          open on desktop (sidebar column visible). LocalStorage
+          override lets the user's last pick survive reloads on the
+          SAME viewport class — we read it through matchMedia so a
+          desktop user who closed the sidebar yesterday still starts
+          closed today, but a mobile user always starts closed
+          regardless of what they did on desktop. */
+       sidebarOpen: (function () {
+         try {
+           var key = window.matchMedia('(min-width: 1024px)').matches
+             ? 'projectbudget:sidebarOpen:desktop'
+             : 'projectbudget:sidebarOpen:mobile';
+           var stored = localStorage.getItem(key);
+           if (stored !== null) return stored === '1';
+         } catch (_e) {}
+         return window.matchMedia('(min-width: 1024px)').matches;
+       })(),
+       _persistSidebar() {
+         try {
+           var key = window.matchMedia('(min-width: 1024px)').matches
+             ? 'projectbudget:sidebarOpen:desktop'
+             : 'projectbudget:sidebarOpen:mobile';
+           localStorage.setItem(key, this.sidebarOpen ? '1' : '0');
+         } catch (_e) {}
+       }
+     }"
+     :class="{ 'app-shell--sidebar-closed': !sidebarOpen }"
+     @open-sidebar.window="sidebarOpen = true; _persistSidebar()"
+     @close-sidebar.window="sidebarOpen = false; _persistSidebar()"
+     @toggle-sidebar.window="sidebarOpen = !sidebarOpen; _persistSidebar()">
   {% include "partials/app-shell.njk" %}
   {# Mobile backdrop — visible only when sidebarOpen and the sidebar
      is in its mobile slide-out state. Click anywhere off-sidebar to
