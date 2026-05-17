@@ -66,7 +66,17 @@ import { thisMonth } from "../domain/budget.js";
 import { GOAL_TYPES } from "../domain/goals.js";
 /* Page-specific slices live in ./slices/. Each one is a plain object
    of methods that `this`-binds to the store at call time;
-   Object.assign at the end of createStore() composes them in. */
+   Object.assign at the end of createStore() composes them in.
+
+   Per-page slice imports were considered as a tree-shaking play —
+   only load the slices each route uses. Rejected: the entire slice
+   source is ~115 KB uncompressed (much smaller after Terser), the
+   savings would be a handful of KB per page, and splitting createStore
+   by route would force every cross-slice method call (e.g.
+   accountsSlice.addAccount touching the categories slice's
+   ensurePaymentCategory via `this`) to either bundle both sides or
+   guard at call time. Net cost > benefit. Single composed store
+   stays the design. */
 import { reportsSlice } from "./slices/reports.js";
 import { dashboardSlice } from "./slices/dashboard.js";
 import { importExportSlice } from "./slices/import-export.js";
