@@ -1,0 +1,275 @@
+---
+layout: layouts/app.njk
+title: "Year over year"
+description: "Compare any two date ranges — income, expense, savings rate, and category-level swings."
+permalink: /app/reports/year-over-year/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="yoyView()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Year over year</h1>
+      <p class="app-page__lead">Pick two periods to compare. Defaults to the last 12 months vs the 12 months before that. Switch between by-month, by-category, and by-payee views to find the swings.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  {# ---- KPI strip — current vs prior deltas ---- #}
+  <div class="kpi-strip">
+    <div class="kpi" :class="data.deltas.income >= 0 ? 'kpi--ok' : 'kpi--danger'">
+      <span class="kpi__label">Income Δ</span>
+      <span class="kpi__value" :class="data.deltas.income >= 0 ? 'amount--inflow' : 'amount--outflow'"
+            x-text="(data.deltas.income >= 0 ? '+' : '') + fmt(data.deltas.income)"></span>
+      <span class="kpi__delta" x-text="'Current ' + fmt(data.current.totalIncome) + ' vs prior ' + fmt(data.prior.totalIncome)"></span>
+    </div>
+    <div class="kpi" :class="data.deltas.expense <= 0 ? 'kpi--ok' : 'kpi--danger'">
+      <span class="kpi__label">Expense Δ</span>
+      <span class="kpi__value" :class="data.deltas.expense > 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="(data.deltas.expense >= 0 ? '+' : '') + fmt(data.deltas.expense)"></span>
+      <span class="kpi__delta" x-text="'Current ' + fmt(data.current.totalExpense) + ' vs prior ' + fmt(data.prior.totalExpense)"></span>
+    </div>
+    <div class="kpi" :class="data.deltas.savingsRate === null || data.deltas.savingsRate >= 0 ? 'kpi--ok' : 'kpi--danger'">
+      <span class="kpi__label">Savings rate Δ</span>
+      <span class="kpi__value" x-text="data.deltas.savingsRate === null ? '—' : ((data.deltas.savingsRate >= 0 ? '+' : '') + (data.deltas.savingsRate * 100).toFixed(1) + ' pp')"></span>
+      <span class="kpi__delta" x-text="ratesLabel()"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Biggest swing</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);"
+            x-text="data.deltas.biggestSwing ? data.deltas.biggestSwing.category : '—'"></span>
+      <span class="kpi__delta"
+            x-text="data.deltas.biggestSwing ? ((data.deltas.biggestSwing.delta >= 0 ? '+' : '') + fmt(data.deltas.biggestSwing.delta)) : ''"></span>
+    </div>
+  </div>
+
+  <section class="report">
+    {# ---- Range pickers + view tabs ---- #}
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs); align-items: flex-end; flex-wrap: wrap;">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Current:</span>
+      <input class="input" type="month" x-model="current.from" style="max-width: 9rem;">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm);">to</span>
+      <input class="input" type="month" x-model="current.to"   style="max-width: 9rem;">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-left: var(--space-md);">Prior:</span>
+      <input class="input" type="month" x-model="prior.from"   style="max-width: 9rem;">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm);">to</span>
+      <input class="input" type="month" x-model="prior.to"     style="max-width: 9rem;">
+      <button class="btn btn--ghost btn--sm" type="button" @click="resetRanges()">Reset (last 12 vs prior 12)</button>
+    </div>
+
+    <div class="chart-toolbar">
+      <span class="chart-toolbar__label">View</span>
+      <span class="chart-picker" role="group" aria-label="View">
+        <template x-for="opt in viewOptions" :key="opt.value">
+          <button type="button"
+                  class="chart-picker__btn"
+                  :class="view === opt.value ? 'is-active' : ''"
+                  :aria-pressed="(view === opt.value).toString()"
+                  @click="setView(opt.value)"
+                  x-text="opt.label"></button>
+        </template>
+      </span>
+    </div>
+
+    <div class="chart" id="chart-yoy" style="min-height: 420px;"></div>
+
+    {# ---- Table view — driven by selected view ---- #}
+    <details class="report__details" style="margin-top: var(--space-md);">
+      <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
+        View as table
+      </summary>
+      <table class="table" style="margin-top: var(--space-sm);">
+        <thead>
+          <tr>
+            <th x-text="firstColLabel()"></th>
+            <th class="num">Current</th>
+            <th class="num">Prior</th>
+            <th class="num">Delta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(r, i) in tableRows()" :key="r._key + ':' + i">
+            <tr>
+              <td x-text="r._label"></td>
+              <td class="num" x-text="'$' + (r.current / 100).toFixed(2)"></td>
+              <td class="num" x-text="'$' + (r.prior / 100).toFixed(2)"></td>
+              <td class="num" :class="r.delta >= 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="(r.delta >= 0 ? '+' : '') + '$' + (r.delta / 100).toFixed(2)"></td>
+            </tr>
+          </template>
+          <tr x-show="!tableRows().length" x-cloak>
+            <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No data.</td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
+
+    <div class="report-toolbar" style="margin-top: var(--space-md);">
+      <p class="report-toolbar__count">
+        <span x-text="tableRows().length"></span> rows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download the current view as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+  </section>
+</div>
+
+<script>
+function yoyView() {
+  /* Date helpers — back N months from a YYYY-MM string. */
+  function back(m, n) {
+    var p = m.split("-").map(Number);
+    var d = new Date(p[0], p[1] - 1 - n, 1);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+
+  var savedView = "byMonth";
+  try {
+    var st = localStorage.getItem("projectbudget:chart-type:yoy");
+    if (st && ["byMonth", "byCategory", "byPayee"].indexOf(st) !== -1) savedView = st;
+  } catch (_e) {}
+  window.__pbChartType = window.__pbChartType || {};
+  window.__pbChartType.yoy = savedView;
+
+  return {
+    view: savedView,
+    viewOptions: [
+      { value: "byMonth",    label: "By month" },
+      { value: "byCategory", label: "By category" },
+      { value: "byPayee",    label: "By payee" },
+    ],
+    current: { from: "", to: "" },
+    prior:   { from: "", to: "" },
+
+    resetRanges() {
+      var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+      var anchor = (s && s.currentMonth) || new Date().toISOString().slice(0, 7);
+      this.current.to = anchor;
+      this.current.from = back(anchor, 11);
+      this.prior.to   = back(anchor, 12);
+      this.prior.from = back(anchor, 23);
+    },
+
+    setView(v) {
+      this.view = v;
+      window.__pbChartType.yoy = v;
+      try { localStorage.setItem("projectbudget:chart-type:yoy", v); } catch (_e) {}
+    },
+
+    get data() {
+      void this.$store.budget._listVersion;
+      if (!this.current.from || !this.current.to || !this.prior.from || !this.prior.to) {
+        return { current: { totalIncome: 0, totalExpense: 0, savingsRate: null }, prior: { totalIncome: 0, totalExpense: 0, savingsRate: null }, paired: [], categoryRows: [], payeeRows: [], deltas: {} };
+      }
+      return this.$store.budget.reportYearOverYear(this.current, this.prior) || { current: {}, prior: {}, paired: [], categoryRows: [], payeeRows: [], deltas: {} };
+    },
+
+    firstColLabel() {
+      if (this.view === "byCategory") return "Category";
+      if (this.view === "byPayee")    return "Payee";
+      return "Month index";
+    },
+
+    tableRows() {
+      var d = this.data;
+      if (this.view === "byCategory") {
+        return (d.categoryRows || []).map(function (r) { return { _label: r.category, _key: r.categoryId, current: r.current, prior: r.prior, delta: r.delta }; });
+      }
+      if (this.view === "byPayee") {
+        return (d.payeeRows || []).map(function (r) { return { _label: r.payee, _key: r.payeeId, current: r.current, prior: r.prior, delta: r.delta }; });
+      }
+      return (d.paired || []).map(function (p) {
+        return {
+          _label: "M" + p.index + " · " + (p.currentMonth || "?") + " vs " + (p.priorMonth || "?"),
+          _key: "m" + p.index,
+          current: p.currentExpense,
+          prior: p.priorExpense,
+          delta: p.currentExpense - p.priorExpense,
+        };
+      });
+    },
+
+    ratesLabel() {
+      var d = this.data;
+      var cur = d.current && d.current.savingsRate;
+      var pri = d.prior   && d.prior.savingsRate;
+      if (cur == null && pri == null) return "";
+      var fmtPct = function (v) { return v === null ? "—" : ((v * 100).toFixed(0) + "%"); };
+      return "Current " + fmtPct(cur) + " vs prior " + fmtPct(pri);
+    },
+
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+
+    init() {
+      this.resetRanges();
+      var self = this;
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderYoY;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-yoy", window.pbRenderYoY, function () {
+          return store.reportYearOverYear(self.current, self.prior);
+        });
+        self.$watch("view",            function () { self.chart && self.chart.redraw(); });
+        self.$watch("current.from",    function () { self.chart && self.chart.redraw(); });
+        self.$watch("current.to",      function () { self.chart && self.chart.redraw(); });
+        self.$watch("prior.from",      function () { self.chart && self.chart.redraw(); });
+        self.$watch("prior.to",        function () { self.chart && self.chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
+    },
+
+    print() { window.print(); },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        window.pbExportCSV("year-over-year-" + this.view, this.tableRows(), [
+          { key: "_label",  label: this.firstColLabel() },
+          { key: "current", label: "Current", numeric: true },
+          { key: "prior",   label: "Prior",   numeric: true },
+          { key: "delta",   label: "Delta",   numeric: true },
+        ]);
+      }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var d = this.data;
+      window.pbExportReportPDF({
+        title: "Year over year",
+        subtitle: this.current.from + "–" + this.current.to + " vs " + this.prior.from + "–" + this.prior.to + " · view: " + this.view,
+        filename: "year-over-year-" + this.view,
+        kpis: [
+          { label: "Income Δ",   value: (d.deltas.income >= 0 ? "+" : "") + this.fmt(d.deltas.income) },
+          { label: "Expense Δ",  value: (d.deltas.expense >= 0 ? "+" : "") + this.fmt(d.deltas.expense) },
+          { label: "Savings rate Δ", value: d.deltas.savingsRate === null ? "—" : ((d.deltas.savingsRate >= 0 ? "+" : "") + (d.deltas.savingsRate * 100).toFixed(1) + " pp") },
+          { label: "Biggest swing", value: d.deltas.biggestSwing ? d.deltas.biggestSwing.category : "—", delta: d.deltas.biggestSwing ? ((d.deltas.biggestSwing.delta >= 0 ? "+" : "") + this.fmt(d.deltas.biggestSwing.delta)) : "" },
+        ],
+        chartEl: document.getElementById("chart-yoy"),
+        columns: [
+          { key: "_label",  label: this.firstColLabel() },
+          { key: "current", label: "Current", numeric: true },
+          { key: "prior",   label: "Prior",   numeric: true },
+          { key: "delta",   label: "Delta",   numeric: true },
+        ],
+        rows: this.tableRows(),
+      });
+    },
+  };
+}
+</script>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/yoy.js";
+  window.pbMountChart = mountChart;
+  window.pbRenderYoY = render;
+</script>

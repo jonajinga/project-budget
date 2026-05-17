@@ -190,3 +190,115 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Reports hub — recents strip, pinned, icons, tag pills.
+   The hub tile gets a small icon at top, a pin button at the
+   top-right corner, and an optional "New" tag at bottom. */
+.report-recents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  margin-top: var(--space-2xs);
+}
+.report-recent {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  color: var(--fg);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  transition: border-color var(--t-fast), background var(--t-fast);
+  min-height: 36px;
+}
+.report-recent:hover {
+  border-color: var(--accent);
+  background: var(--bg-alt);
+}
+.report-recent__title { font-weight: 600; }
+.report-recent__time {
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hub tile (re-uses .report .report--link) is now a relative wrapper
+   so the absolute-positioned pin button + tag can anchor inside. */
+.report-tiles .report--link {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.report__link {
+  display: block;
+  padding: var(--space-md);
+  color: inherit;
+  text-decoration: none;
+  flex: 1;
+}
+.report__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-soft);
+  color: var(--accent);
+  margin-bottom: var(--space-2xs);
+}
+.report__pin {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  z-index: 2;
+  border-radius: var(--radius);
+}
+.report__pin:hover {
+  color: var(--accent);
+  border-color: var(--border-soft);
+  background: var(--bg-alt);
+}
+.report__pin.is-pinned { color: var(--accent); }
+.report__pin:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.report__tag {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--bg-alt);
+  border: 1px solid var(--accent);
+  padding: 2px 6px;
+}
+
+.bundling-status {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+  padding: 10px 14px;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  z-index: 100;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}

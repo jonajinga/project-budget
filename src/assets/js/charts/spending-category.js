@@ -64,7 +64,13 @@ function renderTreemap(el, data) {
     .attr("fill", function (_d, i) { return palette[i % palette.length]; })
     .attr("fill-opacity", 0.85)
     .attr("stroke", c["border"])
-    .attr("stroke-width", 1);
+    .attr("stroke-width", 1)
+    .style("cursor", "pointer")
+    .on("click", function (_evt, d) {
+      var q = d.data && d.data.category;
+      if (q) location.href = "/app/register/?q=" + encodeURIComponent(q);
+    })
+    .append("title").text(function (d) { return d.data.category + " — click to filter the register"; });
 
   cells.append("text")
     .attr("x", 6).attr("y", 16)
@@ -121,6 +127,17 @@ function renderChartJs(el, data, type) {
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: isBar ? "y" : "x",
+      onClick: function (_evt, els) {
+        if (!els || !els.length) return;
+        var label = labels[els[0].index];
+        /* "Other (N)" bucket — no useful search target; skip. */
+        if (!label || /^Other \(/.test(label)) return;
+        location.href = "/app/register/?q=" + encodeURIComponent(label);
+      },
+      onHover: function (evt, els) {
+        if (!evt.native || !evt.native.target) return;
+        evt.native.target.style.cursor = els.length ? "pointer" : "default";
+      },
       plugins: {
         legend: { display: !isBar, position: "bottom" },
         tooltip: {

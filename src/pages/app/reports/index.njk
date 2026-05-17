@@ -1,71 +1,388 @@
 ---
 layout: layouts/app.njk
 title: "Reports"
-description: "Cash flow, net worth, spending, savings rate, debt, projections."
+description: "All 14 reports for the active profile — cash flow, spending, net worth, debt, projections, plus Sankey, heatmap, year-over-year, and subscription audit."
 permalink: /app/reports/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page">
+<div class="app-page" x-data="reportsHubView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Reports</h1>
-      <p class="app-page__lead">Every report reads directly from the active profile. Most include KPI tiles, range controls, sortable tables, and CSV / print export.</p>
+      <p class="app-page__lead">Every report reads directly from the active profile. Most include KPI tiles, range controls, sortable tables, and CSV / PDF / print export.</p>
+    </div>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button type="button" class="btn btn--ghost btn--sm" @click="runAllCSV()" :disabled="bundling"
+              data-tip="Download every report's data as one ZIP-like multi-section CSV.">
+        <span x-text="bundling === 'csv' ? 'Bundling…' : 'Bundle all CSV'"></span>
+      </button>
+      <button type="button" class="btn btn--primary btn--sm" @click="runAllPDF()" :disabled="bundling"
+              data-tip="Renders every report sequentially and emits one combined PDF.">
+        <span x-text="bundling === 'pdf' ? 'Building PDF…' : 'Bundle all PDF'"></span>
+      </button>
     </div>
   </header>
 
-  <h2 class="eyebrow" style="margin-top: var(--space-md);">Cash flow</h2>
-  <div class="report-tiles">
-    <a class="report report--link" href="/app/reports/income-expense/">
-      <h2 class="report__title">Income vs expense</h2>
-      <p class="report__lead">Monthly bars, avg income/expense KPIs, best & worst month.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/savings-rate/">
-      <h2 class="report__title">Savings rate</h2>
-      <p class="report__lead">% of income saved each month — the headline wealth metric.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/projection/">
-      <h2 class="report__title">Cashflow projection</h2>
-      <p class="report__lead">3, 6, and 12 months forward with confidence band.</p>
-    </a>
-  </div>
+  {# ---- Recents strip ---- #}
+  <section x-show="recents.length" x-cloak style="margin-top: var(--space-md);">
+    <h2 class="eyebrow">Recent</h2>
+    <div class="report-recents">
+      <template x-for="r in recents" :key="r.slug">
+        <a class="report-recent" :href="r.url">
+          <span class="report-recent__title" x-text="r.title"></span>
+          <span class="report-recent__time" x-text="relTime(r.visited)"></span>
+        </a>
+      </template>
+      <button class="btn btn--ghost btn--sm" type="button" @click="clearRecents()"
+              data-tip="Forget recently-visited reports on this device.">Clear</button>
+    </div>
+  </section>
 
-  <h2 class="eyebrow" style="margin-top: var(--space-lg);">Spending</h2>
-  <div class="report-tiles">
-    <a class="report report--link" href="/app/reports/spending/">
-      <h2 class="report__title">Spending by category</h2>
-      <p class="report__lead">Treemap, KPIs, top category share, CSV export.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/trends/">
-      <h2 class="report__title">Monthly trends</h2>
-      <p class="report__lead">Sparklines for the top 12 categories, 12 months.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/payees/">
-      <h2 class="report__title">Payee leaderboard</h2>
-      <p class="report__lead">Top merchants by total spend. Spot subscription creep.</p>
-    </a>
-  </div>
+  {# ---- Pinned strip ---- #}
+  <section x-show="pinnedReports().length" x-cloak style="margin-top: var(--space-md);">
+    <h2 class="eyebrow">Pinned</h2>
+    <div class="report-tiles">
+      <template x-for="r in pinnedReports()" :key="r.slug">
+        <div class="report report--link">
+          <button class="report__pin is-pinned" type="button" @click="togglePin(r.slug)"
+                  :data-tip="'Unpin ' + r.title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2"/>
+            </svg>
+          </button>
+          <a class="report__link" :href="r.url">
+            <span class="report__icon" x-html="r.icon"></span>
+            <h2 class="report__title" x-text="r.title"></h2>
+            <p class="report__lead" x-text="r.description"></p>
+          </a>
+        </div>
+      </template>
+    </div>
+  </section>
 
-  <h2 class="eyebrow" style="margin-top: var(--space-lg);">Envelope budget</h2>
-  <div class="report-tiles">
-    <a class="report report--link" href="/app/reports/budget-vs-actual/">
-      <h2 class="report__title">Budget vs actual</h2>
-      <p class="report__lead">Per-category assigned vs spent vs remaining for one month.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/assignment-history/">
-      <h2 class="report__title">Assignment history</h2>
-      <p class="report__lead">Assigned vs spent paired bars per category, last 12 months.</p>
-    </a>
-  </div>
+  {# ---- Templates / saved views nudge ---- #}
+  <section style="margin-top: var(--space-md);" x-show="$store.budget.templates && $store.budget.templates.length" x-cloak>
+    <h2 class="eyebrow">Your saved views</h2>
+    <div class="report-tiles">
+      <template x-for="t in ($store.budget.templates || []).slice(0, 6)" :key="t.id">
+        <a class="report report--link" :href="t.url || '/app/templates/'">
+          <h2 class="report__title" x-text="t.name"></h2>
+          <p class="report__lead" x-text="t.summary || 'Saved view'"></p>
+        </a>
+      </template>
+    </div>
+    <p style="margin-top: var(--space-sm);">
+      <a class="link" href="/app/templates/">Manage saved views →</a>
+    </p>
+  </section>
 
-  <h2 class="eyebrow" style="margin-top: var(--space-lg);">Net worth &amp; debt</h2>
-  <div class="report-tiles">
-    <a class="report report--link" href="/app/reports/net-worth/">
-      <h2 class="report__title">Net worth over time</h2>
-      <p class="report__lead">All accounts, month-end. MoM &amp; range-growth KPIs.</p>
-    </a>
-    <a class="report report--link" href="/app/reports/debt/">
-      <h2 class="report__title">Debt overview</h2>
-      <p class="report__lead">Balances, 3-month payment avg, payoff projections.</p>
-    </a>
+  {# ---- All reports, grouped ---- #}
+  <template x-for="group in groups" :key="group.label">
+    <section style="margin-top: var(--space-lg);">
+      <h2 class="eyebrow" x-text="group.label"></h2>
+      <div class="report-tiles">
+        <template x-for="r in group.reports" :key="r.slug">
+          <div class="report report--link">
+            <button class="report__pin" type="button" @click="togglePin(r.slug)"
+                    :class="isPinned(r.slug) ? 'is-pinned' : ''"
+                    :data-tip="isPinned(r.slug) ? ('Unpin ' + r.title) : ('Pin ' + r.title + ' to the top')">
+              <svg viewBox="0 0 24 24" width="16" height="16" :fill="isPinned(r.slug) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2"/>
+              </svg>
+            </button>
+            <a class="report__link" :href="r.url">
+              <span class="report__icon" x-html="r.icon"></span>
+              <h2 class="report__title" x-text="r.title"></h2>
+              <p class="report__lead" x-text="r.description"></p>
+              <template x-if="r.tag">
+                <span class="report__tag" x-text="r.tag"></span>
+              </template>
+            </a>
+          </div>
+        </template>
+      </div>
+    </section>
+  </template>
+
+  {# ---- Bundling progress ---- #}
+  <div class="bundling-status" x-show="bundling" x-cloak role="status" aria-live="polite">
+    <span x-text="bundlingMsg"></span>
   </div>
 </div>
+
+<script>
+function reportsHubView() {
+  var icon = function (paths) {
+    return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+  };
+  var REPORTS = [
+    { group: "Cash flow", slug: "income-expense", title: "Income vs expense", description: "Monthly bars, average income / expense KPIs, best & worst month.", url: "/app/reports/income-expense/",
+      icon: icon('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/>') },
+    { group: "Cash flow", slug: "savings-rate", title: "Savings rate", description: "Percent of income saved each month — the headline wealth metric.", url: "/app/reports/savings-rate/",
+      icon: icon('<polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/>') },
+    { group: "Cash flow", slug: "projection", title: "Cashflow projection", description: "3, 6, and 12 months forward with a confidence band.", url: "/app/reports/projection/",
+      icon: icon('<polyline points="3 12 7 8 11 14 17 6 21 10"/><polyline points="17 6 21 6 21 10"/>') },
+    { group: "Cash flow", slug: "sankey", title: "Cash-flow Sankey", description: "Where every dollar this month went — income sources → categories → savings.", url: "/app/reports/sankey/", tag: "New",
+      icon: icon('<path d="M3 5h6c4 0 4 6 8 6h4"/><path d="M3 12h4c4 0 4 6 8 6h6"/><path d="M3 19h6"/>') },
+
+    { group: "Spending", slug: "spending", title: "Spending by category", description: "Treemap, donut, bar — KPIs, top category share, CSV export.", url: "/app/reports/spending/",
+      icon: icon('<rect x="3" y="3" width="8" height="11"/><rect x="13" y="3" width="8" height="6"/><rect x="13" y="11" width="8" height="10"/><rect x="3" y="16" width="8" height="5"/>') },
+    { group: "Spending", slug: "trends", title: "Monthly trends", description: "Sparklines for the top N categories over your chosen range.", url: "/app/reports/trends/",
+      icon: icon('<polyline points="3 17 7 13 11 15 17 8 21 11"/>') },
+    { group: "Spending", slug: "payees", title: "Payee leaderboard", description: "Top merchants by total spend. Spot subscription creep early.", url: "/app/reports/payees/",
+      icon: icon('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
+    { group: "Spending", slug: "heatmap", title: "Category heatmap", description: "Category × month grid. Spot seasonal spikes and quiet weeks at a glance.", url: "/app/reports/heatmap/", tag: "New",
+      icon: icon('<rect x="3" y="3" width="6" height="6"/><rect x="11" y="3" width="6" height="6"/><rect x="3" y="11" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/>') },
+    { group: "Spending", slug: "subscriptions", title: "Subscription audit", description: "Auto-detect recurring charges. Cadence, annual cost, biggest line items.", url: "/app/reports/subscriptions/", tag: "New",
+      icon: icon('<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>') },
+
+    { group: "Envelope budget", slug: "budget-vs-actual", title: "Budget vs actual", description: "Per-category assigned vs spent vs remaining for any month.", url: "/app/reports/budget-vs-actual/",
+      icon: icon('<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/>') },
+    { group: "Envelope budget", slug: "assignment-history", title: "Assignment history", description: "Assigned vs spent paired bars per category, over a configurable range.", url: "/app/reports/assignment-history/",
+      icon: icon('<path d="M3 3v18h18"/><rect x="7"  y="11" width="3" height="7"/><rect x="12" y="7"  width="3" height="11"/><rect x="17" y="14" width="3" height="4"/>') },
+
+    { group: "Net worth & debt", slug: "net-worth", title: "Net worth over time", description: "Every account, month-end. MoM and range-growth KPIs.", url: "/app/reports/net-worth/",
+      icon: icon('<path d="M3 17l6-6 4 4 8-8"/><polyline points="14 7 21 7 21 14"/>') },
+    { group: "Net worth & debt", slug: "debt", title: "Debt overview", description: "Balances, 3-month payment averages, payoff projections.", url: "/app/reports/debt/",
+      icon: icon('<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>') },
+
+    { group: "Comparisons", slug: "year-over-year", title: "Year-over-year", description: "Compare current period vs prior period — by month, category, or payee.", url: "/app/reports/year-over-year/", tag: "New",
+      icon: icon('<polyline points="3 17 9 11 13 15 21 7"/><polyline points="3 7 9 13 13 9 21 17"/>') },
+  ];
+
+  return {
+    bundling: null,
+    bundlingMsg: "",
+    recents: [],
+    pinned: [],
+    REPORTS: REPORTS,
+    get groups() {
+      var by = {};
+      REPORTS.forEach(function (r) { (by[r.group] = by[r.group] || []).push(r); });
+      var order = ["Cash flow", "Spending", "Envelope budget", "Net worth & debt", "Comparisons"];
+      return order.map(function (k) { return { label: k, reports: by[k] || [] }; });
+    },
+
+    init() {
+      this.loadRecents();
+      this.loadPinned();
+    },
+
+    loadRecents() {
+      try {
+        var raw = localStorage.getItem("projectbudget:report:recent");
+        var list = raw ? JSON.parse(raw) : [];
+        var self = this;
+        this.recents = (list || []).slice(0, 5).map(function (entry) {
+          var match = self.REPORTS.find(function (r) { return r.slug === entry.slug; });
+          if (!match) return null;
+          return { slug: match.slug, title: match.title, url: match.url, visited: entry.visited };
+        }).filter(Boolean);
+      } catch (e) { this.recents = []; }
+    },
+
+    loadPinned() {
+      try {
+        var raw = localStorage.getItem("projectbudget:report:pinned");
+        this.pinned = raw ? JSON.parse(raw) : [];
+      } catch (e) { this.pinned = []; }
+    },
+
+    pinnedReports() {
+      var self = this;
+      return this.pinned.map(function (slug) { return self.REPORTS.find(function (r) { return r.slug === slug; }); }).filter(Boolean);
+    },
+
+    isPinned(slug) { return this.pinned.indexOf(slug) !== -1; },
+
+    togglePin(slug) {
+      var i = this.pinned.indexOf(slug);
+      if (i === -1) this.pinned.push(slug); else this.pinned.splice(i, 1);
+      localStorage.setItem("projectbudget:report:pinned", JSON.stringify(this.pinned));
+    },
+
+    clearRecents() {
+      localStorage.removeItem("projectbudget:report:recent");
+      this.recents = [];
+    },
+
+    relTime(iso) {
+      if (!iso) return "";
+      var then = new Date(iso).getTime();
+      var diff = Math.floor((Date.now() - then) / 1000);
+      if (diff < 60)    return diff + "s ago";
+      if (diff < 3600)  return Math.floor(diff / 60)    + "m ago";
+      if (diff < 86400) return Math.floor(diff / 3600)  + "h ago";
+      return Math.floor(diff / 86400) + "d ago";
+    },
+
+    /* Run all → CSV — emits one CSV per report, joined with a blank
+       line + section header into a single download. */
+    runAllCSV() {
+      if (this.bundling) return;
+      this.bundling = "csv";
+      this.bundlingMsg = "Building CSV bundle…";
+      var s = this.$store.budget;
+      var sections = [];
+      var push = function (label, rows, cols) {
+        sections.push("# " + label);
+        sections.push(cols.map(function (c) { return '"' + (c.label || c.key) + '"'; }).join(","));
+        rows.forEach(function (row) {
+          sections.push(cols.map(function (c) {
+            var v = row[c.key]; if (v == null) v = "";
+            if (typeof v === "string" && (v.indexOf(",") !== -1 || v.indexOf('"') !== -1)) {
+              return '"' + v.replace(/"/g, '""') + '"';
+            }
+            return String(v);
+          }).join(","));
+        });
+        sections.push("");
+      };
+      try {
+        var ie = s.reportIncomeExpense(null, 12) || [];
+        push("Income vs expense (12 mo)", ie, [
+          { key: "month", label: "Month" }, { key: "income", label: "Income" },
+          { key: "expense", label: "Expense" }, { key: "net", label: "Net" },
+        ]);
+        var nw = s.reportNetWorth(12) || [];
+        push("Net worth (12 mo)", nw, [
+          { key: "month", label: "Month" }, { key: "assets", label: "Assets" },
+          { key: "liabilities", label: "Liabilities" }, { key: "net", label: "Net" },
+        ]);
+        var sr = s.reportSavingsRate(12) || [];
+        push("Savings rate (12 mo)", sr, [
+          { key: "month", label: "Month" }, { key: "income", label: "Income" },
+          { key: "expense", label: "Expense" }, { key: "savingsRate", label: "Savings rate %" },
+        ]);
+        var subs = s.reportSubscriptions(12) || [];
+        push("Subscriptions (12 mo lookback)", subs, [
+          { key: "payee", label: "Payee" }, { key: "cadence", label: "Cadence" },
+          { key: "typicalAmount", label: "Typical amount" }, { key: "annualCost", label: "Annual cost" },
+          { key: "occurrences", label: "Occurrences" }, { key: "lastCharge", label: "Last charge" },
+        ]);
+        var blob = new Blob([sections.join("\n")], { type: "text/csv;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = "project-budget-reports-bundle.csv";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      } catch (e) {
+        console.error(e);
+        alert("Could not build CSV bundle: " + (e && e.message ? e.message : e));
+      } finally {
+        this.bundling = null; this.bundlingMsg = "";
+      }
+    },
+
+    /* Run all → PDF — renders each report's data (without
+       round-tripping through the live page) into a single jsPDF doc. */
+    async runAllPDF() {
+      if (this.bundling) return;
+      if (!window.jspdf || !window.jspdf.jsPDF) { alert("PDF library not loaded."); return; }
+      this.bundling = "pdf"; this.bundlingMsg = "Building PDF bundle…";
+      var s = this.$store.budget;
+      var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter", orientation: "portrait" });
+      var W = doc.internal.pageSize.getWidth();
+      var H = doc.internal.pageSize.getHeight();
+      var marginX = 48, y;
+
+      function header(title, subtitle) {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(20);
+        doc.text(title, marginX, 64);
+        if (subtitle) {
+          doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(120);
+          doc.text(subtitle, marginX, 82);
+        }
+        y = 110;
+      }
+      function tableRows(cols, rows, maxRows) {
+        var n = Math.min(rows.length, maxRows || 30);
+        var colW = (W - 2 * marginX) / cols.length;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(40);
+        cols.forEach(function (c, i) { doc.text(String(c.label), marginX + i * colW, y); });
+        y += 14;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(60);
+        for (var i = 0; i < n; i++) {
+          if (y > H - 60) { doc.addPage(); y = 60; }
+          var row = rows[i];
+          cols.forEach(function (c, ci) {
+            var v = row[c.key]; if (v == null) v = "";
+            if (typeof v === "number" && c.cents) v = "$" + (v / 100).toLocaleString();
+            doc.text(String(v).slice(0, 30), marginX + ci * colW, y);
+          });
+          y += 12;
+        }
+        if (rows.length > n) {
+          y += 8;
+          doc.setTextColor(140);
+          doc.text("(showing " + n + " of " + rows.length + " rows — full data in the CSV)", marginX, y);
+          doc.setTextColor(60);
+        }
+      }
+      function footer() {
+        var pageCount = doc.internal.getNumberOfPages();
+        for (var p = 1; p <= pageCount; p++) {
+          doc.setPage(p);
+          doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140);
+          doc.text("Project Budget · projectbudget.org", marginX, H - 24);
+          doc.text("Page " + p + " of " + pageCount, W - marginX, H - 24, { align: "right" });
+        }
+      }
+
+      try {
+        /* Cover. */
+        header("Reports bundle", new Date().toLocaleString());
+        doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(60);
+        doc.text("This document contains a summary table for every report on Project Budget.", marginX, y); y += 18;
+        doc.text("Open the individual reports for charts and drill-down.", marginX, y); y += 18;
+
+        /* Income vs expense. */
+        doc.addPage(); header("Income vs expense", "12-month summary");
+        tableRows([
+          { key: "month", label: "Month" },
+          { key: "income", label: "Income", cents: true },
+          { key: "expense", label: "Expense", cents: true },
+          { key: "net", label: "Net", cents: true },
+        ], s.reportIncomeExpense(null, 12) || [], 24);
+
+        /* Net worth. */
+        doc.addPage(); header("Net worth", "12-month summary");
+        tableRows([
+          { key: "month", label: "Month" },
+          { key: "assets", label: "Assets", cents: true },
+          { key: "liabilities", label: "Liabilities", cents: true },
+          { key: "net", label: "Net", cents: true },
+        ], s.reportNetWorth(12) || [], 24);
+
+        /* Savings rate. */
+        doc.addPage(); header("Savings rate", "12-month summary");
+        tableRows([
+          { key: "month", label: "Month" },
+          { key: "income", label: "Income", cents: true },
+          { key: "expense", label: "Expense", cents: true },
+          { key: "savingsRate", label: "Savings %" },
+        ], s.reportSavingsRate(12) || [], 24);
+
+        /* Subscriptions. */
+        doc.addPage(); header("Subscription audit", "12-month lookback");
+        tableRows([
+          { key: "payee", label: "Payee" },
+          { key: "cadence", label: "Cadence" },
+          { key: "typicalAmount", label: "Typical amt", cents: true },
+          { key: "annualCost", label: "Annual", cents: true },
+          { key: "occurrences", label: "Count" },
+          { key: "lastCharge", label: "Last" },
+        ], s.reportSubscriptions(12) || [], 30);
+
+        footer();
+        doc.save("project-budget-reports-bundle.pdf");
+      } catch (e) {
+        console.error(e);
+        alert("Could not build PDF bundle: " + (e && e.message ? e.message : e));
+      } finally {
+        this.bundling = null; this.bundlingMsg = "";
+      }
+    },
+  };
+}
+</script>

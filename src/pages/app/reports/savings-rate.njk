@@ -325,13 +325,22 @@ function savingsRateView() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: function (_evt, els) {
+          if (!els || !els.length) return;
+          var m = labels[els[0].index];
+          if (m) location.href = "/app/calendar/?m=" + m;
+        },
+        onHover: function (evt, els) {
+          if (!evt.native || !evt.native.target) return;
+          evt.native.target.style.cursor = els.length ? "pointer" : "default";
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
               label: function (ctx) {
                 var v = ctx.parsed.y;
-                return v === null ? "no income" : (v.toFixed(1) + "% saved");
+                return v === null ? "no income" : (v.toFixed(1) + "% saved · click to open");
               },
             },
           },

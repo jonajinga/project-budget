@@ -63,6 +63,7 @@ import {
   incomeVsExpense, netWorthByMonth, spendingByCategory,
   monthlyTrendsByCategory, debtOverview, assignmentHistory, projection,
   savingsRate, payeeLeaderboard, budgetVsActual,
+  sankeyFlows, categoryHeatmap, yearOverYear, detectSubscriptions,
 } from "../domain/reports.js";
 
 import { download as downloadJSON, suggestedFilename, downloadBundle, suggestedBundleFilename } from "../io/export-json.js";
@@ -1567,6 +1568,28 @@ export function createStore() {
     },
     reportBudgetVsActual(month) {
       return this.profile ? budgetVsActual(this.profile, month || this.currentMonth) : [];
+    },
+    /* ---- New reports (Phase 4) ---- */
+    reportSankey(fromMonth, toMonth) {
+      void this._listVersion;
+      var from = fromMonth || this.currentMonth;
+      var to   = toMonth   || from;
+      return this.profile ? sankeyFlows(this.profile, from, to) : { nodes: [], links: [] };
+    },
+    reportHeatmap(endMonth, count, topN) {
+      void this._listVersion;
+      return this.profile
+        ? categoryHeatmap(this.profile, endMonth || this.currentMonth, count || 12, topN || 15)
+        : { months: [], categories: [], cells: {}, max: 0 };
+    },
+    reportYearOverYear(currentRange, priorRange) {
+      void this._listVersion;
+      if (!this.profile) return { current: {}, prior: {}, paired: [], categoryRows: [], payeeRows: [], deltas: {} };
+      return yearOverYear(this.profile, currentRange, priorRange);
+    },
+    reportSubscriptions(lookbackMonths) {
+      void this._listVersion;
+      return this.profile ? detectSubscriptions(this.profile, lookbackMonths || 12) : [];
     },
 
     /* ---- Dashboard widgets ---- */

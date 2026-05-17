@@ -1,0 +1,257 @@
+---
+layout: layouts/app.njk
+title: "Cash flow"
+description: "Sankey diagram of money movement — income sources flow through the cash-flow pivot to spending categories, savings transfers, and debt payoff."
+permalink: /app/reports/sankey/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="sankeyView()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Cash flow</h1>
+      <p class="app-page__lead">Where money came from and where it went over the selected period. Each band's thickness is proportional to the dollar amount. Transfers between accounts and credit-card payments route through the central pivot rather than getting double-counted.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  {# ---- KPI strip ---- #}
+  <div class="kpi-strip">
+    <div class="kpi kpi--ok">
+      <span class="kpi__label">Total inflow</span>
+      <span class="kpi__value amount--inflow" x-text="fmt(kpis().income)"></span>
+      <span class="kpi__delta" x-text="kpis().incomeSources + ' source' + (kpis().incomeSources === 1 ? '' : 's')"></span>
+    </div>
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Total outflow</span>
+      <span class="kpi__value amount--outflow" x-text="fmt(kpis().expense)"></span>
+      <span class="kpi__delta" x-text="kpis().spendBuckets + ' destination' + (kpis().spendBuckets === 1 ? '' : 's')"></span>
+    </div>
+    <div class="kpi" :class="kpis().net >= 0 ? 'kpi--ok' : 'kpi--danger'">
+      <span class="kpi__label">Net</span>
+      <span class="kpi__value" :class="kpis().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="(kpis().net >= 0 ? '+' : '') + fmt(kpis().net)"></span>
+      <span class="kpi__delta">Inflow − outflow</span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Biggest destination</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
+      <span class="kpi__delta" x-text="kpis().topShare === null ? '' : (kpis().topShare.toFixed(1) + '% of outflow')"></span>
+    </div>
+  </div>
+
+  <section class="report">
+    {# ---- Range picker ---- #}
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs); align-items: flex-end;">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Period:</span>
+      <template x-for="r in presets" :key="r.value">
+        <button type="button" class="btn btn--sm"
+                :class="preset === r.value ? 'btn--primary' : 'btn--ghost'"
+                @click="applyPreset(r.value)"
+                x-text="r.label"></button>
+      </template>
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-left: var(--space-md);">From:</span>
+      <input class="input" type="month" x-model="from" @change="preset = ''" style="max-width: 11rem;">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm);">To:</span>
+      <input class="input" type="month" x-model="to" @change="preset = ''" style="max-width: 11rem;">
+    </div>
+
+    <div class="chart" id="chart-sankey" style="min-height: 420px;"></div>
+
+    {# ---- Detail table ---- #}
+    <details class="report__details" style="margin-top: var(--space-md);">
+      <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
+        View as table
+      </summary>
+      <table class="table" style="margin-top: var(--space-sm);">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Destination</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(l, i) in tableRows()" :key="i">
+            <tr>
+              <td x-text="l.source"></td>
+              <td x-text="l.target"></td>
+              <td class="num" x-text="'$' + l.value.toFixed(2)"></td>
+            </tr>
+          </template>
+          <tr x-show="!tableRows().length" x-cloak>
+            <td colspan="3" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No flows in this range.</td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
+
+    <div class="report-toolbar" style="margin-top: var(--space-md);">
+      <p class="report-toolbar__count">
+        <span x-text="tableRows().length"></span> flows
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download the per-flow source / destination / amount as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+  </section>
+</div>
+
+<script>
+function sankeyView() {
+  return {
+    /* Range state. Default: this calendar month. */
+    preset: "thisMonth",
+    from: "",
+    to: "",
+    presets: [
+      { value: "thisMonth", label: "This month" },
+      { value: "last3",     label: "Last 3 mo" },
+      { value: "last6",     label: "Last 6 mo" },
+      { value: "last12",    label: "Last 12 mo" },
+    ],
+
+    applyPreset(p) {
+      this.preset = p;
+      var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+      var anchor = (s && s.currentMonth) || new Date().toISOString().slice(0, 7);
+      function back(m, n) {
+        var parts = m.split("-").map(Number);
+        var d = new Date(parts[0], parts[1] - 1 - n, 1);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      }
+      if (p === "thisMonth") { this.from = anchor; this.to = anchor; }
+      if (p === "last3")     { this.from = back(anchor, 2);  this.to = anchor; }
+      if (p === "last6")     { this.from = back(anchor, 5);  this.to = anchor; }
+      if (p === "last12")    { this.from = back(anchor, 11); this.to = anchor; }
+    },
+
+    get data() {
+      void this.$store.budget._listVersion;
+      if (!this.from || !this.to) return { nodes: [], links: [] };
+      return this.$store.budget.reportSankey(this.from, this.to) || { nodes: [], links: [] };
+    },
+
+    tableRows() {
+      var d = this.data;
+      return (d.links || []).map(function (l) {
+        return {
+          source: (d.nodes[l.source] || {}).name || "?",
+          target: (d.nodes[l.target] || {}).name || "?",
+          value: l.value || 0,
+        };
+      }).sort(function (a, b) { return b.value - a.value; });
+    },
+
+    kpis() {
+      var d = this.data;
+      if (!d.nodes || !d.nodes.length) return { income: 0, expense: 0, net: 0, incomeSources: 0, spendBuckets: 0, topName: "", topShare: null };
+      /* Find the pivot node — it's whichever node has both incoming
+         AND outgoing links. Income sources only have outgoing; spend
+         buckets only have incoming. */
+      var pivotIdx = null;
+      var incomingByNode = {};
+      var outgoingByNode = {};
+      d.links.forEach(function (l) {
+        outgoingByNode[l.source] = (outgoingByNode[l.source] || 0) + l.value;
+        incomingByNode[l.target] = (incomingByNode[l.target] || 0) + l.value;
+      });
+      d.nodes.forEach(function (_n, i) {
+        if (incomingByNode[i] && outgoingByNode[i]) pivotIdx = i;
+      });
+      var income = pivotIdx !== null ? (incomingByNode[pivotIdx] || 0) : 0;
+      var expense = pivotIdx !== null ? (outgoingByNode[pivotIdx] || 0) : 0;
+      /* Count income sources + spending destinations (anything except
+         the pivot that participates in a flow). */
+      var incomeSources = 0, spendBuckets = 0, topName = "", topVal = 0;
+      d.nodes.forEach(function (n, i) {
+        if (i === pivotIdx) return;
+        if (outgoingByNode[i] && !incomingByNode[i]) incomeSources += 1;
+        if (incomingByNode[i] && !outgoingByNode[i]) {
+          spendBuckets += 1;
+          var v = incomingByNode[i] || 0;
+          if (v > topVal) { topVal = v; topName = n.name; }
+        }
+      });
+      /* Convert dollars → cents for the shared fmt helper (which
+         expects cents). */
+      return {
+        income: Math.round(income * 100),
+        expense: Math.round(expense * 100),
+        net: Math.round((income - expense) * 100),
+        incomeSources: incomeSources,
+        spendBuckets: spendBuckets,
+        topName: topName,
+        topShare: expense > 0 ? (topVal / expense) * 100 : null,
+      };
+    },
+
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+
+    init() {
+      this.applyPreset("thisMonth");
+      var self = this;
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderSankey && window.d3 && window.d3.sankey;
+        if (!ready) { if (++tries < 200) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-sankey", window.pbRenderSankey, function () {
+          return store.reportSankey(self.from, self.to);
+        });
+        self.$watch("from", function () { self.chart && self.chart.redraw(); });
+        self.$watch("to",   function () { self.chart && self.chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
+    },
+
+    print() { window.print(); },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        window.pbExportCSV("cash-flow-sankey", this.tableRows(), [
+          { key: "source", label: "Source" },
+          { key: "target", label: "Destination" },
+          { key: "value",  label: "Amount", format: function (v) { return "$" + Number(v).toFixed(2); } },
+        ]);
+      }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Cash flow",
+        subtitle: this.from + " through " + this.to,
+        filename: "cash-flow-sankey",
+        kpis: [
+          { label: "Total inflow",  value: this.fmt(k.income),  delta: k.incomeSources + " source" + (k.incomeSources === 1 ? "" : "s") },
+          { label: "Total outflow", value: this.fmt(k.expense), delta: k.spendBuckets + " destination" + (k.spendBuckets === 1 ? "" : "s") },
+          { label: "Net",           value: (k.net >= 0 ? "+" : "") + this.fmt(k.net) },
+          { label: "Biggest destination", value: k.topName || "—", delta: k.topShare === null ? "" : (k.topShare.toFixed(1) + "% of outflow") },
+        ],
+        chartEl: document.getElementById("chart-sankey"),
+        columns: [
+          { key: "source", label: "Source" },
+          { key: "target", label: "Destination" },
+          { key: "value",  label: "Amount", format: function (v) { return "$" + Number(v).toFixed(2); } },
+        ],
+        rows: this.tableRows(),
+      });
+    },
+  };
+}
+</script>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/sankey.js";
+  window.pbMountChart = mountChart;
+  window.pbRenderSankey = render;
+</script>

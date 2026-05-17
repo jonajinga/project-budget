@@ -1,0 +1,199 @@
+---
+layout: layouts/app.njk
+title: "Category heatmap"
+description: "Spending intensity by category and month at a glance — spot seasonal patterns and unexpected spikes."
+permalink: /app/reports/heatmap/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="heatmapView()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Category heatmap</h1>
+      <p class="app-page__lead">Each row is a category, each column a month. Cells get darker the more you spent — spot seasonal patterns (heating bills, holiday gifts) and one-off spikes (an unexpected vet visit) without digging through the register.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  {# ---- KPI strip ---- #}
+  <div class="kpi-strip">
+    <div class="kpi kpi--accent">
+      <span class="kpi__label">Categories shown</span>
+      <span class="kpi__value" x-text="data.categories.length"></span>
+      <span class="kpi__delta" x-text="'Top ' + topN + ' by spend'"></span>
+    </div>
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Window total</span>
+      <span class="kpi__value" x-text="fmt(kpis().total)"></span>
+      <span class="kpi__delta" x-text="rangeMonths + '-month window'"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Hottest cell</span>
+      <span class="kpi__value" x-text="fmt(kpis().peakValue)"></span>
+      <span class="kpi__delta" x-text="kpis().peakLabel || ''"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Avg per category</span>
+      <span class="kpi__value" x-text="fmt(kpis().avgPerCat)"></span>
+      <span class="kpi__delta">Across the window</span>
+    </div>
+  </div>
+
+  <section class="report">
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
+      <template x-for="r in ranges" :key="r.value">
+        <button type="button" class="btn btn--sm"
+                :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
+                @click="rangeMonths = r.value"
+                x-text="r.label"></button>
+      </template>
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin: 0 var(--space-2xs) 0 var(--space-md);">Top N:</span>
+      <template x-for="opt in topNOptions" :key="opt">
+        <button type="button" class="btn btn--sm"
+                :class="topN === opt ? 'btn--primary' : 'btn--ghost'"
+                @click="topN = opt"
+                x-text="opt"></button>
+      </template>
+    </div>
+
+    <div class="chart" id="chart-heatmap" style="min-height: 360px; overflow-x: auto;"></div>
+
+    <div class="report-toolbar" style="margin-top: var(--space-md);">
+      <p class="report-toolbar__count">
+        <span x-text="data.categories.length"></span> categories ·
+        <span x-text="data.months.length"></span> months
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download a flat category × month CSV.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+  </section>
+</div>
+
+<script>
+function heatmapView() {
+  return {
+    rangeMonths: 12,
+    topN: 15,
+    ranges: [
+      { value: 3,  label: "3 mo" },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
+    ],
+    topNOptions: [10, 15, 20, 30],
+
+    get data() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.reportHeatmap(null, this.rangeMonths, this.topN) || { months: [], categories: [], cells: {}, max: 0 };
+    },
+
+    flatRows() {
+      var out = [];
+      var d = this.data;
+      d.categories.forEach(function (cat) {
+        d.months.forEach(function (m) {
+          var v = (d.cells[cat.categoryId] || {})[m] || 0;
+          out.push({
+            category: cat.category,
+            group: cat.group || "",
+            month: m,
+            value: v,
+          });
+        });
+      });
+      return out;
+    },
+
+    kpis() {
+      var d = this.data;
+      var total = 0, peakValue = 0, peakLabel = "";
+      d.categories.forEach(function (cat) {
+        d.months.forEach(function (m) {
+          var v = (d.cells[cat.categoryId] || {})[m] || 0;
+          total += v;
+          if (v > peakValue) {
+            peakValue = v;
+            peakLabel = cat.category + " · " + m;
+          }
+        });
+      });
+      return {
+        total: total,
+        peakValue: peakValue,
+        peakLabel: peakLabel,
+        avgPerCat: d.categories.length ? Math.round(total / d.categories.length) : 0,
+      };
+    },
+
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+
+    init() {
+      var self = this;
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderHeatmap && window.d3;
+        if (!ready) { if (++tries < 200) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-heatmap", window.pbRenderHeatmap, function () {
+          return store.reportHeatmap(null, self.rangeMonths, self.topN);
+        });
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
+        self.$watch("topN",        function () { self.chart && self.chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
+    },
+
+    print() { window.print(); },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        window.pbExportCSV("category-heatmap", this.flatRows(), [
+          { key: "group",    label: "Group" },
+          { key: "category", label: "Category" },
+          { key: "month",    label: "Month" },
+          { key: "value",    label: "Spent", numeric: true },
+        ]);
+      }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Category heatmap",
+        subtitle: "Top " + this.topN + " categories · trailing " + this.rangeMonths + " months",
+        filename: "category-heatmap",
+        kpis: [
+          { label: "Categories shown", value: String(this.data.categories.length), delta: "Top " + this.topN + " by spend" },
+          { label: "Window total",     value: this.fmt(k.total), delta: this.rangeMonths + "-month window" },
+          { label: "Hottest cell",     value: this.fmt(k.peakValue), delta: k.peakLabel || "" },
+          { label: "Avg per category", value: this.fmt(k.avgPerCat) },
+        ],
+        chartEl: document.getElementById("chart-heatmap"),
+        columns: [
+          { key: "group",    label: "Group" },
+          { key: "category", label: "Category" },
+          { key: "month",    label: "Month" },
+          { key: "value",    label: "Spent", numeric: true },
+        ],
+        rows: this.flatRows(),
+      });
+    },
+  };
+}
+</script>
+
+<script type="module">
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { render } from "/assets/js/charts/heatmap.js";
+  window.pbMountChart = mountChart;
+  window.pbRenderHeatmap = render;
+</script>

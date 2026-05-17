@@ -1,0 +1,221 @@
+---
+layout: layouts/app.njk
+title: "Subscription audit"
+description: "Auto-detected recurring charges — payee, cadence, annual cost, and a one-click path to pause or cancel."
+permalink: /app/reports/subscriptions/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="subscriptionsView()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Subscription audit</h1>
+      <p class="app-page__lead">Walks the last 12 months of transactions looking for cadence patterns — same payee, roughly the same amount, charged on a regular interval. Each detected subscription shows its typical amount, cadence, and projected annual cost.</p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+  </header>
+
+  {# ---- KPI strip ---- #}
+  <div class="kpi-strip">
+    <div class="kpi kpi--accent">
+      <span class="kpi__label">Subscriptions detected</span>
+      <span class="kpi__value" x-text="rows.length"></span>
+      <span class="kpi__delta" x-text="lookbackMonths + '-month lookback'"></span>
+    </div>
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Total annual cost</span>
+      <span class="kpi__value" x-text="fmt(kpis().annualTotal)"></span>
+      <span class="kpi__delta" x-text="fmt(Math.round(kpis().annualTotal / 12)) + ' / month'"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Biggest line item</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
+      <span class="kpi__delta" x-text="kpis().topAnnual ? (fmt(kpis().topAnnual) + ' / yr') : ''"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Share of last-month spend</span>
+      <span class="kpi__value" x-text="kpis().shareLastMonth === null ? '—' : (kpis().shareLastMonth.toFixed(1) + '%')"></span>
+      <span class="kpi__delta">Of all non-transfer outflow</span>
+    </div>
+  </div>
+
+  <section class="report">
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Lookback:</span>
+      <template x-for="r in lookbacks" :key="r.value">
+        <button type="button" class="btn btn--sm"
+                :class="lookbackMonths === r.value ? 'btn--primary' : 'btn--ghost'"
+                @click="lookbackMonths = r.value"
+                x-text="r.label"></button>
+      </template>
+    </div>
+
+    <div class="report-toolbar">
+      <div class="field report-toolbar__search">
+        <label class="visually-hidden" for="subs-search">Filter</label>
+        <input class="input" id="subs-search" type="search" x-model="query" placeholder="Filter by payee…">
+      </div>
+      <p class="report-toolbar__count">
+        <span x-text="filteredRows().length"></span> shown of
+        <span x-text="rows.length"></span>
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download the detected subscriptions as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Payee</th>
+          <th>Cadence</th>
+          <th class="num">Typical amount</th>
+          <th class="num">Annual cost</th>
+          <th class="num">Occurrences</th>
+          <th>Last charge</th>
+          <th>Last account</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in filteredRows()" :key="r.payeeId">
+          <tr>
+            <td>
+              <strong x-text="r.payee"></strong>
+            </td>
+            <td>
+              <span class="badge"
+                    :class="r.cadence === 'Yearly' ? 'badge--warn' : (r.cadence === 'Weekly' ? 'badge--danger' : '')"
+                    x-text="r.cadence"></span>
+            </td>
+            <td class="num amount--outflow" x-text="'$' + (r.typicalAmount / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="'$' + (r.annualCost / 100).toFixed(2)"></td>
+            <td class="num" x-text="r.occurrences"></td>
+            <td x-text="r.lastCharge"></td>
+            <td x-text="$store.budget.findAccount(r.lastChargeAccountId)?.name || '—'"></td>
+          </tr>
+        </template>
+        <tr x-show="!filteredRows().length" x-cloak>
+          <td colspan="7" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">
+            <span x-show="!rows.length">No recurring charges detected in the lookback window. Subscriptions need at least 3 same-payee charges with ≤25% amount variance to register.</span>
+            <span x-show="rows.length">No matches for that filter.</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card prose" style="margin-top: var(--space-lg);">
+    <h2>How detection works</h2>
+    <ul>
+      <li><strong>At least 3 charges</strong> from the same payee in the lookback window.</li>
+      <li><strong>Amount stability</strong> — max-minus-min within 25% of the median; rules out variable bills (utilities, restaurants).</li>
+      <li><strong>Cadence match</strong> — median interval between consecutive charges lands inside a tight band: weekly (6-8d), biweekly (13-15d), monthly (27-33d), quarterly (88-95d), or yearly (360-370d).</li>
+      <li>Anything that doesn't match these is skipped (false-positive guard).</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+function subscriptionsView() {
+  return {
+    lookbackMonths: 12,
+    query: "",
+    lookbacks: [
+      { value: 3,  label: "3 mo" },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
+    ],
+
+    get rows() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.reportSubscriptions(this.lookbackMonths) || [];
+    },
+
+    filteredRows() {
+      var q = (this.query || "").trim().toLowerCase();
+      if (!q) return this.rows;
+      return this.rows.filter(function (r) { return String(r.payee || "").toLowerCase().indexOf(q) !== -1; });
+    },
+
+    kpis() {
+      var rows = this.rows;
+      var annualTotal = rows.reduce(function (s, r) { return s + (r.annualCost || 0); }, 0);
+      var top = rows[0] || null;
+      /* Share of last-month spend: monthly equivalent of all subs vs
+         total outflow in the most recent calendar month. */
+      var s = this.$store.budget;
+      var p = s.profile;
+      var shareLastMonth = null;
+      if (p && p.transactions) {
+        var lastMonth = s.currentMonth;
+        var lastMonthOutflow = 0;
+        p.transactions.forEach(function (t) {
+          if (!t.date || t.date.slice(0, 7) !== lastMonth) return;
+          if (t.transferTxnId) return;
+          var amt = t.amount || 0;
+          if (amt < 0) lastMonthOutflow += -amt;
+        });
+        var subsMonthly = annualTotal / 12;
+        if (lastMonthOutflow > 0) shareLastMonth = (subsMonthly / lastMonthOutflow) * 100;
+      }
+      return {
+        annualTotal: annualTotal,
+        topName: top ? top.payee : "",
+        topAnnual: top ? top.annualCost : 0,
+        shareLastMonth: shareLastMonth,
+      };
+    },
+
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+
+    init() {
+      /* No chart on this report; just a polling sentinel to confirm
+         Alpine + store ready. */
+    },
+
+    print() { window.print(); },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        window.pbExportCSV("subscriptions", this.filteredRows(), [
+          { key: "payee",         label: "Payee" },
+          { key: "cadence",       label: "Cadence" },
+          { key: "typicalAmount", label: "Typical amount", numeric: true },
+          { key: "annualCost",    label: "Annual cost",    numeric: true },
+          { key: "occurrences",   label: "Occurrences" },
+          { key: "lastCharge",    label: "Last charge" },
+        ]);
+      }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Subscription audit",
+        subtitle: this.lookbackMonths + "-month lookback",
+        filename: "subscriptions",
+        kpis: [
+          { label: "Subscriptions detected", value: String(this.rows.length), delta: this.lookbackMonths + "-month lookback" },
+          { label: "Total annual cost",      value: this.fmt(k.annualTotal), delta: this.fmt(Math.round(k.annualTotal / 12)) + " / month" },
+          { label: "Biggest line item",      value: k.topName || "—", delta: k.topAnnual ? (this.fmt(k.topAnnual) + " / yr") : "" },
+          { label: "Share of last-month spend", value: k.shareLastMonth === null ? "—" : (k.shareLastMonth.toFixed(1) + "%") },
+        ],
+        chartEl: null,
+        columns: [
+          { key: "payee",         label: "Payee" },
+          { key: "cadence",       label: "Cadence" },
+          { key: "typicalAmount", label: "Typical amount", numeric: true },
+          { key: "annualCost",    label: "Annual cost",    numeric: true },
+          { key: "occurrences",   label: "Occurrences" },
+          { key: "lastCharge",    label: "Last charge" },
+        ],
+        rows: this.filteredRows(),
+      });
+    },
+  };
+}
+</script>

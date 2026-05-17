@@ -617,6 +617,11 @@ function registerView() {
       var params = new URL(window.location.href).searchParams;
       var acct = params.get("account");
       if (acct) this.filterAccountId = acct;
+      /* ?q=<text> — sent from report drill-throughs (e.g. "click a
+         payee bar to see all its transactions"). Pre-fills the search
+         box; Fuse.js then handles fuzzy matching at render time. */
+      var q = params.get("q");
+      if (q) this.search = q;
       var today = new Date().toISOString().slice(0, 10);
       this.form.date = today;
       this.transferForm.date = today;

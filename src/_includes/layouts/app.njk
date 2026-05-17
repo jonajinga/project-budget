@@ -76,8 +76,13 @@
        light. Powers the per-report "Export PDF" buttons. #}
     <script src="/assets/js/vendor/jspdf.umd.min.js" defer></script>
   {% endif %}
-  {% if page.url == "/app/reports/spending/" %}
+  {# D3: needed for the spending treemap + heatmap + sankey reports.
+     Sankey additionally needs the d3-sankey plugin (~6 KB). #}
+  {% if page.url == "/app/reports/spending/" or page.url == "/app/reports/heatmap/" or page.url == "/app/reports/sankey/" %}
     <script src="/assets/js/vendor/d3.min.js" defer></script>
+  {% endif %}
+  {% if page.url == "/app/reports/sankey/" %}
+    <script src="/assets/js/vendor/d3-sankey.min.js" defer></script>
   {% endif %}
   <script src="/assets/js/vendor/fuse.min.js" defer></script>
   <script src="/assets/js/vendor/papaparse.min.js" defer></script>
@@ -98,6 +103,23 @@
      vendor. Only loaded on reports pages. #}
   {% if page.url and page.url.startsWith("/app/reports/") %}
     <script src="/assets/js/ui/pdf-export.js?v={{ build.hash }}" defer></script>
+    {# Visit logger — writes /app/reports/<slug>/ visits to localStorage
+       so the hub can render a "Recents" strip. Skips the hub itself. #}
+    <script>
+      (function () {
+        try {
+          var path = location.pathname.replace(/\/+$/, "/");
+          if (path === "/app/reports/" || !/^\/app\/reports\/[^\/]+\/$/.test(path)) return;
+          var slug = path.split("/").filter(Boolean).pop();
+          var key  = "projectbudget:report:recent";
+          var raw  = localStorage.getItem(key);
+          var list = raw ? JSON.parse(raw) : [];
+          list = (list || []).filter(function (e) { return e && e.slug && e.slug !== slug; });
+          list.unshift({ slug: slug, visited: new Date().toISOString() });
+          localStorage.setItem(key, JSON.stringify(list.slice(0, 10)));
+        } catch (e) { /* localStorage unavailable — silently skip. */ }
+      }());
+    </script>
   {% endif %}
   <script src="/assets/js/util/calc.js?v={{ build.hash }}" defer></script>
   {# dialog.js is loaded once in base.njk (covers app + marketing pages). #}

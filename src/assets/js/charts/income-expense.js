@@ -79,6 +79,15 @@ export function render(el, data) {
           ticks: { callback: function (v) { return fmtCents(v); } },
         },
       },
+      onClick: function (_evt, els) {
+        if (!els || !els.length) return;
+        var d = data[els[0].index];
+        if (d && d.month) location.href = "/app/calendar/?m=" + d.month;
+      },
+      onHover: function (evt, els) {
+        if (!evt.native || !evt.native.target) return;
+        evt.native.target.style.cursor = els.length ? "pointer" : "default";
+      },
       plugins: {
         tooltip: {
           callbacks: {
@@ -86,7 +95,7 @@ export function render(el, data) {
             footer: function (items) {
               if (!items || !items.length) return "";
               var d = data[items[0].dataIndex];
-              return "Net: " + fmtCentsPrecise(d.net);
+              return "Net: " + fmtCentsPrecise(d.net) + "  ·  Click to open this month";
             },
           },
         },

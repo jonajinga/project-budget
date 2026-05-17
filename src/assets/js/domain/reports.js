@@ -343,3 +343,350 @@ function occurrencesIn(month, schedule) {
     default:         return 1;
   }
 }
+
+/* Cash-flow Sankey ------------------------------------------------------- */
+
+/* Build { nodes, links } for the D3 sankey diagram. Three node columns:
+   income sources (positive non-transfer txns by category, fallback
+   "Uncategorized income"), spending categories (negative txns by
+   category), and savings/debt-payoff buckets (transfers to savings
+   accounts or any credit-card payment category). Edge values are
+   absolute dollars; sankey doesn't render negatives.
+
+   Currently produces a single time slice — fromMonth/toMonth bound the
+   transactions considered. The renderer + page can re-call for new
+   ranges. */
+export function sankeyFlows(profile, fromMonth, toMonth) {
+  var from = (fromMonth || thisMonth()) + "-01";
+  var to   = monthEnd(toMonth || fromMonth || thisMonth());
+  var nodes = [];
+  var nodeIndex = {};
+  function node(name) {
+    if (nodeIndex[name] !== undefined) return nodeIndex[name];
+    var i = nodes.length;
+    nodes.push({ name: name });
+    nodeIndex[name] = i;
+    return i;
+  }
+  /* Pre-create the central pivot node so income → pivot → spending
+     reads as a clear cash-flow story when no payments / savings
+     transfers exist in the range. */
+  var pivotIdx = node("Cash flow");
+
+  var links = [];
+  var categoryById = {};
+  (profile.categories || []).forEach(function (c) { categoryById[c.id] = c; });
+
+  (profile.transactions || []).forEach(function (t) {
+    if (!t || !t.date) return;
+    if (t.date < from || t.date > to) return;
+    var amt = t.amount || 0;
+    if (amt === 0) return;
+    var cat = t.categoryId ? categoryById[t.categoryId] : null;
+    if (t.transferTxnId) {
+      /* Transfers: model as a flow from pivot → destination account.
+         Only the outflow leg (negative amount) is rendered so we
+         don't double-count both halves of the same transfer pair. */
+      if (amt > 0) return;
+      var destTxn = (profile.transactions || []).find(function (x) { return x.id === t.transferTxnId; });
+      var destAcct = destTxn ? findAccount(profile, destTxn.accountId) : null;
+      if (!destAcct) return;
+      var transferName = "Transfer → " + destAcct.name;
+      links.push({ source: pivotIdx, target: node(transferName), value: Math.abs(amt) / 100 });
+      return;
+    }
+    if (amt > 0) {
+      /* Income: payee → pivot. Group by category if set, else
+         "Uncategorized income". */
+      var srcName = cat ? cat.name : "Uncategorized income";
+      links.push({ source: node(srcName), target: pivotIdx, value: amt / 100 });
+    } else {
+      /* Spending: pivot → category. Skip credit-card payment
+         categories because they're not "spending" — they're a
+         transfer to the debt account. */
+      if (cat && cat.isPaymentCategory) return;
+      var sinkName = cat ? cat.name : "Uncategorized spending";
+      links.push({ source: pivotIdx, target: node(sinkName), value: Math.abs(amt) / 100 });
+    }
+  });
+
+  /* Collapse duplicate links: same source+target consolidates into
+     one fatter link. The sankey layout handles overlapping links
+     poorly, so this both looks cleaner and reads more honestly. */
+  var collapsed = {};
+  links.forEach(function (l) {
+    var key = l.source + ">" + l.target;
+    if (!collapsed[key]) collapsed[key] = { source: l.source, target: l.target, value: 0 };
+    collapsed[key].value += l.value;
+  });
+  var finalLinks = Object.keys(collapsed).map(function (k) { return collapsed[k]; });
+
+  return { nodes: nodes, links: finalLinks };
+}
+
+/* Category heatmap ------------------------------------------------------- */
+
+/* Top-N spending categories × month grid. Returns:
+     {
+       months: [YYYY-MM, ...],
+       categories: [{ categoryId, category, group, total }, ...],
+       cells: { categoryId: { month: value } },
+       max: <max cell value across the grid>,
+     }
+   The renderer uses `max` to scale the sequential color ramp so the
+   busiest cells hit full saturation and quiet cells stay light. */
+export function categoryHeatmap(profile, endMonth, monthCount, topN) {
+  var months = monthRangeBack(endMonth || thisMonth(), monthCount || 12);
+  var byCat = {};
+  var nameByCat = {};
+  var groupByCat = {};
+  (profile.categories || []).forEach(function (c) {
+    nameByCat[c.id] = c.name;
+  });
+  (profile.categoryGroups || []).forEach(function (g) {
+    (g.categories || []).forEach(function (cid) { groupByCat[cid] = g.name; });
+  });
+  (profile.transactions || []).forEach(function (t) {
+    if (!t || !t.date) return;
+    var m = t.date.slice(0, 7);
+    if (months.indexOf(m) === -1) return;
+    var amt = t.amount || 0;
+    if (amt >= 0) return;
+    if (t.transferTxnId) return;
+    var cid = t.categoryId || "__uncat";
+    if (!byCat[cid]) byCat[cid] = { total: 0, cells: {} };
+    var v = Math.abs(amt);
+    byCat[cid].total += v;
+    byCat[cid].cells[m] = (byCat[cid].cells[m] || 0) + v;
+  });
+  var rows = Object.keys(byCat).map(function (cid) {
+    return {
+      categoryId: cid,
+      category: nameByCat[cid] || (cid === "__uncat" ? "Uncategorized" : "Unknown"),
+      group: groupByCat[cid] || "",
+      total: byCat[cid].total,
+      cells: byCat[cid].cells,
+    };
+  }).sort(function (a, b) { return b.total - a.total; });
+  var top = rows.slice(0, topN || 15);
+  var max = 0;
+  top.forEach(function (r) {
+    months.forEach(function (m) {
+      var v = r.cells[m] || 0;
+      if (v > max) max = v;
+    });
+  });
+  var cellsOut = {};
+  top.forEach(function (r) { cellsOut[r.categoryId] = r.cells; });
+  return { months: months, categories: top, cells: cellsOut, max: max };
+}
+
+/* Year-over-year --------------------------------------------------------- */
+
+/* Compare two date ranges. By default: current = last 12 months,
+   prior = the preceding 12 months. Returns per-month, per-category,
+   per-payee paired totals + KPI deltas. Each range is { from, to }
+   in YYYY-MM. */
+export function yearOverYear(profile, currentRange, priorRange) {
+  function bucket(range) {
+    var months = [];
+    var cursor = range.from;
+    while (cursor <= range.to) {
+      months.push(cursor);
+      cursor = nextMonth(cursor);
+    }
+    return months;
+  }
+  function aggregate(months) {
+    var byMonth = {};
+    var byCategory = {};
+    var byPayee = {};
+    var totalIncome = 0, totalExpense = 0;
+    months.forEach(function (m) { byMonth[m] = { income: 0, expense: 0 }; });
+    var catName = {}; (profile.categories || []).forEach(function (c) { catName[c.id] = c.name; });
+    var payeeName = {}; (profile.payees || []).forEach(function (p) { payeeName[p.id] = p.name; });
+    (profile.transactions || []).forEach(function (t) {
+      if (!t || !t.date) return;
+      var m = t.date.slice(0, 7);
+      if (months.indexOf(m) === -1) return;
+      if (t.transferTxnId) return;
+      var amt = t.amount || 0;
+      if (amt > 0) { totalIncome += amt; byMonth[m].income += amt; }
+      else         { totalExpense += -amt; byMonth[m].expense += -amt; }
+      if (amt < 0) {
+        var cid = t.categoryId || "__uncat";
+        var pid = t.payeeId || "__unpayee";
+        byCategory[cid] = (byCategory[cid] || 0) + -amt;
+        byPayee[pid] = (byPayee[pid] || 0) + -amt;
+      }
+    });
+    return {
+      months: months,
+      byMonth: byMonth,
+      byCategory: byCategory,
+      byPayee: byPayee,
+      catName: catName,
+      payeeName: payeeName,
+      totalIncome: totalIncome,
+      totalExpense: totalExpense,
+      net: totalIncome - totalExpense,
+      savingsRate: totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) : null,
+    };
+  }
+  var current = aggregate(bucket(currentRange));
+  var prior   = aggregate(bucket(priorRange));
+
+  /* Build paired-by-month rows aligned by their relative month index
+     (month 1 of current vs month 1 of prior, etc.) so the chart
+     compares chronological position rather than calendar date. */
+  var paired = [];
+  var maxLen = Math.max(current.months.length, prior.months.length);
+  for (var i = 0; i < maxLen; i++) {
+    var cm = current.months[i] || null;
+    var pm = prior.months[i] || null;
+    paired.push({
+      index: i + 1,
+      currentMonth: cm,
+      priorMonth: pm,
+      currentIncome:  cm ? current.byMonth[cm].income  : 0,
+      currentExpense: cm ? current.byMonth[cm].expense : 0,
+      priorIncome:    pm ? prior.byMonth[pm].income    : 0,
+      priorExpense:   pm ? prior.byMonth[pm].expense   : 0,
+    });
+  }
+
+  /* Top movers — categories with the biggest expense delta between
+     ranges (positive = current spent more, negative = current spent
+     less). Used for the "Biggest swing" KPI + the by-category tab. */
+  var allCats = {};
+  Object.keys(current.byCategory).forEach(function (k) { allCats[k] = true; });
+  Object.keys(prior.byCategory).forEach(function (k) { allCats[k] = true; });
+  var categoryRows = Object.keys(allCats).map(function (cid) {
+    var cur = current.byCategory[cid] || 0;
+    var pri = prior.byCategory[cid]   || 0;
+    return {
+      categoryId: cid,
+      category: current.catName[cid] || prior.catName[cid] || (cid === "__uncat" ? "Uncategorized" : "Unknown"),
+      current: cur,
+      prior: pri,
+      delta: cur - pri,
+    };
+  }).sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
+
+  var allPayees = {};
+  Object.keys(current.byPayee).forEach(function (k) { allPayees[k] = true; });
+  Object.keys(prior.byPayee).forEach(function (k) { allPayees[k] = true; });
+  var payeeRows = Object.keys(allPayees).map(function (pid) {
+    var cur = current.byPayee[pid] || 0;
+    var pri = prior.byPayee[pid]   || 0;
+    return {
+      payeeId: pid,
+      payee: current.payeeName[pid] || prior.payeeName[pid] || (pid === "__unpayee" ? "No payee" : "Unknown"),
+      current: cur,
+      prior: pri,
+      delta: cur - pri,
+    };
+  }).sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); }).slice(0, 20);
+
+  return {
+    current: current,
+    prior: prior,
+    paired: paired,
+    categoryRows: categoryRows,
+    payeeRows: payeeRows,
+    deltas: {
+      income: current.totalIncome - prior.totalIncome,
+      expense: current.totalExpense - prior.totalExpense,
+      net: current.net - prior.net,
+      savingsRate: (current.savingsRate !== null && prior.savingsRate !== null)
+        ? (current.savingsRate - prior.savingsRate) : null,
+      biggestSwing: categoryRows[0] || null,
+    },
+  };
+}
+
+/* Subscription audit ----------------------------------------------------- */
+
+/* Walk the last N months looking for cadence patterns: same payee +
+   approximately the same amount (within ±5%) charged repeatedly
+   within ±3 days of a monthly/weekly/yearly anchor. Returns:
+     [
+       { payee, typicalAmount, cadence, occurrences, annualCost,
+         lastCharge, lastChargeAccountId },
+       ...
+     ]
+   sorted by annualCost desc. Pure function — no UI / dates assumed
+   except for the lookback window. */
+export function detectSubscriptions(profile, lookbackMonths) {
+  var monthsBack = lookbackMonths || 12;
+  var cutoffMonth = thisMonth();
+  for (var i = 0; i < monthsBack; i++) cutoffMonth = prevMonth(cutoffMonth);
+  var cutoffISO = cutoffMonth + "-01";
+  var payeeName = {};
+  (profile.payees || []).forEach(function (p) { payeeName[p.id] = p.name; });
+
+  /* Group spending transactions by payeeId. Skip transfers, splits,
+     and positive amounts. */
+  var groups = {};
+  (profile.transactions || []).forEach(function (t) {
+    if (!t || !t.date) return;
+    if (t.date < cutoffISO) return;
+    if (t.transferTxnId) return;
+    if (t.splits) return;
+    var amt = t.amount || 0;
+    if (amt >= 0) return;
+    var pid = t.payeeId || "__unpayee";
+    if (!groups[pid]) groups[pid] = [];
+    groups[pid].push({ date: t.date, amount: Math.abs(amt), accountId: t.accountId });
+  });
+
+  function median(arr) {
+    if (!arr.length) return 0;
+    var sorted = arr.slice().sort(function (a, b) { return a - b; });
+    var mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+  function daysBetween(a, b) {
+    var d1 = new Date(a + "T00:00:00Z").getTime();
+    var d2 = new Date(b + "T00:00:00Z").getTime();
+    return Math.round(Math.abs(d2 - d1) / 86400000);
+  }
+
+  var subscriptions = [];
+  Object.keys(groups).forEach(function (pid) {
+    var txns = groups[pid].sort(function (a, b) { return a.date.localeCompare(b.date); });
+    if (txns.length < 3) return; /* need ≥3 charges to detect a cadence */
+    var amounts = txns.map(function (t) { return t.amount; });
+    var med = median(amounts);
+    /* Pricey-burrito false-positive guard: require amount stability
+       (max-min within 25% of the median) before calling it a sub. */
+    var lo = Math.min.apply(null, amounts);
+    var hi = Math.max.apply(null, amounts);
+    if (med === 0 || (hi - lo) / med > 0.25) return;
+    /* Compute intervals between consecutive charges. */
+    var intervals = [];
+    for (var i = 1; i < txns.length; i++) intervals.push(daysBetween(txns[i - 1].date, txns[i].date));
+    var medInterval = median(intervals);
+    var cadence = null;
+    var annualMultiplier = 0;
+    if (medInterval >= 27 && medInterval <= 33)       { cadence = "Monthly";   annualMultiplier = 12; }
+    else if (medInterval >= 6  && medInterval <= 8)   { cadence = "Weekly";    annualMultiplier = 52; }
+    else if (medInterval >= 13 && medInterval <= 15)  { cadence = "Biweekly";  annualMultiplier = 26; }
+    else if (medInterval >= 88 && medInterval <= 95)  { cadence = "Quarterly"; annualMultiplier = 4; }
+    else if (medInterval >= 360 && medInterval <= 370){ cadence = "Yearly";    annualMultiplier = 1; }
+    if (!cadence) return;
+    var last = txns[txns.length - 1];
+    subscriptions.push({
+      payeeId: pid,
+      payee: payeeName[pid] || (pid === "__unpayee" ? "(no payee)" : "Unknown"),
+      typicalAmount: med,
+      cadence: cadence,
+      occurrences: txns.length,
+      annualCost: med * annualMultiplier,
+      lastCharge: last.date,
+      lastChargeAccountId: last.accountId,
+    });
+  });
+
+  return subscriptions.sort(function (a, b) { return b.annualCost - a.annualCost; });
+}

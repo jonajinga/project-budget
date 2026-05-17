@@ -39,6 +39,15 @@ export function render(el, rows) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: function (_evt, els) {
+          if (!els || !els.length) return;
+          var r = sorted[els[0].index];
+          if (r && r.accountId) location.href = "/app/register/?account=" + r.accountId;
+        },
+        onHover: function (evt, els) {
+          if (!evt.native || !evt.native.target) return;
+          evt.native.target.style.cursor = els.length ? "pointer" : "default";
+        },
         plugins: {
           legend: { display: true, position: "bottom" },
           tooltip: {
@@ -48,6 +57,7 @@ export function render(el, rows) {
                 var lines = [ctx.label + ": " + fmtCentsPrecise(ctx.parsed)];
                 if (r.monthsToPayoff) lines.push("Payoff: " + r.monthsToPayoff + " months");
                 else lines.push("No recent payments");
+                lines.push("Click to open register");
                 return lines;
               },
             },
@@ -88,6 +98,15 @@ export function render(el, rows) {
       indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
+      onClick: function (_evt, els) {
+        if (!els || !els.length) return;
+        var r = sorted[els[0].index];
+        if (r && r.accountId) location.href = "/app/register/?account=" + r.accountId;
+      },
+      onHover: function (evt, els) {
+        if (!evt.native || !evt.native.target) return;
+        evt.native.target.style.cursor = els.length ? "pointer" : "default";
+      },
       scales: {
         x: {
           beginAtZero: true,

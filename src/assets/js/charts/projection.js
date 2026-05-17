@@ -54,6 +54,15 @@ export function render(el, data) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
+      onClick: function (_evt, els) {
+        if (!els || !els.length) return;
+        var m = data[els[0].index] && data[els[0].index].month;
+        if (m) location.href = "/app/calendar/?m=" + m;
+      },
+      onHover: function (evt, els) {
+        if (!evt.native || !evt.native.target) return;
+        evt.native.target.style.cursor = els.length ? "pointer" : "default";
+      },
       scales: {
         x: {
           grid: { display: false },
