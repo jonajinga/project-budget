@@ -196,10 +196,10 @@
 .table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Mobile fallback for any .table not already inside a scrolling
-   container (.report, .card) AND not the register table which
-   swaps to card view. display: block lets the table itself
-   scroll horizontally so its many columns don't force the whole
-   page to scroll. */
+   container (.report, .card) AND not a table that swaps to a card
+   view (.rec-table, .register__table). display: block lets the
+   table itself scroll horizontally so its many columns don't force
+   the whole page to scroll. */
 @media (max-width: 599px) {
   .app-page .table {
     display: block;
@@ -216,6 +216,14 @@
     display: table;
     overflow-x: visible;
     white-space: normal;
+  }
+  /* Tables with their own mobile-card fallback stay hidden — the
+     fallback already shows. Without this override the generic
+     mobile rule above turned them back on as display: block
+     scrollable tables, doubling the content. */
+  .rec-table,
+  .register__table {
+    display: none !important;
   }
 }
 
