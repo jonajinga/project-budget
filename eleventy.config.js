@@ -1,11 +1,12 @@
 import { DateTime } from "luxon";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import eleventyImg from "@11ty/eleventy-img";
 import tinyHTML from "@sardine/eleventy-plugin-tinyhtml";
 import * as pagefind from "pagefind";
+import { PurgeCSS } from "purgecss";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -26,6 +27,7 @@ const CSS_PARTIAL_ORDER = [
   "forms.css",
   "fab.css",
   "goal-progress.css",
+  "contact.css",
   "style-guide.css",
   "print.css",
 ];
@@ -194,6 +196,93 @@ export default function (eleventyConfig) {
       await index.writeFiles({ outputPath: resolve(siteDir, "pagefind") });
     } catch (e) {
       console.warn("Pagefind index build failed:", e.message);
+    }
+  });
+
+  // ---- PurgeCSS site-wide pass -------------------------------------------
+  // Walks _site for HTML + the JS bundles that inject classes at runtime,
+  // reads each file as a raw string, and feeds them to PurgeCSS as
+  // { raw, extension } content objects. Skipping glob entirely sidesteps
+  // the Windows path issue where forward-slash globs silently match zero
+  // files on resolved backslash paths.
+  function walkFiles(dir, extensions, out) {
+    out = out || [];
+    if (!existsSync(dir)) return out;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // Skip vendor + pagefind output to keep the scan fast.
+        if (entry.name === "pagefind" || entry.name === "node_modules") continue;
+        walkFiles(full, extensions, out);
+      } else if (extensions.some(function (ext) { return entry.name.endsWith(ext); })) {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+  eleventyConfig.on("eleventy.after", async () => {
+    try {
+      const siteDir = resolve(__dirname, "_site");
+      const cssPath = resolve(siteDir, "assets/css/global.css");
+      if (!existsSync(cssPath)) return;
+      const before = statSync(cssPath).size;
+
+      const htmlFiles = walkFiles(siteDir, [".html"]);
+      const siteJsFiles = walkFiles(resolve(siteDir, "assets/js"), [".js"]);
+      const srcJsFiles = walkFiles(resolve(__dirname, "src/assets/js"), [".js"]);
+      const allFiles = htmlFiles.concat(siteJsFiles).concat(srcJsFiles);
+
+      const content = allFiles.map(function (f) {
+        return {
+          raw: readFileSync(f, "utf8"),
+          extension: f.endsWith(".html") ? "html" : "js",
+        };
+      });
+
+      // PurgeCSS treats the `css` array as path-or-string + tries to
+      // resolve absolute Windows paths as relative globs (mangling the
+      // drive letter and slashes). Pass the CSS content as a raw
+      // string under a different key shape that the lib supports —
+      // { raw } — so no path resolution happens.
+      const cssContent = readFileSync(cssPath, "utf8");
+
+      const result = await new PurgeCSS().purge({
+        content: content,
+        css: [{ raw: cssContent }],
+        safelist: {
+          standard: [
+            /^is-/, /^has-/, /^x-/, /^js-/,
+            "active", "open", "show", "hidden", "expanded", "collapsed",
+            "is-dragging", "is-chosen", "is-ghost",
+            /^cal-/, /^budget__/, /^register__/, /^rec-/, /^kpi/,
+            /^modal/, /^toast/, /^tippy/, /^profile-switcher/,
+            /^app-/, /^site-/, /^doc-/, /^docs-/,
+            /^theme-picker/, /^save-status/, /^contact-/,
+            /^pb-/, /^thanks-/, /^glossary/, /^auto-assign/,
+            /^goal-/, /^available-pill/, /^amount--/,
+            /^swatch/, /^type-spec/, /^space-spec/, /^callout/,
+            /^fab/, /^cleared-toggle/, /^dnd-handle/, /^card/,
+            /^chart/, /^report/, /^badge/, /^field/, /^form-/,
+            /^example/, /^a11y/, /^lead/, /^eyebrow/, /^breadcrumb/,
+            /^sidebar/, /^header/, /^month-/, /^year-/, /^acct-/,
+            /^cat-/, /^month-strip/, /^sample-/, /^pool-/,
+          ],
+          greedy: [
+            /^data-theme/, /^data-touch/, /^data-tip/,
+            /^aria-/, /^tippy/, /^popper/, /^sortable/,
+          ],
+          deep: [/dialog/, /sortable/, /tippy/, /popper/],
+        },
+        defaultExtractor: (content) => content.match(/[\w-/:%@.]+(?<!:)/g) || [],
+      });
+      if (result && result[0] && result[0].css) {
+        writeFileSync(cssPath, result[0].css);
+        const after = statSync(cssPath).size;
+        const pct = Math.round((1 - after / before) * 100);
+        console.log(`[purgecss] ${(before/1024).toFixed(1)}KB → ${(after/1024).toFixed(1)}KB (-${pct}%) — ${allFiles.length} files scanned`);
+      }
+    } catch (e) {
+      console.warn("PurgeCSS pass failed:", e.message);
     }
   });
 

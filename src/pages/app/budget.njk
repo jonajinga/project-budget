@@ -7,6 +7,13 @@ eleventyExcludeFromCollections: true
 ---
 <div class="app-page" x-data="budgetView()" x-init="init()">
 
+  {# Visually-hidden page heading — SR users land on a clear page
+     title; sighted users see the month strip + RTA card as the
+     visual title. Replaces the missing h1 the WCAG audit flagged. #}
+  <h1 class="visually-hidden">
+    Budget — <span x-text="monthHeaderLabel()">this month</span>
+  </h1>
+
   {# Year strip with prev/next year + the 12-month tab row #}
   <div class="month-strip" role="tablist" aria-label="Budget month">
     <button type="button" class="month-strip__year"
@@ -608,34 +615,37 @@ eleventyExcludeFromCollections: true
            Shows progress bar + 4 stat tiles (target / assigned-MTD /
            needed-this-month / status). #}
         <div class="goal-status" x-show="$store.budget.findGoal(goalCatId)" x-cloak>
-          <div class="goal-status__bar" :data-tip="goalStatusTooltip()"
-               role="progressbar"
-               :aria-valuenow="goalPctForModal()"
-               aria-valuemin="0" aria-valuemax="100">
-            <span class="goal-status__fill"
-                  :class="goalPctForModal() >= 100 ? 'goal-status__fill--funded' : (goalPctForModal() >= 50 ? 'goal-status__fill--partial' : 'goal-status__fill--low')"
-                  :style="'width:' + Math.min(100, goalPctForModal()) + '%'"></span>
+          <div class="goal-status__bar-row">
             <span class="goal-status__cap"
                   x-text="goalPctForModal() >= 100 ? '✓ 100% funded' : (goalPctForModal() + '% funded')"></span>
+            <div class="goal-status__bar" :data-tip="goalStatusTooltip()"
+                 role="progressbar"
+                 :aria-valuenow="goalPctForModal()"
+                 aria-valuemin="0" aria-valuemax="100">
+              <span class="goal-status__fill"
+                    :class="goalPctForModal() >= 100 ? 'goal-status__fill--funded' : (goalPctForModal() >= 50 ? 'goal-status__fill--partial' : 'goal-status__fill--low')"
+                    :style="'width:' + Math.min(100, goalPctForModal()) + '%'"></span>
+            </div>
           </div>
 
           <dl class="goal-status__stats">
-            <div class="goal-status__stat">
+            <div class="goal-status__stat" data-tip="The full amount this goal is asking for this month.">
               <dt>Target</dt>
               <dd x-text="formatCents(goalCurrentTarget())"></dd>
             </div>
-            <div class="goal-status__stat">
-              <dt>Assigned (this month)</dt>
+            <div class="goal-status__stat" data-tip="Dollars you've assigned to this category in the active month.">
+              <dt>Assigned</dt>
               <dd class="amount--inflow"
                   x-text="formatCents($store.budget.assignedFor(goalCatId, $store.budget.currentMonth))"></dd>
             </div>
-            <div class="goal-status__stat">
-              <dt>Available now</dt>
+            <div class="goal-status__stat" data-tip="Total dollars currently sitting in this category (carry-in + this month's assigned + activity).">
+              <dt>Available</dt>
               <dd :class="categoryAvailable(goalCatId) < 0 ? 'amount--outflow' : 'amount--inflow'"
                   x-text="formatCents(categoryAvailable(goalCatId))"></dd>
             </div>
-            <div class="goal-status__stat goal-status__stat--needed">
-              <dt>Needed to reach target</dt>
+            <div class="goal-status__stat goal-status__stat--needed"
+                 data-tip="What's still missing this month to meet the goal target.">
+              <dt>Still needed</dt>
               <dd :class="$store.budget.goalNeeded(goalCatId) > 0 ? 'amount--outflow' : 'amount--inflow'"
                   x-text="$store.budget.goalNeeded(goalCatId) > 0 ? formatCents($store.budget.goalNeeded(goalCatId)) : '✓ Funded'"></dd>
             </div>

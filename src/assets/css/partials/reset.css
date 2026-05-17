@@ -29,7 +29,18 @@ body {
 
 img, picture, video, canvas, svg { display: block; max-width: 100%; height: auto; }
 input, button, textarea, select { font: inherit; color: inherit; }
-button { background: none; border: 0; cursor: pointer; }
+button {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  /* Prevent the text caret from landing inside button labels when a
+     click misses or a drag selects text — buttons should read as
+     single tap targets, never a text run. Apply globally to every
+     <button> so .btn, .btn--icon, .activity-btn, etc. all benefit
+     without per-component duplication. */
+  user-select: none;
+  -webkit-user-select: none;
+}
 a { color: var(--accent); }
 a:hover { color: var(--accent-hover); }
 ul, ol { list-style: none; }

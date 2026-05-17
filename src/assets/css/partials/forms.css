@@ -33,19 +33,33 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: var(--space-md);
+  /* Backdrop padding drops to space-2xs on mobile so a 360px viewport
+     gives the modal nearly the full width — was eating ~50px previously. */
+  padding: var(--space-2xs);
   z-index: 60;
   overflow-y: auto;
   backdrop-filter: blur(4px);
+}
+@media (min-width: 600px) {
+  .modal-backdrop { padding: var(--space-md); }
 }
 .modal {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   max-width: 540px;
   width: 100%;
-  padding: var(--space-lg);
+  /* Tighter padding on mobile so a 360px modal isn't 60% gutter. */
+  padding: var(--space-md);
   box-shadow: var(--shadow-lg);
-  margin-top: 10vh;
+  /* Less top reservation on phones — was wasting 80px on 800-tall
+     screens. Respect safe-area for iOS notch. */
+  margin-top: max(2vh, env(safe-area-inset-top));
+}
+@media (min-width: 600px) {
+  .modal {
+    padding: var(--space-lg);
+    margin-top: 10vh;
+  }
 }
 /* Narrower variant for confirm / alert dialogs — keeps the destructive
    action front and center instead of stretching across a 540px field. */

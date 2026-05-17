@@ -1,16 +1,46 @@
 ---
 layout: layouts/page.njk
 title: "Glossary"
-description: "Definitions for the budgeting terms used in Project Budget."
+subtitle: "Envelope budgeting borrows vocabulary from YNAB, Actual, and traditional household finance. Plain-English definitions for every term Project Budget uses."
+description: "Glossary of envelope budgeting terms used in Project Budget — Ready to Assign, Carry-over, Payment categories, and more."
 permalink: /glossary/
 ---
 <p>
-  Envelope budgeting borrows vocabulary from YNAB, Actual, and traditional household finance. Here is what each term means in Project Budget.
+  Each term has its own dedicated page with the full definition and related cross-links. Use this A–Z index to scan; click any term to read its detail page.
 </p>
 
+{# Sort alphabetically by term, regardless of source-file clustering. #}
+{% set sortedGlossary = glossary | sort(false, false, 'term') %}
+
+{# A–Z jump strip. We render all 26 letters but only enable the ones
+   that have at least one matching entry. This avoids fragile list
+   mutation in Nunjucks and gives the user a complete visual grid. #}
+{% set azLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" %}
+<nav class="glossary-az" aria-label="Jump to letter">
+  {% for letter in azLetters %}
+    {% set hasLetter = false %}
+    {% for entry in sortedGlossary %}
+      {% if not hasLetter and (entry.term | upper)[0] == letter %}{% set hasLetter = true %}{% endif %}
+    {% endfor %}
+    {% if hasLetter %}
+      <a href="#letter-{{ letter | lower }}">{{ letter }}</a>
+    {% else %}
+      <span class="glossary-az__disabled" aria-disabled="true">{{ letter }}</span>
+    {% endif %}
+  {% endfor %}
+</nav>
+
 <dl class="glossary">
-  {% for entry in glossary %}
-    <dt id="{{ entry.key }}">{{ entry.term }}</dt>
-    <dd>{{ entry.body }}</dd>
+  {% for entry in sortedGlossary %}
+    {% set first = (entry.term | upper)[0] %}
+    {% set prevFirst = "" %}
+    {% if not loop.first %}{% set prevFirst = (sortedGlossary[loop.index0 - 1].term | upper)[0] %}{% endif %}
+    {% if (loop.first or first != prevFirst) and azLetters.indexOf(first) >= 0 %}
+      <dt class="glossary__letter" id="letter-{{ first | lower }}"><span aria-hidden="true">{{ first }}</span><span class="visually-hidden">Terms starting with {{ first }}</span></dt>
+    {% endif %}
+    <dt id="{{ entry.key }}">
+      <a href="/glossary/{{ entry.key }}/">{{ entry.term }}</a>
+    </dt>
+    <dd>{{ entry.body | safe }}</dd>
   {% endfor %}
 </dl>

@@ -1,0 +1,173 @@
+---
+layout: layouts/page.njk
+title: "About Project Budget"
+subtitle: "A browser-only envelope budgeting app — no accounts, no servers, no bank connections, no telemetry on your financial data. Built and maintained by one person, in public, under the MIT License."
+description: "About Project Budget — why it exists, who built it, the design constraints (no backend, no bank links, no telemetry), and how it differs from YNAB, Actual, and the cloud-budgeting category."
+permalink: /about/
+---
+<p class="lead">
+  Project Budget is the envelope budgeting workflow popularized by YNAB and Actual Budget, rebuilt as a single static web page that runs entirely in your browser. Your data lives in <code>localStorage</code> — nowhere else.
+</p>
+
+<div class="callout">
+  <p class="callout__title">Open the app</p>
+  <p>The first visit drops you into a fully-populated sample household so you can see how every page works before committing to your own profile. <a href="/app/">Open the sample budget</a> · <a href="/docs/getting-started/">Read the getting-started guide</a></p>
+</div>
+
+<h2 id="why">Why Project Budget exists</h2>
+
+<p>
+  Most modern budgeting apps require a cloud account, link to your bank, and route your transactions through a third-party aggregator. That model trades convenience for surveillance: a startup with access to every dollar you spend, hoping to monetize that data, can be acquired, breached, or simply shut down.
+</p>
+
+<p>
+  Project Budget is the opposite trade. It does not ask for an email address. There is no server. There is no bank link. The app's source is on <a href="{{ site.repo }}" rel="noopener">GitHub</a> under the MIT License — you can self-host it, fork it, or audit it.
+</p>
+
+<p>
+  The trade-off you make in return is real: you maintain your own backups. There is no cloud sync between devices. Importing transactions means downloading a CSV / OFX / QFX / QIF file from your bank and uploading it. If you wipe your browser data without exporting first, your budget is gone. That trade buys you control of your financial data — and on the budgeting workflow itself, this app does roughly what every full-featured envelope budgeting app does.
+</p>
+
+<h2 id="commitments">Hard commitments</h2>
+
+<ul>
+  <li><strong>No backend.</strong> No server processes any of your data. The hosted version at <code>{{ site.url }}</code> is a static page on Cloudflare Pages — when the page loads, all subsequent work is local to your browser.</li>
+  <li><strong>No telemetry on financial data.</strong> The optional analytics (Umami, if enabled) records page views only. It never sees transactions, accounts, balances, payees, categories, or any other budgeting content.</li>
+  <li><strong>No bank-connection integrations.</strong> Plaid, SimpleFIN, MX, and similar services require a server and a paid relationship with the aggregator. Project Budget instead supports the file formats banks already provide.</li>
+  <li><strong>No paid tiers, no license keys, no paywalled features.</strong> The MIT-licensed source is the entire app. There is no Pro version.</li>
+  <li><strong>No tracking pixels or third-party scripts on financial pages.</strong> Fonts ship from <a href="https://fonts.bunny.net" rel="noopener">Bunny Fonts</a> (GDPR-compliant, no logging). Nothing else loads from a third party while you use the app.</li>
+</ul>
+
+<h2 id="who">Who built it</h2>
+
+<div class="contact-page__bio" style="margin: var(--space-md) 0;">
+  <img src="/assets/img/jonajinga.webp"
+       alt="Jon Ajinga, the maintainer of Project Budget"
+       class="contact-page__photo"
+       width="120" height="120" loading="lazy" decoding="async">
+  <h3 class="contact-page__bio-name">Jon Ajinga</h3>
+  <p class="contact-page__bio-role">Maintainer · Project Budget</p>
+  <p class="contact-page__bio-body">
+    I built Project Budget because every other tool I tried either required a cloud account I didn't want, missed an envelope-budgeting workflow I'd come to rely on, or got acquired and shut down. I read every issue + every contact-form submission personally. The roadmap is short on purpose — see the project commitments above for what gets accepted and what doesn't.
+  </p>
+  <ul class="contact-page__bio-links">
+    <li>
+      <strong>GitHub:</strong>
+      <a href="{{ site.repo }}" rel="noopener">{{ site.repo | replace("https://", "") }}</a>
+      <span class="contact-page__bio-hint">Source, issues, discussions, public roadmap.</span>
+    </li>
+    <li>
+      <strong>Email:</strong>
+      <a href="mailto:{{ site.email }}">{{ site.email }}</a>
+      <span class="contact-page__bio-hint">For anything not suited to a public issue.</span>
+    </li>
+    <li>
+      <strong>Contact form:</strong>
+      <a href="/contact/">{{ site.url | replace("https://", "") }}/contact/</a>
+      <span class="contact-page__bio-hint">Bug reports, feature requests, partnership inquiries.</span>
+    </li>
+  </ul>
+</div>
+
+<h2 id="how-it-differs">How it differs from the alternatives</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Aspect</th>
+      <th>Project Budget</th>
+      <th>YNAB</th>
+      <th>Actual Budget</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Where your data lives</td>
+      <td>This browser's <code>localStorage</code></td>
+      <td>YNAB's cloud</td>
+      <td>Your machine + optional self-hosted sync server</td>
+    </tr>
+    <tr>
+      <td>Account required</td>
+      <td>No</td>
+      <td>Yes (email + password)</td>
+      <td>Not for local-only use</td>
+    </tr>
+    <tr>
+      <td>Price</td>
+      <td>Free, open source</td>
+      <td>Subscription</td>
+      <td>Free, open source</td>
+    </tr>
+    <tr>
+      <td>Bank linking</td>
+      <td>Manual CSV / OFX / QFX / QIF import</td>
+      <td>Plaid, others</td>
+      <td>SimpleFIN, others</td>
+    </tr>
+    <tr>
+      <td>Multi-device sync</td>
+      <td>Not built-in — export / import JSON</td>
+      <td>Cloud sync</td>
+      <td>Self-hosted sync server</td>
+    </tr>
+    <tr>
+      <td>Source code</td>
+      <td>MIT, public</td>
+      <td>Closed</td>
+      <td>MIT, public</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  Project Budget is closest in spirit to Actual Budget run in local-only mode. The two main differences: Project Budget never asks for any optional server (the surface area for a sync feature simply isn't there), and it ships as a single static page so you can drop it on any static host or open it from a USB drive.
+</p>
+
+<h2 id="how-it-is-built">How it's built</h2>
+
+<ul>
+  <li><strong>Eleventy v3</strong> (ESM, Nunjucks templates) — static site generator. The build produces ~190 HTML pages plus a single concatenated CSS file.</li>
+  <li><strong>Alpine.js</strong> — reactive UI in the app shell. No virtual DOM, no client-side router, no build-time framework.</li>
+  <li><strong>Chart.js + D3</strong> — lazy-loaded only on the reports pages.</li>
+  <li><strong>Tippy.js + Popper</strong> — tooltips on the budgeting controls so every numeric input has a one-line explainer.</li>
+  <li><strong>Pagefind</strong> — the static-site search index. Builds at deploy time; queries run in the browser.</li>
+  <li><strong>Bunny Fonts</strong> — privacy-respecting font CDN for the four typefaces (Playfair Display, Lora, Source Serif 4, DM Sans).</li>
+  <li><strong>SortableJS</strong> — drag-and-drop for category groups, accounts, and budget rows.</li>
+  <li><strong>Cloudflare Pages</strong> — static host. The build runs on every push to <code>main</code>.</li>
+</ul>
+
+<p>
+  Total runtime payload is small: the CSS bundle is ~200 KB, Alpine + the in-app JS modules are well under 100 KB. Chart libraries (~486 KB combined) load only on report pages. Most pages load and render before the network finishes idling.
+</p>
+
+<h2 id="versioning">Versioning &amp; release cadence</h2>
+
+<p>
+  Project Budget ships continuously. There is no fixed release cycle — features and fixes go out as they're ready. <a href="{{ site.repo }}/commits/main" rel="noopener">Watch the GitHub commit history</a> for the canonical record of what's changed. Conventional commit prefixes (<code>feat:</code>, <code>fix:</code>, <code>chore:</code>) make the log scannable.
+</p>
+
+<p>
+  Breaking changes to the export-data schema (rare) get called out in the commit message. The export schema is documented at <a href="/docs/profiles-backups/export-schema/">/docs/profiles-backups/export-schema/</a>.
+</p>
+
+<h2 id="contributing">Contributing</h2>
+
+<p>
+  See <a href="/open-source/">the open-source page</a> for the contribution policy. The short version: bug fixes, accessibility improvements, new CSV / OFX / QFX / QIF format detectors, new reports, and documentation improvements are all welcome. Anything that requires a backend, sends data off-device, or adds a paid tier is out of scope.
+</p>
+
+<h2 id="acknowledgements">Acknowledgements</h2>
+
+<ul>
+  <li><strong>YNAB</strong> — for popularizing the envelope-budgeting workflow this app implements (Rule One, Ready to Assign, Category Goals).</li>
+  <li><strong>Actual Budget</strong> — for proving that an open-source local-first budgeting app can ship a great experience without a SaaS backend.</li>
+  <li><strong>Pikes Peak Web Designs</strong> — for the site build pattern (CSS partials, Eleventy config, accessibility checklist) reused here.</li>
+  <li><strong>The open-source vendors</strong> — Alpine, Chart.js, D3, Tippy, Pagefind, SortableJS, Dexie, PapaParse, Fuse, Luxon. Every one is MIT, BSD, or Apache licensed.</li>
+</ul>
+
+<h2 id="reach-out">Reach out</h2>
+
+<p>
+  Questions, bug reports, feature requests, partnership inquiries — all welcome through <a href="/contact/">the contact form</a> or by emailing <a href="mailto:{{ site.email }}">{{ site.email }}</a> directly. Bug reports and accessibility issues get priority.
+</p>

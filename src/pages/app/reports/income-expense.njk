@@ -5,19 +5,7 @@ description: "Monthly income vs expense with savings rate, best/worst month, and
 permalink: /app/reports/income-expense/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page"
-     x-data="Object.assign(
-       incomeExpenseView(),
-       reportTable(
-         (self) => ($store.budget.reportIncomeVsExpense(null, self.rangeMonths) || []),
-         { keys: [
-             { key: 'month',   label: 'Month' },
-             { key: 'income',  label: 'Income',  numeric: true },
-             { key: 'expense', label: 'Expense', numeric: true },
-             { key: 'net',     label: 'Net',     numeric: true },
-           ], defaultSort: { key: 'month', dir: 'asc' } }
-       )
-     )" x-init="init()">
+<div class="app-page" x-data="incomeExpenseView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Income vs expense</h1>
@@ -64,7 +52,21 @@ eleventyExcludeFromCollections: true
   </div>
 
   <section class="report">
-    <div class="chart" id="chart-ie" style="min-height: 320px;"></div>
+    <div class="chart-toolbar">
+      <span class="chart-toolbar__label">Chart</span>
+      <span class="chart-picker" role="group" aria-label="Chart type">
+        <template x-for="opt in chartOptions" :key="opt.value">
+          <button type="button"
+                  class="chart-picker__btn"
+                  :class="chartType === opt.value ? 'is-active' : ''"
+                  :aria-pressed="(chartType === opt.value).toString()"
+                  @click="setChartType(opt.value)"
+                  :data-tip="'Render as a ' + opt.label.toLowerCase() + ' chart.'"
+                  x-text="opt.label"></button>
+        </template>
+      </span>
+    </div>
+    <div class="chart" id="chart-ie" style="min-height: 360px;"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -92,7 +94,12 @@ eleventyExcludeFromCollections: true
       <tbody>
         <template x-for="r in rows" :key="r.month">
           <tr>
-            <td x-text="r.month"></td>
+            <td>
+              <a class="report-month-link"
+                 :href="'/app/calendar/?m=' + r.month + '&v=month'"
+                 x-text="r.month"
+                 data-tip="Open this month in the calendar."></a>
+            </td>
             <td class="num amount--inflow" x-text="'$' + (r.income / 100).toFixed(2)"></td>
             <td class="num amount--outflow" x-text="'$' + (r.expense / 100).toFixed(2)"></td>
             <td class="num" :class="r.net < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.net / 100).toFixed(2)"></td>
@@ -107,28 +114,125 @@ eleventyExcludeFromCollections: true
 </div>
 
 <script>
+/* Single Alpine factory — replaces the previous
+   Object.assign(viewFn(), chartTypePicker(), reportTable(srcFn))
+   chain. Inlining the picker + table fields means the x-data
+   expression is just a function call, eliminating a class of
+   silent-failure modes where one factory was undefined at eval
+   time and Object.assign threw, leaving every binding inert. */
 function incomeExpenseView() {
+  /* Read persisted chart-type up front (the picker's global helper
+     may or may not have loaded yet; either way localStorage works). */
+  var savedChartType = "bar";
+  try {
+    var st = localStorage.getItem("projectbudget:chart-type:incomeExpense");
+    if (st && ["bar","line","area","stack"].indexOf(st) !== -1) savedChartType = st;
+  } catch (_e) {}
+  window.__pbChartType = window.__pbChartType || {};
+  window.__pbChartType.incomeExpense = savedChartType;
+
   return {
+    /* ---- View state ---- */
     rangeMonths: 12,
     ranges: [
-      { value: 3,  label: '3 mo' },
-      { value: 6,  label: '6 mo' },
-      { value: 12, label: '12 mo' },
-      { value: 24, label: '24 mo' },
+      { value: 3,  label: "3 mo" },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
     ],
+
+    /* ---- Chart picker ---- */
+    chartType: savedChartType,
+    chartOptions: [
+      { value: "bar",   label: "Bar" },
+      { value: "line",  label: "Line" },
+      { value: "area",  label: "Area" },
+      { value: "stack", label: "Stacked" },
+    ],
+    setChartType(t) {
+      this.chartType = t;
+      window.__pbChartType.incomeExpense = t;
+      try { localStorage.setItem("projectbudget:chart-type:incomeExpense", t); } catch (_e) {}
+      try { window.dispatchEvent(new CustomEvent("pb:chart-type", { detail: { reportId: "incomeExpense", type: t } })); } catch (_e) {}
+    },
+
+    /* ---- Report table (inlined fields + getters) ---- */
+    query: "",
+    sortKey: "month",
+    sortDir: "asc",
+    _keys: [
+      { key: "month",   label: "Month" },
+      { key: "income",  label: "Income",  numeric: true },
+      { key: "expense", label: "Expense", numeric: true },
+      { key: "net",     label: "Net",     numeric: true },
+    ],
+    get rows() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportIncomeVsExpense(null, this.rangeMonths) || [];
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q ? src.filter(function (r) { return String(r.month).toLowerCase().indexOf(q) !== -1; }) : src;
+      var key = this.sortKey, dir = this.sortDir;
+      var keyDef = this._keys.find(function (k) { return k.key === key; });
+      var numeric = !!(keyDef && keyDef.numeric);
+      var copy = filtered.slice();
+      copy.sort(function (a, b) {
+        if (numeric) {
+          var an = Number(a[key]) || 0, bn = Number(b[key]) || 0;
+          return dir === "asc" ? an - bn : bn - an;
+        }
+        var as = String(a[key] == null ? "" : a[key]);
+        var bs = String(b[key] == null ? "" : b[key]);
+        return dir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+      return copy;
+    },
+    get visibleCount() { return this.rows.length; },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        var kd = this._keys.find(function (k) { return k.key === key; });
+        this.sortDir = kd && kd.numeric ? "desc" : "asc";
+      }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+    print() { window.print(); },
+    exportCSV(name) {
+      var self = this;
+      var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");
+      var body = this.rows.map(function (r) {
+        return self._keys.map(function (k) {
+          var v = r[k.key];
+          if (v == null) return "";
+          if (k.numeric && Math.abs(v) >= 1000 && Number.isInteger(v)) v = (v / 100).toFixed(2);
+          return JSON.stringify(String(v));
+        }).join(",");
+      }).join("\r\n");
+      var blob = new Blob([header + "\r\n" + body], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = (name || "report") + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    },
+
+    /* ---- Lifecycle + KPIs ---- */
     init() {
-      /* Stash rangeMonths in a shared place so the Chart.js mount can
-         read it. Use a window-scoped slot keyed by the report id. */
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.incomeExpense = function () { return self.rangeMonths; };
     },
-    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
-    rangeLabel() { return 'Trailing ' + this.rangeMonths + ' mo'; },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
+    rangeLabel() { return "Trailing " + this.rangeMonths + " mo"; },
     kpis() {
       var rows = this.$store.budget.reportIncomeVsExpense(null, this.rangeMonths) || [];
       if (!rows.length) {
-        return { avgIncome: 0, avgExpense: 0, netAvg: 0, savingsRate: null, bestMonth: '', worstMonth: '' };
+        return { avgIncome: 0, avgExpense: 0, netAvg: 0, savingsRate: null, bestMonth: "", worstMonth: "" };
       }
       var sumI = rows.reduce(function (s, r) { return s + r.income; }, 0);
       var sumE = rows.reduce(function (s, r) { return s + r.expense; }, 0);
@@ -174,6 +278,10 @@ function incomeExpenseView() {
       if (e.target.closest && e.target.closest(".btn--sm")) {
         setTimeout(function () { inst.redraw(); }, 0);
       }
+    });
+    /* Chart-type picker dispatches a pb:chart-type event on change. */
+    window.addEventListener("pb:chart-type", function (e) {
+      if (e.detail && e.detail.reportId === "incomeExpense") inst.redraw();
     });
   }
   if (window.Alpine && window.Alpine.store("budget")) boot();

@@ -39,11 +39,14 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* On phones we lift the FAB a bit higher to clear the home-bar safe
-   area on iOS Safari. */
+/* On phones we lift the FAB clear of the iOS home-bar / safe-area
+   on both portrait AND landscape. The `max()` reserves a minimum
+   24px gap even when env(safe-area-inset-bottom) is 0 (PWA / desktop
+   browsers), and on iPhone 14+ landscape the home-bar inset can be
+   ~21px which would otherwise put the FAB right on top of it. */
 @media (max-width: 599px) {
   .fab-quick-add__btn {
-    right: var(--space-sm);
-    bottom: max(var(--space-sm), env(safe-area-inset-bottom, 0));
+    right: max(var(--space-sm), env(safe-area-inset-right, 0));
+    bottom: max(var(--space-md), env(safe-area-inset-bottom, 0));
   }
 }

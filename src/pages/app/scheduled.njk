@@ -17,26 +17,47 @@ eleventyExcludeFromCollections: true
     <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">+ Add recurring</button>
   </header>
 
-  {# Summary tiles — quick view of monthly cash flow committed to recurring. #}
+  {# Summary tiles — quick view of monthly cash flow committed to
+     recurring. Every tile is a button that wires straight into the
+     filter toolbar below: click Inflow to filter to inflows, Outflow
+     to filter to outflows, Active templates / Net monthly to clear
+     filters back to the full set. Active filter gets a ring so the
+     user can see which tile is driving the visible list. #}
   <section class="rec-summary" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
-    <div class="rec-summary__tile">
+    <button type="button" class="rec-summary__tile"
+            :class="filterKind === 'all' ? 'is-active' : ''"
+            :aria-pressed="(filterKind === 'all').toString()"
+            @click="filterKind = 'all'"
+            data-tip="Show every active template — clear the inflow/outflow filter.">
       <span class="rec-summary__label">Active templates</span>
       <span class="rec-summary__value" x-text="totalCount()"></span>
-    </div>
-    <div class="rec-summary__tile">
+    </button>
+    <button type="button" class="rec-summary__tile"
+            :class="filterKind === 'inflow' ? 'is-active' : ''"
+            :aria-pressed="(filterKind === 'inflow').toString()"
+            @click="filterKind = 'inflow'"
+            data-tip="Filter the table to inflow templates only.">
       <span class="rec-summary__label">Monthly inflow</span>
       <span class="rec-summary__value amount--inflow" x-text="formatCents(monthlyInflow())"></span>
-    </div>
-    <div class="rec-summary__tile">
+    </button>
+    <button type="button" class="rec-summary__tile"
+            :class="filterKind === 'outflow' ? 'is-active' : ''"
+            :aria-pressed="(filterKind === 'outflow').toString()"
+            @click="filterKind = 'outflow'"
+            data-tip="Filter the table to outflow templates only.">
       <span class="rec-summary__label">Monthly outflow</span>
       <span class="rec-summary__value amount--outflow" x-text="formatCents(monthlyOutflow())"></span>
-    </div>
-    <div class="rec-summary__tile">
+    </button>
+    <button type="button" class="rec-summary__tile"
+            :class="filterKind === 'all' ? 'is-active' : ''"
+            :aria-pressed="(filterKind === 'all').toString()"
+            @click="filterKind = 'all'"
+            data-tip="Show everything (inflows + outflows).">
       <span class="rec-summary__label">Net monthly</span>
       <span class="rec-summary__value"
             :class="monthlyNet() < 0 ? 'amount--outflow' : (monthlyNet() > 0 ? 'amount--inflow' : '')"
             x-text="formatCents(monthlyNet())"></span>
-    </div>
+    </button>
   </section>
 
   <section class="card">
@@ -89,7 +110,48 @@ eleventyExcludeFromCollections: true
       </p>
     </div>
 
-    <table class="table" x-show="$store.budget.profile && filtered().length" x-cloak>
+    {# ---- Mobile card list (<600px). Mirrors the register's
+       responsive pattern: table on desktop, stacked cards on phones.
+       Same data, different layout — never both visible. #}
+    <ul class="rec-cards" x-show="$store.budget.profile && filtered().length" x-cloak
+        aria-label="Recurring transactions">
+      <template x-for="s in filtered()" :key="'card-' + s.id">
+        <li class="rec-card" :id="'card-edit-' + s.id">
+          <header class="rec-card__head">
+            <p class="rec-card__date" x-text="formatNextDate(s.nextDate)"></p>
+            <p class="rec-card__amount"
+               :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+               x-text="formatCents(s.template.amount)"></p>
+          </header>
+          <p class="rec-card__payee" x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></p>
+          <dl class="rec-card__meta">
+            <div><dt>Frequency</dt><dd x-text="$store.budget.frequencyLabel(s)"></dd></div>
+            <div><dt>Account</dt><dd x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></dd></div>
+            <div><dt>Category</dt>
+              <dd x-text="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"
+                  :style="$store.budget.categoryName(s.template.categoryId) ? '' : 'color: var(--fg-muted); font-style: italic;'"></dd>
+            </div>
+            <div x-show="s.template.memo" x-cloak><dt>Memo</dt><dd x-text="s.template.memo"></dd></div>
+          </dl>
+          <div class="rec-card__actions">
+            <button class="btn btn--ghost btn--sm" type="button"
+                    @click="openEdit(s)"
+                    data-tip="Edit this template.">Edit</button>
+            <button class="btn btn--secondary btn--sm" type="button"
+                    @click="postNow(s.id)"
+                    data-tip="Post now and advance the next date.">Post now</button>
+            <button class="btn btn--ghost btn--sm" type="button"
+                    @click="$store.budget.skipScheduled(s.id)"
+                    data-tip="Skip this occurrence; advance to the next.">Skip</button>
+            <button class="btn btn--danger btn--sm" type="button"
+                    @click="PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })"
+                    data-tip="Permanently remove this template.">Remove</button>
+          </div>
+        </li>
+      </template>
+    </ul>
+
+    <table class="table rec-table" x-show="$store.budget.profile && filtered().length" x-cloak>
       <thead>
         <tr>
           <th scope="col" style="white-space: nowrap;">Next date</th>

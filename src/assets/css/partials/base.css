@@ -91,37 +91,213 @@ sup {
   border: 0;
 }
 
+/* Long-form prose styles. Every marketing/docs/blog page wraps its
+   body content in .prose so headings, lists, links, code, quotes,
+   tables, and figures share one consistent treatment. See the
+   style-guide page for the live reference. */
+.prose {
+  font-size: var(--fs-md);
+  line-height: 1.65;
+  color: var(--fg);
+  max-width: 70ch;
+}
 .prose > * + * { margin-top: var(--space-md); }
-.prose h2 { margin-top: var(--space-xl); }
-.prose h3 { margin-top: var(--space-lg); }
+
+.prose > p:first-child {
+  /* Lead paragraph in any .prose block — a hair larger so the first
+     idea reads like the opening line of an article. */
+  font-size: var(--fs-lg);
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+.prose h2 {
+  font-family: var(--font-headline);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-soft);
+}
+.prose > h2:first-child { border-top: 0; padding-top: 0; margin-top: var(--space-lg); }
+.prose h3 {
+  font-family: var(--font-headline);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.3;
+  margin-top: var(--space-xl);
+}
+.prose h4 {
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-top: var(--space-lg);
+}
+
+.prose a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.prose a:hover { color: var(--accent); text-decoration-thickness: 2px; }
+
 .prose ul, .prose ol { padding-left: 1.5em; }
 .prose li + li { margin-top: var(--space-2xs); }
+.prose li::marker { color: var(--accent); }
+
 .prose code {
   font-family: var(--font-mono);
   font-size: 0.9em;
   background: var(--bg-alt);
   padding: 0.1em 0.35em;
   border-radius: var(--radius-input);
+  border: 1px solid var(--border-soft);
 }
 .prose pre {
   background: var(--bg-alt);
-  padding: var(--space-sm);
+  border: 1px solid var(--border-soft);
+  padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-input);
   overflow-x: auto;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
 }
-.prose pre code { background: none; padding: 0; }
+.prose pre code { background: none; padding: 0; border: 0; font-size: inherit; }
 
-.changelog-entry { margin-top: var(--space-xl); }
-.changelog-entry__header {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-md);
-  border-bottom: 1px solid var(--border-soft);
-  padding-bottom: var(--space-2xs);
-  margin-bottom: var(--space-sm);
+.prose blockquote {
+  margin: var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-alt);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-input);
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-style: italic;
+  color: var(--fg);
+  line-height: 1.5;
 }
-.changelog-entry__header h2 { font-size: var(--fs-xl); margin: 0; }
-.changelog-entry__date { color: var(--fg-muted); font-size: var(--fs-sm); margin: 0; font-variant-numeric: tabular-nums; }
+.prose blockquote > * + * { margin-top: var(--space-sm); }
+.prose blockquote cite {
+  display: block;
+  font-family: var(--font-ui);
+  font-style: normal;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: var(--space-xl);
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.prose table th,
+.prose table td {
+  padding: var(--space-2xs) var(--space-sm);
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  vertical-align: top;
+}
+.prose table th {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  background: var(--bg-alt);
+}
+
+.prose figure { margin: var(--space-md) 0; }
+.prose figcaption {
+  margin-top: var(--space-2xs);
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  text-align: center;
+}
+.prose img { display: block; max-width: 100%; height: auto; border-radius: var(--radius-input); }
+
+.prose kbd {
+  font-family: var(--font-ui);
+  font-size: 0.85em;
+  font-weight: 600;
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--fg);
+}
+
+/* Lead paragraph — opt-in larger intro you can mix into any prose. */
+.lead {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  line-height: 1.4;
+  color: var(--fg);
+  font-weight: 400;
+  max-width: 38em;
+}
+
+/* Reusable callouts for inline guidance inside long-form copy. */
+.callout {
+  margin: var(--space-md) 0;
+  padding: var(--space-md);
+  background: var(--bg-alt);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-input);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+}
+.callout > * + * { margin-top: var(--space-2xs); }
+.callout__title {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+.callout--ok      { border-left-color: var(--ok); }
+.callout--ok .callout__title    { color: var(--ok); }
+.callout--warn    { border-left-color: var(--warn); }
+.callout--warn .callout__title  { color: var(--warn); }
+.callout--danger  { border-left-color: var(--danger); }
+.callout--danger .callout__title { color: var(--danger); }
+.callout--info    { border-left-color: var(--link); }
+.callout--info .callout__title  { color: var(--link); }
+
+/* Definition list pair, used across glossary index, accessibility, etc. */
+.prose dl {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.4fr) 1fr;
+  gap: var(--space-2xs) var(--space-md);
+  margin: var(--space-md) 0;
+}
+.prose dt { font-weight: 700; font-family: var(--font-headline); }
+.prose dd { margin: 0; color: var(--fg); }
+@media (max-width: 599px) {
+  .prose dl { grid-template-columns: 1fr; gap: var(--space-3xs); }
+  .prose dt { margin-top: var(--space-sm); }
+}
 
 /* Blog */
 .post-list {

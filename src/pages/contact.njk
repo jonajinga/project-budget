@@ -1,0 +1,119 @@
+---
+layout: layouts/marketing.njk
+title: "Contact"
+description: "Get in touch about Project Budget — bug reports, feature requests, documentation gaps, accessibility issues, or general questions."
+permalink: /contact/
+---
+<article class="container container--narrow page contact-page">
+  <header class="page__header">
+    <p class="eyebrow">Contact</p>
+    <h1>Get in touch about Project Budget</h1>
+    <p class="page__subtitle">
+      Bug reports, feature requests, accessibility issues, documentation gaps, or just a question — pick a topic and send a note. Replies usually land within a few business days.
+    </p>
+  </header>
+
+  <div class="contact-page__grid">
+    <aside class="contact-page__bio">
+      <img src="/assets/img/jonajinga.webp"
+           alt="Jon Ajinga, the maintainer of Project Budget"
+           class="contact-page__photo"
+           width="160" height="160" loading="lazy" decoding="async">
+      <h2 class="contact-page__bio-name">Jon Ajinga</h2>
+      <p class="contact-page__bio-role">Maintainer · Project Budget</p>
+      <p class="contact-page__bio-body">
+        I read every message personally. Project Budget is open source and developed in public — bug reports, accessibility issues, and feature ideas all shape the roadmap directly.
+      </p>
+      <ul class="contact-page__bio-links">
+        <li>
+          <strong>GitHub:</strong>
+          <a href="{{ site.repo }}/issues" rel="noopener">Open an issue</a>
+          <span class="contact-page__bio-hint">Best for bugs &amp; feature requests with reproducible steps.</span>
+        </li>
+        <li>
+          <strong>Docs:</strong>
+          <a href="/docs/">Read the documentation</a>
+          <span class="contact-page__bio-hint">Most "how do I…" questions already have an answer here.</span>
+        </li>
+      </ul>
+    </aside>
+
+    <section class="contact-page__form-card">
+      <h2 class="contact-page__form-heading">Send a message</h2>
+      <p class="contact-page__form-intro">
+        Pick a topic from the dropdown so the message routes correctly. All fields marked <span class="contact-page__req">*</span> are required.
+      </p>
+
+      <form id="contactForm"
+            data-web3forms
+            data-redirect="/thank-you/"
+            action="https://api.web3forms.com/submit"
+            method="POST"
+            class="contact-form">
+        <input type="hidden" name="access_key" value="b6c3454b-f07c-43f7-9070-0e0cb5286f55">
+        <input type="hidden" name="subject" value="Project Budget — new contact form submission">
+        <input type="hidden" name="from_name" value="Project Budget contact form">
+        {# Honeypot — bots fill it; humans never see it. #}
+        <input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+
+        <div class="contact-form__row">
+          <div class="contact-form__field">
+            <label for="cf-name">Your name <span class="contact-page__req">*</span></label>
+            <input type="text" id="cf-name" name="name" required autocomplete="name" placeholder="Jane Doe">
+          </div>
+          <div class="contact-form__field">
+            <label for="cf-email">Email <span class="contact-page__req">*</span></label>
+            <input type="email" id="cf-email" name="email" required autocomplete="email" placeholder="jane@example.com">
+          </div>
+        </div>
+
+        <div class="contact-form__field">
+          <label for="cf-topic">What's this about? <span class="contact-page__req">*</span></label>
+          <select id="cf-topic" name="topic" required>
+            <option value="">Pick a topic so I can route your message…</option>
+            <option value="Bug report">Bug report — something is broken or behaving unexpectedly</option>
+            <option value="Feature request">Feature request — something you'd like added or improved</option>
+            <option value="Accessibility">Accessibility issue — a barrier to using the app</option>
+            <option value="Documentation">Documentation — a topic that's missing, wrong, or unclear</option>
+            <option value="Data import">Data import — help with CSV / OFX / QIF / QFX files</option>
+            <option value="Profiles & backups">Profiles &amp; backups — questions about local storage or exports</option>
+            <option value="Reports">Reports — questions about a specific report or chart</option>
+            <option value="Privacy / security">Privacy or security concern</option>
+            <option value="Partnership">Partnership, integration, or collaboration</option>
+            <option value="General question">General question — anything else</option>
+          </select>
+          <p class="contact-form__hint">Bug reports and accessibility issues get the fastest reply. For UI bugs, a screenshot helps a lot.</p>
+        </div>
+
+        <div class="contact-form__field">
+          <label for="cf-severity">How urgent is this?</label>
+          <select id="cf-severity" name="severity">
+            <option value="Not urgent">Not urgent — whenever you get to it</option>
+            <option value="Soon">Soon — affecting my budgeting workflow</option>
+            <option value="Blocking">Blocking — I can't use the app until this is fixed</option>
+          </select>
+        </div>
+
+        <div class="contact-form__field">
+          <label for="cf-browser">Browser &amp; device (for bug reports)</label>
+          <input type="text" id="cf-browser" name="browser" placeholder="e.g. Chrome 134 on Windows 11, or Safari on iPhone 15">
+        </div>
+
+        <div class="contact-form__field">
+          <label for="cf-message">Message <span class="contact-page__req">*</span></label>
+          <textarea id="cf-message" name="message" rows="7" required
+                    placeholder="For bugs: what you tried, what happened, what you expected. For features: the problem you're trying to solve, not just the solution you have in mind."></textarea>
+        </div>
+
+        <div class="contact-form__actions">
+          <button class="btn btn--primary" type="submit">Send message</button>
+          <a class="btn btn--ghost" href="{{ site.repo }}/issues" rel="noopener">Open a GitHub issue instead</a>
+        </div>
+
+        <p class="contact-form__privacy">
+          Your message goes to a single inbox I read personally. No tracking pixels, no marketing list — promise.
+        </p>
+      </form>
+    </section>
+  </div>
+</article>

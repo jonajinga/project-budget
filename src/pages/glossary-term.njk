@@ -1,0 +1,29 @@
+---
+pagination:
+  data: glossary
+  size: 1
+  alias: entry
+  addAllPagesToCollections: true
+layout: layouts/page.njk
+permalink: "/glossary/{{ entry.key }}/"
+eleventyComputed:
+  title: "{{ entry.term }}"
+  description: "Definition of {{ entry.term }} in Project Budget — {{ entry.body | striptags | safe }}"
+  section: "Glossary"
+  sectionUrl: "/glossary/"
+---
+<p class="glossary-term__body">{{ entry.body | safe }}</p>
+
+<h2>How it shows up in Project Budget</h2>
+<p>
+  The <strong>{{ entry.term }}</strong> field surfaces in the budgeting flow exactly where this definition implies. The
+  <a href="/glossary/">glossary index</a> lists every related term, and the
+  <a href="/docs/">documentation</a> shows worked examples wherever this concept matters.
+</p>
+
+<h2>Where to next</h2>
+<ul>
+  <li><a href="/glossary/">Back to the full glossary</a> — A–Z index of every term.</li>
+  <li><a href="/docs/">Documentation</a> — task-based walk-throughs that use this term in context.</li>
+  <li><a href="/app/">Open the app</a> — see <strong>{{ entry.term }}</strong> applied to your own data.</li>
+</ul>

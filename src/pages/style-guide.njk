@@ -1,277 +1,292 @@
 ---
-layout: layouts/marketing.njk
+layout: layouts/page.njk
 title: "Style guide"
-description: "The design system behind Project Budget: tokens, typography, buttons, forms, cards, tables, badges, alerts, and modals — all rendered live."
+subtitle: "The living design system behind Project Budget — tokens, typography, page chrome, prose, components, and accessibility rules. Every component is rendered with the production CSS, so what you see here is what every page uses."
+description: "The design system behind Project Budget: tokens, typography, prose, buttons, forms, cards, tables, callouts, alerts, modals — all rendered live."
 permalink: /style-guide/
 ---
-<article class="container style-guide">
-  <header class="page__header">
-    <h1>Style guide</h1>
-    <p class="page__subtitle">
-      The living design system for Project Budget. Every component on this page is rendered with the production CSS, so what you see is what the rest of the site uses. Designed against WCAG 2.2 AA contrast and target-size minimums, with AAA touch targets on every default-size button.
-    </p>
-  </header>
+<p class="lead">
+  Every marketing and docs page on this site composes from this set. If a component isn't on this page, it shouldn't be on a marketing page. Add it here first.
+</p>
 
-  <nav class="style-guide__toc" aria-label="Style guide sections">
-    <ul>
-      <li><a href="#color">Color</a></li>
-      <li><a href="#typography">Typography</a></li>
-      <li><a href="#spacing">Spacing</a></li>
-      <li><a href="#buttons">Buttons</a></li>
-      <li><a href="#forms">Forms</a></li>
-      <li><a href="#cards">Cards</a></li>
-      <li><a href="#tables">Tables</a></li>
-      <li><a href="#badges">Badges</a></li>
-      <li><a href="#alerts">Alerts</a></li>
-      <li><a href="#toasts">Toasts</a></li>
-      <li><a href="#modals">Modals</a></li>
-      <li><a href="#accessibility">Accessibility</a></li>
-    </ul>
-  </nav>
+<div class="callout">
+  <p class="callout__title">How to use this page</p>
+  <p>
+    Sections are addressable by anchor — the right-side TOC tracks scroll position. New components belong here before they belong anywhere else, so the system stays single-sourced.
+  </p>
+</div>
 
-  <section id="color" class="style-guide__section">
-    <h2>Color tokens</h2>
-    <p>
-      Palette is shared with Project Broadsheet — paper / ink / vermillion / slate / gold — so projects feel related without being identical. Variable <em>names</em> stay app-local (<code>--bg</code>, <code>--fg</code>, <code>--accent</code>) so swapping themes touches one file. Every text-on-surface pairing below clears WCAG 2.2 AA (4.5:1 for body, 3:1 for large text and UI surfaces) in both light and dark themes.
-    </p>
-    <div class="swatch-grid">
-      <div class="swatch swatch--bg"><code>--bg</code><span class="swatch__hint">page</span></div>
-      <div class="swatch swatch--bg-elevated"><code>--bg-elevated</code><span class="swatch__hint">cards, modals</span></div>
-      <div class="swatch swatch--bg-alt"><code>--bg-alt</code><span class="swatch__hint">table heads, alt rows</span></div>
-      <div class="swatch swatch--fg"><code>--fg</code><span class="swatch__hint">body text</span></div>
-      <div class="swatch swatch--fg-muted"><code>--fg-muted</code><span class="swatch__hint">secondary text</span></div>
-      <div class="swatch swatch--fg-subtle"><code>--fg-subtle</code><span class="swatch__hint">small print, hints</span></div>
-      <div class="swatch swatch--accent"><code>--accent</code><span class="swatch__hint">primary actions, links</span></div>
-      <div class="swatch swatch--link"><code>--link</code><span class="swatch__hint">in-prose links</span></div>
-      <div class="swatch swatch--ok"><code>--ok</code><span class="swatch__hint">positive available</span></div>
-      <div class="swatch swatch--warn"><code>--warn</code><span class="swatch__hint">warnings, due</span></div>
-      <div class="swatch swatch--danger"><code>--danger</code><span class="swatch__hint">destructive, outflow</span></div>
+<h2 id="page-chrome">Page chrome</h2>
+<p>
+  Every marketing, docs, glossary, and blog page renders through the same shell:
+</p>
+<ul>
+  <li><strong>Breadcrumb</strong> at the top — Home / Section / Title — with an explicit <code>aria-label="Breadcrumb"</code>.</li>
+  <li><strong>Page title</strong> (<code>&lt;h1&gt;</code>) and optional <strong>subtitle</strong> (<code>front-matter <code>subtitle:</code></code>).</li>
+  <li><strong>Prose body</strong> wrapped in <code>.prose</code> — see the typography section.</li>
+  <li><strong>Sticky TOC</strong> on the right (≥1024px viewport) — built client-side from <code>h2</code>/<code>h3</code> inside <code>.doc-content__prose</code>.</li>
+</ul>
+
+<h2 id="typography">Typography</h2>
+<p>
+  Four families: <strong>Playfair Display</strong> for hero/display, <strong>Lora</strong> for headlines, <strong>Source Serif 4</strong> for body, <strong>DM Sans</strong> for in-app UI. The flat type ramp below is what every page draws from — no ad-hoc font sizes.
+</p>
+
+<h3>Lead paragraph</h3>
+<p class="lead">A lead is the first idea a reader meets. It sits in display-serif at <code>--fs-xl</code> with relaxed line-height so the opening line reads like the lede of an article.</p>
+
+<h3>Standard prose</h3>
+<p>
+  Body copy uses Source Serif 4 at <code>--fs-md</code> / 1.65 line-height with a <code>max-width: 70ch</code> measure. Headings inside prose carry deliberate spacing: <code>h2</code> gets a top rule + <code>--space-2xl</code> top margin, <code>h3</code> sits closer at <code>--space-xl</code>. <code>h4</code> renders as small-caps UI text.
+</p>
+
+<h3>Inline elements</h3>
+<p>
+  Links underline by default — they get <a href="#typography">slightly thicker on hover</a>. Inline <code>code</code> sits on the alt surface with a subtle border. Keyboard shortcuts render as <kbd>Cmd</kbd>+<kbd>K</kbd>. <strong>Strong</strong> and <em>emphasis</em> keep the body weight contract.
+</p>
+
+<h3>Blockquote</h3>
+<blockquote>
+  <p>"Every dollar gets a job before the month begins."</p>
+  <cite>— Envelope budgeting, paraphrased</cite>
+</blockquote>
+
+<h3>Lists</h3>
+<ul>
+  <li>Unordered lists use an accent-tinted marker.</li>
+  <li>List items take <code>--space-2xs</code> between them so they read as discrete points.</li>
+  <li>Nest sparingly. If you need three levels, restructure as headings.</li>
+</ul>
+<ol>
+  <li>Numbered lists follow the same pattern.</li>
+  <li>Use them when sequence matters.</li>
+  <li>Otherwise prefer unordered.</li>
+</ol>
+
+<h3>Definition list</h3>
+<dl>
+  <dt>Ready to Assign</dt>
+  <dd>Money you've received but not yet given a job.</dd>
+  <dt>Assigned</dt>
+  <dd>The dollar amount you've committed to a category this month.</dd>
+  <dt>Carry-over</dt>
+  <dd>The available balance that rolls into next month's same category.</dd>
+</dl>
+
+<h3>Tables</h3>
+<table>
+  <thead>
+    <tr><th>Date</th><th>Payee</th><th>Category</th><th>Amount</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Apr 18</td><td>Whole Foods</td><td>Groceries</td><td>−$48.22</td></tr>
+    <tr><td>Apr 17</td><td>Payroll</td><td>Income</td><td>$2,400.00</td></tr>
+    <tr><td>Apr 15</td><td>Comcast</td><td>Internet</td><td>−$79.99</td></tr>
+  </tbody>
+</table>
+
+<h3>Code block</h3>
+<pre><code>// Every dollar gets a job before the month begins.
+function rta(profile, month) {
+  return inflow(profile, month) - assigned(profile, month);
+}</code></pre>
+
+<h2 id="callouts">Callouts</h2>
+<p>
+  Use callouts for inline guidance that breaks out of regular prose flow. Four variants — neutral (accent), <code>--ok</code>, <code>--warn</code>, <code>--danger</code> — picked by semantic intent, not aesthetics.
+</p>
+
+<div class="callout">
+  <p class="callout__title">Default</p>
+  <p>Neutral callout. Use this for explanatory asides that aren't warnings or errors — context, tips, "good to know" notes.</p>
+</div>
+
+<div class="callout callout--ok">
+  <p class="callout__title">Success / OK</p>
+  <p>Confirms a result or a healthy state — "Goal is fully funded for this month."</p>
+</div>
+
+<div class="callout callout--warn">
+  <p class="callout__title">Warning</p>
+  <p>For non-blocking caution — "You're about to overwrite assignments for every category."</p>
+</div>
+
+<div class="callout callout--danger">
+  <p class="callout__title">Destructive</p>
+  <p>For irreversible action warnings — "Deleting moves the profile to trash for 7 days. Permanent after that."</p>
+</div>
+
+<div class="callout callout--info">
+  <p class="callout__title">Info</p>
+  <p>For informational cross-references — "See the glossary entry on <a href="/glossary/ready-to-assign/">Ready to Assign</a> for a longer definition."</p>
+</div>
+
+<h2 id="color">Color tokens</h2>
+<p>
+  Palette is paper / ink / vermillion / slate / gold — shared with Project Broadsheet so projects feel related without being identical. Every text-on-surface pairing below clears WCAG 2.2 AA (4.5:1 for body, 3:1 for large text and UI surfaces) in both light and dark themes.
+</p>
+<div class="swatch-grid">
+  <div class="swatch swatch--bg"><code>--bg</code><span class="swatch__hint">page</span></div>
+  <div class="swatch swatch--bg-elevated"><code>--bg-elevated</code><span class="swatch__hint">cards, modals</span></div>
+  <div class="swatch swatch--bg-alt"><code>--bg-alt</code><span class="swatch__hint">alt rows, table heads</span></div>
+  <div class="swatch swatch--fg"><code>--fg</code><span class="swatch__hint">body text</span></div>
+  <div class="swatch swatch--fg-muted"><code>--fg-muted</code><span class="swatch__hint">secondary text</span></div>
+  <div class="swatch swatch--fg-subtle"><code>--fg-subtle</code><span class="swatch__hint">small print</span></div>
+  <div class="swatch swatch--accent"><code>--accent</code><span class="swatch__hint">primary actions, accent rails</span></div>
+  <div class="swatch swatch--link"><code>--link</code><span class="swatch__hint">in-prose links</span></div>
+  <div class="swatch swatch--ok"><code>--ok</code><span class="swatch__hint">positive available</span></div>
+  <div class="swatch swatch--warn"><code>--warn</code><span class="swatch__hint">warnings, due</span></div>
+  <div class="swatch swatch--danger"><code>--danger</code><span class="swatch__hint">destructive, outflow</span></div>
+</div>
+
+<h2 id="spacing">Spacing scale</h2>
+<p>Nine steps from <code>3xs</code> (4px) to <code>3xl</code> (96px). Grids and components compose from this scale — never raw pixels.</p>
+<ul class="space-spec">
+  <li><code>--space-3xs</code><span class="space-spec__bar" style="width: var(--space-3xs);"></span><span>4px</span></li>
+  <li><code>--space-2xs</code><span class="space-spec__bar" style="width: var(--space-2xs);"></span><span>8px</span></li>
+  <li><code>--space-xs</code><span class="space-spec__bar" style="width: var(--space-xs);"></span><span>12px</span></li>
+  <li><code>--space-sm</code><span class="space-spec__bar" style="width: var(--space-sm);"></span><span>16px</span></li>
+  <li><code>--space-md</code><span class="space-spec__bar" style="width: var(--space-md);"></span><span>24px</span></li>
+  <li><code>--space-lg</code><span class="space-spec__bar" style="width: var(--space-lg);"></span><span>32px</span></li>
+  <li><code>--space-xl</code><span class="space-spec__bar" style="width: var(--space-xl);"></span><span>48px</span></li>
+  <li><code>--space-2xl</code><span class="space-spec__bar" style="width: var(--space-2xl);"></span><span>72px</span></li>
+  <li><code>--space-3xl</code><span class="space-spec__bar" style="width: var(--space-3xl);"></span><span>96px</span></li>
+</ul>
+
+<h2 id="buttons">Buttons</h2>
+<p>
+  Default-size buttons are <strong>44 × 44 CSS pixels minimum</strong> (WCAG 2.2 AAA target size). The compact variant <code>btn--sm</code> is <strong>36 × 36</strong>. Every variant has an explicit <code>:focus-visible</code> ring and a <code>:disabled</code> state.
+</p>
+
+<h3>Primary</h3>
+<div class="example__row">
+  <button type="button" class="btn btn--primary">Add transaction</button>
+  <button type="button" class="btn btn--primary btn--sm">Save</button>
+  <button type="button" class="btn btn--primary" disabled>Disabled</button>
+</div>
+
+<h3>Secondary</h3>
+<div class="example__row">
+  <button type="button" class="btn btn--secondary">Transfer</button>
+  <button type="button" class="btn btn--secondary btn--sm">Restore</button>
+  <button type="button" class="btn btn--secondary" disabled>Disabled</button>
+</div>
+
+<h3>Ghost</h3>
+<div class="example__row">
+  <button type="button" class="btn btn--ghost">Cancel</button>
+  <button type="button" class="btn btn--ghost btn--sm">Edit</button>
+  <button type="button" class="btn btn--ghost" disabled>Disabled</button>
+</div>
+
+<h3>Danger</h3>
+<div class="example__row">
+  <button type="button" class="btn btn--danger">Delete profile</button>
+  <button type="button" class="btn btn--danger btn--sm">Remove</button>
+  <button type="button" class="btn btn--danger" disabled>Disabled</button>
+</div>
+
+<h2 id="forms">Forms</h2>
+<p>
+  Every input is paired with a visible <code>&lt;label&gt;</code>. <code>field__hint</code> is for non-essential help text; required and error messaging live above or beside the input, never as the only signal. Inputs are <strong>44 px tall</strong> matching the button target size.
+</p>
+
+<form class="form-stack" onsubmit="event.preventDefault();">
+  <div class="field">
+    <label class="field__label" for="sg-name">Account name</label>
+    <input class="input" id="sg-name" type="text" value="Checking">
+    <p class="field__hint">Anything you'll recognize at a glance.</p>
+  </div>
+  <div class="form-row">
+    <div class="field">
+      <label class="field__label" for="sg-type">Type</label>
+      <select class="select" id="sg-type">
+        <option>Checking</option>
+        <option>Savings</option>
+        <option>Credit card</option>
+      </select>
     </div>
-  </section>
-
-  <section id="typography" class="style-guide__section">
-    <h2>Typography</h2>
-    <p>
-      Four families: <strong>Playfair Display</strong> for masthead and modal titles, <strong>Lora</strong> for headlines, <strong>Source Serif 4</strong> for body, <strong>DM Sans</strong> for in-app UI. Type scale is fluid where it counts (KPIs, hero) and a flat ramp everywhere else.
-    </p>
-    <div class="type-spec"><span class="type-spec__label">Display / 4xl</span><span class="type-spec__sample" style="font-family: var(--font-display); font-size: var(--fs-4xl); line-height: var(--lh-tight);">Money has a job.</span></div>
-    <div class="type-spec"><span class="type-spec__label">Display / 3xl</span><span class="type-spec__sample" style="font-family: var(--font-display); font-size: var(--fs-3xl); line-height: var(--lh-tight);">Money has a job.</span></div>
-    <div class="type-spec"><span class="type-spec__label">Headline / 2xl</span><span class="type-spec__sample" style="font-family: var(--font-headline); font-size: var(--fs-2xl);">Money has a job.</span></div>
-    <div class="type-spec"><span class="type-spec__label">Headline / xl</span><span class="type-spec__sample" style="font-family: var(--font-headline); font-size: var(--fs-xl);">Money has a job.</span></div>
-    <div class="type-spec"><span class="type-spec__label">Headline / lg</span><span class="type-spec__sample" style="font-family: var(--font-headline); font-size: var(--fs-lg);">Money has a job.</span></div>
-    <div class="type-spec"><span class="type-spec__label">Body / md</span><span class="type-spec__sample" style="font-size: var(--fs-md);">Every dollar is assigned before the month begins.</span></div>
-    <div class="type-spec"><span class="type-spec__label">Body / base</span><span class="type-spec__sample">Every dollar is assigned before the month begins.</span></div>
-    <div class="type-spec"><span class="type-spec__label">UI / sm</span><span class="type-spec__sample" style="font-family: var(--font-ui); font-size: var(--fs-sm);">Filter, search, totals.</span></div>
-    <div class="type-spec"><span class="type-spec__label">UI / xs</span><span class="type-spec__sample" style="font-family: var(--font-ui); font-size: var(--fs-xs);">Field hints, eyebrow labels.</span></div>
-    <div class="type-spec"><span class="type-spec__label">Mono</span><span class="type-spec__sample" style="font-family: var(--font-mono);">$2,400.00 · acct_xyz_123</span></div>
-  </section>
-
-  <section id="spacing" class="style-guide__section">
-    <h2>Spacing scale</h2>
-    <p>Nine steps from <code>3xs</code> (4px) to <code>3xl</code> (96px). Grids and components compose from this scale — never raw pixels.</p>
-    <ul class="space-spec">
-      <li><code>--space-3xs</code><span class="space-spec__bar" style="width: var(--space-3xs);"></span><span>4px</span></li>
-      <li><code>--space-2xs</code><span class="space-spec__bar" style="width: var(--space-2xs);"></span><span>8px</span></li>
-      <li><code>--space-xs</code><span class="space-spec__bar" style="width: var(--space-xs);"></span><span>12px</span></li>
-      <li><code>--space-sm</code><span class="space-spec__bar" style="width: var(--space-sm);"></span><span>16px</span></li>
-      <li><code>--space-md</code><span class="space-spec__bar" style="width: var(--space-md);"></span><span>24px</span></li>
-      <li><code>--space-lg</code><span class="space-spec__bar" style="width: var(--space-lg);"></span><span>32px</span></li>
-      <li><code>--space-xl</code><span class="space-spec__bar" style="width: var(--space-xl);"></span><span>48px</span></li>
-      <li><code>--space-2xl</code><span class="space-spec__bar" style="width: var(--space-2xl);"></span><span>72px</span></li>
-      <li><code>--space-3xl</code><span class="space-spec__bar" style="width: var(--space-3xl);"></span><span>96px</span></li>
-    </ul>
-  </section>
-
-  <section id="buttons" class="style-guide__section">
-    <h2>Buttons</h2>
-    <p>
-      Default-size buttons are <strong>44 × 44 CSS pixels minimum</strong> (WCAG 2.2 AAA target size). The compact variant <code>btn--sm</code> is <strong>36 × 36</strong> and reserved for dense table rows. Every variant has an explicit <code>:focus-visible</code> ring and a <code>:disabled</code> state.
-    </p>
-
-    <div class="example">
-      <h3 class="example__title">Primary</h3>
-      <div class="example__row">
-        <button type="button" class="btn btn--primary">Add transaction</button>
-        <button type="button" class="btn btn--primary btn--sm">Save</button>
-        <button type="button" class="btn btn--primary" disabled>Disabled</button>
-      </div>
+    <div class="field">
+      <label class="field__label" for="sg-balance">Opening balance</label>
+      <input class="input" id="sg-balance" type="text" inputmode="decimal" value="1,250.00">
     </div>
+  </div>
+  <div class="field">
+    <label class="field__label" for="sg-memo">Memo (optional)</label>
+    <input class="input" id="sg-memo" type="text" placeholder="Auto-saved snapshot from import">
+  </div>
+  <div class="form-actions">
+    <button class="btn btn--primary" type="submit">Save</button>
+    <button class="btn btn--ghost" type="button">Cancel</button>
+  </div>
+</form>
 
-    <div class="example">
-      <h3 class="example__title">Secondary</h3>
-      <div class="example__row">
-        <button type="button" class="btn btn--secondary">Transfer</button>
-        <button type="button" class="btn btn--secondary btn--sm">Restore</button>
-        <button type="button" class="btn btn--secondary" disabled>Disabled</button>
-      </div>
+<h2 id="cards">Cards</h2>
+<p>The default container for any group of related content. Cards have horizontal overflow on so tables inside them scroll laterally on phones instead of forcing the page wider.</p>
+<section class="card">
+  <h3 class="card__title">Storage</h3>
+  <p class="card__body" style="margin-bottom: var(--space-sm);">Profile data is held in your browser's localStorage. Typical quota is 5&ndash;10 MB.</p>
+  <p style="margin-bottom: var(--space-2xs); font-variant-numeric: tabular-nums;">182.4 KB used of 5 MB (4%)</p>
+  <div style="background: var(--bg-alt); height: 10px; border: 1px solid var(--border-soft);">
+    <div style="background: var(--accent); height: 100%; width: 4%;"></div>
+  </div>
+</section>
+
+<h2 id="badges">Badges</h2>
+<p>For inline metadata — status, tags, counts. Pair color with a label so the meaning isn't color-only.</p>
+<div class="example__row">
+  <span class="badge">active</span>
+  <span class="badge badge--warn">duplicate</span>
+  <span class="badge">card payment</span>
+  <span class="badge">split (3)</span>
+</div>
+
+<h2 id="toasts">Toasts</h2>
+<p>Bottom-right transient notifications. The container is <code>aria-live="polite"</code>; each toast carries <code>role="status"</code> so screen readers announce them without interrupting the user.</p>
+<div class="example__row" style="flex-direction: column; align-items: stretch;">
+  <div class="toast" role="status">
+    <p class="toast__body">Profile 'Household' created.</p>
+    <button class="toast__close" type="button" aria-label="Dismiss">&times;</button>
+  </div>
+  <div class="toast toast--warn" role="status">
+    <p class="toast__body">Delete cancelled — typed name did not match.</p>
+    <button class="toast__close" type="button" aria-label="Dismiss">&times;</button>
+  </div>
+  <div class="toast toast--danger" role="status">
+    <p class="toast__body">Could not save changes. Check browser storage settings.</p>
+    <button class="toast__close" type="button" aria-label="Dismiss">&times;</button>
+  </div>
+</div>
+
+<h2 id="modals">Modals</h2>
+<p>
+  Every modal carries <code>role="dialog"</code> and <code>aria-modal="true"</code>. Esc closes; click-outside dismisses. Destructive actions require typed-name confirmation.
+</p>
+<div class="modal-preview">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sg-modal-title" style="margin: 0; box-shadow: var(--shadow-md);">
+    <button class="modal__close" type="button" aria-label="Close">&times;</button>
+    <h3 class="modal__title" id="sg-modal-title">Delete profile</h3>
+    <p style="color: var(--fg-muted);">Deleting moves the profile to trash for 7 days. You can restore it from Settings during that window.</p>
+    <p style="margin-top: var(--space-sm);">To confirm, type the profile name exactly: <strong>Household</strong></p>
+    <div class="field" style="margin-top: var(--space-sm);">
+      <input class="input" type="text" aria-label="Profile name confirmation">
     </div>
-
-    <div class="example">
-      <h3 class="example__title">Ghost</h3>
-      <div class="example__row">
-        <button type="button" class="btn btn--ghost">Cancel</button>
-        <button type="button" class="btn btn--ghost btn--sm">Edit</button>
-        <button type="button" class="btn btn--ghost" disabled>Disabled</button>
-      </div>
+    <div class="form-actions">
+      <button class="btn btn--danger" type="button">Delete profile</button>
+      <button class="btn btn--ghost" type="button">Cancel</button>
     </div>
+  </div>
+</div>
 
-    <div class="example">
-      <h3 class="example__title">Danger</h3>
-      <div class="example__row">
-        <button type="button" class="btn btn--danger">Delete profile</button>
-        <button type="button" class="btn btn--danger btn--sm">Remove</button>
-        <button type="button" class="btn btn--danger" disabled>Disabled</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="forms" class="style-guide__section">
-    <h2>Forms</h2>
-    <p>
-      Every input is paired with a visible <code>&lt;label&gt;</code>. <code>field__hint</code> is for non-essential help text; required and error messaging live above or beside the input, never as the only signal. Inputs are <strong>44 px tall</strong> (matching the button target size) so the form line aligns with the action row.
-    </p>
-
-    <div class="example">
-      <form class="form-stack" onsubmit="event.preventDefault();">
-        <div class="field">
-          <label class="field__label" for="sg-name">Account name</label>
-          <input class="input" id="sg-name" type="text" value="Checking">
-          <p class="field__hint">Anything you'll recognize at a glance.</p>
-        </div>
-        <div class="form-row">
-          <div class="field">
-            <label class="field__label" for="sg-type">Type</label>
-            <select class="select" id="sg-type">
-              <option>Checking</option>
-              <option>Savings</option>
-              <option>Credit card</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="field__label" for="sg-balance">Opening balance</label>
-            <input class="input" id="sg-balance" type="text" inputmode="decimal" value="1,250.00">
-          </div>
-        </div>
-        <div class="field">
-          <label class="field__label" for="sg-memo">Memo (optional)</label>
-          <input class="input" id="sg-memo" type="text" placeholder="Auto-saved snapshot from import">
-        </div>
-        <div class="form-actions">
-          <button class="btn btn--primary" type="submit">Save</button>
-          <button class="btn btn--ghost" type="button">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </section>
-
-  <section id="cards" class="style-guide__section">
-    <h2>Cards</h2>
-    <p>The default container for any group of related content inside the app shell. Cards have horizontal overflow on so tables inside them scroll laterally on phones instead of forcing the page wider.</p>
-    <div class="example">
-      <section class="card">
-        <h3 class="card__title">Storage</h3>
-        <p class="card__body" style="margin-bottom: var(--space-sm);">Profile data is held in your browser's localStorage. Typical quota is 5&ndash;10 MB.</p>
-        <p style="margin-bottom: var(--space-2xs); font-variant-numeric: tabular-nums;">182.4 KB used of 5 MB (4%)</p>
-        <div style="background: var(--bg-alt); height: 10px; border: 1px solid var(--border-soft);">
-          <div style="background: var(--accent); height: 100%; width: 4%;"></div>
-        </div>
-      </section>
-    </div>
-  </section>
-
-  <section id="tables" class="style-guide__section">
-    <h2>Tables</h2>
-    <p>Numeric columns use <code>.num</code> (right-aligned, tabular-nums). Tables inside cards scroll horizontally on phones.</p>
-    <div class="example">
-      <section class="card">
-        <table class="table">
-          <thead>
-            <tr><th>Date</th><th>Payee</th><th>Category</th><th class="num">Amount</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Apr 18</td><td>Whole Foods</td><td>Groceries</td><td class="num amount--outflow">-$48.22</td></tr>
-            <tr><td>Apr 17</td><td>Payroll</td><td>Income</td><td class="num amount--inflow">$2,400.00</td></tr>
-            <tr><td>Apr 15</td><td>Comcast</td><td>Internet</td><td class="num amount--outflow">-$79.99</td></tr>
-          </tbody>
-        </table>
-      </section>
-    </div>
-  </section>
-
-  <section id="badges" class="style-guide__section">
-    <h2>Badges</h2>
-    <p>For inline metadata — status, tags, counts. Pair color with a label so the meaning isn't color-only.</p>
-    <div class="example example__row">
-      <span class="badge">active</span>
-      <span class="badge badge--warn">duplicate</span>
-      <span class="badge">card payment</span>
-      <span class="badge">split (3)</span>
-    </div>
-  </section>
-
-  <section id="alerts" class="style-guide__section">
-    <h2>Alerts &amp; help blocks</h2>
-    <p>For inline guidance and warnings. The <code>.form-help</code> block carries a left accent border so it reads as advisory, not error.</p>
-    <div class="example">
-      <div class="form-help">
-        <p>All imports run in your browser. The file you select never leaves this page.</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="toasts" class="style-guide__section">
-    <h2>Toasts</h2>
-    <p>Bottom-right transient notifications. The container is <code>aria-live="polite"</code>; each toast carries <code>role="status"</code> so screen readers announce them without interrupting the user.</p>
-    <div class="example example__row" style="flex-direction: column; align-items: stretch;">
-      <div class="toast" role="status">
-        <p class="toast__body">Profile 'Household' created.</p>
-        <button class="toast__close" type="button" aria-label="Dismiss">&times;</button>
-      </div>
-      <div class="toast toast--warn" role="status">
-        <p class="toast__body">Delete cancelled — typed name did not match.</p>
-        <button class="toast__close" type="button" aria-label="Dismiss">&times;</button>
-      </div>
-      <div class="toast toast--danger" role="status">
-        <p class="toast__body">Could not save changes. Check browser storage settings.</p>
-        <button class="toast__close" type="button" aria-label="Dismiss">&times;</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="modals" class="style-guide__section">
-    <h2>Modals</h2>
-    <p>
-      Every modal carries <code>role="dialog"</code> and <code>aria-modal="true"</code>. Esc closes; click-outside dismisses. Destructive actions require typed-name confirmation (see the delete-profile flow).
-    </p>
-    <div class="example modal-preview">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sg-modal-title" style="margin: 0; box-shadow: var(--shadow-md);">
-        <button class="modal__close" type="button" aria-label="Close">&times;</button>
-        <h3 class="modal__title" id="sg-modal-title">Delete profile</h3>
-        <p style="color: var(--fg-muted);">Deleting moves the profile to trash for 7 days. You can restore it from Settings during that window.</p>
-        <p style="margin-top: var(--space-sm);">To confirm, type the profile name exactly: <strong>Household</strong></p>
-        <div class="field" style="margin-top: var(--space-sm);">
-          <input class="input" type="text" aria-label="Profile name confirmation">
-        </div>
-        <div class="form-actions">
-          <button class="btn btn--danger" type="button">Delete profile</button>
-          <button class="btn btn--ghost" type="button">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="accessibility" class="style-guide__section">
-    <h2>Accessibility checklist</h2>
-    <ul class="a11y-checklist">
-      <li><strong>Target size.</strong> Default buttons, header icon buttons, and modal-close buttons are 44 × 44 CSS pixels (WCAG 2.2 AAA). Compact buttons in dense table rows are 36 × 36 (AA, 24 × 24 minimum). Dense controls (<code>.cleared-toggle</code>) render at 28 × 28 but extend their hit area to 44 × 44 via a transparent pseudo-element.</li>
-      <li><strong>Focus visible.</strong> Every interactive element has a 2 px solid <code>--accent</code> outline plus a 4 px soft halo on buttons. Skip-link slides into view on focus.</li>
-      <li><strong>Contrast.</strong> Body text ≥ 4.5:1, large text and UI surfaces ≥ 3:1 in both themes. <code>--fg-subtle</code> was retuned to clear 4.5:1 on the paper background for small print.</li>
-      <li><strong>Color is never the only signal.</strong> Amounts pair color with a sign and a number; goal status pairs color with a label; reconciled state pairs background with the lock icon.</li>
-      <li><strong>Semantic structure.</strong> One <code>&lt;h1&gt;</code> per page. Landmarks (<code>header</code>, <code>nav</code>, <code>main</code>, <code>footer</code>) wrap their regions. Tables use <code>&lt;th scope="col"&gt;</code>.</li>
-      <li><strong>Keyboard.</strong> Esc closes modals. Skip link goes to <code>#main</code>. Every action available by mouse is available by keyboard.</li>
-      <li><strong>Reduced motion.</strong> <code>prefers-reduced-motion</code> collapses every animation and transition to 0.01ms.</li>
-      <li><strong>Live regions.</strong> The toast stack is <code>aria-live="polite"</code> + <code>aria-atomic="true"</code>; individual toasts use <code>role="status"</code>.</li>
-      <li><strong>Forms.</strong> Every input has a paired <code>&lt;label for="..."&gt;</code>. Required state is conveyed by the attribute and the label, not by color.</li>
-    </ul>
-  </section>
-</article>
+<h2 id="accessibility">Accessibility rules</h2>
+<ul>
+  <li><strong>Target size.</strong> Default buttons, header icon buttons, and modal-close buttons are 44 × 44 CSS pixels (WCAG 2.2 AAA). Compact variants in dense rows are 36 × 36 (AA, 24 × 24 minimum).</li>
+  <li><strong>Focus visible.</strong> Every interactive element has a 2 px solid <code>--accent</code> outline plus a 4 px soft halo on buttons. Skip link slides into view on focus.</li>
+  <li><strong>Contrast.</strong> Body text ≥ 4.5:1, large text and UI surfaces ≥ 3:1 in both themes.</li>
+  <li><strong>Color is never the only signal.</strong> Amounts pair color with a sign and a number; goal status pairs color with a label.</li>
+  <li><strong>Semantic structure.</strong> One <code>&lt;h1&gt;</code> per page. Landmarks (<code>header</code>, <code>nav</code>, <code>main</code>, <code>footer</code>) wrap their regions. Tables use <code>&lt;th scope="col"&gt;</code>.</li>
+  <li><strong>Keyboard.</strong> Esc closes modals. Skip link goes to <code>#main</code>. Every action available by mouse is available by keyboard.</li>
+  <li><strong>Reduced motion.</strong> <code>prefers-reduced-motion</code> collapses every animation to 0.01ms.</li>
+  <li><strong>Live regions.</strong> The toast stack is <code>aria-live="polite"</code>; individual toasts use <code>role="status"</code>.</li>
+  <li><strong>Forms.</strong> Every input has a paired <code>&lt;label for="..."&gt;</code>. Required state is conveyed by the attribute and the label, not by color.</li>
+</ul>

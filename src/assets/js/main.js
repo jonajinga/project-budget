@@ -9,16 +9,67 @@
 
   var THEME_KEY = "projectbudget-theme";
 
+  /* All available themes — the original light/dark plus the preset
+     library inspired by Guerilla Type. The header sun/moon button
+     still toggles only between light + dark (the two "system"
+     themes); the Settings → Appearance picker can set any. */
+  /* "light" and "dark" are now the GitHub palette — the project's
+     standard pair. The legacy Broadsheet cream/vermillion lives at
+     "paper"/"ink" for users who prefer the original aesthetic. */
+  var THEMES = [
+    { id: "light",            label: "Light",                 scheme: "light" },
+    { id: "dark",             label: "Dark",                  scheme: "dark"  },
+    { id: "paper",            label: "Paper (Broadsheet)",    scheme: "light" },
+    { id: "ink",              label: "Ink (Broadsheet)",      scheme: "dark"  },
+    { id: "solarized-light",  label: "Solarized Light",       scheme: "light" },
+    { id: "solarized-dark",   label: "Solarized Dark",        scheme: "dark"  },
+    { id: "github-light",     label: "GitHub Light (alias)",  scheme: "light" },
+    { id: "github-dark",      label: "GitHub Dark (alias)",   scheme: "dark"  },
+    { id: "dracula",          label: "Dracula",               scheme: "dark"  },
+    { id: "nord",             label: "Nord",                  scheme: "dark"  },
+    { id: "gruvbox-dark",     label: "Gruvbox Dark",          scheme: "dark"  },
+    { id: "one-dark",         label: "One Dark",              scheme: "dark"  },
+    { id: "tokyo-night",      label: "Tokyo Night",           scheme: "dark"  },
+    { id: "catppuccin",       label: "Catppuccin",            scheme: "dark"  },
+    { id: "rose-pine",        label: "Rosé Pine",             scheme: "dark"  },
+  ];
+  var THEME_IDS = THEMES.map(function (t) { return t.id; });
+
   function applyTheme(t) {
+    /* Accept any registered theme ID. Unknown values fall back to
+       "light" so the page never ends up in an undefined state. */
+    if (THEME_IDS.indexOf(t) === -1) t = "light";
     document.documentElement.setAttribute("data-theme", t);
     try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    try {
+      window.dispatchEvent(new CustomEvent("pb:theme-change", { detail: { theme: t } }));
+    } catch (_e) {}
   }
   function currentTheme() {
     var t = document.documentElement.getAttribute("data-theme");
-    return t === "dark" ? "dark" : "light";
+    return THEME_IDS.indexOf(t) !== -1 ? t : "light";
   }
+  /* Header button: light ↔ dark within the same theme family when
+     possible. Families: github (light/dark = the defaults), paper/ink
+     (Broadsheet), solarized-light/solarized-dark. Single-scheme
+     presets (Dracula, Nord, etc.) toggle back to the default pair. */
+  var THEME_PAIRS = {
+    "light": "dark",
+    "dark": "light",
+    "github-light": "github-dark",
+    "github-dark": "github-light",
+    "paper": "ink",
+    "ink": "paper",
+    "solarized-light": "solarized-dark",
+    "solarized-dark": "solarized-light",
+  };
   function toggleTheme() {
-    applyTheme(currentTheme() === "dark" ? "light" : "dark");
+    var t = currentTheme();
+    if (THEME_PAIRS[t]) { applyTheme(THEME_PAIRS[t]); return; }
+    /* Single-scheme presets (Dracula, etc.) — flip to the base
+       light/dark depending on the preset's color scheme. */
+    var preset = THEMES.find(function (x) { return x.id === t; });
+    applyTheme(preset && preset.scheme === "dark" ? "light" : "dark");
   }
 
   /* ---- Site menu (hamburger) -------------------------------------- */
@@ -264,6 +315,44 @@
     /* Hamburger triggers (multiple — one per header variant) */
     document.querySelectorAll(".site-header__hamburger").forEach(function (btn) {
       btn.addEventListener("click", function (e) { e.preventDefault(); toggleSiteMenu(); });
+    });
+
+    /* Web3Forms contact-form handler. Submits via fetch so we can swap
+       the button label + redirect to a thank-you page without a full
+       page reload. Falls back to a regular form POST if fetch errors. */
+    document.querySelectorAll("form[data-web3forms]").forEach(function (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var btn = form.querySelector("[type=\"submit\"]");
+        var errorBox = form.querySelector(".form-error");
+        var origLabel = btn ? btn.textContent : "";
+        if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+        if (errorBox) errorBox.style.display = "none";
+        var data = new FormData(form);
+        /* Preserve the user's topic + severity selections through the
+           redirect so the thank-you page can swap in copy tailored to
+           the kind of message they sent. */
+        var topic = data.get("topic") || "";
+        var severity = data.get("severity") || "";
+        fetch("https://api.web3forms.com/submit", { method: "POST", body: data })
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (json && json.success) {
+              var base = form.dataset.redirect || "/thank-you/";
+              var sep = base.indexOf("?") === -1 ? "?" : "&";
+              var qs = "topic=" + encodeURIComponent(topic) +
+                (severity ? "&severity=" + encodeURIComponent(severity) : "");
+              window.location.href = base + (topic ? sep + qs : "");
+            } else {
+              if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+              if (errorBox) { errorBox.style.display = "block"; errorBox.textContent = "Sending failed. Please try again or email directly."; }
+            }
+          })
+          .catch(function () {
+            if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+            if (errorBox) { errorBox.style.display = "block"; errorBox.textContent = "Network error. Please try again."; }
+          });
+      });
     });
 
     /* Site menu links close menu on navigation */

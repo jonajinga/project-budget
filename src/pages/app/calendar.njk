@@ -29,7 +29,10 @@ eleventyExcludeFromCollections: true
                 @click="jumpToday()">Today</button>
         <button type="button" class="btn btn--ghost btn--sm"
                 @click="step(1)" :aria-label="'Next ' + view">&rarr;</button>
-        <h1 class="cal-toolbar__title" x-text="anchorLabel()"></h1>
+        {# Server-side h1 fallback so screen readers + pre-hydration
+           crawlers always see a page heading. Alpine swaps in the
+           dynamic label (e.g. "May 2026") once hydrated. #}
+        <h1 class="cal-toolbar__title" x-text="anchorLabel() || 'Calendar'">Calendar</h1>
       </div>
     </div>
 
@@ -206,7 +209,7 @@ eleventyExcludeFromCollections: true
                           'cal-mini__cell--blank': cell.blank,
                           'cal-mini__cell--today': cell.isToday,
                           'cal-mini__cell--has':   !cell.blank && cell.count > 0,
-                          'cal-mini__cell--hot':   !cell.blank && (cell.intensity || 0) >= 50
+                          'cal-mini__cell--hot':   !cell.blank && (cell.intensity || 0) >= 25
                         }"
                         :style="!cell.blank && cell.intensity > 0 ? ('--intensity: ' + cell.intensity) : ''">
                     <button type="button"
@@ -1195,9 +1198,22 @@ eleventyExcludeFromCollections: true
 
 <script>
 function calendarView() {
+  /* Initialize anchorISO synchronously to today — if left as "" until
+     init() runs, Alpine's first render computes monthCells with NaN
+     dates (every cell keyed "NaN-NaN-NaN"). x-for collapses identical
+     keys to one element, and the subsequent init() update can't
+     re-hydrate the missing 41 cells. Symptom: calendar renders empty
+     and a hard refresh (which somehow primed cached state) was the
+     only fix. Mobile browsers hit this 100% of the time because their
+     init pacing leaves the first render visible long enough to stick. */
+  var _today = new Date();
+  var _todayISO = _today.getFullYear() + "-" +
+    String(_today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(_today.getDate()).padStart(2, "0");
+
   return {
     view: "month",     // 'day' | 'week' | 'month' | 'year'
-    anchorISO: "",     // selected day OR a YYYY-MM-DD anchor for month/week/year
+    anchorISO: _todayISO, // selected day OR a YYYY-MM-DD anchor for month/week/year
     selectedISO: null, // month-view click selection
 
     searchQuery: "",
@@ -1326,6 +1342,20 @@ function calendarView() {
 
     init() {
       this.anchorISO = this._isoDay(new Date());
+      /* Honor URL params from drill-through links — `?m=YYYY-MM` lands
+         on Month view for that month; `?v=year|week|day` switches
+         view. Reports' month-cell links pass these. */
+      try {
+        var params = new URL(window.location.href).searchParams;
+        var mParam = params.get("m");
+        if (mParam && /^\d{4}-\d{2}$/.test(mParam)) {
+          this.anchorISO = mParam + "-01";
+        }
+        var vParam = params.get("v");
+        if (vParam && ["day","week","month","year"].indexOf(vParam) !== -1) {
+          this.view = vParam;
+        }
+      } catch (_e) {}
       /* Read persisted display preferences (default ON for day-
          totals, OFF for year-net). Watch + write back on change. */
       try {

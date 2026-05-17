@@ -5,8 +5,15 @@
       <p class="site-footer__tagline">{{ site.tagline }}</p>
     </div>
 
+    {# All utility links on a single horizontal row. Union of nav.main
+       (sans the CTA + features anchor) + nav.footer + GitHub so users
+       can reach everything in one glance without scanning two stacks. #}
     <nav class="site-footer__nav" aria-label="Footer">
-      <ul>
+      <ul class="site-footer__links">
+        <li><a href="/docs/">Docs</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/glossary/">Glossary</a></li>
+        <li><a href="/open-source/">Open source</a></li>
         {% for item in nav.footer %}
           <li><a href="{{ item.url }}">{{ item.label }}</a></li>
         {% endfor %}
@@ -15,7 +22,7 @@
     </nav>
 
     <p class="site-footer__copy">
-      &copy; {% currentYear %} {{ site.author }}. {{ site.license }} licensed.
+      &copy; {% currentYear %} {{ site.title }}. {{ site.license }} licensed.
       Website by <a href="https://pikespeakwebdesigns.com" rel="noopener">Pikes Peak Web Designs</a>.
     </p>
   </div>

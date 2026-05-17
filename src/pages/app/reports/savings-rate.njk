@@ -5,20 +5,7 @@ description: "Monthly and trailing savings rate. The single most important wealt
 permalink: /app/reports/savings-rate/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page"
-     x-data="Object.assign(
-       savingsRateView(),
-       reportTable(
-         (self) => ($store.budget.reportSavingsRate(null, self.rangeMonths) || []),
-         { keys: [
-             { key: 'month',   label: 'Month' },
-             { key: 'income',  label: 'Income',  numeric: true },
-             { key: 'expense', label: 'Expense', numeric: true },
-             { key: 'savings', label: 'Saved',   numeric: true },
-             { key: 'rate',    label: 'Rate',    numeric: true },
-           ], defaultSort: { key: 'month', dir: 'asc' } }
-       )
-     )" x-init="init()">
+<div class="app-page" x-data="savingsRateView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Savings rate</h1>
@@ -63,7 +50,21 @@ eleventyExcludeFromCollections: true
   </div>
 
   <section class="report">
-    <div class="chart" id="chart-sr" style="min-height: 320px;"></div>
+    <div class="chart-toolbar">
+      <span class="chart-toolbar__label">Chart</span>
+      <span class="chart-picker" role="group" aria-label="Chart type">
+        <template x-for="opt in chartOptions" :key="opt.value">
+          <button type="button"
+                  class="chart-picker__btn"
+                  :class="chartType === opt.value ? 'is-active' : ''"
+                  :aria-pressed="(chartType === opt.value).toString()"
+                  @click="setChartType(opt.value)"
+                  :data-tip="'Render as a ' + opt.label.toLowerCase() + ' chart.'"
+                  x-text="opt.label"></button>
+        </template>
+      </span>
+    </div>
+    <div class="chart" id="chart-sr" style="min-height: 360px;"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -90,7 +91,12 @@ eleventyExcludeFromCollections: true
       <tbody>
         <template x-for="r in rows" :key="r.month">
           <tr>
-            <td x-text="r.month"></td>
+            <td>
+              <a class="report-month-link"
+                 :href="'/app/calendar/?m=' + r.month + '&v=month'"
+                 x-text="r.month"
+                 data-tip="Open this month in the calendar."></a>
+            </td>
             <td class="num amount--inflow" x-text="'$' + (r.income / 100).toFixed(2)"></td>
             <td class="num amount--outflow" x-text="'$' + (r.expense / 100).toFixed(2)"></td>
             <td class="num" :class="r.savings < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.savings / 100).toFixed(2)"></td>
@@ -108,22 +114,109 @@ eleventyExcludeFromCollections: true
 
 <script>
 function savingsRateView() {
+  var savedChartType = "line";
+  try {
+    var st = localStorage.getItem("projectbudget:chart-type:savingsRate");
+    if (st && ["line","area","bar"].indexOf(st) !== -1) savedChartType = st;
+  } catch (_e) {}
+  window.__pbChartType = window.__pbChartType || {};
+  window.__pbChartType.savingsRate = savedChartType;
+
   return {
     rangeMonths: 12,
     ranges: [
-      { value: 6,  label: '6 mo' },
-      { value: 12, label: '12 mo' },
-      { value: 24, label: '24 mo' },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
     ],
+
+    chartType: savedChartType,
+    chartOptions: [
+      { value: "line", label: "Line" },
+      { value: "area", label: "Area" },
+      { value: "bar",  label: "Bar" },
+    ],
+    setChartType(t) {
+      this.chartType = t;
+      window.__pbChartType.savingsRate = t;
+      try { localStorage.setItem("projectbudget:chart-type:savingsRate", t); } catch (_e) {}
+      try { window.dispatchEvent(new CustomEvent("pb:chart-type", { detail: { reportId: "savingsRate", type: t } })); } catch (_e) {}
+    },
+
+    query: "",
+    sortKey: "month",
+    sortDir: "asc",
+    _keys: [
+      { key: "month",   label: "Month" },
+      { key: "income",  label: "Income",  numeric: true },
+      { key: "expense", label: "Expense", numeric: true },
+      { key: "savings", label: "Saved",   numeric: true },
+      { key: "rate",    label: "Rate",    numeric: true },
+    ],
+    get rows() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportSavingsRate(null, this.rangeMonths) || [];
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q ? src.filter(function (r) { return String(r.month).toLowerCase().indexOf(q) !== -1; }) : src;
+      var key = this.sortKey, dir = this.sortDir;
+      var keyDef = this._keys.find(function (k) { return k.key === key; });
+      var numeric = !!(keyDef && keyDef.numeric);
+      var copy = filtered.slice();
+      copy.sort(function (a, b) {
+        if (numeric) {
+          var an = Number(a[key]) || 0, bn = Number(b[key]) || 0;
+          return dir === "asc" ? an - bn : bn - an;
+        }
+        var as = String(a[key] == null ? "" : a[key]);
+        var bs = String(b[key] == null ? "" : b[key]);
+        return dir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+      return copy;
+    },
+    get visibleCount() { return this.rows.length; },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        var kd = this._keys.find(function (k) { return k.key === key; });
+        this.sortDir = kd && kd.numeric ? "desc" : "asc";
+      }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+    print() { window.print(); },
+    exportCSV(name) {
+      var self = this;
+      var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");
+      var body = this.rows.map(function (r) {
+        return self._keys.map(function (k) {
+          var v = r[k.key];
+          if (v == null) return "";
+          if (k.numeric && Math.abs(v) >= 1000 && Number.isInteger(v)) v = (v / 100).toFixed(2);
+          return JSON.stringify(String(v));
+        }).join(",");
+      }).join("\r\n");
+      var blob = new Blob([header + "\r\n" + body], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = (name || "report") + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    },
+
     init() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.savingsRate = function () { return self.rangeMonths; };
     },
-    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     kpis() {
       var rows = this.$store.budget.reportSavingsRate(null, this.rangeMonths) || [];
-      if (!rows.length) return { rate: null, totalSavings: 0, avgSavings: 0, bestMonth: '', bestRate: null, negCount: 0, totalCount: 0 };
+      if (!rows.length) return { rate: null, totalSavings: 0, avgSavings: 0, bestMonth: "", bestRate: null, negCount: 0, totalCount: 0 };
       var sumI = rows.reduce(function (s, r) { return s + r.income; }, 0);
       var sumE = rows.reduce(function (s, r) { return s + r.expense; }, 0);
       var totalSavings = sumI - sumE;
@@ -135,7 +228,7 @@ function savingsRateView() {
         rate: rate,
         totalSavings: totalSavings,
         avgSavings: Math.round(totalSavings / rows.length),
-        bestMonth: best ? best.month : '',
+        bestMonth: best ? best.month : "",
         bestRate: best ? best.rate : null,
         negCount: negCount,
         totalCount: rows.length,
@@ -150,9 +243,10 @@ function savingsRateView() {
   import { applyChartDefaults, upsert } from "/assets/js/charts/chartjs.js";
   import { colors } from "/assets/js/charts/theme-colors.js";
 
-  /* Render the savings-rate line chart with a zero baseline so the user
-     can see months that dipped into the red. Y-axis is %, derived from
-     the row's `rate` value (null rendered as gap). */
+  /* Render the savings-rate chart. The picker (line | area | bar) is
+     read each redraw from window.__pbChartType.savingsRate. Null rates
+     (months with $0 income) render as gaps in line/area mode and as
+     muted zero-height bars in bar mode. */
   function render(el, data) {
     applyChartDefaults();
     var c = colors();
@@ -162,25 +256,35 @@ function savingsRateView() {
     var ok     = c["ok"] || "#2f6e4d";
     var danger = c["danger"] || "#9e2d22";
     var borderSoft = c["border"] || "rgba(0,0,0,0.06)";
+    var type = (window.pbReadChartType && window.pbReadChartType("savingsRate", "line")) || "line";
+
+    var dataset;
+    if (type === "bar") {
+      dataset = {
+        label: "Savings rate (%)",
+        data: pct.map(function (v) { return v === null ? 0 : v; }),
+        backgroundColor: pct.map(function (v) { return v === null ? c["fg-muted"] : (v < 0 ? danger : ok); }),
+        borderRadius: 0, borderSkipped: false,
+      };
+    } else {
+      var fill = type === "area";
+      dataset = {
+        label: "Savings rate (%)",
+        data: pct,
+        borderColor: accent,
+        backgroundColor: fill ? (accent + "22") : "transparent",
+        fill: fill, tension: 0.25, spanGaps: true,
+        pointRadius: 3, pointHoverRadius: 6, borderWidth: 2,
+        pointBackgroundColor: function (ctx) {
+          var v = ctx.parsed && ctx.parsed.y;
+          return (v === null || v === undefined) ? accent : (v < 0 ? danger : ok);
+        },
+      };
+    }
+
     upsert(el, {
-      type: "line",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: "Savings rate (%)",
-          data: pct,
-          borderColor: accent,
-          backgroundColor: accent + "22",
-          fill: true,
-          tension: 0.25,
-          spanGaps: true,
-          pointRadius: 3,
-          pointBackgroundColor: function (ctx) {
-            var v = ctx.parsed && ctx.parsed.y;
-            return (v === null || v === undefined) ? accent : (v < 0 ? danger : ok);
-          },
-        }],
-      },
+      type: type === "bar" ? "bar" : "line",
+      data: { labels: labels, datasets: [dataset] },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -223,6 +327,9 @@ function savingsRateView() {
       if (e.target.closest && e.target.closest(".btn--sm")) {
         setTimeout(function () { inst.redraw(); }, 0);
       }
+    });
+    window.addEventListener("pb:chart-type", function (e) {
+      if (e.detail && e.detail.reportId === "savingsRate") inst.redraw();
     });
   }
   if (window.Alpine && window.Alpine.store("budget")) boot();

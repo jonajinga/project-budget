@@ -3,8 +3,16 @@
 {% block bodyClass %}layout-app{% endblock %}
 
 {% block content %}
-<div class="app-shell" x-data="{ sidebarOpen: false }">
+<div class="app-shell" x-data="{ sidebarOpen: false }"
+     @open-sidebar.window="sidebarOpen = true"
+     @close-sidebar.window="sidebarOpen = false">
   {% include "partials/app-shell.njk" %}
+  {# Mobile backdrop — visible only when sidebarOpen and the sidebar
+     is in its mobile slide-out state. Click anywhere off-sidebar to
+     dismiss. WCAG-friendly: backdrop is purely decorative, the close
+     button inside the sidebar is the keyboard-accessible affordance. #}
+  <div class="app-sidebar-backdrop" x-show="sidebarOpen" x-cloak
+       @click="sidebarOpen = false" aria-hidden="true"></div>
   <div class="app-sidebar-handle" role="separator" aria-orientation="vertical"
        aria-label="Resize sidebar" tabindex="0"
        data-tip="Drag to resize the sidebar. Double-click to reset to the default width."></div>
@@ -23,8 +31,13 @@
      load before tippy. #}
   <script src="/assets/js/app.js?v={{ build.hash }}" type="module"></script>
   <script src="/assets/js/vendor/dexie.min.js" defer></script>
-  <script src="/assets/js/vendor/d3.min.js" defer></script>
-  <script src="/assets/js/vendor/chart.umd.min.js" defer></script>
+  {# D3 + Chart.js together are ~486KB. They're only used by /app/reports/*.
+     Load them ONLY on report pages so every other app page (budget,
+     register, calendar, accounts, etc.) skips the cost. #}
+  {% if page.url and (page.url.startsWith("/app/reports/") or page.url == "/app/reports/") %}
+    <script src="/assets/js/vendor/d3.min.js" defer></script>
+    <script src="/assets/js/vendor/chart.umd.min.js" defer></script>
+  {% endif %}
   <script src="/assets/js/vendor/fuse.min.js" defer></script>
   <script src="/assets/js/vendor/papaparse.min.js" defer></script>
   <script src="/assets/js/vendor/popper.min.js" defer></script>
@@ -34,6 +47,7 @@
   <script src="/assets/js/ui/sortable-bind.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/ui/command-palette.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/ui/report-table.js?v={{ build.hash }}" defer></script>
+  <script src="/assets/js/ui/chart-type-picker.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/util/calc.js?v={{ build.hash }}" defer></script>
   {# dialog.js is loaded once in base.njk (covers app + marketing pages). #}
 {% endblock %}

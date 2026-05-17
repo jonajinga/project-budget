@@ -99,11 +99,32 @@ eleventyExcludeFromCollections: true
       </div>
     </section>
 
-    <section class="card">
-      <h2 class="card__title">Theme</h2>
-      <p class="card__body">
-        Toggle from the header. Your preference is stored under <code>projectbudget-theme</code> and respected immediately on every load.
+    <section class="card" x-data="themePicker()" x-init="init()">
+      <h2 class="card__title">Appearance</h2>
+      <p class="card__body" style="margin-bottom: var(--space-sm);">
+        Pick a color theme. The header sun/moon button still toggles
+        between the two base themes (light + dark); the picker below
+        lets you switch to any preset. Your choice is stored under
+        <code>projectbudget-theme</code> and respected on every load.
       </p>
+      <div class="theme-picker" role="radiogroup" aria-label="Color theme">
+        <template x-for="t in themes" :key="t.id">
+          <button type="button"
+                  class="theme-picker__opt"
+                  :class="current === t.id ? 'is-active' : ''"
+                  :aria-pressed="(current === t.id).toString()"
+                  :data-theme-preview="t.id"
+                  @click="pick(t.id)"
+                  :data-tip="t.label + ' · ' + t.scheme">
+            <span class="theme-picker__swatch" aria-hidden="true">
+              <span class="theme-picker__swatch-bg"></span>
+              <span class="theme-picker__swatch-fg"></span>
+              <span class="theme-picker__swatch-accent"></span>
+            </span>
+            <span class="theme-picker__label" x-text="t.label"></span>
+          </button>
+        </template>
+      </div>
     </section>
 
     <section class="card" x-data="{
@@ -374,6 +395,43 @@ eleventyExcludeFromCollections: true
 </div>
 
 <script>
+/* Theme picker — surfaces every registered theme from main.js's
+   THEMES list. Listens for pb:theme-change so the active card stays
+   in sync when the header toggle flips between light + dark. */
+function themePicker() {
+  return {
+    themes: [
+      { id: "light",            label: "Light",                 scheme: "light" },
+      { id: "dark",             label: "Dark",                  scheme: "dark"  },
+      { id: "paper",            label: "Paper (Broadsheet)",    scheme: "light" },
+      { id: "ink",              label: "Ink (Broadsheet)",      scheme: "dark"  },
+      { id: "solarized-light",  label: "Solarized Light",       scheme: "light" },
+      { id: "solarized-dark",   label: "Solarized Dark",        scheme: "dark"  },
+      { id: "dracula",          label: "Dracula",               scheme: "dark"  },
+      { id: "nord",             label: "Nord",                  scheme: "dark"  },
+      { id: "gruvbox-dark",     label: "Gruvbox Dark",          scheme: "dark"  },
+      { id: "one-dark",         label: "One Dark",              scheme: "dark"  },
+      { id: "tokyo-night",      label: "Tokyo Night",           scheme: "dark"  },
+      { id: "catppuccin",       label: "Catppuccin",            scheme: "dark"  },
+      { id: "rose-pine",        label: "Rosé Pine",             scheme: "dark"  },
+    ],
+    current: "light",
+    init() {
+      this.current = document.documentElement.getAttribute("data-theme") || "light";
+      var self = this;
+      window.addEventListener("pb:theme-change", function (e) {
+        if (e.detail && e.detail.theme) self.current = e.detail.theme;
+      });
+    },
+    pick(id) {
+      this.current = id;
+      document.documentElement.setAttribute("data-theme", id);
+      try { localStorage.setItem("projectbudget-theme", id); } catch (_e) {}
+      try { window.dispatchEvent(new CustomEvent("pb:theme-change", { detail: { theme: id } })); } catch (_e) {}
+    },
+  };
+}
+
 function settingsView() {
   return {
     snapLabel: "",

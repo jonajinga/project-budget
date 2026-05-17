@@ -190,8 +190,14 @@
   outline-offset: 2px;
 }
 
+/* Outflow = red (--danger), Inflow = green (--ok). Previously
+   inflow used --accent which is blue in GitHub / Solarized themes —
+   that collided with accent-tinted backgrounds (year-view heatmap,
+   accent-soft pills) and produced near-invisible text. Using --ok
+   keeps semantic colour: positive money is green everywhere,
+   negative is red. */
 .amount--outflow { color: var(--danger); }
-.amount--inflow  { color: var(--accent); }
+.amount--inflow  { color: var(--ok); }
 
 /* Payee auto-suggest dropdown — pinned beneath the input.
    top:100% positions it at the bottom edge of the containing .field

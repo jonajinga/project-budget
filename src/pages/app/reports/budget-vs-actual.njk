@@ -5,22 +5,7 @@ description: "Per-category envelope health: assigned vs spent vs remaining for a
 permalink: /app/reports/budget-vs-actual/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page"
-     x-data="Object.assign(
-       budgetVsActualView(),
-       reportTable(
-         (self) => ($store.budget.reportBudgetVsActual(self.month) || []),
-         { keys: [
-             { key: 'category',  label: 'Category' },
-             { key: 'group',     label: 'Group' },
-             { key: 'assigned',  label: 'Assigned',  numeric: true },
-             { key: 'spent',     label: 'Spent',     numeric: true },
-             { key: 'remaining', label: 'Remaining', numeric: true },
-             { key: 'pct',       label: '% used',    numeric: true },
-             { key: 'status',    label: 'Status' },
-           ], defaultSort: { key: 'pct', dir: 'desc' } }
-       )
-     )" x-init="init()">
+<div class="app-page" x-data="budgetVsActualView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Budget vs actual</h1>
@@ -117,17 +102,86 @@ eleventyExcludeFromCollections: true
 
 <script>
 function budgetVsActualView() {
+  var d = new Date();
+  var monthInitial = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+
   return {
-    month: '',
+    month: monthInitial,
+
+    query: "",
+    sortKey: "pct",
+    sortDir: "desc",
+    _keys: [
+      { key: "category",  label: "Category" },
+      { key: "group",     label: "Group" },
+      { key: "assigned",  label: "Assigned",  numeric: true },
+      { key: "spent",     label: "Spent",     numeric: true },
+      { key: "remaining", label: "Remaining", numeric: true },
+      { key: "pct",       label: "% used",    numeric: true },
+      { key: "status",    label: "Status" },
+    ],
+    get rows() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportBudgetVsActual(this.month) || [];
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q ? src.filter(function (r) {
+        return ((r.category || "") + " " + (r.group || "")).toLowerCase().indexOf(q) !== -1;
+      }) : src;
+      var key = this.sortKey, dir = this.sortDir;
+      var keyDef = this._keys.find(function (k) { return k.key === key; });
+      var numeric = !!(keyDef && keyDef.numeric);
+      var copy = filtered.slice();
+      copy.sort(function (a, b) {
+        if (numeric) {
+          var an = Number(a[key]) || 0, bn = Number(b[key]) || 0;
+          return dir === "asc" ? an - bn : bn - an;
+        }
+        var as = String(a[key] == null ? "" : a[key]);
+        var bs = String(b[key] == null ? "" : b[key]);
+        return dir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+      return copy;
+    },
+    get visibleCount() { return this.rows.length; },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        var kd = this._keys.find(function (k) { return k.key === key; });
+        this.sortDir = kd && kd.numeric ? "desc" : "asc";
+      }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+    print() { window.print(); },
+    exportCSV(name) {
+      var self = this;
+      var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");
+      var body = this.rows.map(function (r) {
+        return self._keys.map(function (k) {
+          var v = r[k.key];
+          if (v == null) return "";
+          if (k.numeric && Math.abs(v) >= 1000 && Number.isInteger(v)) v = (v / 100).toFixed(2);
+          return JSON.stringify(String(v));
+        }).join(",");
+      }).join("\r\n");
+      var blob = new Blob([header + "\r\n" + body], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = (name || "report") + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    },
+
     init() {
       var store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
       if (store && store.currentMonth) this.month = store.currentMonth;
-      else {
-        var d = new Date();
-        this.month = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-      }
     },
-    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     kpis() {
       var rows = this.$store.budget.reportBudgetVsActual(this.month) || [];
       var assigned = rows.reduce(function (s, r) { return s + r.assigned; }, 0);
@@ -137,8 +191,8 @@ function budgetVsActualView() {
         spent: spent,
         remaining: assigned - spent,
         pctUsed: assigned > 0 ? (spent / assigned) * 100 : (spent > 0 ? 100 : 0),
-        over: rows.filter(function (r) { return r.status === 'over'; }).length,
-        unbudgeted: rows.filter(function (r) { return r.status === 'unbudgeted'; }).length,
+        over: rows.filter(function (r) { return r.status === "over"; }).length,
+        unbudgeted: rows.filter(function (r) { return r.status === "unbudgeted"; }).length,
         total: rows.length,
       };
     },

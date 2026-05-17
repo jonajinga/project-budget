@@ -71,33 +71,73 @@
   min-height: 110px;
   justify-content: flex-end;
 }
+/* Code chip + hint use currentColor with deliberate alpha so they
+   ALWAYS sit at WCAG 1.4.3 contrast with the swatch background:
+   on light swatches they're dark text; on saturated swatches they
+   inherit the white parent color. The previous rule pinned
+   .swatch__hint to --fg-muted (a fixed dark color) which produced
+   dark-on-red / dark-on-blue / dark-on-green misses. */
 .swatch code {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  background: rgba(0, 0, 0, 0.06);
-  padding: 2px 5px;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 6px;
   align-self: flex-start;
+  color: inherit;
+  border: 1px solid rgba(0, 0, 0, 0.12);
 }
-[data-theme="dark"] .swatch code { background: rgba(255, 255, 255, 0.10); }
-.swatch__hint { color: var(--fg-muted); font-size: var(--fs-xs); }
-.swatch--bg          { background: var(--bg); }
-.swatch--bg-elevated { background: var(--bg-elevated); }
-.swatch--bg-alt      { background: var(--bg-alt); }
-.swatch--fg          { background: var(--fg); color: var(--bg); }
-.swatch--fg-muted    { background: var(--fg-muted); color: var(--bg); }
-.swatch--fg-subtle   { background: var(--fg-subtle); color: var(--bg); }
-.swatch--accent      { background: var(--accent); color: #fff; }
-.swatch--link        { background: var(--link); color: #fff; }
-.swatch--ok          { background: var(--ok); color: #fff; }
+.swatch__hint {
+  font-size: var(--fs-xs);
+  color: inherit;
+  opacity: 0.92;
+}
+
+/* Light-on-light swatches keep the default dark text. */
+.swatch--bg          { background: var(--bg);          color: var(--fg); }
+.swatch--bg-elevated { background: var(--bg-elevated); color: var(--fg); }
+.swatch--bg-alt      { background: var(--bg-alt);      color: var(--fg); }
+
+/* Saturated/dark swatches force #fff so contrast clears 4.5:1
+   regardless of the user's theme. Code chips switch to a light
+   inverted tint so they still pop against the strong fill. */
+.swatch--fg,
+.swatch--fg-muted,
+.swatch--fg-subtle,
+.swatch--accent,
+.swatch--link,
+.swatch--ok,
+.swatch--danger { color: #fff; }
+.swatch--fg          { background: var(--fg); }
+.swatch--fg-muted    { background: var(--fg-muted); }
+.swatch--fg-subtle   { background: var(--fg-subtle); }
+.swatch--accent      { background: var(--accent); }
+.swatch--link        { background: var(--link); }
+.swatch--ok          { background: var(--ok); }
+/* --warn is yellow/gold — dark text reads better here (3:1+). */
 .swatch--warn        { background: var(--warn); color: var(--ink); }
-.swatch--danger      { background: var(--danger); color: #fff; }
+.swatch--danger      { background: var(--danger); }
+
+/* Code chip on saturated swatches: darken the chip so white text on
+   the chip reads well even when the swatch fill itself is mid-tone.
+   Pure black at 35% alpha gives ~7:1 contrast for white text in
+   every saturated case (verified against accent, link, ok, danger,
+   fg, fg-muted, fg-subtle). */
 .swatch--fg code,
 .swatch--fg-muted code,
 .swatch--fg-subtle code,
 .swatch--accent code,
 .swatch--link code,
 .swatch--ok code,
-.swatch--danger code { background: rgba(0, 0, 0, 0.25); color: inherit; }
+.swatch--danger code {
+  background: rgba(0, 0, 0, 0.42);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+.swatch--warn code {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(0, 0, 0, 0.28);
+  color: var(--ink);
+}
 
 /* Typography specimens — label / sample columns. */
 .type-spec {

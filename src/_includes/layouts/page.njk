@@ -1,12 +1,43 @@
 ---
 layout: layouts/marketing.njk
 ---
-<article class="container container--narrow page">
-  <header class="page__header">
-    <h1>{{ title }}</h1>
-    {% if subtitle %}<p class="page__subtitle">{{ subtitle }}</p>{% endif %}
-  </header>
-  <div class="prose">
-    {{ content | safe }}
+<div class="container container--wide doc-shell">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a>
+    {% if section and sectionUrl %}
+      <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+      <a href="{{ sectionUrl }}">{{ section }}</a>
+    {% endif %}
+    <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+    <span aria-current="page">{{ title }}</span>
+  </nav>
+
+  {# Two-column shell with the TOC on the LEFT (mirrors the docs
+     sidebar position so every page on the site shares one navigation
+     vocabulary). The TOC is built client-side from h2/h3 in
+     .doc-content__prose by docs.js. #}
+  <div class="docs-layout docs-layout--toc-left">
+    <aside class="docs-layout__toc docs-layout__toc--left" aria-label="On this page">
+      <div class="docs-toc" id="docs-toc">
+        <button type="button" class="docs-toc__toggle" id="docs-toc-toggle" aria-controls="toc-list" aria-expanded="true">
+          <span>On this page</span>
+          <span class="docs-toc__chevron" aria-hidden="true">&#9662;</span>
+        </button>
+        <ol id="toc-list" class="docs-toc__list"></ol>
+      </div>
+    </aside>
+
+    <article class="doc-content" id="doc-content">
+      <header class="page__header">
+        <h1>{{ title }}</h1>
+        {% if subtitle %}<p class="page__subtitle">{{ subtitle }}</p>{% endif %}
+      </header>
+
+      <div class="doc-content__prose prose">
+        {{ content | safe }}
+      </div>
+    </article>
   </div>
-</article>
+</div>
+
+<script defer src="/assets/js/docs.js"></script>

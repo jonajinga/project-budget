@@ -43,6 +43,20 @@ layout: layouts/base.njk
       </div>
     </aside>
 
+    {# On-this-page TOC sits in the middle-left column, between the
+       docs-nav sidebar and the content. Mirrors the position of the
+       on-this-page TOC on every other site page so the user always
+       finds it in the same screen region. #}
+    <aside class="docs-layout__toc" aria-label="On this page">
+      <div class="docs-toc" id="docs-toc">
+        <button type="button" class="docs-toc__toggle" id="docs-toc-toggle" aria-controls="toc-list" aria-expanded="true">
+          <span>On this page</span>
+          <span class="docs-toc__chevron" aria-hidden="true">&#9662;</span>
+        </button>
+        <ol id="toc-list" class="docs-toc__list"></ol>
+      </div>
+    </aside>
+
     <article class="doc-content" id="doc-content">
       <h1>{{ title }}</h1>
       {% if subtitle %}<p class="doc-lead">{{ subtitle }}</p>{% endif %}
@@ -75,16 +89,6 @@ layout: layouts/base.njk
         </nav>
       {% endif %}
     </article>
-
-    <aside class="docs-layout__toc" aria-label="On this page">
-      <div class="docs-toc" id="docs-toc">
-        <button type="button" class="docs-toc__toggle" id="docs-toc-toggle" aria-controls="toc-list" aria-expanded="true">
-          <span>On this page</span>
-          <span class="docs-toc__chevron" aria-hidden="true">&#9662;</span>
-        </button>
-        <ol id="toc-list" class="docs-toc__list"></ol>
-      </div>
-    </aside>
   </div>
 </div>
 

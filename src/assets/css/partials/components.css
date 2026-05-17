@@ -62,21 +62,33 @@
 }
 
 /* Icon-only square button — for tight action clusters (up/down
-   arrows, repeat / mute toggles). 32x32, no border, accent on hover.
-   Pairs with an inline SVG icon child. */
+   arrows, repeat / mute toggles). Default 44x44 to meet WCAG 2.5.5
+   target size; dense in-row clusters opt out with data-touch="compact"
+   for a 32x32 visual size with a transparent ::before hit-area
+   extension that still hits 44x44 (see .data-touch--compact below). */
 .btn--icon {
   padding: 0;
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  position: relative;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
   color: var(--fg-muted);
   border-radius: var(--radius-input);
 }
-.btn--icon:hover,
-.btn--icon:focus-visible { background: var(--bg-alt); color: var(--accent); }
+.btn--icon:hover { background: var(--bg-alt); color: var(--accent); }
+.btn--icon:focus-visible {
+  /* WCAG 2.4.11: visible focus indicator. The bg-alt swap alone is
+     ~1.05:1 against bg-elevated and easily missed. */
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  color: var(--accent);
+}
 .btn--icon:disabled,
 .btn--icon[aria-disabled="true"] {
   opacity: 0.3;
@@ -84,6 +96,20 @@
   pointer-events: none;
 }
 .btn--icon svg { display: block; }
+
+/* Compact opt-out for dense row clusters. Visual size shrinks to
+   32x32 (group actions) or 28x28 (per-row actions), but a
+   transparent ::before bleeds the hit area back to 44x44 so touch
+   users never lose the target. */
+.btn--icon[data-touch="compact"] {
+  width: 32px; min-width: 32px;
+  height: 32px; min-height: 32px;
+}
+.btn--icon[data-touch="compact"]::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
 
 /* Inline-edit trigger — looks like text in a table cell but clickable to
    enter rename / annotate mode. Reused by snapshot labels and daily-backup
@@ -129,16 +155,25 @@
   width: 100%;
   padding: 0.6rem 0.8rem;
   font: inherit;
+  /* iOS Safari zooms when a focused input has font-size < 16px. The
+     root is 17px so 1rem clears the threshold — pin here explicitly
+     so per-page overrides (register inline-edit, calendar custom
+     span, etc.) don't accidentally trigger zoom on focus. */
+  font-size: max(1rem, 16px);
   color: var(--fg);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-input);
+  min-height: 44px;
   transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 .input:focus, .select:focus, .textarea:focus {
-  outline: none;
+  /* WCAG 2.4.11: focus indicator must be perceivable. Pair the
+     accent border with a stronger halo (accent-soft was too faint
+     against the page background to register as a focus ring). */
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .field { display: flex; flex-direction: column; gap: var(--space-2xs); }
@@ -180,8 +215,11 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
-.badge--warn { background: rgba(168, 107, 20, 0.12); color: var(--warn); }
-.badge--danger { background: rgba(168, 52, 31, 0.12); color: var(--danger); }
+/* Bumped tint alpha 0.12 → 0.20 so the badge is identifiable as a
+   pill (≥3:1 against bg-elevated per WCAG 1.4.11) and the warn text
+   (#8e6620) clears 4.5:1 on the darker tint. */
+.badge--warn { background: rgba(168, 107, 20, 0.20); color: var(--warn); }
+.badge--danger { background: rgba(168, 52, 31, 0.20); color: var(--danger); }
 
 /* Theme toggle */
 .theme-toggle {
@@ -349,6 +387,22 @@
           mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='currentColor'><path d='M4 6l4 4 4-4' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>") no-repeat center / contain;
 }
 .group-toggle__chevron.is-collapsed { transform: rotate(-90deg); }
+
+/* Optional category-count tag inside the group toggle on the
+   categories page — "3 categories" style. Hidden on the budget
+   page (no .group-toggle__count rendered there). */
+.group-toggle__count {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  margin-left: var(--space-2xs);
+  white-space: nowrap;
+}
 
 /* Tippy.js — Project Budget theme */
 .tippy-box[data-theme~="projectbudget"] {

@@ -5,8 +5,8 @@ export default {
   description:
     "A free, open-source budgeting web app for envelope-style personal finance. Your data lives in your browser. No accounts, no servers, no bank connections.",
   url: process.env.SITE_URL || "https://projectbudget.org",
-  author: "Jon Ajinga",
-  email: "jonajinga@gmail.com",
+  author: "Project Budget",
+  email: "hello@projectbudget.org",
   language: "en",
   locale: "en_US",
   themeColor: "#0f172a",

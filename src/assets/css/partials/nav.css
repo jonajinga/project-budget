@@ -218,8 +218,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  /* 44x44 to meet WCAG 2.5.5 — the header icon row is the only
+     place undo/redo/search/theme live, so the targets matter. */
+  width: 44px;
+  height: 44px;
   background: none;
   border: 0;
   color: var(--fg-muted);
@@ -278,8 +280,14 @@
   font: inherit;
   font-size: var(--fs-md);
   color: var(--fg);
-  outline: none;
+  /* Outline replaced by an inset accent underline so the caret isn't
+     the only focus indicator — meets WCAG 2.4.7 + 2.4.11. */
+  outline: 0;
+  border-bottom: 2px solid transparent;
   padding: 0.4rem 0;
+}
+.search-modal__input:focus-visible {
+  border-bottom-color: var(--accent);
 }
 .search-modal__close {
   background: none;
@@ -350,8 +358,12 @@ button.search-result {
   font: inherit;
   border-bottom: 1px solid var(--border-soft);
 }
-button.search-result:hover,
-button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
+button.search-result:hover { background: var(--bg-alt); }
+button.search-result:focus-visible {
+  background: var(--bg-alt);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .search-result {
   display: block;
   padding: var(--space-sm) var(--space-md);
@@ -391,32 +403,62 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
   padding-block: var(--space-xl);
   margin-top: var(--space-2xl);
 }
+/* Three rows, full-width: brand + tagline | utility links | copyright.
+   Links stack horizontally and wrap only when the viewport can't fit
+   the full row. Centered horizontally on tablet+. */
 .site-footer__inner {
-  display: grid;
-  gap: var(--space-lg);
-  grid-template-columns: 1fr;
-}
-@media (min-width: 768px) {
-  .site-footer__inner { grid-template-columns: 1fr auto; }
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 .site-footer__name { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 700; }
 .site-footer__tagline { color: var(--fg-muted); font-size: var(--fs-sm); margin-top: var(--space-3xs); }
-.site-footer__nav ul {
+.site-footer__brand { text-align: left; }
+/* Single-line link row. Horizontal scroll kicks in only when the
+   viewport is too narrow to fit every label — we never wrap to a
+   second line. Scrollbar is hidden for a clean look on narrow
+   screens; users can still flick horizontally. */
+.site-footer__nav ul,
+.site-footer__links {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-md) var(--space-lg);
   list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  padding-block: var(--space-sm);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.site-footer__nav a { color: var(--fg); text-decoration: none; font-size: var(--fs-sm); }
+.site-footer__nav ul::-webkit-scrollbar,
+.site-footer__links::-webkit-scrollbar { display: none; }
+.site-footer__nav li { flex: 0 0 auto; }
+.site-footer__nav a { color: var(--fg); text-decoration: none; font-size: var(--fs-sm); white-space: nowrap; }
 .site-footer__nav a:hover { color: var(--accent); }
 .site-footer__copy {
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--border-soft);
-  padding-top: var(--space-md);
   font-size: var(--fs-xs);
   color: var(--fg-subtle);
+  margin: 0;
 }
 .site-footer__copy a { color: var(--fg-subtle); text-decoration: underline; }
+
+/* Mobile backdrop for the app sidebar. Visible only when
+   sidebarOpen; below 1024px desktop layout. Sits under the sidebar
+   (z-index 24 vs 25) so taps on it close the drawer. */
+.app-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 24;
+  cursor: pointer;
+}
+@media (min-width: 1024px) {
+  .app-sidebar-backdrop { display: none; }
+}
 
 /* App sidebar */
 .app-sidebar {
@@ -428,7 +470,11 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
   gap: var(--space-sm);
 
   position: fixed;
-  inset: 0 30% 0 0;
+  inset: 0 auto 0 0;
+  /* Width capped so the drawer doesn't engulf the viewport — leaves
+     a tappable strip on the right edge AND the backdrop above can
+     receive the dismiss tap. */
+  width: min(320px, 88vw);
   z-index: 25;
   transform: translateX(-100%);
   transition: transform var(--t-base);
@@ -464,24 +510,28 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
 }
 @media (min-width: 1024px) {
   .app-sidebar {
-    /* Full-viewport height sidebar that scrolls independently from
-       the main content. The header is sticky above so the user
-       always sees both — but the sidebar gets the whole viewport's
-       worth of vertical room for its account list. */
+    /* Desktop: sidebar is a grid child of .app-shell sized by the
+       --app-sidebar-width CSS variable that the resize handle JS
+       writes to. Clear every mobile-drawer rule so position/width
+       fall back to the grid layout. */
     position: sticky;
-    top: 0;
+    /* Sidebar sticks slightly higher than the header bottom (4rem)
+       so it gets +25px of extra vertical room — visible without
+       scrolling on shorter laptops + tablet-landscape. The header's
+       drop-shadow still separates the two. */
+    top: calc(4rem - 25px);
     inset: auto;
-    /* svh (small viewport height) accounts for mobile browser chrome;
-       falls back to vh on older browsers. min-height ensures we never
-       collapse if a parent constrains us. */
-    height: 100vh;
-    height: 100svh;
-    min-height: 100vh;
+    width: auto;
+    height: calc(100vh - 4rem + 25px);
+    height: calc(100svh - 4rem + 25px);
+    min-height: calc(100vh - 4rem + 25px);
     transform: none;
-    padding-top: calc(4rem + var(--space-sm));
+    padding-top: var(--space-sm);
     padding-bottom: var(--space-sm);
   }
   .app-sidebar__close { display: none; }
+  /* Desktop has its own resize handle — drawer backdrop is mobile-only. */
+  .app-sidebar-backdrop { display: none !important; }
 }
 
 /* Make the accounts panel grab all remaining vertical space between
@@ -535,13 +585,94 @@ button.search-result:focus-visible { background: var(--bg-alt); outline: none; }
 .app-sidebar__footer {
   margin-top: auto;
   border-top: 1px solid var(--border-soft);
-  padding-top: var(--space-2xs);
+  padding-top: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
   font-size: var(--fs-xs);
   color: var(--fg-muted);
   line-height: 1.3;
 }
-.last-saved { margin: 0 0 var(--space-3xs); }
-.app-sidebar__exit { color: var(--fg-muted); }
+
+/* Save-status pill: a 2-line stack with a status dot. Communicates
+   "the app is saving your work" without competing visually with the
+   exit link below it. The dot uses --ok for the steady state and
+   gently pulses to read as "live, healthy". */
+.save-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-xs);
+  background: var(--bg-alt);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+  cursor: help;
+}
+.save-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ok);
+  flex: 0 0 8px;
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok), transparent 50%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .save-status--ready .save-status__dot {
+    animation: save-pulse 2.4s ease-in-out infinite;
+  }
+}
+@keyframes save-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok), transparent 60%); }
+  50%      { box-shadow: 0 0 0 5px color-mix(in oklab, var(--ok), transparent 100%); }
+}
+.save-status--saved .save-status__dot { background: var(--accent); }
+.save-status__label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.save-status__eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  line-height: 1;
+}
+.save-status__state {
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Exit link rebuilt as a clear secondary action with an arrow icon
+   so users don't mistake it for part of the save-status block. */
+.app-sidebar__exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2xs) var(--space-xs);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-decoration: none;
+  border-radius: var(--radius-input);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.app-sidebar__exit:hover { color: var(--accent); background: var(--bg-alt); }
+.app-sidebar__exit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.app-sidebar__exit svg { flex: 0 0 14px; }
 
 /* Profile switcher */
 .profile-switcher { position: relative; }

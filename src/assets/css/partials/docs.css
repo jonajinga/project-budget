@@ -41,11 +41,26 @@
   gap: var(--space-lg);
 }
 @media (min-width: 1024px) {
-  .docs-layout { grid-template-columns: 240px 1fr 220px; gap: var(--space-xl); }
+  /* Docs pages: [docs sidebar | content | on-this-page TOC]. The
+     TOC moved to the LEFT next to the docs sidebar so site-wide
+     "where am I in this page" navigation lives in one consistent
+     column position. The right rail is now empty. */
+  .docs-layout { grid-template-columns: 220px 220px 1fr; gap: var(--space-xl); }
 }
 @media (min-width: 1024px) {
-  .docs-layout[data-sidebar="closed"] { grid-template-columns: 1fr 220px; }
+  .docs-layout[data-sidebar="closed"] { grid-template-columns: 220px 1fr; }
   .docs-layout[data-sidebar="closed"] .docs-layout__sidebar { display: none; }
+}
+
+/* Marketing/blog/glossary pages that don't have a docs sidebar use
+   a 2-column variant: [on-this-page TOC | content]. Mirrors the
+   docs layout's left-side navigation so the TOC always lives in
+   the same screen position. */
+.docs-layout--toc-left {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1024px) {
+  .docs-layout--toc-left { grid-template-columns: 220px 1fr; gap: var(--space-xl); }
 }
 
 .docs-layout__sidebar { min-width: 0; }

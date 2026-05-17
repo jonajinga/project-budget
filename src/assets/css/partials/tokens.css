@@ -57,53 +57,53 @@
   --radius: 0;
   --radius-input: 0;
 
-  /* Broadsheet light palette. */
-  --paper:        #f4f1eb;
-  --paper-raised: #fbf8f2;
-  --paper-sunken: #ebe6db;
-  --ink:          #1a1a1a;
-  --ink-soft:     #2c2c2c;
-  --muted:        #5c544a;
-  --rule:         #8b6f47;
-  --vermillion:   #c0392b;
-  --vermillion-d: #9e2d22;
-  --slate:        #2c5f8a;
-  --slate-d:      #1e4462;
-  --gold:         #b8862c;
+  /* ── Default light palette: GitHub Light ──────────────────────────
+     Standard "light" theme on the app. The legacy Broadsheet palette
+     (paper/vermillion) is still available via [data-theme="paper"]
+     as an opt-in preset. Raw color names below (--ink, --gold, etc.)
+     are kept as aliases so the few components that read them directly
+     continue to work. */
+  --bg:           #ffffff;
+  --bg-elevated:  #f6f8fa;
+  --bg-alt:       #eaeef2;
+  --fg:           #1f2328;
+  --fg-muted:     #57606a;
+  --fg-subtle:    #69717b;
+  --border:       rgba(31, 35, 40, 0.16);
+  --border-soft:  rgba(31, 35, 40, 0.08);
+  --border-strong:rgba(31, 35, 40, 0.42);
+  --accent:       #0969da;
+  --accent-hover: #0a3069;
+  --accent-soft:  rgba(9, 105, 218, 0.10);
+  --link:         #0969da;
+  --link-hover:   #0a3069;
+  --danger:       #cf222e;
+  --warn:         #9a6700;
+  --ok:           #1a7f37;
 
-  /* Project-local aliases used by the rest of the CSS. */
-  --bg:           var(--paper);
-  --bg-elevated:  var(--paper-raised);
-  --bg-alt:       var(--paper-sunken);
-  --fg:           var(--ink);
-  --fg-muted:     var(--muted);
-  /* --fg-subtle bumped from #6b6457 (~4.1:1 on --paper) to #524b43
-     (~5.9:1) so field hints, eyebrow labels, and footer fine-print
-     all clear WCAG 2.2 AA (4.5:1) for normal text. */
-  --fg-subtle:    #524b43;
-  --border:       rgba(26, 26, 26, 0.16);
-  --border-soft:  rgba(26, 26, 26, 0.08);
-  /* Stronger border tone reserved for interactive controls (buttons,
-     icon-buttons, focusable chips) so they read as clickable, not
-     decorative. ~3.2:1 against --paper — clears WCAG 1.4.11 (3:1 for
-     non-text UI components). Cards/dividers keep the softer --border. */
-  --border-strong: rgba(26, 26, 26, 0.42);
-  --accent:       var(--vermillion);
-  --accent-hover: var(--vermillion-d);
-  --accent-soft:  rgba(192, 57, 43, 0.10);
-  --link:         var(--slate);
-  --link-hover:   var(--slate-d);
-  --danger:       var(--vermillion-d);
-  --warn:         var(--gold);
-  --ok:           #2f6e4d;
+  /* Legacy raw palette aliases — components in nav.css + style-guide.css
+     reference var(--ink) and var(--gold) directly. Keep them pointing
+     at the active GitHub Light values so nothing breaks. */
+  --ink:          var(--fg);
+  --ink-soft:     var(--fg);
+  --muted:        var(--fg-muted);
+  --paper:        var(--bg);
+  --paper-raised: var(--bg-elevated);
+  --paper-sunken: var(--bg-alt);
+  --gold:         var(--warn);
+  --vermillion:   var(--accent);
+  --vermillion-d: var(--accent-hover);
+  --slate:        var(--link);
+  --slate-d:      var(--link-hover);
+  --rule:         var(--border);
 
-  /* D3 chart palette — read by charts/theme-colors.js. */
-  --chart-1: #c0392b;
-  --chart-2: #2c5f8a;
-  --chart-3: #b8862c;
-  --chart-4: #2f6e4d;
-  --chart-5: #8b6f47;
-  --chart-6: #5c544a;
+  /* D3 chart palette. */
+  --chart-1: #0969da;
+  --chart-2: #8250df;
+  --chart-3: #9a6700;
+  --chart-4: #1a7f37;
+  --chart-5: #cf222e;
+  --chart-6: #57606a;
 
   --shadow-sm: 0 1px 2px rgba(26, 26, 26, 0.06), 0 1px 4px rgba(26, 26, 26, 0.04);
   --shadow-md: 0 2px 4px rgba(26, 26, 26, 0.08), 0 6px 16px rgba(26, 26, 26, 0.08);
@@ -114,46 +114,45 @@
 }
 
 [data-theme="dark"] {
-  /* Broadsheet dark palette. */
-  --paper:        #12100e;
-  --paper-raised: #1c1a17;
-  --paper-sunken: #0a0908;
-  --ink:          #e8e3d6;
-  --ink-soft:     #d6d0c2;
-  --muted:        #b3aba0;
-  --rule:         #c2a878;
-  --vermillion:   #e05a4b;
-  --vermillion-d: #c0392b;
-  --slate:        #6fa9d9;
-  --slate-d:      #4e8dc0;
-  --gold:         #d4a45a;
+  /* Default dark palette: GitHub Dark. Legacy raw aliases stay
+     pointed at the active tokens for components that read them. */
+  --bg:           #0d1117;
+  --bg-elevated:  #161b22;
+  --bg-alt:       #21262d;
+  --fg:           #c9d1d9;
+  --fg-muted:     #8b949e;
+  --fg-subtle:    #7e858f;
+  --border:       rgba(201, 209, 217, 0.20);
+  --border-soft:  rgba(201, 209, 217, 0.10);
+  --border-strong:rgba(201, 209, 217, 0.50);
+  --accent:       #58a6ff;
+  --accent-hover: #1f6feb;
+  --accent-soft:  rgba(88, 166, 255, 0.18);
+  --link:         #58a6ff;
+  --link-hover:   #1f6feb;
+  --danger:       #f85149;
+  --warn:         #d29922;
+  --ok:           #3fb950;
 
-  --bg:           var(--paper);
-  --bg-elevated:  var(--paper-raised);
-  --bg-alt:       var(--paper-sunken);
-  --fg:           var(--ink);
-  --fg-muted:     var(--muted);
-  --fg-subtle:    #908779;
-  --border:       rgba(232, 227, 214, 0.24);
-  --border-soft:  rgba(232, 227, 214, 0.12);
-  /* Bumped from 0.42 → 0.58 — dark surfaces need more contrast on
-     button borders for WCAG 1.4.11 (3:1) to land convincingly. */
-  --border-strong: rgba(232, 227, 214, 0.58);
-  --accent:       var(--vermillion);
-  --accent-hover: var(--vermillion-d);
-  --accent-soft:  rgba(224, 90, 75, 0.16);
-  --link:         var(--slate);
-  --link-hover:   var(--slate-d);
-  --danger:       var(--vermillion);
-  --warn:         var(--gold);
-  --ok:           #6fbf95;
+  --ink:          var(--fg);
+  --ink-soft:     var(--fg);
+  --muted:        var(--fg-muted);
+  --paper:        var(--bg);
+  --paper-raised: var(--bg-elevated);
+  --paper-sunken: var(--bg-alt);
+  --gold:         var(--warn);
+  --vermillion:   var(--accent);
+  --vermillion-d: var(--accent-hover);
+  --slate:        var(--link);
+  --slate-d:      var(--link-hover);
+  --rule:         var(--border);
 
-  --chart-1: #e05a4b;
-  --chart-2: #6fa9d9;
-  --chart-3: #d4a45a;
-  --chart-4: #6fbf95;
-  --chart-5: #c2a878;
-  --chart-6: #b3aba0;
+  --chart-1: #58a6ff;
+  --chart-2: #a371f7;
+  --chart-3: #d29922;
+  --chart-4: #3fb950;
+  --chart-5: #f85149;
+  --chart-6: #79c0ff;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 4px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.30);
@@ -162,3 +161,274 @@
 
 html { color-scheme: light; }
 html[data-theme="dark"] { color-scheme: dark; }
+
+/* ── Theme presets ────────────────────────────────────────────────
+   Adapted from Guerilla Type's preset library. Each preset is gated
+   by [data-theme="<id>"] and only redefines the color tokens that
+   change — typography, spacing, shadows, borders all inherit from
+   the base. The Settings → Appearance picker writes the chosen ID
+   to localStorage (projectbudget-theme). All presets aim to clear
+   WCAG 2.2 AA contrast in the body-text + UI surface pairs. */
+
+[data-theme="solarized-dark"] {
+  color-scheme: dark;
+  --bg:           #002b36;
+  --bg-elevated:  #073642;
+  --bg-alt:       #0e4250;
+  --fg:           #fdf6e3;
+  --fg-muted:     #93a1a1;
+  --fg-subtle:    #859595;
+  --border:       rgba(253, 246, 227, 0.18);
+  --border-soft:  rgba(253, 246, 227, 0.10);
+  --border-strong:rgba(253, 246, 227, 0.45);
+  --accent:       #cb4b16;
+  --accent-hover: #b03a08;
+  --accent-soft:  rgba(203, 75, 22, 0.18);
+  --link:         #268bd2;
+  --link-hover:   #1d6ea0;
+  --danger:       #dc322f;
+  --warn:         #b58900;
+  --ok:           #859900;
+  --chart-1: #cb4b16; --chart-2: #268bd2; --chart-3: #b58900;
+  --chart-4: #859900; --chart-5: #6c71c4; --chart-6: #93a1a1;
+}
+
+[data-theme="solarized-light"] {
+  color-scheme: light;
+  --bg:           #fdf6e3;
+  --bg-elevated:  #eee8d5;
+  --bg-alt:       #e6dfc5;
+  --fg:           #073642;
+  --fg-muted:     #586e75;
+  --fg-subtle:    #556a71;
+  --border:       rgba(7, 54, 66, 0.18);
+  --border-soft:  rgba(7, 54, 66, 0.10);
+  --border-strong:rgba(7, 54, 66, 0.45);
+  --accent:       #b03a08;
+  --accent-hover: #7c2a04;
+  --accent-soft:  rgba(176, 58, 8, 0.12);
+  --link:         #1d6da4;
+  --link-hover:   #155988;
+  --danger:       #dc322f;
+  --warn:         #8e6c00;
+  --ok:           #586e0f;
+  --chart-1: #b03a08; --chart-2: #1d6da4; --chart-3: #8e6c00;
+  --chart-4: #586e0f; --chart-5: #6c71c4; --chart-6: #586e75;
+}
+
+[data-theme="dracula"] {
+  color-scheme: dark;
+  --bg:           #282a36;
+  --bg-elevated:  #343746;
+  --bg-alt:       #44475a;
+  --fg:           #f8f8f2;
+  --fg-muted:     #bdbdbe;
+  --fg-subtle:    #a3a3a3;
+  --border:       rgba(248, 248, 242, 0.20);
+  --border-soft:  rgba(248, 248, 242, 0.10);
+  --border-strong:rgba(248, 248, 242, 0.50);
+  --accent:       #ff79c6;
+  --accent-hover: #cc4d97;
+  --accent-soft:  rgba(255, 121, 198, 0.18);
+  --link:         #8be9fd;
+  --link-hover:   #6dc7da;
+  --danger:       #ff5555;
+  --warn:         #f1fa8c;
+  --ok:           #50fa7b;
+  --chart-1: #ff79c6; --chart-2: #8be9fd; --chart-3: #f1fa8c;
+  --chart-4: #50fa7b; --chart-5: #bd93f9; --chart-6: #ffb86c;
+}
+
+[data-theme="nord"] {
+  color-scheme: dark;
+  --bg:           #2e3440;
+  --bg-elevated:  #3b4252;
+  --bg-alt:       #434c5e;
+  --fg:           #eceff4;
+  --fg-muted:     #d8dee9;
+  --fg-subtle:    #a8b0bb;
+  --border:       rgba(236, 239, 244, 0.20);
+  --border-soft:  rgba(236, 239, 244, 0.10);
+  --border-strong:rgba(236, 239, 244, 0.50);
+  --accent:       #88c0d0;
+  --accent-hover: #5e81ac;
+  --accent-soft:  rgba(136, 192, 208, 0.18);
+  --link:         #81a1c1;
+  --link-hover:   #5e81ac;
+  --danger:       #bf616a;
+  --warn:         #ebcb8b;
+  --ok:           #a3be8c;
+  --chart-1: #88c0d0; --chart-2: #81a1c1; --chart-3: #ebcb8b;
+  --chart-4: #a3be8c; --chart-5: #b48ead; --chart-6: #d08770;
+}
+
+[data-theme="gruvbox-dark"] {
+  color-scheme: dark;
+  --bg:           #282828;
+  --bg-elevated:  #3c3836;
+  --bg-alt:       #504945;
+  --fg:           #fbf1c7;
+  --fg-muted:     #d5c4a1;
+  --fg-subtle:    #bdae93;
+  --border:       rgba(251, 241, 199, 0.20);
+  --border-soft:  rgba(251, 241, 199, 0.10);
+  --border-strong:rgba(251, 241, 199, 0.50);
+  --accent:       #fe8019;
+  --accent-hover: #d65d0e;
+  --accent-soft:  rgba(254, 128, 25, 0.18);
+  --link:         #83a598;
+  --link-hover:   #689d6a;
+  --danger:       #fb4934;
+  --warn:         #fabd2f;
+  --ok:           #b8bb26;
+  --chart-1: #fe8019; --chart-2: #83a598; --chart-3: #fabd2f;
+  --chart-4: #b8bb26; --chart-5: #d3869b; --chart-6: #d5c4a1;
+}
+
+[data-theme="one-dark"] {
+  color-scheme: dark;
+  --bg:           #282c34;
+  --bg-elevated:  #21252b;
+  --bg-alt:       #3a3f4b;
+  --fg:           #dde2ea;
+  --fg-muted:     #9aa0ad;
+  --fg-subtle:    #91969e;
+  --border:       rgba(221, 226, 234, 0.20);
+  --border-soft:  rgba(221, 226, 234, 0.10);
+  --border-strong:rgba(221, 226, 234, 0.50);
+  --accent:       #e06c75;
+  --accent-hover: #be5046;
+  --accent-soft:  rgba(224, 108, 117, 0.18);
+  --link:         #61afef;
+  --link-hover:   #4490c4;
+  --danger:       #e06c75;
+  --warn:         #e5c07b;
+  --ok:           #98c379;
+  --chart-1: #e06c75; --chart-2: #61afef; --chart-3: #e5c07b;
+  --chart-4: #98c379; --chart-5: #c678dd; --chart-6: #56b6c2;
+}
+
+[data-theme="tokyo-night"] {
+  color-scheme: dark;
+  --bg:           #1a1b26;
+  --bg-elevated:  #1f2335;
+  --bg-alt:       #24283b;
+  --fg:           #c0caf5;
+  --fg-muted:     #9aa5ce;
+  --fg-subtle:    #868c9d;
+  --border:       rgba(192, 202, 245, 0.20);
+  --border-soft:  rgba(192, 202, 245, 0.10);
+  --border-strong:rgba(192, 202, 245, 0.50);
+  --accent:       #bb9af7;
+  --accent-hover: #7c66ad;
+  --accent-soft:  rgba(187, 154, 247, 0.18);
+  --link:         #7aa2f7;
+  --link-hover:   #5e81d1;
+  --danger:       #f7768e;
+  --warn:         #e0af68;
+  --ok:           #9ece6a;
+  --chart-1: #bb9af7; --chart-2: #7aa2f7; --chart-3: #e0af68;
+  --chart-4: #9ece6a; --chart-5: #f7768e; --chart-6: #73daca;
+}
+
+[data-theme="catppuccin"] {
+  color-scheme: dark;
+  --bg:           #1e1e2e;
+  --bg-elevated:  #181825;
+  --bg-alt:       #313244;
+  --fg:           #cdd6f4;
+  --fg-muted:     #a6adc8;
+  --fg-subtle:    #83889f;
+  --border:       rgba(205, 214, 244, 0.20);
+  --border-soft:  rgba(205, 214, 244, 0.10);
+  --border-strong:rgba(205, 214, 244, 0.50);
+  --accent:       #f5c2e7;
+  --accent-hover: #c98ec0;
+  --accent-soft:  rgba(245, 194, 231, 0.18);
+  --link:         #89b4fa;
+  --link-hover:   #6a91d1;
+  --danger:       #f38ba8;
+  --warn:         #f9e2af;
+  --ok:           #a6e3a1;
+  --chart-1: #f5c2e7; --chart-2: #89b4fa; --chart-3: #f9e2af;
+  --chart-4: #a6e3a1; --chart-5: #cba6f7; --chart-6: #94e2d5;
+}
+
+[data-theme="rose-pine"] {
+  color-scheme: dark;
+  --bg:           #191724;
+  --bg-elevated:  #1f1d2e;
+  --bg-alt:       #26233a;
+  --fg:           #e0def4;
+  --fg-muted:     #908caa;
+  --fg-subtle:    #89859c;
+  --border:       rgba(224, 222, 244, 0.20);
+  --border-soft:  rgba(224, 222, 244, 0.10);
+  --border-strong:rgba(224, 222, 244, 0.50);
+  --accent:       #ebbcba;
+  --accent-hover: #b88e8d;
+  --accent-soft:  rgba(235, 188, 186, 0.18);
+  --link:         #9ccfd8;
+  --link-hover:   #7caab2;
+  --danger:       #eb6f92;
+  --warn:         #f6c177;
+  --ok:           #3e8fb0;
+  --chart-1: #ebbcba; --chart-2: #9ccfd8; --chart-3: #f6c177;
+  --chart-4: #3e8fb0; --chart-5: #c4a7e7; --chart-6: #eb6f92;
+}
+
+/* Broadsheet palette — the original cream-paper + vermillion-ink
+   Project Budget identity. Now a named preset so users who prefer
+   the warmer aesthetic can flip back. Pairs with [data-theme="ink"]
+   for the matching dark counterpart. */
+[data-theme="paper"] {
+  color-scheme: light;
+  --bg:           #f4f1eb;
+  --bg-elevated:  #fbf8f2;
+  --bg-alt:       #ebe6db;
+  --fg:           #1a1a1a;
+  --fg-muted:     #5c544a;
+  --fg-subtle:    #524b43;
+  --border:       rgba(26, 26, 26, 0.16);
+  --border-soft:  rgba(26, 26, 26, 0.08);
+  --border-strong: rgba(26, 26, 26, 0.42);
+  --accent:       #c0392b;
+  --accent-hover: #9e2d22;
+  --accent-soft:  rgba(192, 57, 43, 0.10);
+  --link:         #2c5f8a;
+  --link-hover:   #1e4462;
+  --danger:       #9e2d22;
+  --warn:         #8e6620;
+  --ok:           #2f6e4d;
+  --chart-1: #c0392b; --chart-2: #2c5f8a; --chart-3: #b8862c;
+  --chart-4: #2f6e4d; --chart-5: #8b6f47; --chart-6: #5c544a;
+}
+
+[data-theme="ink"] {
+  color-scheme: dark;
+  --bg:           #12100e;
+  --bg-elevated:  #1c1a17;
+  --bg-alt:       #0a0908;
+  --fg:           #e8e3d6;
+  --fg-muted:     #b3aba0;
+  --fg-subtle:    #908779;
+  --border:       rgba(232, 227, 214, 0.24);
+  --border-soft:  rgba(232, 227, 214, 0.12);
+  --border-strong: rgba(232, 227, 214, 0.58);
+  --accent:       #e05a4b;
+  --accent-hover: #c0392b;
+  --accent-soft:  rgba(224, 90, 75, 0.16);
+  --link:         #6fa9d9;
+  --link-hover:   #4e8dc0;
+  --danger:       #e05a4b;
+  --warn:         #d4a45a;
+  --ok:           #6fbf95;
+  --chart-1: #e05a4b; --chart-2: #6fa9d9; --chart-3: #d4a45a;
+  --chart-4: #6fbf95; --chart-5: #c2a878; --chart-6: #b3aba0;
+}
+
+/* Aliases for legacy localStorage values — anyone who saved
+   "github-light" or "github-dark" still gets the right palette
+   (which is now the default light/dark). */
+[data-theme="github-light"] { color-scheme: light; }
+[data-theme="github-dark"]  { color-scheme: dark; }

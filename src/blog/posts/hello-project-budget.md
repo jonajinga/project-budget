@@ -22,4 +22,4 @@ Project Budget will not sync to your bank. It will not run on a phone as a nativ
 
 ## What's next
 
-The roadmap is short on purpose: more bank-export shape detectors as people ask, a small handful of additional reports, and the option to encrypt exports for users who want it. The full plan is in the [changelog](/changelog/) and on [GitHub](https://github.com/jonajinga/project-budget).
+The roadmap is short on purpose: more bank-export shape detectors as people ask, a small handful of additional reports, and the option to encrypt exports for users who want it. The full plan lives on [GitHub](https://github.com/jonajinga/project-budget).

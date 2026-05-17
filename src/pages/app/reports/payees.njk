@@ -5,20 +5,7 @@ description: "Top merchants and payees ranked by total spend. Surfaces subscript
 permalink: /app/reports/payees/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page"
-     x-data="Object.assign(
-       payeeLeaderboardView(),
-       reportTable(
-         (self) => ($store.budget.reportPayeeLeaderboard(self.from, self.to, self.limit) || []),
-         { keys: [
-             { key: 'payee',    label: 'Payee' },
-             { key: 'total',    label: 'Total spent', numeric: true },
-             { key: 'count',    label: 'Transactions', numeric: true },
-             { key: 'avg',      label: 'Avg / txn',    numeric: true },
-             { key: 'lastDate', label: 'Last used' },
-           ], defaultSort: { key: 'total', dir: 'desc' } }
-       )
-     )" x-init="init()">
+<div class="app-page" x-data="payeeLeaderboardView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Payee leaderboard</h1>
@@ -118,25 +105,94 @@ eleventyExcludeFromCollections: true
 
 <script>
 function payeeLeaderboardView() {
+  /* Initial 12-month window ending today. Set synchronously so the
+     first render has valid date strings. */
+  var d = new Date();
+  var toInitial = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  var fd = new Date(d.getFullYear() - 1, d.getMonth(), 1);
+  var fromInitial = fd.getFullYear() + "-" + String(fd.getMonth() + 1).padStart(2, "0");
+
   return {
-    from: '',
-    to: '',
+    from: fromInitial,
+    to: toInitial,
     limit: 25,
+
+    query: "",
+    sortKey: "total",
+    sortDir: "desc",
+    _keys: [
+      { key: "payee",    label: "Payee" },
+      { key: "total",    label: "Total spent", numeric: true },
+      { key: "count",    label: "Transactions", numeric: true },
+      { key: "avg",      label: "Avg / txn",    numeric: true },
+      { key: "lastDate", label: "Last used" },
+    ],
+    get rows() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportPayeeLeaderboard(this.from, this.to, this.limit) || [];
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q ? src.filter(function (r) { return String(r.payee || "").toLowerCase().indexOf(q) !== -1; }) : src;
+      var key = this.sortKey, dir = this.sortDir;
+      var keyDef = this._keys.find(function (k) { return k.key === key; });
+      var numeric = !!(keyDef && keyDef.numeric);
+      var copy = filtered.slice();
+      copy.sort(function (a, b) {
+        if (numeric) {
+          var an = Number(a[key]) || 0, bn = Number(b[key]) || 0;
+          return dir === "asc" ? an - bn : bn - an;
+        }
+        var as = String(a[key] == null ? "" : a[key]);
+        var bs = String(b[key] == null ? "" : b[key]);
+        return dir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+      return copy;
+    },
+    get visibleCount() { return this.rows.length; },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        var kd = this._keys.find(function (k) { return k.key === key; });
+        this.sortDir = kd && kd.numeric ? "desc" : "asc";
+      }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+    print() { window.print(); },
+    exportCSV(name) {
+      var self = this;
+      var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");
+      var body = this.rows.map(function (r) {
+        return self._keys.map(function (k) {
+          var v = r[k.key];
+          if (v == null) return "";
+          if (k.numeric && Math.abs(v) >= 1000 && Number.isInteger(v)) v = (v / 100).toFixed(2);
+          return JSON.stringify(String(v));
+        }).join(",");
+      }).join("\r\n");
+      var blob = new Blob([header + "\r\n" + body], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = (name || "report") + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    },
+
     init() {
+      /* Snap to active profile's currentMonth once the store is up. */
       var store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
       if (store && store.currentMonth) {
         this.to = store.currentMonth;
         var parts = store.currentMonth.split("-").map(Number);
-        var fd = new Date(parts[0] - 1, parts[1] - 1, 1);  /* 12 months back */
-        this.from = fd.getFullYear() + "-" + String(fd.getMonth() + 1).padStart(2, "0");
-      } else {
-        var d = new Date();
-        this.to = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-        var f = new Date(d.getFullYear() - 1, d.getMonth(), 1);
-        this.from = f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0");
+        var fbd = new Date(parts[0] - 1, parts[1] - 1, 1);
+        this.from = fbd.getFullYear() + "-" + String(fbd.getMonth() + 1).padStart(2, "0");
       }
     },
-    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     kpis() {
       var data = this.$store.budget.reportPayeeLeaderboard(this.from, this.to, this.limit) || [];
       var total = data.reduce(function (s, r) { return s + r.total; }, 0);
@@ -147,7 +203,7 @@ function payeeLeaderboardView() {
         count: data.length,
         txns: txns,
         avgTxn: txns ? Math.round(total / txns) : 0,
-        topName: data[0] ? data[0].payee : '',
+        topName: data[0] ? data[0].payee : "",
         topShare: data[0] && total > 0 ? (data[0].total / total) * 100 : null,
         top5Share: total > 0 ? (top5 / total) * 100 : null,
       };

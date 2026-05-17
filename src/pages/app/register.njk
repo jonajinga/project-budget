@@ -126,9 +126,10 @@ eleventyExcludeFromCollections: true
             <button type="button"
                     class="cleared-toggle"
                     :aria-pressed="form.cleared.toString()"
+                    :aria-label="form.cleared ? 'Cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'"
                     @click="form.cleared = !form.cleared"
                     :data-tip="form.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
-              <span x-show="form.cleared">&#10003;</span>
+              <span x-show="form.cleared" aria-hidden="true">&#10003;</span>
             </button>
             <span>Cleared</span>
           </span>
@@ -213,10 +214,11 @@ eleventyExcludeFromCollections: true
                 <button type="button"
                         class="cleared-toggle"
                         :aria-pressed="t.cleared.toString()"
+                        :aria-label="t.reconciled ? 'Reconciled and locked' : (t.cleared ? 'Cleared. Click to uncheck.' : 'Mark as cleared')"
                         :data-locked="t.reconciled.toString()"
                         @click="toggleCleared(t)"
                         :data-tip="t.reconciled ? 'Reconciled and locked. Unlock to change.' : (t.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).')">
-                  <span x-show="t.cleared">&#10003;</span>
+                  <span x-show="t.cleared" aria-hidden="true">&#10003;</span>
                 </button>
               </td>
             </template>
@@ -309,9 +311,10 @@ eleventyExcludeFromCollections: true
                 <button type="button"
                         class="cleared-toggle"
                         :aria-pressed="edit.cleared.toString()"
+                        :aria-label="edit.cleared ? 'Cleared. Click to uncheck.' : 'Mark as cleared'"
                         @click="edit.cleared = !edit.cleared"
                         :data-tip="edit.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
-                  <span x-show="edit.cleared">&#10003;</span>
+                  <span x-show="edit.cleared" aria-hidden="true">&#10003;</span>
                 </button>
               </td>
             </template>
@@ -369,10 +372,11 @@ eleventyExcludeFromCollections: true
             <div class="cluster" style="flex-wrap: wrap;">
               <button type="button" class="cleared-toggle"
                       :aria-pressed="t.cleared.toString()"
+                      :aria-label="t.reconciled ? 'Reconciled and locked' : (t.cleared ? 'Cleared. Click to uncheck.' : 'Mark as cleared')"
                       :data-locked="t.reconciled.toString()"
                       @click="toggleCleared(t)"
                       title="Toggle cleared">
-                <span x-show="t.cleared">&#10003;</span>
+                <span x-show="t.cleared" aria-hidden="true">&#10003;</span>
               </button>
               <button class="btn btn--ghost btn--sm" type="button" @click="startEdit(t)" x-show="!t.reconciled && !t.transferTxnId">Edit</button>
               <button class="btn btn--ghost btn--sm" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId">Split</button>
@@ -421,9 +425,10 @@ eleventyExcludeFromCollections: true
               <button type="button"
                       class="cleared-toggle"
                       :aria-pressed="edit.cleared.toString()"
+                      :aria-label="edit.cleared ? 'Cleared. Click to uncheck.' : 'Mark as cleared'"
                       @click="edit.cleared = !edit.cleared"
                       :data-tip="edit.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
-                <span x-show="edit.cleared">&#10003;</span>
+                <span x-show="edit.cleared" aria-hidden="true">&#10003;</span>
               </button>
               <span>Cleared</span>
             </span>

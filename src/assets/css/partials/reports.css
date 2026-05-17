@@ -120,3 +120,24 @@
   width: 0.75em;
   display: inline-block;
 }
+
+/* Month-cell link in report tables — drills to /app/calendar/?m=...
+   Underlined to read as a clear affordance; uses accent color on
+   hover so it stands out as the primary navigation target in the
+   row. Tippy tooltip explains where the click goes. */
+.report-month-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.report-month-link:hover {
+  color: var(--accent);
+  text-decoration-thickness: 2px;
+}
+.report-month-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -48,7 +48,12 @@ eleventyExcludeFromCollections: true
       <tbody>
         <template x-for="r in rows" :key="r.month">
           <tr>
-            <td x-text="r.month"></td>
+            <td>
+              <a class="report-month-link"
+                 :href="'/app/calendar/?m=' + r.month + '&v=month'"
+                 x-text="r.month"
+                 data-tip="Open this month in the calendar."></a>
+            </td>
             <td class="num" :class="r.low < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.low / 100).toFixed(2)"></td>
             <td class="num" :class="r.expected < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.expected / 100).toFixed(2)"></td>
             <td class="num" :class="r.high < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.high / 100).toFixed(2)"></td>
@@ -71,33 +76,67 @@ eleventyExcludeFromCollections: true
 
 <script>
 function projectionView() {
-  /* Extend the generic reportTable() factory with this report's
-     horizon state. The chart mount + redraw lifecycle stays in init. */
-  var rt = window.reportTable(function () {
-    return Alpine.store("budget").reportProjection(this.horizon || 12);
-  }, {
-    keys: [
+  return {
+    horizon: 12,
+
+    query: "",
+    sortKey: "month",
+    sortDir: "asc",
+    _keys: [
       { key: "month",    label: "Month" },
       { key: "low",      label: "Low",      numeric: true },
       { key: "expected", label: "Expected", numeric: true },
       { key: "high",     label: "High",     numeric: true },
     ],
-    defaultSort: { key: "month", dir: "asc" },
-  });
-  rt.horizon = 12;
-  rt.init = function () {
-    var self = this;
-    var ready = function () { return window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart; };
-    var tries = 0;
-    var poll = function () {
-      if (ready()) {
-        var store = Alpine.store("budget");
-        var inst = window.pbMountChart("#chart-proj", window.pbRenderProj, function () { return store.reportProjection(self.horizon); });
-        Alpine.effect(function () { self.horizon; store.profile; inst.redraw(); });
-      } else if (++tries < 50) setTimeout(poll, 50);
-    };
-    poll();
+    get rows() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportProjection(this.horizon || 12) || [];
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q ? src.filter(function (r) { return String(r.month).toLowerCase().indexOf(q) !== -1; }) : src;
+      var key = this.sortKey, dir = this.sortDir;
+      var keyDef = this._keys.find(function (k) { return k.key === key; });
+      var numeric = !!(keyDef && keyDef.numeric);
+      var copy = filtered.slice();
+      copy.sort(function (a, b) {
+        if (numeric) {
+          var an = Number(a[key]) || 0, bn = Number(b[key]) || 0;
+          return dir === "asc" ? an - bn : bn - an;
+        }
+        var as = String(a[key] == null ? "" : a[key]);
+        var bs = String(b[key] == null ? "" : b[key]);
+        return dir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+      return copy;
+    },
+    get visibleCount() { return this.rows.length; },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        var kd = this._keys.find(function (k) { return k.key === key; });
+        this.sortDir = kd && kd.numeric ? "desc" : "asc";
+      }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+    print() { window.print(); },
+
+    init() {
+      var self = this;
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart;
+        if (ready) {
+          var store = Alpine.store("budget");
+          var inst = window.pbMountChart("#chart-proj", window.pbRenderProj, function () { return store.reportProjection(self.horizon); });
+          Alpine.effect(function () { self.horizon; store.profile; store._listVersion; inst.redraw(); });
+        } else if (++tries < 50) setTimeout(poll, 50);
+      };
+      poll();
+    },
   };
-  return rt;
 }
 </script>

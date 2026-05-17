@@ -1,4 +1,6 @@
-<aside class="app-sidebar" :class="{ 'is-open': sidebarOpen }" aria-label="App navigation">
+<aside id="app-sidebar" class="app-sidebar" :class="{ 'is-open': sidebarOpen }"
+       aria-label="App navigation"
+       @keydown.escape.window="sidebarOpen = false">
   <button class="app-sidebar__close"
           type="button"
           @click="sidebarOpen = false"
@@ -12,6 +14,7 @@
         <li>
           <a href="{{ item.url }}"
              class="app-nav__link"
+             @click="sidebarOpen = false"
              {% if page.url == item.url %}aria-current="page"{% endif %}>
             <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -56,10 +59,34 @@
   </div>
 
   <div class="app-sidebar__footer">
-    <p class="last-saved" aria-live="polite">
-      <span x-text="$store.budget && $store.budget.lastSavedLabel ? $store.budget.lastSavedLabel : 'Ready'"></span>
-    </p>
-    <a class="app-sidebar__exit" href="/">Back to site</a>
+    {# Save-status pill: dot + label communicates that the app is
+       saving as you go. "Ready" is the steady state; saving / saved
+       overlay it briefly on mutation. Tippy spells out the meaning. #}
+    <div class="save-status"
+         x-data
+         :class="$store.budget && $store.budget.lastSavedLabel ? 'save-status--saved' : 'save-status--ready'"
+         role="status"
+         aria-live="polite"
+         data-tip="Auto-save status. Your profile is written to this browser's localStorage on every change — no network call, no account required.">
+      <span class="save-status__dot" aria-hidden="true"></span>
+      <span class="save-status__label">
+        <span class="save-status__eyebrow">Auto-save</span>
+        <span class="save-status__state"
+              x-text="$store.budget && $store.budget.lastSavedLabel ? $store.budget.lastSavedLabel : 'Ready · all changes saved'"></span>
+      </span>
+    </div>
+
+    {# Exit affordance — separated from the save indicator so users
+       don't read "Back to site" as part of the save state. Marked as
+       a secondary action with an arrow icon for affordance clarity. #}
+    <a class="app-sidebar__exit" href="/"
+       data-tip="Leave the app shell and return to the public Project Budget website. Your data stays put.">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M19 12H5"/>
+        <polyline points="12 19 5 12 12 5"/>
+      </svg>
+      <span>Back to public site</span>
+    </a>
   </div>
 </aside>
 

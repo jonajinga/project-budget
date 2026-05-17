@@ -9,6 +9,12 @@ eleventyExcludeFromCollections: true
   <header class="app-page__header">
     <h1 class="app-page__title">Categories</h1>
     <div class="cluster">
+      <button class="btn btn--ghost btn--sm" type="button"
+              x-show="hasGroups"
+              x-cloak
+              @click="$store.budget.setAllCatGroupsCollapsed(!$store.budget.allCatGroupsCollapsed())"
+              :data-tip="$store.budget.allCatGroupsCollapsed() ? 'Expand every category group at once.' : 'Collapse every category group at once.'"
+              x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all' : 'Collapse all'"></button>
       <button class="btn btn--secondary" type="button" @click="showGroup = true">New group</button>
     </div>
   </header>
@@ -35,8 +41,24 @@ eleventyExcludeFromCollections: true
             <span class="dnd-handle"
                   :aria-label="'Drag to reorder group ' + (group.group?.name || '')"
                   x-show="group.group" aria-hidden="false">&#9776;</span>
-            <h2 class="card__title" style="margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis;"
-                x-text="group.group ? group.group.name : 'Ungrouped'"></h2>
+            {# Collapse toggle — chevron + group title together form
+               one clickable affordance. Uses the budget store's
+               existing per-group collapse state so the same toggle
+               persists across the /app/budget/ + /app/categories/
+               views. Ungrouped block has no collapse state. #}
+            <button type="button" class="group-toggle"
+                    @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
+                    :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
+                    :disabled="!group.group"
+                    :data-tip="group.group ? ($store.budget.isCatGroupCollapsed(group.group.id) ? 'Expand this group.' : 'Collapse this group.') : ''">
+              <span class="group-toggle__chevron"
+                    :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''"
+                    aria-hidden="true">&#9662;</span>
+              <h2 class="card__title" style="margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis;"
+                  x-text="group.group ? group.group.name : 'Ungrouped'"></h2>
+              <span class="group-toggle__count" x-show="group.group" x-cloak
+                    x-text="group.categories.length + (group.categories.length === 1 ? ' category' : ' categories')"></span>
+            </button>
           </div>
           <div class="cluster">
             <button class="btn btn--icon" type="button"
@@ -71,6 +93,7 @@ eleventyExcludeFromCollections: true
           </div>
         </header>
 
+        <div x-show="!(group.group && $store.budget.isCatGroupCollapsed(group.group.id))" x-cloak>
         <table class="table">
           <thead>
             <tr>
@@ -131,6 +154,7 @@ eleventyExcludeFromCollections: true
             </tr>
           </tbody>
         </table>
+        </div>
       </section>
     </template>
   </div>

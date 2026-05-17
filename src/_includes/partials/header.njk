@@ -5,12 +5,18 @@
   {% if isApp %}
     {# ---- App-mode header: hamburger | profile | theme toggle ---- #}
     <div class="container site-header__inner site-header__inner--app">
+      {# In app mode the hamburger opens the app SIDEBAR (Budget /
+         Register / Calendar / Accounts list / Save status / Profile
+         switcher), not the marketing site-menu. The custom event
+         flows up to the layout-level x-data="{ sidebarOpen }" that
+         drives the mobile drawer. #}
       <button type="button"
               class="site-header__hamburger"
-              aria-controls="site-menu"
+              aria-controls="app-sidebar"
               aria-expanded="false"
-              aria-label="Open menu"
-              data-tip="Open the main menu — site links, documentation, and settings.">
+              aria-label="Open app navigation"
+              onclick="window.dispatchEvent(new CustomEvent('open-sidebar')); this.setAttribute('aria-expanded','true');"
+              data-tip="Open the app sidebar — Budget, Register, Calendar, Accounts, and profile switcher.">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <line x1="3" y1="6"  x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
@@ -138,13 +144,10 @@
       {% for item in nav.main %}
         <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
       {% endfor %}
-    </ul>
-
-    <p class="site-menu__group-label">More</p>
-    <ul class="site-menu__list">
       {% for item in nav.footer %}
         <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
       {% endfor %}
+      <li><a href="{{ site.repo }}" class="site-menu__link" rel="noopener">GitHub</a></li>
     </ul>
   </aside>
 

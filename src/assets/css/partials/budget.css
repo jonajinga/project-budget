@@ -19,7 +19,8 @@
   font-size: var(--fs-xl);
 }
 .budget__month-button {
-  width: 36px; height: 36px;
+  width: 44px; height: 44px;
+  min-height: 44px; min-width: 44px;
   border: 1px solid var(--border);
   border-radius: var(--radius-input);
   font-size: 1.1rem;
@@ -90,7 +91,18 @@
 }
 .budget__row:hover .budget__row-actions,
 .budget__row:focus-within .budget__row-actions { opacity: 1; }
-.budget__row-actions .btn--icon { width: 26px; height: 26px; min-height: 26px; }
+/* Dense per-row icon buttons: shrink visual to 28x28 to keep the
+   row compact, but extend the hit area to 44x44 via ::before so
+   touch targets meet WCAG 2.5.5. Override min-width too — the
+   global .btn--icon now forces 44px which would swallow row height. */
+.budget__row-actions .btn--icon {
+  width: 28px; min-width: 28px;
+  height: 28px; min-height: 28px;
+  position: relative;
+}
+.budget__row-actions .btn--icon::before {
+  content: ""; position: absolute; inset: -8px;
+}
 @media (hover: none) {
   .budget__row-actions { opacity: 1; }
 }
@@ -103,7 +115,14 @@
 }
 .budget__group:hover .budget__group-actions,
 .budget__group:focus-within .budget__group-actions { opacity: 1; }
-.budget__group-actions .btn--icon { width: 28px; height: 28px; min-height: 28px; }
+.budget__group-actions .btn--icon {
+  width: 32px; min-width: 32px;
+  height: 32px; min-height: 32px;
+  position: relative;
+}
+.budget__group-actions .btn--icon::before {
+  content: ""; position: absolute; inset: -6px;
+}
 @media (hover: none) {
   .budget__group-actions { opacity: 1; }
 }
@@ -147,7 +166,7 @@
   white-space: nowrap;
 }
 .goal-badge--funded  { background: var(--accent-soft); color: var(--accent); }
-.goal-badge--partial { background: rgba(168, 107, 20, 0.12); color: var(--warn); }
+.goal-badge--partial { background: rgba(168, 107, 20, 0.20); color: var(--warn); }
 .goal-badge--needed  { background: rgba(168, 52, 31, 0.12); color: var(--danger); }
 .goal-badge--over    { background: var(--accent-soft); color: var(--accent); }
 
@@ -178,7 +197,8 @@
   cursor: pointer;
   border-radius: var(--radius);
   white-space: nowrap;
-  min-height: 36px;
+  /* WCAG 2.5.5: 44x44 target. */
+  min-height: 44px;
 }
 .month-strip__year:hover { color: var(--accent); background: var(--bg-alt); }
 .month-strip__year:focus-visible {
@@ -202,7 +222,9 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  min-height: 36px;
+  /* 44x44 minimum — 12 tabs in a row makes thumb tapping error-prone
+     at smaller targets. */
+  min-height: 44px;
   border-radius: var(--radius);
   white-space: nowrap;
 }
@@ -306,18 +328,20 @@
   border-radius: var(--radius-input);
   font-family: var(--font-ui);
   padding: var(--space-md);
-  /* No upper margin — sits flush under the grid (or directly under
-     the toolbar when the grid is collapsed). */
   margin-top: 0;
   box-shadow: var(--shadow-sm);
   align-items: center;
   row-gap: var(--space-sm);
-  /* Override the default 6.5rem numeric columns — values use fs-xl
-     (24px) tabular numerals and 7-digit dollars need ~9rem to avoid
-     spilling into the next column. The label column flexes to fill
-     leftover space; numeric columns get more room first. */
-  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(9rem, max-content));
+  /* Mobile-first: stack label + 3 numeric values into a single
+     column so the row never overflows a 360px viewport. The 3-up
+     desktop layout kicks in at 600px+. */
+  grid-template-columns: 1fr;
   column-gap: var(--space-md);
+}
+@media (min-width: 600px) {
+  .budget__total-row {
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(9rem, max-content));
+  }
 }
 .budget__total-row .num {
   display: flex;
@@ -446,79 +470,106 @@
    Layout: full-width progress bar with inline "%/funded" cap, then
    a 2x2 grid of stat tiles, then a narrative paragraph below. */
 .goal-status {
-  margin: 0 0 var(--space-md);
-  padding: var(--space-md);
+  margin: 0 0 var(--space-lg);
+  padding: var(--space-lg) var(--space-md) var(--space-md);
   background: var(--bg-alt);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 .goal-status__bar {
   position: relative;
   width: 100%;
-  height: 28px;
+  height: 16px;
   background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
   overflow: hidden;
-  margin-bottom: var(--space-md);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: var(--space-sm);
 }
 .goal-status__fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: color-mix(in oklab, var(--accent), transparent 50%);
+  background: color-mix(in oklab, var(--accent), transparent 35%);
   transition: width var(--t-base);
 }
-.goal-status__fill--low     { background: color-mix(in oklab, var(--warn),  transparent 55%); }
-.goal-status__fill--partial { background: color-mix(in oklab, var(--accent), transparent 55%); }
-.goal-status__fill--funded  { background: color-mix(in oklab, var(--ok),    transparent 45%); }
+.goal-status__fill--low     { background: color-mix(in oklab, var(--warn),  transparent 45%); }
+.goal-status__fill--partial { background: color-mix(in oklab, var(--accent), transparent 35%); }
+.goal-status__fill--funded  { background: color-mix(in oklab, var(--ok),    transparent 30%); }
+/* Cap text sits above the bar, right-aligned, so it can always be
+   read regardless of the fill position. */
 .goal-status__cap {
-  position: relative;
+  align-self: flex-end;
+  font-family: var(--font-ui);
   font-size: var(--fs-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
   color: var(--fg);
+  margin-top: calc(-1 * var(--space-2xs));
+}
+.goal-status__bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .goal-status__stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-sm);
-  margin: 0 0 var(--space-sm);
+  margin: 0;
   padding: 0;
 }
 @media (min-width: 600px) {
   .goal-status__stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .goal-status__stat {
+  /* Container query context so the value font-size can scale to fit
+     the tile width — fixed font-size at the parent breakpoint level
+     was causing values like "$100.00" / "$876.50" / "✓ Funded" to
+     overflow narrow tiles and get truncated with ellipsis. */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: var(--space-sm);
+  justify-content: space-between;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-sm) var(--space-2xs);
   background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-input);
+  min-height: 5.5rem;
+  min-width: 0;
+  cursor: help;
 }
-.goal-status__stat--needed { border-left: 3px solid var(--accent); }
+.goal-status__stat--needed {
+  border-left: 3px solid var(--accent);
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+}
 .goal-status__stat dt {
-  font-size: 0.625rem;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--fg-muted);
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.2;
   margin: 0;
 }
 .goal-status__stat dd {
   margin: 0;
   font-family: var(--font-ui);
-  font-size: var(--fs-md);
+  /* Fluid scaling: 0.95rem → 1.25rem based on the tile's own inline
+     size. Tile widths cluster around 120-160px in the 4-up grid;
+     11cqi puts the value at ~14-18px which fits "$1,234.56" without
+     ellipsis truncation. Wraps cleanly if a value still won't fit
+     (no nowrap / no overflow:hidden / no text-overflow). */
+  font-size: clamp(0.95rem, 11cqi, 1.25rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 .goal-status__hint {
   margin: 0;
@@ -918,7 +969,7 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   gap: 2px;
 }
 .cal-toolbar__view {
-  padding: 0.45rem 0.85rem;
+  padding: 0.65rem 0.95rem;
   background: transparent;
   border: 0;
   color: var(--fg-muted);
@@ -926,7 +977,9 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   font-weight: 600;
   cursor: pointer;
   border-radius: calc(var(--radius) + 2px);
-  min-height: 36px;
+  /* 44x44 — Day/Week/Month/Year tabs are the primary navigation
+     for the calendar; thumb-friendly targets matter most here. */
+  min-height: 44px;
 }
 .cal-toolbar__view:hover { color: var(--fg); }
 .cal-toolbar__view:focus-visible {
@@ -1358,6 +1411,15 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   background: var(--bg-alt);
   border: 0;
   padding: 0;
+}
+/* Below 600px the 5.25rem WK column plus 7 day cells overflows
+   horizontally. Collapse to the same compact width as the no-totals
+   variant so the grid fits a 360px viewport. The per-week stat
+   tiles inside wknum are hidden by the cell-totals collapse rule. */
+@media (max-width: 599px) {
+  .cal__wknum,
+  .cal--no-totals .cal__wknum { flex: 0 0 1.75rem; width: 1.75rem; }
+  .cal__wknum-stats { display: none !important; }
 }
 .cal__wknum--head {
   align-items: center;
@@ -2014,15 +2076,17 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   box-shadow: 0 0 0 1px var(--accent);
 }
 .cal-mini__cell--today .cal-mini__day { color: #fff; font-weight: 700; }
-/* High-intensity heatmap cells (≥50% — the dark accent backgrounds)
-   need light text to meet WCAG 1.4.3 (4.5:1 for normal text). The
-   default --fg ink color sits at ~2.5:1 against the strong accent
-   tint; #fff sits at ~5:1. Also overrides nested amount--* classes
-   so the +/− values keep contrast in net-display mode. */
+/* Any cell tinted with the accent — even at lower intensity (≥25%)
+   — needs white text + white amount colors. The default --fg sits
+   too close to the accent on light themes (GitHub Light, Solarized
+   Light) and the amount--inflow / amount--outflow colors collide
+   with the accent-tinted background. Forcing white at ≥25% gives a
+   clean ≥4.5:1 across every theme. The threshold flips the
+   .cal-mini__cell--hot class on the cell from the template. */
 .cal-mini__cell--hot .cal-mini__day,
 .cal-mini__cell--hot .cal-mini__day .amount--inflow,
 .cal-mini__cell--hot .cal-mini__day .amount--outflow,
-.cal-mini__cell--hot .cal-mini__day .cal-mini__day-zero { color: #fff; }
+.cal-mini__cell--hot .cal-mini__day .cal-mini__day-zero { color: #fff !important; }
 .cal-mini__day {
   flex: 1;
   background: transparent;
@@ -2314,8 +2378,12 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   flex-direction: column;
   gap: 4px;
   padding: var(--space-sm) var(--space-2xs) var(--space-sm) var(--space-sm);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
+  /* Faint accent-tinted fill — reads as a deliberate card against
+     both the cream paper modal in light mode AND the near-black
+     modal in dark mode, without the harsh "black-on-black" effect
+     of the previous --bg-elevated fill. */
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+  border: 1px solid var(--border-strong);
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   cursor: help;
@@ -2324,7 +2392,10 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
      ("$5,800.00" never breaks across two lines). */
   container-type: inline-size;
 }
-.cal-period-totals__tile--muted { border-left-color: var(--border); }
+.cal-period-totals__tile--muted {
+  background: var(--bg-elevated);
+  border-left-color: var(--border-strong);
+}
 .cal-period-totals__tile dt {
   font-size: 0.65rem;
   text-transform: uppercase;
@@ -2441,6 +2512,11 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 @media (max-width: 599px)  { .kpi-strip { grid-template-columns: 1fr; } }
 
 .kpi {
+  /* Each tile is its own container so the value can fluidly scale
+     down when 2-up wrapping puts narrow cards on tablet portrait
+     (~360-470px wide each). Without this a 7-digit currency string
+     would overflow the card. */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-3xs);
@@ -2449,6 +2525,7 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   border: 1px solid var(--border-soft);
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
+  min-width: 0;
 }
 .kpi--ok      { border-left-color: var(--ok); }
 .kpi--warn    { border-left-color: var(--warn); }
@@ -2462,11 +2539,19 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   font-weight: 600;
 }
 .kpi__value {
-  font-size: var(--fs-2xl);
+  /* Scales 1.25rem → 2rem with the tile width. Using UI sans
+     (DM Sans) instead of Playfair for numeric scanning — the
+     display serif's thin strokes blurred at smaller container
+     widths. Tabular nums keep digit columns aligned. */
+  font-size: clamp(1.25rem, 9cqi, 2rem);
+  font-family: var(--font-ui);
   line-height: 1.1;
   font-weight: 700;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  font-family: var(--font-display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kpi__delta {
   font-size: var(--fs-xs);
@@ -2487,14 +2572,129 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 @media (max-width: 1023px) { .rec-summary { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 599px)  { .rec-summary { grid-template-columns: 1fr; } }
+/* Tiles are <button>s so the user can click them to apply the
+   matching filter to the table below. Active filter gets a 3px
+   accent rail on the left so it reads at a glance which tile is
+   driving the visible list. Cursor + hover state surface the
+   clickability without an extra chrome change. */
 .rec-summary__tile {
   display: flex;
   flex-direction: column;
   gap: var(--space-3xs);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid transparent;
   border-radius: var(--radius);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+.rec-summary__tile:hover {
+  background: var(--bg-alt);
+  border-left-color: var(--border-strong);
+}
+.rec-summary__tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.rec-summary__tile.is-active {
+  border-left-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+}
+
+/* ---- Recurring-table responsive swap ----
+   Mirror the register's pattern: a 7-column .rec-table on tablet+
+   gets swapped for a stack of .rec-cards below 600px so phone users
+   don't horizontally scroll. Both lists render the same source data;
+   only one is visible at a time. */
+.rec-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.rec-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-input);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+.rec-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.rec-card__date {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+}
+.rec-card__amount {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.rec-card__payee {
+  margin: 0;
+  font-family: var(--font-headline);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.rec-card__meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--space-sm);
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--fs-sm);
+}
+.rec-card__meta div { display: contents; }
+.rec-card__meta dt {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  align-self: center;
+}
+.rec-card__meta dd { margin: 0; color: var(--fg); }
+.rec-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  margin-top: var(--space-2xs);
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--border-soft);
+}
+.rec-card__actions .btn { min-height: 44px; }
+
+/* Show/hide swap. Cards only render on phones; table only on
+   tablet+. The x-show="..." attributes keep both in the DOM but
+   visibility-toggled — we layer display:none on top so the hidden
+   variant doesn't reserve layout space. */
+.rec-table { display: none; }
+.rec-cards { display: flex; }
+@media (min-width: 600px) {
+  .rec-table { display: table; }
+  .rec-cards { display: none !important; }
 }
 .rec-summary__label {
   font-size: var(--fs-xs);

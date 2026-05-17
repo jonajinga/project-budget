@@ -1,22 +1,46 @@
 ---
 layout: layouts/marketing.njk
 ---
-<article class="container container--narrow post">
-  <header class="post__header">
-    <p class="post__meta">
-      <time datetime="{{ page.date | htmlDateString }}">{{ page.date | readableDate }}</time>
-      {% if tag %} &middot; {{ tag }}{% endif %}
-      {% if templateContent %} &middot; {{ templateContent | readingTime }} min read{% endif %}
-      {% if author %} &middot; {{ author }}{% endif %}
-    </p>
-    <h1 class="post__title">{{ title }}</h1>
-    {% if summary %}<p class="post__subtitle">{{ summary }}</p>{% endif %}
-  </header>
-  <div class="prose">
-    {{ content | safe }}
-  </div>
+<div class="container container--wide doc-shell">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a>
+    <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+    <a href="/blog/">Blog</a>
+    <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+    <span aria-current="page">{{ title }}</span>
+  </nav>
 
-  <footer class="post__footer">
-    <p><a href="/blog/">&larr; All posts</a></p>
-  </footer>
-</article>
+  <div class="docs-layout docs-layout--toc-left">
+    <aside class="docs-layout__toc docs-layout__toc--left" aria-label="On this page">
+      <div class="docs-toc" id="docs-toc">
+        <button type="button" class="docs-toc__toggle" id="docs-toc-toggle" aria-controls="toc-list" aria-expanded="true">
+          <span>On this page</span>
+          <span class="docs-toc__chevron" aria-hidden="true">&#9662;</span>
+        </button>
+        <ol id="toc-list" class="docs-toc__list"></ol>
+      </div>
+    </aside>
+
+    <article class="doc-content post" id="doc-content">
+      <header class="post__header">
+        <p class="post__meta">
+          <time datetime="{{ page.date | htmlDateString }}">{{ page.date | readableDate }}</time>
+          {% if tag %} &middot; {{ tag }}{% endif %}
+          {% if templateContent %} &middot; {{ templateContent | readingTime }} min read{% endif %}
+          {% if author %} &middot; {{ author }}{% endif %}
+        </p>
+        <h1 class="post__title">{{ title }}</h1>
+        {% if summary %}<p class="post__subtitle">{{ summary }}</p>{% endif %}
+      </header>
+      <div class="doc-content__prose prose">
+        {{ content | safe }}
+      </div>
+
+      <footer class="post__footer">
+        <p><a href="/blog/">&larr; All posts</a></p>
+      </footer>
+    </article>
+  </div>
+</div>
+
+<script defer src="/assets/js/docs.js"></script>

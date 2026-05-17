@@ -38,12 +38,27 @@ export function applyChartDefaults() {
   Chart.defaults.color = c["fg-muted"];
   Chart.defaults.borderColor = c["border"];
   Chart.defaults.animation = reducedMotion() ? false : { duration: 350 };
+  /* Tooltip styling — matches Tippy's projectbudget theme: inverted
+     fg-on-bg so it always reads as a dark popover (white text) in
+     light themes and a light popover (dark text) in dark themes.
+     Previously titleColor + bodyColor were pinned to #fff, which
+     became invisible on the light `--fg` background in GitHub Dark
+     / Solarized Dark themes. Pairing background=fg with text=bg
+     keeps contrast >= 7:1 in every theme. */
   Chart.defaults.plugins.tooltip.backgroundColor = c["fg"];
-  Chart.defaults.plugins.tooltip.titleColor = "#fff";
-  Chart.defaults.plugins.tooltip.bodyColor = "#fff";
+  Chart.defaults.plugins.tooltip.titleColor = c["bg"];
+  Chart.defaults.plugins.tooltip.bodyColor = c["bg"];
+  Chart.defaults.plugins.tooltip.footerColor = c["bg"];
   Chart.defaults.plugins.tooltip.borderColor = c["fg"];
-  Chart.defaults.plugins.tooltip.padding = 10;
-  Chart.defaults.plugins.tooltip.cornerRadius = 0;
+  Chart.defaults.plugins.tooltip.padding = { top: 8, right: 12, bottom: 8, left: 12 };
+  Chart.defaults.plugins.tooltip.cornerRadius = 4;
+  Chart.defaults.plugins.tooltip.titleFont = { weight: "700", size: 13 };
+  Chart.defaults.plugins.tooltip.bodyFont = { weight: "400", size: 13 };
+  Chart.defaults.plugins.tooltip.boxPadding = 6;
+  Chart.defaults.plugins.tooltip.usePointStyle = true;
+  Chart.defaults.plugins.tooltip.displayColors = true;
+  Chart.defaults.plugins.tooltip.intersect = false;
+  Chart.defaults.plugins.tooltip.mode = "index";
   Chart.defaults.plugins.legend.labels.color = c["fg-muted"];
   Chart.defaults.plugins.legend.labels.usePointStyle = true;
   Chart.defaults.plugins.legend.position = "bottom";

@@ -1,0 +1,273 @@
+---
+layout: layouts/marketing.njk
+title: "Thank you"
+description: "Your message has been received."
+permalink: /thank-you/
+eleventyExcludeFromCollections: true
+noindex: true
+---
+<article class="container container--narrow page thanks-page">
+  <header class="page__header">
+    <p class="eyebrow" id="ty-eyebrow">Sent</p>
+    <h1 id="ty-title">Thanks for reaching out.</h1>
+    <p class="page__subtitle" id="ty-subtitle">
+      Your message landed in the inbox. I read every submission personally and reply within a few business days.
+    </p>
+  </header>
+
+  <section class="thanks-page__next">
+    <h2 class="thanks-page__next-title" id="ty-next-title">What happens next</h2>
+    <ol class="thanks-page__steps" id="ty-steps">
+      <li class="thanks-page__step">
+        <span class="thanks-page__step-num">1</span>
+        <div>
+          <p class="thanks-page__step-head">I read your message</p>
+          <p class="thanks-page__step-body">Personally. Every one.</p>
+        </div>
+      </li>
+      <li class="thanks-page__step">
+        <span class="thanks-page__step-num">2</span>
+        <div>
+          <p class="thanks-page__step-head">I reply</p>
+          <p class="thanks-page__step-body">Usually within a few business days.</p>
+        </div>
+      </li>
+    </ol>
+    <p class="thanks-page__sla" id="ty-sla" hidden>
+      <strong>Typical response:</strong> <span id="ty-sla-text"></span>
+    </p>
+  </section>
+
+  <section class="thanks-page__links">
+    <h2>While you wait</h2>
+    <ul id="ty-links">
+      <li><a href="/docs/">Documentation</a> <span class="thanks-page__link-hint">Most "how do I…" questions have an answer here.</span></li>
+      <li><a href="{{ site.repo }}" rel="noopener">GitHub repo</a> <span class="thanks-page__link-hint">Follow development and recent commits.</span></li>
+    </ul>
+    <p class="thanks-page__email">
+      Forgot something? Email me directly at <a href="mailto:hello@projectbudget.org">hello@projectbudget.org</a> and I'll catch the thread.
+    </p>
+  </section>
+</article>
+
+<script>
+/* Per-topic personalization. The contact form passes ?topic= and
+   ?severity= on redirect; we swap in tailored copy. Vanilla JS so
+   marketing pages don't need to load Alpine just for this page. */
+(function () {
+  "use strict";
+  var CONFIG = {
+    "Bug report": {
+      eyebrow: "Bug report received",
+      title: "Got it. The bug is logged.",
+      subtitle: "Your report is in the queue. Bug reports get priority — if I can reproduce it, it's usually fixed in the next release.",
+      sla: "1–3 business days for an acknowledgment, often the same day for a fix if it's clear.",
+      steps: [
+        ["I read your report personally", "No support tier, no routing — straight to me."],
+        ["I try to reproduce", "If you included a screenshot or steps, this is fast. If not, I might ping you for more detail."],
+        ["Fix + release", "Project Budget ships continuously — bug fixes typically land within a release or two."],
+      ],
+      links: [
+        ["GitHub issues", "https://github.com/jonajinga/project-budget/issues", "Track the fix or add follow-up detail."],
+        ["GitHub repo", "https://github.com/jonajinga/project-budget", "Watch the commits to see when your fix lands."],
+      ],
+    },
+    "Feature request": {
+      eyebrow: "Feature request received",
+      title: "Thanks for the idea.",
+      subtitle: "I read every feature request. They shape the roadmap directly, even when they don't ship right away.",
+      sla: "1–2 weeks for a thoughtful reply on whether it fits the roadmap.",
+      steps: [
+        ["I read your request and think about it", "Often it overlaps with something already on the roadmap; sometimes it reshapes a priority."],
+        ["I reply with a fit assessment", "Whether it fits the project's no-backend / no-telemetry constraints, and whether it's queued, declined, or needs more discussion."],
+        ["If accepted, it gets a GitHub issue", "So you can track progress publicly."],
+      ],
+      links: [
+        ["Open-source commitments", "/open-source/", "What gets accepted and what doesn't."],
+        ["GitHub commits", "https://github.com/jonajinga/project-budget/commits/main", "See what shipped recently."],
+      ],
+    },
+    "Accessibility": {
+      eyebrow: "Accessibility report received",
+      title: "Thank you. This gets priority.",
+      subtitle: "Accessibility issues are bugs — and they're treated as a higher priority than feature work.",
+      sla: "1–3 business days. If you're blocked from using the app, please say so in a follow-up.",
+      steps: [
+        ["I read your report and reproduce the issue", "Often with WAVE, axe, or by switching to keyboard-only / screen-reader testing."],
+        ["I fix it", "Usually in the next release. WCAG 2.2 AA is the floor for every component."],
+        ["I follow up with you", "To confirm the fix landed and the barrier is gone."],
+      ],
+      links: [
+        ["Accessibility statement", "/accessibility/", "Current commitments and known gaps."],
+        ["GitHub issues", "https://github.com/jonajinga/project-budget/issues", "Track the fix."],
+      ],
+    },
+    "Documentation": {
+      eyebrow: "Documentation feedback received",
+      title: "Got it. Docs need this.",
+      subtitle: "Documentation gaps are real bugs. Thanks for flagging this — it likely helps the next person too.",
+      sla: "1 week for a doc update or reply.",
+      steps: [
+        ["I check the existing docs", "Sometimes the answer exists but is hard to find — which is itself a problem to fix."],
+        ["I write or update the page", "Usually in the next docs sync. Markdown lives in /docs/ on the repo."],
+        ["I let you know when it's live", "With a link to the new or updated page."],
+      ],
+      links: [
+        ["Documentation", "/docs/", "Browse what's already there."],
+        ["Edit docs on GitHub", "https://github.com/jonajinga/project-budget/tree/main/src/docs", "PRs welcome."],
+      ],
+    },
+    "Data import": {
+      eyebrow: "Import help requested",
+      title: "Thanks. Let's get your data in.",
+      subtitle: "Import issues often turn out to be a quirk in a specific bank's CSV format. Easy to fix once I see a sample.",
+      sla: "1–3 business days.",
+      steps: [
+        ["I read your message", "If you mentioned the bank or app and pasted a header row, even better."],
+        ["I might ask for a sample file", "A few anonymized rows are usually enough to identify the format."],
+        ["I add or tune a detector", "Most new bank formats land within a release."],
+      ],
+      links: [
+        ["Import docs", "/docs/importing/formats/", "Currently supported formats."],
+        ["GitHub issue with sample data", "https://github.com/jonajinga/project-budget/issues", "Often the fastest path to a fix."],
+      ],
+    },
+    "Profiles & backups": {
+      eyebrow: "Profiles / backups question received",
+      title: "Thanks. Your data is safe.",
+      subtitle: "Storage and backups are critical — happy to dig into your specific situation.",
+      sla: "1–3 business days, faster if data integrity is at risk.",
+      steps: [
+        ["I read your message carefully", "Especially anything about missing data or sync issues."],
+        ["I walk you through the diagnosis", "Project Budget stores everything locally — there's almost always a recoverable backup."],
+        ["If it's a bug, I fix it", "Storage bugs are P0 and get patched fast."],
+      ],
+      links: [
+        ["How storage works", "/docs/profiles-backups/how-storage-works/", "Where your data lives and how it's persisted."],
+        ["Backups & export", "/docs/profiles-backups/backups-and-export/", "How to make manual backups."],
+      ],
+    },
+    "Reports": {
+      eyebrow: "Reports question received",
+      title: "Thanks. Let's look at it together.",
+      subtitle: "Whether the numbers look wrong or you want a new chart, I want to hear about it.",
+      sla: "1 week for a reply.",
+      steps: [
+        ["I read your message", "If you mentioned which report and what looked off, that's gold."],
+        ["I check the calculation", "Reports read directly from your transactions — bugs almost always trace to a specific kind of data."],
+        ["I fix or explain", "Either the report's wrong (I fix it) or the data is doing something unexpected (I explain why)."],
+      ],
+      links: [
+        ["Reports overview", "/docs/reports/overview/", "How each report is calculated."],
+        ["Open the reports", "/app/reports/", "Take another look."],
+      ],
+    },
+    "Privacy / security": {
+      eyebrow: "Privacy or security concern received",
+      title: "Thank you. I take this seriously.",
+      subtitle: "Privacy and security reports get the fastest response. Project Budget has no backend by design — but if there's a leak, a tracker, or a sandbox escape, I want to know now.",
+      sla: "Within 24 hours. If it's an active exploit, please email hello@projectbudget.org with `URGENT` in the subject too.",
+      steps: [
+        ["I triage immediately", "Privacy/security takes priority over every other queue."],
+        ["I reproduce and assess severity", "If it's exploitable, I patch in private first."],
+        ["I disclose responsibly", "Credit to you (or anonymous, your call) in the public release notes."],
+      ],
+      links: [
+        ["Privacy policy", "/privacy/", "What Project Budget does and doesn't collect."],
+        ["Open-source commitments", "/open-source/", "No backend, no telemetry, no exceptions."],
+      ],
+    },
+    "Partnership": {
+      eyebrow: "Partnership inquiry received",
+      title: "Thanks for reaching out.",
+      subtitle: "Always open to integrations, collaborations, and adjacent open-source work that respects the project's no-backend / no-telemetry constraints.",
+      sla: "1–2 weeks, sometimes longer for larger conversations.",
+      steps: [
+        ["I read your message", "Especially the alignment with the project's commitments."],
+        ["I reply with a fit assessment", "Honest about what kinds of partnerships work for an MIT-licensed, browser-only budgeting app."],
+        ["We figure out next steps together", "Could be a call, a written proposal, or a quick yes/no."],
+      ],
+      links: [
+        ["Open-source commitments", "/open-source/", "What's in and out of scope for the project."],
+      ],
+    },
+    "General question": {
+      eyebrow: "Message received",
+      title: "Got it. Reply on the way.",
+      subtitle: "I read everything that comes through this form personally.",
+      sla: "1–5 business days.",
+      steps: [
+        ["I read your message", "Personally — no chatbot, no routing."],
+        ["I reply", "Usually with an answer; sometimes with a follow-up question."],
+      ],
+      links: [
+        ["Documentation", "/docs/", "A lot of questions already have written answers."],
+        ["Glossary", "/glossary/", "Plain-English definitions for budgeting terms."],
+      ],
+    },
+  };
+
+  function setText(id, text) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+  function buildSteps(steps) {
+    var ol = document.getElementById("ty-steps");
+    if (!ol || !steps || !steps.length) return;
+    ol.innerHTML = "";
+    steps.forEach(function (s, i) {
+      var li = document.createElement("li");
+      li.className = "thanks-page__step";
+      var num = document.createElement("span");
+      num.className = "thanks-page__step-num";
+      num.textContent = String(i + 1);
+      var wrap = document.createElement("div");
+      var head = document.createElement("p");
+      head.className = "thanks-page__step-head";
+      head.textContent = s[0];
+      var body = document.createElement("p");
+      body.className = "thanks-page__step-body";
+      body.textContent = s[1];
+      wrap.appendChild(head); wrap.appendChild(body);
+      li.appendChild(num); li.appendChild(wrap);
+      ol.appendChild(li);
+    });
+  }
+  function buildLinks(links) {
+    var ul = document.getElementById("ty-links");
+    if (!ul || !links || !links.length) return;
+    ul.innerHTML = "";
+    links.forEach(function (l) {
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = l[1]; a.textContent = l[0];
+      if (/^https?:/.test(l[1])) a.rel = "noopener";
+      var hint = document.createElement("span");
+      hint.className = "thanks-page__link-hint";
+      hint.textContent = " " + l[2];
+      li.appendChild(a); li.appendChild(hint);
+      ul.appendChild(li);
+    });
+  }
+
+  var params = new URLSearchParams(window.location.search || "");
+  var topic = params.get("topic") || "";
+  var severity = params.get("severity") || "";
+  var c = CONFIG[topic];
+  if (!c) return; /* default copy already in HTML */
+
+  setText("ty-eyebrow", c.eyebrow);
+  setText("ty-title", c.title);
+  setText("ty-subtitle", c.subtitle);
+  buildSteps(c.steps);
+  buildLinks(c.links);
+  var sla = severity === "Blocking" ? "Within 24 hours — flagged as blocking your workflow." : c.sla;
+  if (sla) {
+    setText("ty-sla-text", sla);
+    var slaEl = document.getElementById("ty-sla");
+    if (slaEl) slaEl.hidden = false;
+  }
+  /* Update page title too so the browser tab matches the personalized copy. */
+  document.title = c.title + " · Project Budget";
+})();
+</script>

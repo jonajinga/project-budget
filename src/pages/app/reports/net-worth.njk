@@ -5,17 +5,7 @@ description: "Net worth trajectory with growth rate, MoM change, and CSV export.
 permalink: /app/reports/net-worth/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page"
-     x-data="Object.assign(
-       netWorthView(),
-       reportTable(
-         (self) => ($store.budget.reportNetWorth(null, self.rangeMonths) || []),
-         { keys: [
-             { key: 'month', label: 'Month-end' },
-             { key: 'value', label: 'Net worth', numeric: true },
-           ], defaultSort: { key: 'month', dir: 'asc' } }
-       )
-     )" x-init="init()">
+<div class="app-page" x-data="netWorthView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Net worth over time</h1>
@@ -61,7 +51,21 @@ eleventyExcludeFromCollections: true
   </div>
 
   <section class="report">
-    <div class="chart" id="chart-nw" style="min-height: 320px;"></div>
+    <div class="chart-toolbar">
+      <span class="chart-toolbar__label">Chart</span>
+      <span class="chart-picker" role="group" aria-label="Chart type">
+        <template x-for="opt in chartOptions" :key="opt.value">
+          <button type="button"
+                  class="chart-picker__btn"
+                  :class="chartType === opt.value ? 'is-active' : ''"
+                  :aria-pressed="(chartType === opt.value).toString()"
+                  @click="setChartType(opt.value)"
+                  :data-tip="'Render as a ' + opt.label.toLowerCase() + ' chart.'"
+                  x-text="opt.label"></button>
+        </template>
+      </span>
+    </div>
+    <div class="chart" id="chart-nw" style="min-height: 360px;"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -87,7 +91,12 @@ eleventyExcludeFromCollections: true
       <tbody>
         <template x-for="r in rows" :key="r.month">
           <tr>
-            <td x-text="r.month"></td>
+            <td>
+              <a class="report-month-link"
+                 :href="'/app/calendar/?m=' + r.month + '&v=month'"
+                 x-text="r.month"
+                 data-tip="Open this month in the calendar."></a>
+            </td>
             <td class="num" :class="r.value < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.value / 100).toFixed(2)"></td>
           </tr>
         </template>
@@ -101,20 +110,104 @@ eleventyExcludeFromCollections: true
 
 <script>
 function netWorthView() {
+  var savedChartType = "line";
+  try {
+    var st = localStorage.getItem("projectbudget:chart-type:netWorth");
+    if (st && ["line","area","bar"].indexOf(st) !== -1) savedChartType = st;
+  } catch (_e) {}
+  window.__pbChartType = window.__pbChartType || {};
+  window.__pbChartType.netWorth = savedChartType;
+
   return {
     rangeMonths: 12,
     ranges: [
-      { value: 6,  label: '6 mo' },
-      { value: 12, label: '12 mo' },
-      { value: 24, label: '24 mo' },
-      { value: 36, label: '36 mo' },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
+      { value: 36, label: "36 mo" },
     ],
+
+    chartType: savedChartType,
+    chartOptions: [
+      { value: "line", label: "Line" },
+      { value: "area", label: "Area" },
+      { value: "bar",  label: "Bar" },
+    ],
+    setChartType(t) {
+      this.chartType = t;
+      window.__pbChartType.netWorth = t;
+      try { localStorage.setItem("projectbudget:chart-type:netWorth", t); } catch (_e) {}
+      try { window.dispatchEvent(new CustomEvent("pb:chart-type", { detail: { reportId: "netWorth", type: t } })); } catch (_e) {}
+    },
+
+    query: "",
+    sortKey: "month",
+    sortDir: "asc",
+    _keys: [
+      { key: "month", label: "Month-end" },
+      { key: "value", label: "Net worth", numeric: true },
+    ],
+    get rows() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportNetWorth(null, this.rangeMonths) || [];
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q ? src.filter(function (r) { return String(r.month).toLowerCase().indexOf(q) !== -1; }) : src;
+      var key = this.sortKey, dir = this.sortDir;
+      var keyDef = this._keys.find(function (k) { return k.key === key; });
+      var numeric = !!(keyDef && keyDef.numeric);
+      var copy = filtered.slice();
+      copy.sort(function (a, b) {
+        if (numeric) {
+          var an = Number(a[key]) || 0, bn = Number(b[key]) || 0;
+          return dir === "asc" ? an - bn : bn - an;
+        }
+        var as = String(a[key] == null ? "" : a[key]);
+        var bs = String(b[key] == null ? "" : b[key]);
+        return dir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+      return copy;
+    },
+    get visibleCount() { return this.rows.length; },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        var kd = this._keys.find(function (k) { return k.key === key; });
+        this.sortDir = kd && kd.numeric ? "desc" : "asc";
+      }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+    print() { window.print(); },
+    exportCSV(name) {
+      var self = this;
+      var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");
+      var body = this.rows.map(function (r) {
+        return self._keys.map(function (k) {
+          var v = r[k.key];
+          if (v == null) return "";
+          if (k.numeric && Math.abs(v) >= 1000 && Number.isInteger(v)) v = (v / 100).toFixed(2);
+          return JSON.stringify(String(v));
+        }).join(",");
+      }).join("\r\n");
+      var blob = new Blob([header + "\r\n" + body], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = (name || "report") + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    },
+
     init() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.netWorth = function () { return self.rangeMonths; };
     },
-    fmt(c) { return (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     kpis() {
       var rows = this.$store.budget.reportNetWorth(null, this.rangeMonths) || [];
       if (!rows.length) {
@@ -154,6 +247,9 @@ function netWorthView() {
       if (e.target.closest && e.target.closest(".btn--sm")) {
         setTimeout(function () { inst.redraw(); }, 0);
       }
+    });
+    window.addEventListener("pb:chart-type", function (e) {
+      if (e.detail && e.detail.reportId === "netWorth") inst.redraw();
     });
   }
   if (window.Alpine && window.Alpine.store("budget")) boot();
