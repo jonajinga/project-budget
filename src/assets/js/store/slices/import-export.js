@@ -35,14 +35,22 @@ import { loadProfile } from "../profile.js";
 
 export const importExportSlice = {
   /* ---- Export ---- */
+  /**
+   * Trigger a browser download of the active profile as JSON.
+   */
   exportActiveJSON() {
     if (!this.profile) return;
     downloadJSON(this.profile);
     this.pushToast("Profile downloaded.");
   },
+  /** @returns {string} suggested filename for the active profile */
   exportFilename() {
     return this.profile ? suggestedFilename(this.profile) : "";
   },
+  /**
+   * Download every profile in the index as a single bundle file.
+   * No-op if the profile index is empty or all loads fail.
+   */
   exportAllProfilesJSON() {
     var index = this.profiles || [];
     if (!index.length) return;
@@ -56,11 +64,24 @@ export const importExportSlice = {
     downloadBundle(profiles);
     this.pushToast("Exported " + profiles.length + " profile" + (profiles.length === 1 ? "" : "s") + " as one bundle.");
   },
+  /** @returns {string} suggested filename for the bundle download */
   exportBundleFilename() { return suggestedBundleFilename(); },
 
   /* ---- JSON import ---- */
+  /**
+   * @param {string} text raw JSON
+   * @returns {object} parser result {ok, kind, profile|profiles, ...}
+   */
   parseImportJSON(text) { return parseJSON(text); },
 
+  /**
+   * Import a parsed JSON payload as a new profile (single or bundle).
+   * For bundles, every contained profile is imported with a fresh id
+   * and the first is activated. For singles, the new profile becomes
+   * the active one.
+   * @param {object} parsed result of parseImportJSON
+   * @returns {object|object[]|null} the imported profile(s), or null if invalid
+   */
   importJSONAsNew(parsed) {
     if (!parsed || !parsed.ok) return null;
     /* Bundle: import every profile as new. */
@@ -90,6 +111,13 @@ export const importExportSlice = {
     return fresh;
   },
 
+  /**
+   * Overwrite the active profile in place with parsed JSON data.
+   * Requires confirmedName to match the active profile's name.
+   * @param {object} parsed result of parseImportJSON
+   * @param {string} confirmedName
+   * @returns {boolean} false on name mismatch or invalid input
+   */
   importJSONReplacing(parsed, confirmedName) {
     if (!parsed || !parsed.ok || !this.profile) return false;
     if (confirmedName !== this.profile.name) {
@@ -106,44 +134,92 @@ export const importExportSlice = {
   },
 
   /* ---- CSV / OFX / QIF / GoCardless import ---- */
+  /**
+   * Parse a CSV blob into rows plus a header-detection guess.
+   * @param {string} text
+   * @returns {object} {headers, rows, detection}
+   */
   parseCSVText(text) {
     var parsed = parseCSV(text);
     var detection = csvDetect(parsed.headers);
     return { headers: parsed.headers, rows: parsed.rows, detection: detection };
   },
 
+  /**
+   * Convert raw rows into normalized transaction shape using the
+   * user's column mapping.
+   * @param {object[]} rows
+   * @param {object} columnMap
+   * @returns {object[]}
+   */
   applyCSVMapping(rows, columnMap) { return applyMapping(rows, columnMap); },
 
+  /**
+   * Annotate parsed rows with a `duplicate` flag against existing
+   * transactions in the target account.
+   * @param {id} accountId
+   * @param {object[]} rows
+   * @returns {object[]}
+   */
   dryRunCSV(accountId, rows) {
     if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
     return csvDryRun(this.profile, accountId, rows);
   },
 
+  /**
+   * @param {string} text raw OFX
+   * @returns {object[]} parsed rows
+   */
   parseOFXText(text) { return parseOFX(text); },
+  /**
+   * @param {id} accountId
+   * @param {object[]} rows
+   * @returns {object[]} rows with `duplicate` flag annotated
+   */
   dryRunOFX(accountId, rows) {
     if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
     return ofxDryRun(this.profile, accountId, rows);
   },
 
+  /**
+   * @param {string} text raw QIF
+   * @returns {object[]} parsed rows
+   */
   parseQIFText(text) { return parseQIF(text); },
+  /**
+   * @param {id} accountId
+   * @param {object[]} rows
+   * @returns {object[]} rows with `duplicate` flag annotated
+   */
   dryRunQIF(accountId, rows) {
     if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
     return qifDryRun(this.profile, accountId, rows);
   },
 
+  /**
+   * @param {string} text raw GoCardless export
+   * @returns {object[]} parsed rows
+   */
   parseGoCardlessText(text) { return parseGoCardless(text); },
+  /**
+   * @param {id} accountId
+   * @param {object[]} rows
+   * @returns {object[]} rows with `duplicate` flag annotated
+   */
   dryRunGoCardless(accountId, rows) {
     if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
     return gcDryRun(this.profile, accountId, rows);
   },
 
-  /* Commit non-duplicate rows as real transactions. Categories are
-     matched by name (case-insensitive); unmatched categories become
-     null. Returns { added, skipped } counts.
-     Wrapped in batchMutate so all rows commit atomically: one
-     undo entry covers the entire import, save fires once at the
-     end, and a mid-loop error rolls back to the pre-import
-     profile state (no partial imports). */
+  /**
+   * Commit non-duplicate rows as real transactions. Categories are
+   * matched by name (case-insensitive); unmatched categories become
+   * null. Atomic via batchMutate — one undo entry, single save, and
+   * mid-loop errors roll back the whole import.
+   * @param {id} accountId
+   * @param {object[]} rows
+   * @returns {object} {added, skipped}
+   */
   commitImport(accountId, rows) {
     if (!this.profile) return { added: 0, skipped: 0 };
     var self = this;

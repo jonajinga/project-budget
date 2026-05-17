@@ -18,6 +18,13 @@ import { upsertPayee } from "../../domain/payees.js";
 
 export const transactionsSlice = {
   /* ---- Single-row CRUD ---- */
+  /**
+   * Create a transaction. Upserts the payee from `payeeName` when
+   * provided (overriding any payeeId). Amount stored as integer cents.
+   * Records an undo entry.
+   * @param {object} opts {accountId, date, payeeName|payeeId, categoryId, amount, memo, cleared}
+   * @returns {object|null} the created transaction
+   */
   addTransaction(opts) {
     if (!this.profile) return null;
     this._recordUndo("Add transaction");
@@ -42,6 +49,14 @@ export const transactionsSlice = {
     return t;
   },
 
+  /**
+   * Patch a transaction. Resolves payeeName -> payeeId via upsert,
+   * rounds amount to integer cents, and mirrors the edit onto the
+   * paired transfer row when applicable. Records an undo entry.
+   * @param {id} id
+   * @param {object} patch
+   * @returns {object|null} the updated transaction
+   */
   updateTransaction(id, patch) {
     if (!this.profile) return null;
     this._recordUndo("Edit transaction");
@@ -59,6 +74,12 @@ export const transactionsSlice = {
     return result;
   },
 
+  /**
+   * Move a transaction to the trash (30-day recovery window).
+   * Records an undo entry.
+   * @param {id} id
+   * @returns {boolean} false if the domain helper refused
+   */
   deleteTransaction(id) {
     if (!this.profile) return false;
     this._recordUndo("Delete transaction");
@@ -136,6 +157,9 @@ export const transactionsSlice = {
   },
 
   /* ---- Trash management ---- */
+  /**
+   * @returns {object[]} trashed transactions, most-recently-deleted first
+   */
   listTrashedTransactions() {
     void this._listVersion;
     if (!this.profile || !this.profile.trash) return [];
@@ -143,6 +167,12 @@ export const transactionsSlice = {
       return (b.deletedAt || "").localeCompare(a.deletedAt || "");
     });
   },
+  /**
+   * Restore a trashed transaction back to its account. Records an
+   * undo entry.
+   * @param {id} id
+   * @returns {object|null} the restored transaction
+   */
   restoreTransactionFromTrash(id) {
     if (!this.profile) return null;
     this._recordUndo("Restore transaction");
@@ -152,6 +182,11 @@ export const transactionsSlice = {
     if (rec) this.pushToast("Restored.");
     return rec;
   },
+  /**
+   * Permanently remove a trashed transaction. Records an undo entry.
+   * @param {id} id
+   * @returns {boolean}
+   */
   purgeTransactionFromTrash(id) {
     if (!this.profile) return false;
     this._recordUndo("Purge transaction");
@@ -161,6 +196,10 @@ export const transactionsSlice = {
     if (ok) this.pushToast("Purged.");
     return ok;
   },
+  /**
+   * Purge every row currently in the trash. Records an undo entry.
+   * @returns {number} count purged
+   */
   emptyTransactionTrash() {
     if (!this.profile) return 0;
     this._recordUndo("Empty transaction trash");
@@ -171,6 +210,14 @@ export const transactionsSlice = {
     return n;
   },
 
+  /**
+   * Replace a transaction's splits (pass null/empty to clear and
+   * revert to a flat single-category transaction). Records an undo
+   * entry labelled by whether splits were set or cleared.
+   * @param {id} id
+   * @param {object[]|null} splits
+   * @returns {object|null} the updated transaction
+   */
   setSplits(id, splits) {
     if (!this.profile) return null;
     this._recordUndo(splits ? "Edit splits" : "Clear splits");
@@ -179,6 +226,13 @@ export const transactionsSlice = {
     return t;
   },
 
+  /**
+   * Create a paired transfer between two accounts (one outflow row
+   * on the source, one inflow row on the destination, linked by
+   * transferTxnId). Records an undo entry.
+   * @param {object} opts {fromAccountId, toAccountId, amount, date, memo}
+   * @returns {object|null} {outTxn, inTxn} pair
+   */
   transfer(opts) {
     if (!this.profile) return null;
     this._recordUndo("Transfer");
@@ -195,6 +249,10 @@ export const transactionsSlice = {
   },
 
   /* ---- Transaction queries ---- */
+  /**
+   * @param {id} accountId
+   * @returns {object[]} transactions in the account, newest date first
+   */
   transactionsForAccount(accountId) {
     if (!this.profile) return [];
     return this.profile.transactions
@@ -205,6 +263,9 @@ export const transactionsSlice = {
       });
   },
 
+  /**
+   * @returns {object[]} every transaction in the profile, newest date first
+   */
   allTransactions() {
     if (!this.profile) return [];
     return this.profile.transactions.slice().sort(function (a, b) {

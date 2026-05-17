@@ -15,6 +15,11 @@ import {
 import { upsertPayee } from "../../domain/payees.js";
 
 export const scheduledSlice = {
+  /**
+   * Create a recurring template. Records an undo entry.
+   * @param {object} opts {template, frequency, startDate, ...}
+   * @returns {object|null} the schedule record
+   */
   addSchedule(opts) {
     if (!this.profile) return null;
     this._recordUndo("Add recurring");
@@ -22,6 +27,9 @@ export const scheduledSlice = {
     this._save();
     return s;
   },
+  /**
+   * @param {id} id
+   */
   removeSchedule(id) {
     if (!this.profile) return;
     this._recordUndo("Remove recurring");
@@ -29,6 +37,13 @@ export const scheduledSlice = {
     this._bumpLists();
     this._save();
   },
+  /**
+   * Patch a schedule's template / frequency / nextDate fields.
+   * Records an undo entry.
+   * @param {id} id
+   * @param {object} patch
+   * @returns {object|null} the updated schedule
+   */
   updateSchedule(id, patch) {
     if (!this.profile) return null;
     this._recordUndo("Edit recurring");
@@ -37,10 +52,22 @@ export const scheduledSlice = {
     this._save();
     return s;
   },
+  /**
+   * @returns {object[]} schedules whose nextDate is today or earlier
+   */
   dueScheduled() {
     if (!this.profile) return [];
     return dueTransactions(this.profile);
   },
+  /**
+   * Materialize a due schedule into a real transaction, advance
+   * nextDate, and replace the schedule object by reference so the
+   * recurring table re-renders. Upserts the payee on the fly if the
+   * template only carried a payeeName. Records an undo entry.
+   * @param {id} id
+   * @param {object} [overrides] partial transaction fields
+   * @returns {object|null} the created transaction
+   */
   postScheduled(id, overrides) {
     if (!this.profile) return null;
     this._recordUndo("Post scheduled");
@@ -68,6 +95,13 @@ export const scheduledSlice = {
     this._save();
     return t;
   },
+  /**
+   * Advance nextDate without posting a transaction. Replaces the
+   * schedule object by reference for Alpine reactivity. Records an
+   * undo entry.
+   * @param {id} id
+   * @returns {object|null} the updated schedule
+   */
   skipScheduled(id) {
     if (!this.profile) return null;
     this._recordUndo("Skip scheduled");
@@ -83,9 +117,14 @@ export const scheduledSlice = {
     return s;
   },
 
-  /* Toggle a template's paused flag. Paused templates stay in the
-     list (history, frequency, nextDate preserved) but skip the due
-     queue + upcoming bills + calendar projection until resumed. */
+  /**
+   * Toggle a template's paused flag. Paused templates stay in the
+   * list but skip the due queue, upcoming bills, and calendar
+   * projection. Records an undo entry.
+   * @param {id} id
+   * @param {boolean} paused
+   * @returns {object|null} the updated schedule
+   */
   setSchedulePaused(id, paused) {
     if (!this.profile) return null;
     var idx = this.profile.scheduled.findIndex(function (x) { return x.id === id; });

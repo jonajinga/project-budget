@@ -540,11 +540,22 @@ export function categoryHeatmap(profile, endMonth, monthCount, topN) {
   var byCat = {};
   var nameByCat = {};
   var groupByCat = {};
+  /* Pre-index groups by id so we can resolve each category's group
+     name in O(1) instead of an O(G) find per category. The previous
+     implementation walked profile.categoryGroups expecting a
+     `.categories` array on each group — but the schema models the
+     relationship the other way (category.groupId). The lookup was
+     reading undefined, so every row's `group` field came back as ""
+     and the heatmap's group column appeared blank. */
+  var groupNameById = {};
+  (profile.categoryGroups || []).forEach(function (g) {
+    groupNameById[g.id] = g.name;
+  });
   (profile.categories || []).forEach(function (c) {
     nameByCat[c.id] = c.name;
-  });
-  (profile.categoryGroups || []).forEach(function (g) {
-    (g.categories || []).forEach(function (cid) { groupByCat[cid] = g.name; });
+    if (c.groupId && groupNameById[c.groupId]) {
+      groupByCat[c.id] = groupNameById[c.groupId];
+    }
   });
   (profile.transactions || []).forEach(function (t) {
     if (!t || !t.date) return;

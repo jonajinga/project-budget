@@ -15,61 +15,75 @@ import {
 } from "../../domain/reports.js";
 
 export const reportsSlice = {
+  /** @returns {object[]} */
   reportIncomeVsExpense(endMonth, count) {
     return this.profile ? incomeVsExpense(this.profile, endMonth || this.currentMonth, count) : [];
   },
+  /** @returns {object[]} */
   reportNetWorth(endMonth, count) {
     return this.profile ? netWorthByMonth(this.profile, endMonth || this.currentMonth, count) : [];
   },
+  /** @returns {object[]} */
   reportSpending(fromMonth, toMonth) {
     if (!this.profile) return [];
     var to = toMonth || this.currentMonth;
     var from = fromMonth || to;
     return spendingByCategory(this.profile, from, to);
   },
+  /** @returns {object[]} */
   reportTrends(endMonth, count, topN) {
     return this.profile ? monthlyTrendsByCategory(this.profile, endMonth || this.currentMonth, count, topN) : [];
   },
+  /** @returns {object[]} */
   reportDebt() {
     return this.profile ? debtOverview(this.profile) : [];
   },
+  /** @returns {object[]} */
   reportAssignmentHistory(endMonth, count, topN) {
     return this.profile ? assignmentHistory(this.profile, endMonth || this.currentMonth, count, topN) : [];
   },
+  /** @returns {object[]} */
   reportProjection(count) {
     return this.profile ? projection(this.profile, count) : [];
   },
+  /** @returns {object[]} */
   reportSavingsRate(endMonth, count) {
     return this.profile ? savingsRate(this.profile, endMonth || this.currentMonth, count) : [];
   },
+  /** @returns {object[]} */
   reportPayeeLeaderboard(fromMonth, toMonth, limit) {
     if (!this.profile) return [];
     var to = toMonth || this.currentMonth;
     var from = fromMonth || to;
     return payeeLeaderboard(this.profile, from, to, limit);
   },
+  /** @returns {object[]} */
   reportBudgetVsActual(month) {
     return this.profile ? budgetVsActual(this.profile, month || this.currentMonth) : [];
   },
 
   /* ---- New reports (Phase 4) ---- */
+  /** @returns {object} {nodes, links} */
   reportSankey(fromMonth, toMonth) {
     void this._listVersion;
     var from = fromMonth || this.currentMonth;
     var to   = toMonth   || from;
     return this.profile ? sankeyFlows(this.profile, from, to) : { nodes: [], links: [] };
   },
+  /** @returns {object} {months, categories, cells, max} */
   reportHeatmap(endMonth, count, topN) {
     void this._listVersion;
     return this.profile
       ? categoryHeatmap(this.profile, endMonth || this.currentMonth, count || 12, topN || 15)
       : { months: [], categories: [], cells: {}, max: 0 };
   },
+  /** @returns {object} {current, prior, paired, categoryRows, payeeRows, deltas} */
   reportYearOverYear(currentRange, priorRange) {
     void this._listVersion;
     if (!this.profile) return { current: {}, prior: {}, paired: [], categoryRows: [], payeeRows: [], deltas: {} };
     return yearOverYear(this.profile, currentRange, priorRange);
   },
+  /** @returns {object[]} */
   reportSubscriptions(lookbackMonths) {
     void this._listVersion;
     return this.profile ? detectSubscriptions(this.profile, lookbackMonths || 12) : [];

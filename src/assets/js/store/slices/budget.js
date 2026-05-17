@@ -17,45 +17,76 @@ import {
 
 export const budgetSlice = {
   /* ---- Budget month + math ---- */
+  /** @param {string} m YYYY-MM */
   setMonth(m) { this.currentMonth = m; },
+  /** Step the active month back by one. */
   goPrevMonth() { this.currentMonth = prevMonth(this.currentMonth); },
+  /** Step the active month forward by one. */
   goNextMonth() { this.currentMonth = nextMonth(this.currentMonth); },
+  /** Reset the active month to today's calendar month. */
   jumpToThisMonth() { this.currentMonth = thisMonth(); },
 
+  /**
+   * @param {string} [month] YYYY-MM, defaults to currentMonth
+   * @returns {number} cents available to assign this month
+   */
   readyToAssign(month) {
     if (!this.profile) return 0;
     return readyToAssignImpl(this.profile, month || this.currentMonth);
   },
+  /**
+   * @param {id} categoryId
+   * @param {string} [month]
+   * @returns {object} {carryIn, assigned, activity, available} — all cents
+   */
   categoryRow(categoryId, month) {
     if (!this.profile) return { carryIn: 0, assigned: 0, activity: 0, available: 0 };
     return categoryRowImpl(this.profile, categoryId, month || this.currentMonth);
   },
+  /**
+   * @param {string} [month]
+   * @returns {number} cents — sum of every category's assigned value this month
+   */
   totalAssignedInMonth(month) {
     if (!this.profile) return 0;
     return totalAssignedInMonthImpl(this.profile, month || this.currentMonth);
   },
+  /**
+   * @param {string} [month]
+   * @returns {number} cents — inflow-to-RTA transactions in the month
+   */
   totalInflowToBudget(month) {
     if (!this.profile) return 0;
     return totalInflowToBudgetImpl(this.profile, month || this.currentMonth);
   },
+  /**
+   * @param {id} categoryId
+   * @param {string} [month]
+   * @returns {number} cents assigned to the category in the month
+   */
   assignedFor(categoryId, month) {
     if (!this.profile) return 0;
     return budgetAssigned(this.profile, categoryId, month || this.currentMonth);
   },
+  /**
+   * @param {id} categoryId
+   * @param {string} [month]
+   * @returns {number} cents of transaction activity (typically negative)
+   */
   activityFor(categoryId, month) {
     if (!this.profile) return 0;
     return budgetActivity(this.profile, categoryId, month || this.currentMonth);
   },
 
-  /* Assign a value (in cents) to a category for a month.
-     Replaces the budgets[month] object (and the inner .assigned map)
-     with fresh references so every consumer that reads through the
-     Alpine proxy sees a top-level property change and re-evaluates.
-     Mutating a nested property in place is technically reactive in
-     Alpine v3, but downstream re-reads sometimes hold stale values
-     when the dependency chain crosses a function boundary
-     (categoryRow -> assigned). The fresh-reference assignment is
-     bulletproof. */
+  /**
+   * Assign a value (in cents) to a category for a month. Replaces the
+   * budgets[month] object and its inner .assigned map by reference so
+   * Alpine consumers downstream of categoryRow re-evaluate reliably.
+   * Records an undo entry.
+   * @param {id} categoryId
+   * @param {string} month YYYY-MM
+   * @param {number} cents
+   */
   assign(categoryId, month, cents) {
     if (!this.profile) return;
     var m = month || this.currentMonth;
@@ -69,17 +100,15 @@ export const budgetSlice = {
     this._save();
   },
 
-  /* ---- Bulk-clear helpers ---------------------------------------
-     Wipe many assigned values (or push them so available == 0) in
-     a single undo entry. Used by the budget page's multi-select
-     toolbar + the per-group/per-row "Clear" actions.
-
-     clearAssignedForCategories: sets assigned to 0 for every catId
-     in `categoryIds` in `month`. Empty list = no-op.
-
-     clearAvailableForCategories: walks each catId, computes the
-     assignment needed so categoryRow(cat).available == 0, and writes
-     it. For categories whose available is already 0, no-op. */
+  /* ---- Bulk-clear helpers --------------------------------------- */
+  /**
+   * Set assigned to 0 for every catId in `categoryIds` in `month`,
+   * under one undo entry.
+   * @param {string[]} categoryIds
+   * @param {string} [month]
+   * @param {string} [label] undo label override
+   * @returns {number} count of categories actually changed
+   */
   clearAssignedForCategories(categoryIds, month, label) {
     if (!this.profile || !categoryIds || !categoryIds.length) return 0;
     var m = month || this.currentMonth;
@@ -95,6 +124,15 @@ export const budgetSlice = {
     this._save();
     return n;
   },
+  /**
+   * For each catId, write the assignment that makes available == 0
+   * (i.e. assigned = -carryIn - activity). Categories already at 0
+   * are skipped. Single undo entry.
+   * @param {string[]} categoryIds
+   * @param {string} [month]
+   * @param {string} [label] undo label override
+   * @returns {number} count of categories actually changed
+   */
   clearAvailableForCategories(categoryIds, month, label) {
     if (!this.profile || !categoryIds || !categoryIds.length) return 0;
     var m = month || this.currentMonth;
@@ -117,9 +155,12 @@ export const budgetSlice = {
     return n;
   },
 
-  /* Convenience: every on-budget category id for the active profile
-     (skips payment categories — those are derived from card spending
-     and don't accept direct assignment safely). */
+  /**
+   * Every on-budget category id, excluding hidden and payment
+   * categories (those derive from card spending and shouldn't take
+   * direct assignment).
+   * @returns {string[]}
+   */
   allBudgetableCategoryIds() {
     if (!this.profile) return [];
     var self = this;
@@ -127,9 +168,12 @@ export const budgetSlice = {
       .filter(function (c) { return !c.hidden && !self.isPaymentCategory(c.id); })
       .map(function (c) { return c.id; });
   },
-  /* All category ids belonging to a single group (skips payment +
-     hidden). Useful for "select entire group" / "clear assigned for
-     this group". */
+  /**
+   * Category ids belonging to a single group (skips hidden + payment
+   * categories). Useful for "select entire group" actions.
+   * @param {id} groupId
+   * @returns {string[]}
+   */
   categoryIdsInGroup(groupId) {
     if (!this.profile) return [];
     var self = this;
@@ -138,10 +182,16 @@ export const budgetSlice = {
       .map(function (c) { return c.id; });
   },
 
-  /* Move money from one category to another in a single transaction:
-     decrement source.assigned by cents, increment target.assigned by
-     cents. The net change to "Total assigned" is zero — the user is
-     just reallocating. Records ONE undo entry covering both legs. */
+  /**
+   * Reallocate cents from one category to another in a single undo
+   * entry — net change to total assigned is zero. No-op if the ids
+   * match or amount is non-positive.
+   * @param {id} fromCategoryId
+   * @param {id} toCategoryId
+   * @param {number} cents
+   * @param {string} [month]
+   * @returns {boolean} false on invalid args
+   */
   moveMoney(fromCategoryId, toCategoryId, cents, month) {
     if (!this.profile) return false;
     var amt = Math.round(Number(cents) || 0);
@@ -161,13 +211,12 @@ export const budgetSlice = {
     return true;
   },
 
-  /* ---- Budget templates -----------------------------------------
-     A template is a named snapshot of a single month's `assigned`
-     map. Save once ("Standard month"), apply to any future month to
-     re-create the same allocation. Stored on the profile under
-     `budgetTemplates`. Categories that no longer exist when the
-     template is applied are silently dropped. */
-
+  /* ---- Budget templates ----------------------------------------- */
+  /**
+   * All saved templates sorted by name. Reads _listVersion for
+   * reactivity.
+   * @returns {object[]}
+   */
   listBudgetTemplates() {
     void this._listVersion;
     if (!this.profile) return [];
@@ -176,6 +225,13 @@ export const budgetSlice = {
     });
   },
 
+  /**
+   * Snapshot a month's non-zero assigned map under `name`; overwrites
+   * if a template by that name already exists. Records an undo entry.
+   * @param {string} name
+   * @param {string} [month]
+   * @returns {object|null} template, or null if name is blank
+   */
   saveBudgetTemplate(name, month) {
     if (!this.profile) return null;
     var clean = (name || "").trim();
@@ -213,6 +269,13 @@ export const budgetSlice = {
     return tpl;
   },
 
+  /**
+   * Copy a template's assigned values onto `month`. Category ids that
+   * no longer exist are silently dropped. Records an undo entry.
+   * @param {id} templateId
+   * @param {string} [month]
+   * @returns {number} count of categories actually assigned
+   */
   applyBudgetTemplate(templateId, month) {
     if (!this.profile) return 0;
     var tpl = (this.profile.budgetTemplates || []).find(function (t) { return t.id === templateId; });
@@ -238,6 +301,11 @@ export const budgetSlice = {
     return n;
   },
 
+  /**
+   * Remove a saved template by id. Records an undo entry.
+   * @param {id} templateId
+   * @returns {boolean} false if not found
+   */
   deleteBudgetTemplate(templateId) {
     if (!this.profile || !this.profile.budgetTemplates) return false;
     var i = this.profile.budgetTemplates.findIndex(function (t) { return t.id === templateId; });
@@ -252,14 +320,30 @@ export const budgetSlice = {
   },
 
   /* Quick-assign helpers — they return cents; UI calls assign(). */
+  /**
+   * @param {id} categoryId
+   * @param {string} [month]
+   * @returns {number} cents that were assigned in the prior month
+   */
   quickLastMonth(categoryId, month) {
     if (!this.profile) return 0;
     return quickAssignLastMonth(this.profile, categoryId, month || this.currentMonth);
   },
+  /**
+   * @param {id} categoryId
+   * @param {string} [month]
+   * @param {number} [n] window in months
+   * @returns {number} cents of average spending over the window
+   */
   quickAvg(categoryId, month, n) {
     if (!this.profile) return 0;
     return quickAssignAverageSpending(this.profile, categoryId, month || this.currentMonth, n);
   },
+  /**
+   * @param {id} categoryId
+   * @param {string} [month] currently unused
+   * @returns {number} cents — the goal target for the category, or 0
+   */
   quickGoalTarget(categoryId, month) {
     var goal = this.findGoal(categoryId);
     if (!goal) return 0;

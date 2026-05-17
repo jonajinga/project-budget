@@ -8,9 +8,13 @@ import { categoryRow, assigned as budgetAssigned } from "../../domain/budget.js"
 import { occurrencesIn } from "../../domain/scheduled.js";
 
 export const dashboardSlice = {
-  /* Count of categories whose net (carry + assigned + activity) is
-     below zero this month, plus the total deficit. Drives the
-     "Overspent" KPI tile + the alert. */
+  /**
+   * Count of categories whose available is below zero this month
+   * plus the absolute-value sum of the deficits. Drives the
+   * "Overspent" KPI tile and dashboard alert.
+   * @param {string} [month]
+   * @returns {object} {count, totalDeficit} — deficit in cents
+   */
   overspentCount(month) {
     if (!this.profile) return { count: 0, totalDeficit: 0 };
     void this._listVersion;
@@ -28,10 +32,14 @@ export const dashboardSlice = {
     return { count: count, totalDeficit: deficit };
   },
 
-  /* Sum of every scheduled occurrence in the next `days` days plus
-     the underlying schedule records so the dashboard can list them.
-     Outflow shows as negative, inflow as positive — caller decides
-     how to render. Each returned bill carries the resolved ISO date. */
+  /**
+   * Resolve every scheduled occurrence in the next `days` days into
+   * a flat list, with running totals. Outflow shows as negative,
+   * inflow as positive — caller decides how to render.
+   * @param {number} [days] defaults to 14
+   * @returns {object} {totalNet, totalOut, totalIn, items[]} — cents; each item
+   *   has {schedId, date, amount, payeeName, payeeId, accountId, categoryId}
+   */
   upcomingBills(days) {
     void this._listVersion;
     if (!this.profile || !this.profile.scheduled.length) {
@@ -65,8 +73,13 @@ export const dashboardSlice = {
     return { totalNet: totalNet, totalOut: totalOut, totalIn: totalIn, items: items };
   },
 
-  /* Goals sorted by furthest from this month's target, capped at
-     `limit`. Used by the dashboard's "Needs attention" band. */
+  /**
+   * Goals sorted by furthest from this month's target (lowest pct
+   * first), capped at `limit`. Goals already at 100% are excluded.
+   * @param {number} [limit] defaults to 3
+   * @param {string} [month]
+   * @returns {object[]} {goal, categoryId, categoryName, assigned, target, pct, deficit}
+   */
   goalsNeedingAttention(limit, month) {
     void this._listVersion;
     if (!this.profile || !this.profile.goals) return [];
@@ -91,10 +104,13 @@ export const dashboardSlice = {
     return rows.slice(0, limit || 3);
   },
 
-  /* Surface deterministic warnings the dashboard should highlight.
-     Each alert returns { id, severity, text, href } where severity
-     is "danger" | "warn" | "info" and href is the page that resolves
-     the alert. Read-only — the user takes action from the link. */
+  /**
+   * Deterministic warnings shown on the dashboard. Each entry is
+   * {id, severity, text, href} where severity is
+   * "danger"|"warn"|"info" and href is the page that resolves the
+   * alert. Read-only.
+   * @returns {object[]}
+   */
   dashboardAlerts() {
     void this._listVersion;
     var out = [];

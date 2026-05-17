@@ -24,6 +24,10 @@ export const categoriesSlice = {
   /* Every mutator bumps _listVersion so categoryGroupsView()'s
      reactivity tripwire fires and the budget grid re-renders
      without a manual refresh. */
+  /**
+   * @param {string} name
+   * @returns {object|null} the created group
+   */
   addCategoryGroup(name) {
     if (!this.profile) return null;
     this._recordUndo("Add group");
@@ -32,6 +36,10 @@ export const categoriesSlice = {
     this._save();
     return g;
   },
+  /**
+   * @param {id} id
+   * @param {string} name
+   */
   renameCategoryGroup(id, name) {
     if (!this.profile) return;
     this._recordUndo("Rename group");
@@ -39,6 +47,11 @@ export const categoriesSlice = {
     this._bumpLists();
     this._save();
   },
+  /**
+   * Delete a category group; member-handling is delegated to the
+   * domain helper. Records an undo entry.
+   * @param {id} id
+   */
   deleteCategoryGroup(id) {
     if (!this.profile) return;
     this._recordUndo("Delete group");
@@ -46,6 +59,10 @@ export const categoriesSlice = {
     this._bumpLists();
     this._save();
   },
+  /**
+   * @param {object} opts {name, groupId, ...}
+   * @returns {object|null} the created category
+   */
   addCategory(opts) {
     if (!this.profile) return null;
     this._recordUndo("Add category");
@@ -54,6 +71,10 @@ export const categoriesSlice = {
     this._save();
     return c;
   },
+  /**
+   * @param {id} id
+   * @param {string} name
+   */
   renameCategory(id, name) {
     if (!this.profile) return;
     this._recordUndo("Rename category");
@@ -61,6 +82,9 @@ export const categoriesSlice = {
     this._bumpLists();
     this._save();
   },
+  /**
+   * @param {id} id
+   */
   deleteCategory(id) {
     if (!this.profile) return;
     this._recordUndo("Delete category");
@@ -68,6 +92,12 @@ export const categoriesSlice = {
     this._bumpLists();
     this._save();
   },
+  /**
+   * Reparent a category to a different group (or detach with null).
+   * No undo entry.
+   * @param {id} id
+   * @param {id} groupId
+   */
   moveCategoryToGroup(id, groupId) {
     if (!this.profile) return;
     moveCategoryToGroupImpl(this.profile, id, groupId);
@@ -80,6 +110,12 @@ export const categoriesSlice = {
      categoryGroupsView / accountGroupsView render the new order on
      next read. _bumpLists nudges any consumer that walked the view
      in a prior tick. */
+  /**
+   * Reorder a category group to a new index in the sortIndex list.
+   * No undo entry.
+   * @param {id} id
+   * @param {number} toIndex
+   */
   moveCategoryGroup(id, toIndex) {
     if (!this.profile) return;
     var arr = this.profile.categoryGroups
@@ -95,6 +131,13 @@ export const categoriesSlice = {
     this._save();
   },
 
+  /**
+   * Move a category into a group at a specific index, updating
+   * sortIndex on every sibling in the target group. No undo entry.
+   * @param {id} catId
+   * @param {id} toGroupId
+   * @param {number} toIndex
+   */
   moveCategory(catId, toGroupId, toIndex) {
     if (!this.profile) return;
     var cat = this.profile.categories.find(function (c) { return c.id === catId; });
@@ -110,6 +153,11 @@ export const categoriesSlice = {
     this._save();
   },
 
+  /**
+   * Reorder an account group within the sortIndex list. No undo entry.
+   * @param {id} id
+   * @param {number} toIndex
+   */
   moveAccountGroup(id, toIndex) {
     if (!this.profile) return;
     var arr = this.profile.accountGroups
@@ -125,6 +173,13 @@ export const categoriesSlice = {
     this._save();
   },
 
+  /**
+   * Move an account into a group at a specific index, updating
+   * sortIndex on every sibling. No undo entry.
+   * @param {id} acctId
+   * @param {id} toGroupId
+   * @param {number} toIndex
+   */
   moveAccount(acctId, toGroupId, toIndex) {
     if (!this.profile) return;
     var a = this.profile.accounts.find(function (x) { return x.id === acctId; });
@@ -141,22 +196,40 @@ export const categoriesSlice = {
   },
 
   /* ---- Derivations / lookups ---- */
+  /** @param {id} id @returns {object|null} */
   findCategory(id) { return this.profile ? findCategoryImpl(this.profile, id) : null; },
+  /** @param {id} id @returns {object|null} */
   findCategoryGroup(id) { return this.profile ? findCategoryGroupImpl(this.profile, id) : null; },
+  /**
+   * Budget-grid view of groups with their categories attached. Reads
+   * _listVersion for reactivity.
+   * @returns {object[]}
+   */
   categoryGroupsView() {
     /* Reactivity tripwire — bumpLists triggers re-render even when
        the profile object reference doesn't change. */
     void this._listVersion;
     return this.profile ? categoryGroupsViewImpl(this.profile) : [];
   },
+  /** @param {id} id @returns {boolean} */
   isPaymentCategory(id) { return this.profile ? isPaymentCategoryImpl(this.profile, id) : false; },
+  /**
+   * Account id paired with a payment category, or null.
+   * @param {id} id payment category id
+   * @returns {id|null}
+   */
   paymentCardId(id) { return this.profile ? paymentCardIdImpl(this.profile, id) : null; },
+  /** @param {id} id @returns {string} category name, or "" */
   categoryName(id) {
     var c = this.findCategory(id);
     return c ? c.name : "";
   },
 
-  /* All categories flat — used by dropdowns. Skips hidden by default. */
+  /**
+   * Flat list of categories formatted "Group / Name" for dropdown
+   * pickers. Hidden categories are excluded.
+   * @returns {object[]} {id, name, groupName}
+   */
   categoriesFlat() {
     void this._listVersion;
     if (!this.profile) return [];
