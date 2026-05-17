@@ -33,6 +33,9 @@ eleventyExcludeFromCollections: true
            crawlers always see a page heading. Alpine swaps in the
            dynamic label (e.g. "May 2026") once hydrated. #}
         <h1 class="cal-toolbar__title" x-text="anchorLabel() || 'Calendar'">Calendar</h1>
+        <button type="button" class="btn btn--ghost btn--sm" @click="saveCurrentView()"
+                style="margin-left: auto;"
+                data-tip="Save this month + view as a recall-able view in /app/templates/.">Save view</button>
       </div>
 
       {# Year-view display toggle — swaps each cell's date number for
@@ -1426,6 +1429,27 @@ function calendarView() {
         try { localStorage.setItem("projectbudget:cal-year-show-net", v ? "1" : "0"); }
         catch (_e) {}
       });
+      /* Sync filter state back to the URL so the page is shareable +
+         saveable as a view. anchorISO is per-day; we round to the
+         month for the ?m= param to match what the page reads on load. */
+      var self = this;
+      this.$watch("anchorISO", function () { self._syncUrl(); });
+      this.$watch("view",      function () { self._syncUrl(); });
+    },
+
+    _syncUrl() {
+      try {
+        var month = (this.anchorISO || "").slice(0, 7);
+        var parts = [];
+        if (month) parts.push("m=" + month);
+        if (this.view && this.view !== "month") parts.push("v=" + this.view);
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "calendar", name: "" });
     },
 
     /* ---------- date helpers ---------- */

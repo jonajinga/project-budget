@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Savings rate</h1>
       <p class="app-page__lead">Income minus expense, divided by income. A 20% rate is solid; 30%+ is excellent. Negative means you spent more than you earned that month.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this range + chart type + filter as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
@@ -253,10 +257,42 @@ function savingsRateView() {
       setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
     },
 
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.rangeMonths !== 12)        parts.push("range=" + this.rangeMonths);
+        if (this.chartType   !== "line")    parts.push("type="  + encodeURIComponent(this.chartType));
+        if (this.brushFrom)                 parts.push("from="  + this.brushFrom);
+        if (this.brushTo)                   parts.push("to="    + this.brushTo);
+        if (this.query)                     parts.push("q="     + encodeURIComponent(this.query));
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "savings-rate", name: "" });
+    },
+
     init() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.savingsRate = function () { return self.rangeMonths; };
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var r = Number(p.get("range"));
+        if (r && [6,12,24].indexOf(r) !== -1) self.rangeMonths = r;
+        var t = p.get("type");
+        if (t && ["line","area","bar"].indexOf(t) !== -1) self.chartType = t;
+        var q = p.get("q"); if (q) self.query = q;
+        var bf = p.get("from"), bt = p.get("to");
+        if (bf && bt) { self.brushFrom = bf; self.brushTo = bt; }
+      } catch (_e) {}
+      self.$watch("rangeMonths", function () { self._syncUrl(); });
+      self.$watch("chartType",   function () { self._syncUrl(); });
+      self.$watch("query",       function () { self._syncUrl(); });
+      self.$watch("brushFrom",   function () { self._syncUrl(); });
+      self.$watch("brushTo",     function () { self._syncUrl(); });
       window.pbOnBrush = window.pbOnBrush || {};
       window.pbOnBrush.savingsRate = function (range, data) {
         if (!range || range.from == null || range.to == null) {

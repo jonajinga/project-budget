@@ -99,6 +99,10 @@
      call it without an import. Loaded on reports + a few other
      pages that have Export buttons. #}
   <script src="/assets/js/ui/csv-export.js?v={{ build.hash }}" type="module"></script>
+  {# Global save-view listener — turns pb:save-view events from any
+     page into entries in projectbudget:savedViews, captures the
+     live URL so filters are recall-able with one click. #}
+  <script src="/assets/js/ui/save-view.js?v={{ build.hash }}" defer></script>
   {# Per-report PDF export — uses the already-conditional jsPDF
      vendor. Only loaded on reports pages. #}
   {% if page.url and page.url.startsWith("/app/reports/") %}

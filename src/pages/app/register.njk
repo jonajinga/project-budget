@@ -28,6 +28,8 @@ eleventyExcludeFromCollections: true
               data-tip="Move money between two of your own accounts. Creates a paired entry on each side.">Transfer</button>
       <button class="btn btn--secondary" type="button" @click="showReconcile = true" x-show="filterAccountId" x-cloak
               data-tip="Match the cleared balance to your statement. Closes any gap with an adjustment, then locks cleared transactions.">Reconcile</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save the current account + search as a recall-able view in /app/templates/.">Save view</button>
     </div>
   </header>
 
@@ -151,7 +153,8 @@ eleventyExcludeFromCollections: true
         </select>
         <input class="input register__search" type="search"
                aria-label="Search payee or memo"
-               x-model="search"
+               x-model.debounce.300ms="search"
+               @input.debounce.300ms="updateUrl()"
                placeholder="Search payee or memo">
       </div>
       <p class="register__count">
@@ -766,8 +769,15 @@ function registerView() {
 
     updateUrl() {
       var base = window.location.pathname;
-      var qs = this.filterAccountId ? ("?account=" + this.filterAccountId) : "";
+      var parts = [];
+      if (this.filterAccountId) parts.push("account=" + encodeURIComponent(this.filterAccountId));
+      if (this.search && this.search.trim()) parts.push("q=" + encodeURIComponent(this.search.trim()));
+      var qs = parts.length ? ("?" + parts.join("&")) : "";
       history.replaceState(null, "", base + qs);
+    },
+    saveCurrentView() {
+      this.updateUrl();
+      this.$dispatch("pb:save-view", { kind: "register", name: "" });
     },
 
     submitAdd() {
