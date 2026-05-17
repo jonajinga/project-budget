@@ -17,9 +17,21 @@
    than the hamburger column. */
 .site-header__inner--app {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  /* Mobile/tablet (under 1024px where the sidebar is a drawer):
+     three equal columns lock the profile to true viewport center —
+     hamburger flush left, profile dead center, actions flush right.
+     Desktop bumps to auto 1fr auto so the centered profile lives in
+     the natural fr middle column. */
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--space-sm);
+}
+.site-header__inner--app > .site-header__hamburger { justify-self: start; }
+.site-header__inner--app > .site-header__profile { justify-self: center; }
+.site-header__inner--app > .site-header__actions { justify-self: end; }
+@media (min-width: 1024px) {
+  .site-header__inner--app { grid-template-columns: auto 1fr auto; }
+  .site-header__inner--app > .site-header__profile { justify-self: start; }
 }
 
 /* App header drops the 1180-px container cap so the hamburger sits
@@ -127,28 +139,12 @@
    undo/redo (they're rare on mobile, and Cmd+Z still works) keeps
    everything on one row inside a 360-px viewport. */
 @media (max-width: 599px) {
-  /* Three equal columns lock the profile name to true horizontal
-     center — `auto 1fr auto` was offsetting the profile left of
-     center because the actions column is wider than the hamburger.
-     1fr auto 1fr keeps side columns equal so the auto middle
-     centers perfectly. */
+  /* Grid layout (1fr auto 1fr + justify-self per child) lives in
+     the .site-header__inner--app base rules so it covers tablets
+     too — only the mobile-specific padding + icon sizing live here. */
   .site-header__inner--app {
-    grid-template-columns: 1fr auto 1fr;
     gap: var(--space-3xs);
     padding-inline: var(--space-2xs);
-  }
-  /* Hamburger column: pin to start. */
-  .site-header__inner--app > .site-header__hamburger {
-    justify-self: start;
-  }
-  /* Profile column: dead center via the auto middle col. */
-  .site-header__inner--app > .site-header__profile {
-    justify-self: center;
-  }
-  /* Actions column: pin to end so search + theme cluster sits
-     flush right against the screen edge. */
-  .site-header__inner--app > .site-header__actions {
-    justify-self: end;
   }
   .site-header__hamburger,
   .site-header__search,
