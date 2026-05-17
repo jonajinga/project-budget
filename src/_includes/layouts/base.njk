@@ -21,6 +21,18 @@
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="{{ site.themeColor }}">
+  {# Service worker — stale-while-revalidate for /app/*, network-
+     first for marketing pages. Registers silently after page load
+     so the install doesn't block first paint. #}
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/sw.js").catch(function (err) {
+          console.warn("SW registration failed:", err);
+        });
+      });
+    }
+  </script>
 
   {% if site.umamiWebsiteId %}
   <script defer src="https://cloud.umami.is/script.js" data-website-id="{{ site.umamiWebsiteId }}"></script>

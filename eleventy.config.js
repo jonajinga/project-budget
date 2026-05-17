@@ -155,6 +155,7 @@ export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy({ "src/favicon.ico": "favicon.ico" });
   eleventyConfig.addPassthroughCopy({ "src/favicon.svg": "favicon.svg" });
   eleventyConfig.addPassthroughCopy({ "src/manifest.webmanifest": "manifest.webmanifest" });
+  eleventyConfig.addPassthroughCopy({ "src/sw.js": "sw.js" });
 
   // ---- Watch -------------------------------------------------------------
   eleventyConfig.addWatchTarget("src/assets/css/partials/");
