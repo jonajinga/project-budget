@@ -318,3 +318,28 @@
 [data-theme-preview="rose-pine"] .theme-picker__swatch-bg           { background: #191724; }
 [data-theme-preview="rose-pine"] .theme-picker__swatch-fg           { background: #e0def4; }
 [data-theme-preview="rose-pine"] .theme-picker__swatch-accent       { background: #ebbcba; }
+
+/* Doc / marketing content INSIDE the app shell — used by /about,
+   /contact, /privacy, /terms, /accessibility, /glossary, etc. The
+   prose lives in a narrow readable column so the same content reads
+   well alongside the sidebar at desktop widths. */
+.app-doc {
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: var(--space-md) var(--space-md) var(--space-2xl);
+}
+.app-doc__header { margin-bottom: var(--space-lg); }
+.app-doc__title {
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+}
+.app-doc__subtitle {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+.app-doc__prose > * + * { margin-top: var(--space-sm); }
+.app-doc__prose h2 { margin-top: var(--space-lg); }
+.app-doc__prose h3 { margin-top: var(--space-md); }
