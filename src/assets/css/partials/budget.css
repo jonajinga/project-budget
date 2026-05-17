@@ -252,9 +252,33 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 @media (hover: none) {
   .budget__row-actions { opacity: 1; }
 }
-/* Same fade-in pattern for the group header's inline actions. */
+/* Keep the title + actions on one row at the group header — the
+   parent `.cluster` utility wraps by default, so the action
+   buttons would drop below the title on narrow viewports. The
+   toggle button is allowed to truncate via min-width: 0 +
+   text-overflow on its <strong>. */
+.budget__group-header > .cluster {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.budget__group-header .group-toggle {
+  min-width: 0;
+  overflow: hidden;
+}
+.budget__group-header .group-toggle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* Same fade-in pattern for the group header's inline actions.
+   nowrap + flex-shrink: 0 keeps the cluster pinned next to the
+   title even on narrow viewports (otherwise the cluster wraps
+   below the title, breaking the visual hierarchy). */
 .budget__group-actions {
   display: inline-flex;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   gap: 2px;
   opacity: 0;
   transition: opacity var(--t-fast);
@@ -434,11 +458,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 .available-pill {
   display: inline-flex;
   align-items: center;
-  /* Center the value inside the pill so $-sign + digits look
-     balanced — was flex-end which butted the trailing digit
-     against the right padding. */
-  justify-content: center;
-  min-width: 6rem;
+  /* Right-align with generous padding so the trailing digit clears
+     the border AND digit-right-edges line up across rows (the
+     convention for scanning tabular numerals). */
+  justify-content: flex-end;
+  min-width: 7rem;
   max-width: 100%;
   /* Extra right padding so the trailing digit doesn't kiss the
      pill border — especially noticeable on long signed values like
@@ -568,23 +592,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
-/* Outflow button inside the total row keeps the same big numeric
-   treatment but stays inline (no pill chrome — the total row is a
-   summary, like group headers). */
+/* Outflow button inside the total row keeps the pill chrome but
+   scales the type up to match the other big total values. */
 .budget__total-row .budget__activity-btn.budget__total-value {
-  display: inline;
-  min-width: 0;
-  border: 0;
-  padding: 0;
-  border-radius: 0;
   font-weight: 700;
   font-size: var(--fs-xl);
-}
-.budget__total-row .budget__activity-btn.budget__total-value:not(:disabled):hover {
-  background: transparent;
-  border-color: transparent;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 /* Right-edge alignment across every row type. Every number cell sits
@@ -630,11 +642,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      stretching across the entire grid column. */
   display: inline-flex;
   align-items: center;
-  /* Center the value inside the pill so $-sign + digits look
-     balanced — was flex-end which butted the trailing digit
-     against the right padding. */
-  justify-content: center;
-  min-width: 6rem;
+  /* Right-align with generous padding so the trailing digit clears
+     the border AND digit-right-edges line up across rows (the
+     convention for scanning tabular numerals). */
+  justify-content: flex-end;
+  min-width: 7rem;
   max-width: 100%;
   /* Extra right padding so the trailing digit doesn't kiss the
      pill border — especially noticeable on long signed values like
