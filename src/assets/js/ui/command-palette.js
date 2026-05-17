@@ -34,7 +34,7 @@
       { id: "go-scheduled",  label: "Go to Recurring",   hint: "/app/scheduled/",  run: function () { go("/app/scheduled/"); } },
       { id: "go-reports",    label: "Go to Reports",     hint: "/app/reports/",    run: function () { go("/app/reports/"); } },
       { id: "go-import",     label: "Go to Import",      hint: "/app/import/",     run: function () { go("/app/import/"); } },
-      { id: "go-export",     label: "Go to Export",      hint: "/app/export/",     run: function () { go("/app/export/"); } },
+      { id: "go-backup",     label: "Go to Backup",      hint: "/app/backup/",     run: function () { go("/app/backup/"); } },
       { id: "go-profiles",   label: "Go to Profiles",    hint: "/app/profiles/",   run: function () { go("/app/profiles/"); } },
       { id: "go-settings",   label: "Go to Settings",    hint: "/app/settings/",   run: function () { go("/app/settings/"); } },
       { id: "go-style-guide", label: "Go to Style Guide", hint: "/style-guide/",   run: function () { go("/style-guide/"); } },

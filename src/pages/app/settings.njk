@@ -75,7 +75,7 @@ eleventyExcludeFromCollections: true
       </div>
     </dl>
     <div class="form-actions" style="margin-top: var(--space-md);">
-      <a class="btn btn--secondary btn--sm" href="/app/export/">Export</a>
+      <a class="btn btn--secondary btn--sm" href="/app/backup/">Backup</a>
       <a class="btn btn--secondary btn--sm" href="/app/import/">Import</a>
       <button class="btn btn--secondary btn--sm" type="button" @click="$store.budget.exportAllProfilesJSON()"
               :disabled="!$store.budget.profiles?.length"

@@ -390,56 +390,9 @@
       input.addEventListener("focus", function () { runSearch(input.value); });
     }
 
-    /* Global keybinds.
-       - Cmd/Ctrl+K   → search + command palette (universal convention)
-       - n            → quick-add transaction (only when not typing in a
-                        field, so it doesn't intercept actual text input)
-       - Cmd/Ctrl+Z   → undo (skipped when typing so OS-native text undo
-                        keeps working inside inputs)
-       Earlier the FAB tooltip pointed at Ctrl+K, which actually opens
-       the palette — pressing `n` jumps straight to Quick Add without
-       the intermediate palette step. */
-    function inEditableField(target) {
-      if (!target || !target.tagName) return false;
-      var tag = target.tagName.toUpperCase();
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-      return !!target.isContentEditable;
-    }
-    document.addEventListener("keydown", function (e) {
-      if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        openSearch();
-      } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "?" && !inEditableField(e.target)) {
-        /* GitHub-style: `?` opens the command palette so users can
-           discover available actions + navigation. Same destination
-           as Cmd/Ctrl+K but without a modifier — easier to remember. */
-        e.preventDefault();
-        openSearch();
-      } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "n" && !inEditableField(e.target)) {
-        /* Only fire when the FAB partial is on the page (app shell). */
-        if (document.querySelector(".fab-quick-add")) {
-          e.preventDefault();
-          try { document.dispatchEvent(new CustomEvent("pb:quick-add-open")); } catch (_e) {}
-        }
-      } else if (e.key === "Escape") {
-        if (searchModal() && !searchModal().hidden) closeSearch();
-        if (siteMenu() && siteMenu().classList.contains("is-open")) closeSiteMenu();
-      } else if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "z") {
-        /* Skip undo/redo when the user is typing in a field so they
-           can use the OS-native text undo inside inputs/textareas. */
-        var t = e.target;
-        var tag = t && t.tagName ? t.tagName.toUpperCase() : "";
-        if (tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
-        var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
-        if (!s) return;
-        e.preventDefault();
-        if (e.shiftKey) {
-          if (s.canRedo()) s.redo();
-        } else {
-          if (s.canUndo()) s.undo();
-        }
-      }
-    });
+    /* See top-level keydown listener below — registered at IIFE
+       scope (outside wire) so it attaches regardless of whether
+       anything in wire throws. */
 
     /* System theme change with no explicit preference */
     try {
@@ -467,6 +420,59 @@
   window.ProjectBudget.openSearch = openSearch;
   window.ProjectBudget.closeSearch = closeSearch;
   window.ProjectBudget.toggleSiteMenu = toggleSiteMenu;
+
+  /* Global keybinds — registered here at the IIFE top level (NOT
+     inside wire()) so they attach regardless of whether anything in
+     wire() throws partway through. Capture phase so we beat any
+     Alpine x-data @keydown.window handlers that might preventDefault
+     on the same key.
+
+     Bindings:
+       - Cmd/Ctrl+K            → search + command palette
+       - ?  (or Shift+/)       → same as above (GitHub convention)
+       - n                     → quick-add transaction (skip in inputs)
+       - Cmd/Ctrl+Z / +Shift+Z → undo / redo (skip in inputs)
+       - Escape                → close modals + menus
+
+     The `?` handler also accepts e.code === "Slash" + e.shiftKey as
+     a fallback for keyboard layouts where e.key may not report "?"
+     directly. */
+  function inEditableField(target) {
+    if (!target || !target.tagName) return false;
+    var tag = target.tagName.toUpperCase();
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    return !!target.isContentEditable;
+  }
+  document.addEventListener("keydown", function (e) {
+    var isQuestion = (e.key === "?") ||
+      (e.code === "Slash" && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey);
+
+    if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if (typeof openSearch === "function") openSearch();
+    } else if (isQuestion && !inEditableField(e.target)) {
+      e.preventDefault();
+      if (typeof openSearch === "function") openSearch();
+    } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "n" && !inEditableField(e.target)) {
+      if (document.querySelector(".fab-quick-add")) {
+        e.preventDefault();
+        try { document.dispatchEvent(new CustomEvent("pb:quick-add-open")); } catch (_e) {}
+      }
+    } else if (e.key === "Escape") {
+      if (typeof searchModal === "function" && searchModal() && !searchModal().hidden) closeSearch();
+      if (typeof siteMenu === "function" && siteMenu() && siteMenu().classList.contains("is-open")) closeSiteMenu();
+    } else if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "z") {
+      if (inEditableField(e.target)) return;
+      var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+      if (!s) return;
+      e.preventDefault();
+      if (e.shiftKey) {
+        if (s.canRedo()) s.redo();
+      } else {
+        if (s.canUndo()) s.undo();
+      }
+    }
+  }, true);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", wire);

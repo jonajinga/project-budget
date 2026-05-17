@@ -1,58 +1,27 @@
 ---
 layout: layouts/app.njk
 title: "Export"
-description: "Download the active profile as a JSON file."
+description: "Redirects to /app/backup/ — backup is the canonical place to download profiles as JSON."
 permalink: /app/export/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data>
+{# Inline meta-refresh + JS redirect so this page stays a thin
+   forwarder. /app/backup/ is the canonical place to take a backup or
+   download the active profile alone — Export used to do the exact
+   same thing, so it's been merged. The visible card is a fallback
+   for users who arrive with JS off (extremely rare for the app shell
+   but cheap to support). #}
+<meta http-equiv="refresh" content="0; url=/app/backup/">
+<div class="app-page" x-data x-init="window.location.replace('/app/backup/')">
   <header class="app-page__header">
-    <h1 class="app-page__title">Export</h1>
+    <h1 class="app-page__title">Export moved to Backup</h1>
   </header>
-
-  <p class="app-page__lead">
-    Download the active profile as one JSON file. It contains every account, transaction, category, payee, schedule, and goal. Round-trips losslessly through import.
-  </p>
-
-  <p class="app-page__lead" x-show="!$store.budget.profile" x-cloak>
-    Create or switch to a profile before exporting.
-  </p>
-
-  <section class="card" x-show="$store.budget.profile" x-cloak>
-    <h2 class="card__title">Active profile</h2>
+  <section class="card">
     <p class="card__body">
-      <strong x-text="$store.budget.profile?.name"></strong>
-      &middot; <span x-text="$store.budget.profile?.accounts?.length ?? 0"></span> accounts
-      &middot; <span x-text="$store.budget.profile?.transactions?.length ?? 0"></span> transactions
-      &middot; <span x-text="$store.budget.profile?.categories?.length ?? 0"></span> categories
+      Export and Backup did the same thing (download a JSON snapshot of your profile), so they've been merged. <a href="/app/backup/">Continue to /app/backup/</a> — that's the canonical place to take a backup or download the active profile alone.
     </p>
-    <p class="form-help" style="margin-top: var(--space-sm);">
-      File will be named <code x-text="$store.budget.exportFilename()"></code>.
-      No encryption in v1 — protect the file the way you would protect any sensitive document.
-    </p>
-    <div class="form-actions">
-      <button class="btn btn--primary" type="button" @click="$store.budget.exportActiveJSON()">Download JSON</button>
-    </div>
-  </section>
-
-  <section class="card" style="margin-top: var(--space-md);" x-data x-show="$store.budget.profiles?.length > 0" x-cloak>
-    <h2 class="card__title">Export all profiles</h2>
-    <p class="card__body" style="margin-bottom: var(--space-sm);">
-      Bundle every profile in this browser into one JSON file. Useful for moving everything to another browser or device in a single import. The bundle file name follows
-      <code x-text="$store.budget.exportBundleFilename()"></code>.
-    </p>
-    <p style="color: var(--fg-muted); font-size: var(--fs-sm); margin-bottom: var(--space-sm);">
-      <strong x-text="$store.budget.profiles?.length"></strong> profile(s) will be included.
-    </p>
-    <div class="form-actions">
-      <button class="btn btn--secondary" type="button" @click="$store.budget.exportAllProfilesJSON()">Download all profiles as bundle</button>
-    </div>
-  </section>
-
-  <section class="card" style="margin-top: var(--space-md);">
-    <h2 class="card__title">Make exporting a habit</h2>
-    <p class="card__body">
-      Project Budget writes daily backups inside your browser, but they go with the browser if you wipe your cache or switch devices. A JSON export is your portable copy. Save it somewhere durable — a personal drive, a synced folder, or alongside other financial records.
+    <p class="card__body" style="color: var(--fg-muted); font-size: var(--fs-sm);">
+      You should be redirected automatically. If you aren't, click the link above.
     </p>
   </section>
 </div>

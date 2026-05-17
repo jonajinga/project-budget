@@ -1735,6 +1735,28 @@ export function createStore() {
         });
       }
 
+      /* Rule 6: accounts flagged exclude-from-net-worth. Reminder
+         note (info, not warn) so users glancing at the dashboard
+         remember that their displayed net worth omits these
+         balances. Only fires when at least one account is excluded
+         AND its total is non-zero. */
+      var excludedSum = 0;
+      var excludedCount = 0;
+      this.profile.accounts.forEach(function (a) {
+        if (a.closedAt) return;
+        if (!a.excludeFromNetWorth) return;
+        excludedCount += 1;
+        excludedSum += self.accountBalance(a.id);
+      });
+      if (excludedCount > 0 && excludedSum !== 0) {
+        out.push({
+          id: "excluded-from-nw",
+          severity: "info",
+          text: excludedCount + " account" + (excludedCount === 1 ? "" : "s") + " totaling " + ((excludedSum / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })) + " excluded from net worth.",
+          href: "/app/accounts/",
+        });
+      }
+
       return out;
     },
 

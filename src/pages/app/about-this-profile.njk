@@ -46,6 +46,40 @@ eleventyExcludeFromCollections: true
       </dl>
     </section>
 
+    {# Net-worth picture — surfaces the working roll-up + how much
+       sits in accounts flagged exclude-from-net-worth + the all-in
+       total. Only renders the excluded rows when at least one
+       account is excluded so households without 529s/escrow/RSUs
+       stay tidy. #}
+    <section class="card" style="margin-top: var(--space-md);">
+      <h2 class="card__title">Net worth picture</h2>
+      <dl class="about-profile">
+        <div>
+          <dt>Net worth (working total)</dt>
+          <dd :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents($store.budget.netWorth())"></dd>
+        </div>
+        <div x-show="excludedCount() > 0" x-cloak>
+          <dt>Excluded from net worth
+            <span class="badge" style="margin-left: var(--space-2xs);"
+                  x-text="excludedCount() + (excludedCount() === 1 ? ' account' : ' accounts')"></span>
+          </dt>
+          <dd :class="excludedTotal() < 0 ? 'amount--outflow' : ''"
+              x-text="formatCents(excludedTotal())"></dd>
+        </div>
+        <div x-show="excludedCount() > 0" x-cloak>
+          <dt><strong>All-in total (net + excluded)</strong></dt>
+          <dd><strong x-text="formatCents($store.budget.netWorth() + excludedTotal())"></strong></dd>
+        </div>
+      </dl>
+      <p x-show="excludedNames().length" x-cloak class="about-profile__excluded-list">
+        Excluded accounts:
+        <template x-for="(n, i) in excludedNames()" :key="n">
+          <span><span x-text="n"></span><span x-show="i < excludedNames().length - 1" aria-hidden="true">, </span></span>
+        </template>
+      </p>
+    </section>
+
     <section class="card" style="margin-top: var(--space-md);">
       <h2 class="card__title">Activity</h2>
       <dl class="about-profile">
@@ -66,7 +100,6 @@ eleventyExcludeFromCollections: true
       </p>
       <div class="cluster" style="margin-top: var(--space-sm);">
         <a class="btn btn--primary btn--sm" href="/app/backup/">Open backup page</a>
-        <a class="btn btn--ghost btn--sm" href="/app/export/">Export profile JSON</a>
       </div>
     </section>
 
@@ -135,6 +168,30 @@ function aboutProfileView() {
         return d.toLocaleString();
       } catch (_e) { return "—"; }
     },
+    /* Net-worth picture helpers — sum + count + names of every
+       account flagged excludeFromNetWorth so users can see at a
+       glance which accounts the working net-worth roll-up skips. */
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+    excludedAccounts() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      return p.accounts.filter(function (a) {
+        return !a.closedAt && a.excludeFromNetWorth;
+      });
+    },
+    excludedCount() { return this.excludedAccounts().length; },
+    excludedTotal() {
+      var s = this.$store.budget;
+      return this.excludedAccounts().reduce(function (sum, a) {
+        return sum + s.accountBalance(a.id);
+      }, 0);
+    },
+    excludedNames() {
+      return this.excludedAccounts().map(function (a) { return a.name; });
+    },
   };
 }
 </script>
@@ -145,4 +202,5 @@ function aboutProfileView() {
   .about-profile > div:last-child { border-bottom: 0; }
   .about-profile dt { color: var(--fg-muted); margin: 0; font-size: var(--fs-sm); }
   .about-profile dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .about-profile__excluded-list { margin: var(--space-sm) 0 0; color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.5; }
 </style>
