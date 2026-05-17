@@ -61,7 +61,12 @@ eleventyExcludeFromCollections: true
                 data-tip="Jump to the current calendar month.">This month</button>
         <button type="button" class="btn btn--primary btn--sm"
                 @click="openAutoAssign({ kind: 'all', name: 'All categories', ids: null })"
-                data-tip="Fill in this month's Assigned column for every category — from goal needs, last month's plan, or recent averages.">⚡ Auto-assign</button>
+                data-tip="Fill in this month's Assigned column for every category — from goal needs, last month's plan, or recent averages.">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;">
+            <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
+          </svg>
+          Auto-assign
+        </button>
         <button type="button" class="btn btn--ghost btn--sm"
                 @click="bulkClearAssigned('all')"
                 data-tip="Reset Assigned to $0 for every category in this month. Cmd/Ctrl+Z undoes.">Clear all assigned</button>
@@ -841,7 +846,12 @@ eleventyExcludeFromCollections: true
     </div>
     <div class="cluster" style="gap: var(--space-2xs);">
       <button type="button" class="btn btn--primary btn--sm" @click="bulkAutoAssign()"
-              data-tip="Open the auto-assign strategy picker for every selected category.">⚡ Auto-assign</button>
+              data-tip="Open the auto-assign strategy picker for every selected category.">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;">
+          <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
+        </svg>
+        Auto-assign
+      </button>
       <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAssigned('selection')"
               data-tip="Reset Assigned to $0 for every selected category in this month.">Clear assigned</button>
       <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAvailable('selection')"
