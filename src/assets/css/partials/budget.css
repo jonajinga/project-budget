@@ -97,6 +97,13 @@
   .budget__activity::before,
   .budget__available::before { display: none; }
 }
+/* Column header strip — only useful on desktop where rows lay out
+   horizontally. On mobile each cat row carries its own micro-labels
+   above each pill so the column strip is redundant. */
+.budget__column-header { display: none; }
+@media (min-width: 600px) {
+  .budget__column-header { display: grid; }
+}
 .budget__row { border-top: 1px solid var(--border-soft); }
 
 /* Group header — deliberately heavier than a cat row so the visual

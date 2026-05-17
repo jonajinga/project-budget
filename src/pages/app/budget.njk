@@ -101,7 +101,10 @@ eleventyExcludeFromCollections: true
     </div>
 
     <div x-show="!budgetCollapsed" x-cloak>
-      <div class="budget__group-header">
+      {# Desktop-only column header — at mobile each cat row carries
+         its own micro-labels above the pills, so the header strip is
+         redundant. Hidden via the budget__column-header class below. #}
+      <div class="budget__group-header budget__column-header">
         <span>Category</span>
         <span class="num" data-tip="Dollars you committed to this category this month.">Assigned</span>
         <span class="num" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
