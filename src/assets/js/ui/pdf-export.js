@@ -238,12 +238,42 @@
   window.pbCaptureChart = captureChart;
   window.pbSvgToPNG = svgToPNG;
 
+  /* Lazy-load the jsPDF UMD (~357 KB) on first Export PDF click
+     instead of at page paint. Saves the weight on initial reports
+     page load — most visits never click Export. Cached after the
+     first load so subsequent exports are instant. */
+  var _jsPDFPromise = null;
+  function ensureJsPDF() {
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+    if (_jsPDFPromise) return _jsPDFPromise;
+    _jsPDFPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = "/assets/js/vendor/jspdf.umd.min.js";
+      s.async = true;
+      s.onload = function () {
+        if (window.jspdf && window.jspdf.jsPDF) resolve();
+        else reject(new Error("jsPDF loaded but window.jspdf.jsPDF missing"));
+      };
+      s.onerror = function () { reject(new Error("Failed to load jsPDF")); };
+      document.head.appendChild(s);
+    });
+    return _jsPDFPromise;
+  }
+  window.pbEnsureJsPDF = ensureJsPDF;
+
   /* The main entry point. Returns a Promise that resolves when the
      PDF has been triggered for download. */
-  window.pbExportReportPDF = function (opts) {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-      console.error("jsPDF not loaded — PDF export unavailable.");
-      return Promise.resolve();
+  window.pbExportReportPDF = async function (opts) {
+    try {
+      await ensureJsPDF();
+    } catch (err) {
+      console.error("PDF export unavailable:", err);
+      try {
+        if (window.Alpine && window.Alpine.store && window.Alpine.store("budget")) {
+          window.Alpine.store("budget").pushToast("Couldn't load PDF library. Check your connection.", "danger");
+        }
+      } catch (_e) {}
+      return;
     }
     var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter", orientation: "portrait" });
     var pageW = doc.internal.pageSize.getWidth();

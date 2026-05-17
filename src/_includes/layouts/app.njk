@@ -71,11 +71,9 @@
        globally. Default display:false; individual charts opt in. #}
     <script src="/assets/js/vendor/chartjs-plugin-datalabels.min.js" defer></script>
   {% endif %}
-  {% if page.url and page.url.startsWith("/app/reports/") %}
-    {# jsPDF UMD: ~357 KB. Reports-only so every other page stays
-       light. Powers the per-report "Export PDF" buttons. #}
-    <script src="/assets/js/vendor/jspdf.umd.min.js" defer></script>
-  {% endif %}
+  {# jsPDF (~357 KB) is dynamically loaded on first Export PDF click
+     via pdf-export.js's ensureJsPDF() helper. Not loaded at page
+     paint — saves the weight on every reports page initial load. #}
   {# D3: needed for the spending treemap + heatmap + sankey reports.
      Sankey additionally needs the d3-sankey plugin (~6 KB). #}
   {% if page.url == "/app/reports/spending/" or page.url == "/app/reports/heatmap/" or page.url == "/app/reports/sankey/" %}

@@ -290,9 +290,17 @@ function reportsHubView() {
        Sequential to keep memory + iframe count bounded. */
     async runAllPDF() {
       if (this.bundling) return;
-      if (!window.jspdf || !window.jspdf.jsPDF) { alert("PDF library not loaded."); return; }
-      if (!window.pbCaptureChart) { alert("Chart capture helper not loaded."); return; }
-      this.bundling = "pdf"; this.bundlingMsg = "Building PDF bundle…";
+      this.bundling = "pdf"; this.bundlingMsg = "Loading PDF library…";
+      try {
+        if (window.pbEnsureJsPDF) await window.pbEnsureJsPDF();
+      } catch (err) {
+        this.bundling = null; this.bundlingMsg = "";
+        alert("Couldn't load PDF library. Check your connection.");
+        return;
+      }
+      if (!window.jspdf || !window.jspdf.jsPDF) { this.bundling = null; alert("PDF library not loaded."); return; }
+      if (!window.pbCaptureChart) { this.bundling = null; alert("Chart capture helper not loaded."); return; }
+      this.bundlingMsg = "Building PDF bundle…";
       var self = this;
       var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter", orientation: "portrait" });
       var W = doc.internal.pageSize.getWidth();
