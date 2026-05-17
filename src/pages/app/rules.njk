@@ -1,0 +1,209 @@
+---
+layout: layouts/app.njk
+title: "Rules"
+description: "Auto-categorize transactions and clean up payee names from bank imports."
+permalink: /app/rules/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="rulesView()" x-init="init()">
+
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Rules</h1>
+      <p class="app-page__lead">
+        Pattern-based automation that fires on every new transaction
+        you enter manually <em>and</em> on every row of a bank import.
+      </p>
+    </div>
+  </header>
+
+  {# ---- Auto-categorize rules ---- #}
+  <section class="card">
+    <header class="rules-section__head">
+      <div>
+        <h2 class="card__title">Auto-categorize</h2>
+        <p class="card__body" style="margin: 0;">
+          When an incoming transaction's payee name matches the pattern,
+          assign the chosen category. First matching rule wins; reorder
+          to control priority.
+        </p>
+      </div>
+      <button class="btn btn--primary btn--sm" type="button"
+              @click="newCatRule()"
+              :disabled="!hasCategories">+ New rule</button>
+    </header>
+
+    <p x-show="!hasCategories" x-cloak class="callout callout--warn" style="margin: var(--space-sm) 0 0;">
+      Add a category first on <a href="/app/categories/">/app/categories/</a> before creating categorize rules.
+    </p>
+
+    <ul class="rules-list" x-show="$store.budget.listCategorizeRules().length" x-cloak>
+      <template x-for="(r, idx) in $store.budget.listCategorizeRules()" :key="r.id">
+        <li class="rules-list__item" :class="r.enabled === false ? 'is-disabled' : ''">
+          <div class="rules-list__row">
+            <select class="select" x-model="r.matchType"
+                    @change="$store.budget.updateRule('categorize', r.id, { matchType: r.matchType })">
+              <option value="contains">contains</option>
+              <option value="starts-with">starts with</option>
+              <option value="equals">equals</option>
+              <option value="regex">regex</option>
+            </select>
+            <input class="input" type="text"
+                   x-model.debounce.400ms="r.pattern"
+                   @input.debounce.400ms="$store.budget.updateRule('categorize', r.id, { pattern: r.pattern })"
+                   placeholder="e.g. amazon">
+            <span class="rules-list__arrow" aria-hidden="true">&rarr;</span>
+            <select class="select" x-model="r.categoryId"
+                    @change="$store.budget.updateRule('categorize', r.id, { categoryId: r.categoryId })">
+              <option value="">(uncategorized)</option>
+              <template x-for="c in $store.budget.categoriesFlat()" :key="c.id">
+                <option :value="c.id" x-text="c.name"></option>
+              </template>
+            </select>
+            <div class="cluster" style="gap: var(--space-3xs); flex-wrap: nowrap;">
+              <label class="rules-list__enable" :data-tip="r.enabled === false ? 'Enable this rule' : 'Disable this rule'">
+                <input type="checkbox" :checked="r.enabled !== false"
+                       @change="$store.budget.updateRule('categorize', r.id, { enabled: $event.target.checked })">
+                <span>Enabled</span>
+              </label>
+              <button class="btn btn--icon" type="button"
+                      @click="$store.budget.moveRule('categorize', r.id, -1)"
+                      :disabled="idx === 0" aria-label="Move up" data-tip="Higher priority">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
+              </button>
+              <button class="btn btn--icon" type="button"
+                      @click="$store.budget.moveRule('categorize', r.id, 1)"
+                      :disabled="idx >= $store.budget.listCategorizeRules().length - 1" aria-label="Move down" data-tip="Lower priority">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <button class="btn btn--icon" type="button"
+                      @click="deleteCatRule(r)"
+                      aria-label="Delete rule" data-tip="Delete this rule" style="color: var(--danger);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </div>
+        </li>
+      </template>
+    </ul>
+    <p x-show="!$store.budget.listCategorizeRules().length" x-cloak style="color: var(--fg-muted); margin: var(--space-sm) 0 0;">
+      No categorize rules yet. The first rule whose pattern matches an
+      incoming payee assigns the category to that transaction.
+    </p>
+  </section>
+
+  {# ---- Payee-normalize rules ---- #}
+  <section class="card">
+    <header class="rules-section__head">
+      <div>
+        <h2 class="card__title">Normalize payee names</h2>
+        <p class="card__body" style="margin: 0;">
+          Rewrite the payee on incoming transactions. Use this to clean
+          up bank-export gunk like "SQ *COFFEE SHOP 8847" &rarr;
+          "Coffee Shop". Normalize fires BEFORE categorize.
+        </p>
+      </div>
+      <button class="btn btn--primary btn--sm" type="button"
+              @click="newNormRule()">+ New rule</button>
+    </header>
+
+    <ul class="rules-list" x-show="$store.budget.listNormalizeRules().length" x-cloak>
+      <template x-for="(r, idx) in $store.budget.listNormalizeRules()" :key="r.id">
+        <li class="rules-list__item" :class="r.enabled === false ? 'is-disabled' : ''">
+          <div class="rules-list__row">
+            <select class="select" x-model="r.matchType"
+                    @change="$store.budget.updateRule('normalizePayee', r.id, { matchType: r.matchType })">
+              <option value="contains">contains</option>
+              <option value="starts-with">starts with</option>
+              <option value="equals">equals</option>
+              <option value="regex">regex</option>
+            </select>
+            <input class="input" type="text"
+                   x-model.debounce.400ms="r.pattern"
+                   @input.debounce.400ms="$store.budget.updateRule('normalizePayee', r.id, { pattern: r.pattern })"
+                   placeholder="raw payee text">
+            <span class="rules-list__arrow" aria-hidden="true">&rarr;</span>
+            <input class="input" type="text"
+                   x-model.debounce.400ms="r.replacement"
+                   @input.debounce.400ms="$store.budget.updateRule('normalizePayee', r.id, { replacement: r.replacement })"
+                   placeholder="cleaned name">
+            <div class="cluster" style="gap: var(--space-3xs); flex-wrap: nowrap;">
+              <label class="rules-list__enable" :data-tip="r.enabled === false ? 'Enable this rule' : 'Disable this rule'">
+                <input type="checkbox" :checked="r.enabled !== false"
+                       @change="$store.budget.updateRule('normalizePayee', r.id, { enabled: $event.target.checked })">
+                <span>Enabled</span>
+              </label>
+              <button class="btn btn--icon" type="button"
+                      @click="$store.budget.moveRule('normalizePayee', r.id, -1)"
+                      :disabled="idx === 0" aria-label="Move up" data-tip="Higher priority">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
+              </button>
+              <button class="btn btn--icon" type="button"
+                      @click="$store.budget.moveRule('normalizePayee', r.id, 1)"
+                      :disabled="idx >= $store.budget.listNormalizeRules().length - 1" aria-label="Move down" data-tip="Lower priority">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <button class="btn btn--icon" type="button"
+                      @click="deleteNormRule(r)"
+                      aria-label="Delete rule" data-tip="Delete this rule" style="color: var(--danger);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </div>
+        </li>
+      </template>
+    </ul>
+    <p x-show="!$store.budget.listNormalizeRules().length" x-cloak style="color: var(--fg-muted); margin: var(--space-sm) 0 0;">
+      No normalize rules yet.
+    </p>
+  </section>
+</div>
+
+<script>
+function rulesView() {
+  return {
+    init() {},
+    get hasCategories() {
+      return !!(this.$store.budget.profile && (this.$store.budget.profile.categories || []).length);
+    },
+    newCatRule() {
+      this.$store.budget.addCategorizeRule({
+        pattern: "",
+        matchType: "contains",
+        categoryId: "",
+        enabled: true,
+      });
+    },
+    newNormRule() {
+      this.$store.budget.addNormalizeRule({
+        pattern: "",
+        matchType: "contains",
+        replacement: "",
+        enabled: true,
+      });
+    },
+    deleteCatRule(r) {
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Delete this categorize rule?",
+        message: "Existing transactions are unaffected. Only future ones will stop using this rule.",
+        confirmLabel: "Delete rule",
+        danger: true,
+      }).then(function (ok) {
+        if (ok) self.$store.budget.deleteRule("categorize", r.id);
+      });
+    },
+    deleteNormRule(r) {
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Delete this normalize rule?",
+        message: "Existing payee names stay as-is. Only future imports will stop using this rule.",
+        confirmLabel: "Delete rule",
+        danger: true,
+      }).then(function (ok) {
+        if (ok) self.$store.budget.deleteRule("normalizePayee", r.id);
+      });
+    },
+  };
+}
+</script>

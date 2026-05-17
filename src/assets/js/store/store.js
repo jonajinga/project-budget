@@ -68,6 +68,7 @@ import { accountsSlice } from "./slices/accounts.js";
 import { categoriesSlice } from "./slices/categories.js";
 import { budgetSlice } from "./slices/budget.js";
 import { transactionsSlice } from "./slices/transactions.js";
+import { rulesSlice } from "./slices/rules.js";
 
 export function createStore() {
   var base = {
@@ -629,6 +630,7 @@ export function createStore() {
     accountsSlice,
     categoriesSlice,
     budgetSlice,
+    rulesSlice,
     transactionsSlice,
     snapshotsSlice,
     payeesSlice,

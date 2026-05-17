@@ -15,14 +15,18 @@ import {
   emptyTrash as emptyTrashImpl,
 } from "../../domain/transactions.js";
 import { upsertPayee } from "../../domain/payees.js";
+import { applyRules } from "../../domain/rules.js";
 
 export const transactionsSlice = {
   /* ---- Single-row CRUD ---- */
   /**
    * Create a transaction. Upserts the payee from `payeeName` when
    * provided (overriding any payeeId). Amount stored as integer cents.
+   * Auto-rules (normalize payee + categorize) are applied unless
+   * opts.skipRules is true (used by transfers + reconciliation
+   * adjustments where rules shouldn't override the intent).
    * Records an undo entry.
-   * @param {object} opts {accountId, date, payeeName|payeeId, categoryId, amount, memo, cleared}
+   * @param {object} opts {accountId, date, payeeName|payeeId, categoryId, amount, memo, cleared, skipRules?}
    * @returns {object|null} the created transaction
    */
   addTransaction(opts) {
@@ -30,8 +34,15 @@ export const transactionsSlice = {
     this._recordUndo("Add transaction");
     var amount = Math.round(Number(opts.amount) || 0);
     var payeeId = null;
-    if (opts.payeeName) {
-      var p = upsertPayee(this.profile, opts.payeeName, opts.categoryId || null);
+    var rawPayeeName = opts.payeeName;
+    var categoryId = opts.categoryId || null;
+    if (rawPayeeName && !opts.skipRules) {
+      var ruled = applyRules(this.profile, rawPayeeName, categoryId);
+      rawPayeeName = ruled.name;
+      categoryId = ruled.categoryId;
+    }
+    if (rawPayeeName) {
+      var p = upsertPayee(this.profile, rawPayeeName, categoryId || null);
       if (p) payeeId = p.id;
     } else if (opts.payeeId) {
       payeeId = opts.payeeId;
@@ -40,7 +51,7 @@ export const transactionsSlice = {
       accountId: opts.accountId,
       date: opts.date || new Date().toISOString().slice(0, 10),
       payeeId: payeeId,
-      categoryId: opts.categoryId || null,
+      categoryId: categoryId,
       amount: amount,
       memo: opts.memo || "",
       cleared: !!opts.cleared,
