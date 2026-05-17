@@ -111,6 +111,24 @@ eleventyExcludeFromCollections: true
         <button class="btn btn--ghost btn--sm" type="button" @click="showAdd = false">Cancel</button>
       </div>
       <form @submit.prevent="submitAdd(); showAdd = false">
+        {# Outflow / Inflow toggle — drives the sign of the amount on
+           submit so mobile users never need a minus sign. Also filters
+           the category dropdown to match (expense categories on
+           Outflow; income-group categories on Inflow). #}
+        <div class="txn-type-toggle" role="radiogroup" aria-label="Transaction type">
+          <button type="button" class="txn-type-toggle__opt"
+                  :class="form.type === 'outflow' ? 'is-active' : ''"
+                  :aria-pressed="form.type === 'outflow'"
+                  @click="form.type = 'outflow'; form.categoryId = ''">
+            <span aria-hidden="true">−</span> Outflow
+          </button>
+          <button type="button" class="txn-type-toggle__opt"
+                  :class="form.type === 'inflow' ? 'is-active' : ''"
+                  :aria-pressed="form.type === 'inflow'"
+                  @click="form.type = 'inflow'; form.categoryId = ''">
+            <span aria-hidden="true">+</span> Inflow
+          </button>
+        </div>
         <div class="form-row register__add-grid">
           <div class="field">
             <label class="field__label" for="t-date">Date</label>
@@ -133,16 +151,21 @@ eleventyExcludeFromCollections: true
             <label class="field__label" for="t-cat">Category</label>
             <select class="select" id="t-cat" x-model="form.categoryId">
               <option value="">(uncategorized)</option>
-              <template x-for="c in selectableCategories" :key="c.id">
+              <template x-for="c in selectableCategoriesForType(form.type)" :key="c.id">
                 <option :value="c.id" x-text="c.name"></option>
               </template>
             </select>
+            <p class="field__hint"
+               x-show="form.type === 'inflow' && !selectableCategoriesForType('inflow').length" x-cloak>
+              No income categories yet — create one in a group marked as "Income".
+            </p>
           </div>
           <div class="field">
             <label class="field__label" for="t-amount">Amount</label>
-            <input class="input" id="t-amount" type="text" x-model="form.amount" placeholder="-12.34 · or 12+8.99"
+            <input class="input" id="t-amount" type="text" x-model="form.amount"
+                   :placeholder="form.type === 'inflow' ? '12.34 · or 12+8.99' : '12.34 · or 12+8.99'"
                    inputmode="decimal" required
-                   data-tip="Calculator: type expressions like 12.50 + 8.99 or 100 - 25 * 2 — they evaluate on save.">
+                   data-tip="Enter a positive number — the Outflow / Inflow toggle sets the sign. Calculator: type expressions like 12.50 + 8.99.">
             <p class="field__hint calc-preview" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
           </div>
           <div class="field">
@@ -401,7 +424,7 @@ eleventyExcludeFromCollections: true
               <td>
                 <select class="select" x-model="edit.categoryId" aria-label="Category">
                   <option value="">(uncategorized)</option>
-                  <template x-for="c in selectableCategories" :key="c.id">
+                  <template x-for="c in selectableCategoriesForType(edit.type)" :key="c.id">
                     <option :value="c.id" x-text="c.name"></option>
                   </template>
                 </select>
@@ -411,7 +434,21 @@ eleventyExcludeFromCollections: true
               <td><input class="input" type="text" x-model="edit.memo" aria-label="Memo"></td>
             </template>
             <template x-if="editingId === t.id">
-              <td class="num"><input class="input" type="text" x-model="edit.amount" inputmode="decimal" aria-label="Amount" style="text-align: right;"></td>
+              <td class="num">
+                <div class="register__edit-amount">
+                  <div class="txn-type-toggle txn-type-toggle--sm" role="radiogroup" aria-label="Type">
+                    <button type="button" class="txn-type-toggle__opt"
+                            :class="edit.type === 'outflow' ? 'is-active' : ''"
+                            :aria-pressed="edit.type === 'outflow'"
+                            @click="edit.type = 'outflow'; edit.categoryId = ''">−</button>
+                    <button type="button" class="txn-type-toggle__opt"
+                            :class="edit.type === 'inflow' ? 'is-active' : ''"
+                            :aria-pressed="edit.type === 'inflow'"
+                            @click="edit.type = 'inflow'; edit.categoryId = ''">+</button>
+                  </div>
+                  <input class="input" type="text" x-model="edit.amount" inputmode="decimal" aria-label="Amount" style="text-align: right;">
+                </div>
+              </td>
             </template>
             <template x-if="editingId === t.id">
               <td class="col-cleared">
@@ -521,17 +558,34 @@ eleventyExcludeFromCollections: true
               <input class="input" type="text" x-model="edit.payeeName">
             </div>
             <div class="field">
+              <label class="field__label">Type</label>
+              <div class="txn-type-toggle" role="radiogroup" aria-label="Transaction type">
+                <button type="button" class="txn-type-toggle__opt"
+                        :class="edit.type === 'outflow' ? 'is-active' : ''"
+                        :aria-pressed="edit.type === 'outflow'"
+                        @click="edit.type = 'outflow'; edit.categoryId = ''">
+                  <span aria-hidden="true">−</span> Outflow
+                </button>
+                <button type="button" class="txn-type-toggle__opt"
+                        :class="edit.type === 'inflow' ? 'is-active' : ''"
+                        :aria-pressed="edit.type === 'inflow'"
+                        @click="edit.type = 'inflow'; edit.categoryId = ''">
+                  <span aria-hidden="true">+</span> Inflow
+                </button>
+              </div>
+            </div>
+            <div class="field">
               <label class="field__label">Category</label>
               <select class="select" x-model="edit.categoryId">
                 <option value="">(uncategorized)</option>
-                <template x-for="c in selectableCategories" :key="c.id">
+                <template x-for="c in selectableCategoriesForType(edit.type)" :key="c.id">
                   <option :value="c.id" x-text="c.name"></option>
                 </template>
               </select>
             </div>
             <div class="field">
               <label class="field__label">Amount</label>
-              <input class="input" type="text" x-model="edit.amount" inputmode="decimal" style="text-align: right;">
+              <input class="input" type="text" x-model="edit.amount" inputmode="decimal" style="text-align: right;" placeholder="Enter a positive number">
             </div>
             <div class="field">
               <label class="field__label">Memo</label>

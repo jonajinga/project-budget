@@ -65,6 +65,36 @@ export function isPaymentCategory(profile, categoryId) {
   return paymentCardId(profile, categoryId) !== null;
 }
 
+/**
+ * True iff the group is an income group. Prefers the explicit `kind`
+ * field; falls back to a name-pattern match for legacy data that
+ * was created before the field existed. `kind: "expense"` overrides
+ * the name match, so a group literally named "Income" can still be
+ * declared expense if the user wants.
+ * @param {object|null} group
+ * @returns {boolean}
+ */
+export function isIncomeGroup(group) {
+  if (!group) return false;
+  if (group.kind === "income") return true;
+  if (group.kind === "expense") return false;
+  return /^(income|revenue|inflow|earnings|paycheck|paychecks)$/i.test((group.name || "").trim());
+}
+
+/**
+ * True iff the category lives in an income group.
+ * @param {Profile} profile
+ * @param {id} categoryId
+ * @returns {boolean}
+ */
+export function isIncomeCategory(profile, categoryId) {
+  if (!profile || !categoryId) return false;
+  var cat = (profile.categories || []).find(function (c) { return c.id === categoryId; });
+  if (!cat) return false;
+  var group = (profile.categoryGroups || []).find(function (g) { return g.id === cat.groupId; });
+  return isIncomeGroup(group);
+}
+
 /* Hidden system group that holds Credit Card Payment categories. */
 function ensurePaymentGroup(profile) {
   var existing = profile.categoryGroups.find(function (g) { return g.name === "Credit Card Payments"; });

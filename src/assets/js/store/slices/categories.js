@@ -18,6 +18,8 @@ import {
   moveCategoryToGroup as moveCategoryToGroupImpl,
   paymentCardId as paymentCardIdImpl,
   isPaymentCategory as isPaymentCategoryImpl,
+  isIncomeCategory as isIncomeCategoryImpl,
+  isIncomeGroup as isIncomeGroupImpl,
 } from "../../domain/categories.js";
 
 export const categoriesSlice = {
@@ -213,6 +215,10 @@ export const categoriesSlice = {
   },
   /** @param {id} id @returns {boolean} */
   isPaymentCategory(id) { return this.profile ? isPaymentCategoryImpl(this.profile, id) : false; },
+  /** @param {id} id @returns {boolean} */
+  isIncomeCategory(id) { return this.profile ? isIncomeCategoryImpl(this.profile, id) : false; },
+  /** @param {object} group @returns {boolean} */
+  isIncomeGroup(group) { return isIncomeGroupImpl(group); },
   /**
    * Account id paired with a payment category, or null.
    * @param {id} id payment category id

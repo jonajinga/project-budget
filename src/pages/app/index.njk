@@ -32,6 +32,24 @@ eleventyExcludeFromCollections: true
 
     {# ==== Quick-add transaction (inline, dashboard) ==== #}
     <section class="card dash-quick" x-show="quickHasAccounts()" x-cloak>
+      {# Outflow / Inflow toggle — drives the sign of the amount on
+         submit so users never need to type a minus sign (mobile
+         numeric keypads don't have one) AND so the category dropdown
+         can filter to match the type. #}
+      <div class="txn-type-toggle" role="radiogroup" aria-label="Transaction type" style="margin-bottom: var(--space-2xs);">
+        <button type="button" class="txn-type-toggle__opt"
+                :class="quickForm.type === 'outflow' ? 'is-active' : ''"
+                :aria-pressed="quickForm.type === 'outflow'"
+                @click="quickForm.type = 'outflow'; quickForm.categoryId = ''">
+          <span aria-hidden="true">−</span> Outflow
+        </button>
+        <button type="button" class="txn-type-toggle__opt"
+                :class="quickForm.type === 'inflow' ? 'is-active' : ''"
+                :aria-pressed="quickForm.type === 'inflow'"
+                @click="quickForm.type = 'inflow'; quickForm.categoryId = ''">
+          <span aria-hidden="true">+</span> Inflow
+        </button>
+      </div>
       <form class="dash-quick__form" @submit.prevent="quickAddSubmit()">
         <div class="dash-quick__field">
           <label class="field__label" for="qa-date">Date</label>
@@ -45,7 +63,7 @@ eleventyExcludeFromCollections: true
         <div class="dash-quick__field">
           <label class="field__label" for="qa-amount">Amount</label>
           <input class="input" id="qa-amount" type="text" x-model="quickForm.amount"
-                 placeholder="-25.00" inputmode="decimal" required>
+                 placeholder="25.00" inputmode="decimal" required>
         </div>
         <div class="dash-quick__field">
           <label class="field__label" for="qa-account">Account</label>
@@ -59,7 +77,7 @@ eleventyExcludeFromCollections: true
           <label class="field__label" for="qa-cat">Category</label>
           <select class="select" id="qa-cat" x-model="quickForm.categoryId">
             <option value="">(auto)</option>
-            <template x-for="c in $store.budget.categoriesFlat()" :key="c.id">
+            <template x-for="c in quickCategoriesForType(quickForm.type)" :key="c.id">
               <option :value="c.id" x-text="c.name"></option>
             </template>
           </select>
@@ -410,7 +428,7 @@ function dashboardView() {
        first open account once the profile loads via the quickAccounts
        getter. Auto-rules fire on submit (categorize / normalize-payee)
        so manual entries are normalized just like imports. */
-    quickForm: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "" },
+    quickForm: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", type: "outflow" },
 
     /* ---- Memoization layer ----
        The dashboard surfaces a dozen getters that each walk the full
@@ -495,11 +513,26 @@ function dashboardView() {
       var n = Number(clean);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
+    /* Filter the category dropdown to match the toggle: outflow shows
+       expense-group categories, inflow shows income-group categories.
+       Same rule as the register page so the UX is consistent. */
+    quickCategoriesForType(type) {
+      var s = this.$store.budget;
+      return (s.categoriesFlat() || []).filter(function (c) {
+        if (s.isPaymentCategory(c.id)) return false;
+        var isIncome = s.isIncomeCategory(c.id);
+        if (type === "inflow") return isIncome;
+        return !isIncome;
+      });
+    },
     quickAddSubmit() {
       var f = this.quickForm;
       if (!f.accountId) return;
-      var amount = this._parseQuickAmount(f.amount);
-      if (!amount) { this.$store.budget.pushToast("Amount is required.", "warn"); return; }
+      var rawAmount = this._parseQuickAmount(f.amount);
+      if (!rawAmount) { this.$store.budget.pushToast("Amount is required.", "warn"); return; }
+      /* Toggle owns the sign. Users type a positive number on the
+         mobile keypad; we apply outflow/inflow direction here. */
+      var amount = Math.abs(rawAmount) * (f.type === "inflow" ? 1 : -1);
       this.$store.budget.addTransaction({
         accountId: f.accountId,
         date: f.date || new Date().toISOString().slice(0, 10),
@@ -510,8 +543,8 @@ function dashboardView() {
         cleared: false,
       });
       this.$store.budget.pushToast("Added transaction.", "ok");
-      /* Reset just the per-row inputs, preserve account + date so
-         entering a batch is fast. */
+      /* Reset just the per-row inputs, preserve account + date + type
+         so entering a batch is fast. */
       this.quickForm.payeeName = "";
       this.quickForm.amount = "";
       this.quickForm.categoryId = "";

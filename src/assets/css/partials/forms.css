@@ -142,3 +142,62 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ---- Outflow / Inflow segmented toggle ---------------------------
+   Used on every transaction-entry surface (register add + edit form,
+   register mobile card edit, dashboard quick-add, recurring builder).
+   Mobile users can't easily type a negative sign on the numeric
+   keypad, so this toggle is the canonical way to indicate sign — the
+   submit handlers apply the sign and the amount input stays positive.
+*/
+.txn-type-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  background: var(--bg-alt);
+  padding: 2px;
+  gap: 2px;
+}
+.txn-type-toggle__opt {
+  background: transparent;
+  border: 0;
+  padding: 0.45rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+  border-radius: calc(var(--radius-input) - 2px);
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.txn-type-toggle__opt:hover { color: var(--fg); }
+.txn-type-toggle__opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.txn-type-toggle__opt.is-active {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+/* First active opt uses outflow color, second uses inflow color so
+   the active pill is visually consistent with the +/- sign. */
+.txn-type-toggle__opt:first-child.is-active { color: var(--danger); }
+.txn-type-toggle__opt:last-child.is-active  { color: var(--ok); }
+/* Small variant for table-row inline edit (less vertical room). */
+.txn-type-toggle--sm .txn-type-toggle__opt {
+  padding: 0.2rem 0.55rem;
+  min-height: 28px;
+  font-size: var(--fs-xs);
+}
+.register__edit-amount {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2xs);
+}
+.register__edit-amount .input { max-width: 8rem; }

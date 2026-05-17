@@ -19,7 +19,7 @@
  * version so stale assets don't linger.
  */
 
-const CACHE_VERSION = "pb-v2026-05-17-3";
+const CACHE_VERSION = "pb-v2026-05-17-4";
 const STATIC_CACHE = "pb-static-" + CACHE_VERSION;
 const RUNTIME_CACHE = "pb-runtime-" + CACHE_VERSION;
 

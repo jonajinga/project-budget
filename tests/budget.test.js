@@ -71,6 +71,25 @@ describe("budgetSlice", () => {
     expect(ctx.host.assignedFor(ctx.dining.id,    "2024-04")).toBe(30000);
   });
 
+  it("isIncomeCategory detects via kind=income on the group", () => {
+    var ctx = build();
+    var foodGroup = ctx.host.profile.categoryGroups[0];
+    foodGroup.kind = "expense";
+    expect(ctx.host.isIncomeCategory(ctx.groceries.id)).toBe(false);
+    foodGroup.kind = "income";
+    expect(ctx.host.isIncomeCategory(ctx.groceries.id)).toBe(true);
+  });
+
+  it("isIncomeCategory falls back to name pattern when kind is unset", () => {
+    var ctx = build();
+    var foodGroup = ctx.host.profile.categoryGroups[0];
+    delete foodGroup.kind;
+    /* "Food" does NOT match the income name pattern. */
+    expect(ctx.host.isIncomeCategory(ctx.groceries.id)).toBe(false);
+    foodGroup.name = "Income";
+    expect(ctx.host.isIncomeCategory(ctx.groceries.id)).toBe(true);
+  });
+
   it("allBudgetableCategoryIds excludes hidden", () => {
     var ctx = build();
     var ids = ctx.host.allBudgetableCategoryIds();

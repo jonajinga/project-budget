@@ -66,7 +66,17 @@ export function newAccount(opts) {
 }
 
 export function newCategoryGroup(name, sortIndex) {
-  return { id: newId(), name: name, sortIndex: sortIndex || 0, collapsed: false };
+  return {
+    id: newId(),
+    name: name,
+    sortIndex: sortIndex || 0,
+    collapsed: false,
+    /* "expense" | "income". Drives the Outflow/Inflow toggle in the
+       transaction form so income categories only show when entering
+       an inflow. Default expense; user-facing toggle on the
+       categories admin page can flip it. */
+    kind: "expense",
+  };
 }
 
 export function newCategory(opts) {

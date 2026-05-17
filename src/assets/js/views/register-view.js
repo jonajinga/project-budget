@@ -37,8 +37,8 @@ function registerView() {
     bulkRenameTarget: "",
     bulkShiftDelta: 0,
 
-    form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false },
-    edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false },
+    form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false, type: "outflow" },
+    edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false, type: "outflow" },
     transferForm: { fromAccountId: "", toAccountId: "", amount: "", date: "", memo: "" },
     reconcileForm: { statementBalance: "", checked: false, diff: 0 },
     showMakeRecurring: false,
@@ -114,6 +114,22 @@ function registerView() {
     get selectableCategories() {
       var self = this;
       return this.$store.budget.categoriesFlat().filter(c => !self.$store.budget.isPaymentCategory(c.id));
+    },
+
+    /* Variant of selectableCategories filtered by transaction type:
+       outflow → all expense-group categories (default), inflow →
+       only categories whose group has kind: "income". The toggle in
+       the add + edit forms drives this so the dropdown only ever
+       shows categories that match the user's intent. */
+    selectableCategoriesForType(type) {
+      var self = this;
+      var s = this.$store.budget;
+      return this.selectableCategories.filter(function (c) {
+        var isIncome = s.isIncomeCategory(c.id);
+        if (type === "inflow")  return isIncome;
+        /* Outflow + null/unset both show expense categories. */
+        return !isIncome;
+      });
     },
 
     /* `due` was a local snapshot populated by refreshDue() at init —
@@ -312,18 +328,26 @@ function registerView() {
 
     submitAdd() {
       if (!this.form.accountId) return;
+      /* The Outflow/Inflow toggle is the source of truth for sign.
+         Users type a positive number (matching the mobile keypad) and
+         we negate it for outflow on the way to the store. If a user
+         still types a literal "-12.34" it's normalised to absolute
+         first so the toggle wins consistently. */
+      var raw = this.parseDollars(this.form.amount);
+      var signed = Math.abs(raw) * (this.form.type === "inflow" ? 1 : -1);
       this.$store.budget.addTransaction({
         accountId: this.form.accountId,
         date: this.form.date,
         payeeName: this.form.payeeName,
         categoryId: this.form.categoryId || null,
-        amount: this.parseDollars(this.form.amount),
+        amount: signed,
         memo: this.form.memo,
         cleared: this.form.cleared,
       });
       var keepAccount = this.form.accountId;
+      var keepType = this.form.type;
       var today = new Date().toISOString().slice(0, 10);
-      this.form = { date: today, payeeName: "", amount: "", accountId: keepAccount, categoryId: "", memo: "", cleared: false };
+      this.form = { date: today, payeeName: "", amount: "", accountId: keepAccount, categoryId: "", memo: "", cleared: false, type: keepType };
       this.payeeSuggestions = [];
     },
 
@@ -344,26 +368,36 @@ function registerView() {
 
     startEdit(t) {
       this.editingId = t.id;
+      /* Derive the toggle state from the existing amount sign so the
+         edit form shows the same Outflow/Inflow state the user
+         originally entered. Amount field always shows the absolute
+         value — sign lives on the toggle. */
+      var amt = t.amount || 0;
       this.edit = {
         date: t.date,
         accountId: t.accountId,
         payeeName: this.$store.budget.payeeName(t.payeeId),
         categoryId: t.categoryId || "",
         memo: t.memo,
-        amount: ((t.amount || 0) / 100).toFixed(2),
+        amount: (Math.abs(amt) / 100).toFixed(2),
         cleared: t.cleared,
+        type: amt >= 0 ? "inflow" : "outflow",
       };
     },
 
     saveEdit() {
       if (!this.editingId) return;
+      /* Same sign rule as submitAdd — toggle wins, raw input is
+         normalised to absolute value first. */
+      var raw = this.parseDollars(this.edit.amount);
+      var signed = Math.abs(raw) * (this.edit.type === "inflow" ? 1 : -1);
       this.$store.budget.updateTransaction(this.editingId, {
         date: this.edit.date,
         accountId: this.edit.accountId,
         payeeName: this.edit.payeeName,
         categoryId: this.edit.categoryId || null,
         memo: this.edit.memo,
-        amount: this.parseDollars(this.edit.amount),
+        amount: signed,
         cleared: this.edit.cleared,
       });
       this.editingId = null;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "exportedAt": "2026-05-17T18:39:28.104Z",
+  "exportedAt": "2026-05-17T19:02:33.201Z",
   "profile": {
     "id": "d88e8baa-9b60-41f9-9c6a-ef64d3d76054",
     "name": "The Brennan-Park household",
@@ -250,67 +250,78 @@
         "id": "d7f7fba7-5bac-4d6c-90e0-5634fb570f65",
         "name": "Income",
         "sortIndex": 0,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "income"
       },
       {
         "id": "07b72794-b902-4756-a0f4-81181ed3c164",
         "name": "Housing",
         "sortIndex": 1,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "885d2548-5032-43a9-84e5-ca072e24f22b",
         "name": "Transportation",
         "sortIndex": 2,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "2bf98c6d-8f00-4fe2-a62d-19b354086a24",
         "name": "Food",
         "sortIndex": 3,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "8b6fbd0d-6a74-4b8d-a1c9-fc4a8292aeb7",
         "name": "Kids",
         "sortIndex": 4,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "433a756c-0bb7-4014-bd3a-2c666aab9444",
         "name": "Healthcare",
         "sortIndex": 5,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "8f145a22-253e-468c-aca4-865b3ecc1bc0",
         "name": "Subscriptions",
         "sortIndex": 6,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "d329766d-16e9-4fae-b9b4-975d4c285c4a",
         "name": "Personal",
         "sortIndex": 7,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "8b82fc4d-b9b5-4cfd-84e6-63e55678eb47",
         "name": "Savings",
         "sortIndex": 8,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "96601626-7aa1-4c52-b132-fbd2097b830b",
         "name": "Insurance",
         "sortIndex": 9,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       },
       {
         "id": "3562b76e-3d5a-4577-b3a8-7d1890c7692c",
         "name": "Charity",
         "sortIndex": 10,
-        "collapsed": false
+        "collapsed": false,
+        "kind": "expense"
       }
     ],
     "categories": [
