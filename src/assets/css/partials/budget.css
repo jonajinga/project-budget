@@ -314,7 +314,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.budget__row-actions { flex: 0 0 auto; }
+.budget__row-actions { flex: 0 0 auto; max-width: 100%; flex-wrap: wrap; }
 /* Mobile: let the name take its natural width (no ellipsis). */
 @media (max-width: 599px) {
   .budget__cat-name {
@@ -367,7 +367,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   flex: 1 1 auto;
   min-width: 4ch;
 }
-.budget__group-actions { flex: 0 0 auto; }
+.budget__group-actions { flex: 0 0 auto; max-width: 100%; flex-wrap: wrap; }
 @media (max-width: 599px) {
   /* Action clusters wrap to their own row on mobile instead of
      stealing space from the category/group title. Names get their
