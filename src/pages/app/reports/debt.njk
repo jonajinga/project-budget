@@ -141,17 +141,21 @@ function debtView() {
     print() { window.print(); },
 
     init() {
+      var self = this;
+      var chart = null;
       var tries = 0;
       var poll = function () {
-        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart;
-        if (ready) {
-          var store = Alpine.store("budget");
-          var inst = window.pbMountChart("#chart-debt", window.pbRenderDebt, function () { return store.reportDebt(); });
-          Alpine.effect(function () { store.profile; store._listVersion; inst.redraw(); });
-          window.addEventListener("pb:chart-type", function (e) {
-            if (e.detail && e.detail.reportId === "debt") inst.redraw();
-          });
-        } else if (++tries < 50) setTimeout(poll, 50);
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderDebt;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        chart = window.pbMountChart("#chart-debt", window.pbRenderDebt, function () {
+          return store.reportDebt();
+        });
+        self.$watch("chartType", function () { chart && chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store._listVersion;
+          if (chart) chart.redraw();
+        });
       };
       poll();
     },

@@ -1198,41 +1198,70 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   border-left: 1px solid var(--border-soft);
 }
 
-/* Header IN / OUT / NET / ENTRIES tiles — compact inline-flex
-   layout used in primary + extra month/week/day period headers
-   (NOT the modals). Stays small + tight so it sits inline next
-   to the period title without dominating the chrome. The modal
-   variant (.period-modal__filters) overrides below with the
-   full bordered-card chrome. */
+/* Unified IN / OUT / NET / ENTRIES tile style used everywhere they
+   appear: primary + extra month/week/day period headers, AND the
+   period transactions modal (via .period-modal__filters). Same
+   visual language as the day-modal .cal-period-totals__tile —
+   accent-tinted background, strong border, 3px semantic colored
+   left rail per position (green inflow / red outflow / accent net
+   / neutral entries), container-query fluid value font.
+   Headers use inline-flex with a sensible min-width so tiles never
+   collapse to truncation; modal context overrides to a 4-up grid. */
 .cal-extra-period__totals {
   display: inline-flex;
   align-items: stretch;
-  gap: var(--space-sm);
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
   margin: 0;
   padding: 0;
 }
 .cal-extra-period__stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   text-align: right;
-  padding: 4px 6px;
+  padding: var(--space-2xs) var(--space-sm);
+  /* flex: 0 0 auto stops the tile from shrinking below its content
+     size when the parent flex container is squeezed. The previous
+     `min-width: 90px` was being overridden by the flex layout and
+     letting tiles collapse, truncating "$0.00" → "$0.0". Removing
+     container-type (only needed when a child uses cqi units) also
+     restores normal sizing behavior. */
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--border-strong);
   border-radius: var(--radius-input);
-  background: transparent;
-  border: 0;
+  background: var(--bg-elevated);
   color: inherit;
   font: inherit;
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+/* Semantic left-rail + tinted background per position in the
+   4-up row (In / Out / Net / Entries). nth-of-type targets the
+   stat regardless of whether the element is a <button> (clickable)
+   or a <div> (the Net tile). */
+.cal-extra-period__totals > .cal-extra-period__stat:nth-of-type(1) {
+  border-left-color: var(--ok);
+  background: color-mix(in oklab, var(--ok) 6%, var(--bg-elevated));
+}
+.cal-extra-period__totals > .cal-extra-period__stat:nth-of-type(2) {
+  border-left-color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 6%, var(--bg-elevated));
+}
+.cal-extra-period__totals > .cal-extra-period__stat:nth-of-type(3) {
+  border-left-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+}
+.cal-extra-period__totals > .cal-extra-period__stat:nth-of-type(4) {
+  border-left-color: var(--border-strong);
 }
 .cal-extra-period__stat--clickable {
   cursor: pointer;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elevated);
-  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
 .cal-extra-period__stat--clickable:hover {
-  background: color-mix(in oklab, var(--accent) 16%, var(--bg-elevated));
+  background: color-mix(in oklab, var(--accent) 12%, var(--bg-elevated));
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent) inset;
 }
 .cal-extra-period__stat--clickable:focus-visible {
   outline: 2px solid var(--accent);

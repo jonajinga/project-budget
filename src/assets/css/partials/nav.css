@@ -403,48 +403,121 @@ button.search-result:focus-visible {
   padding-block: var(--space-xl);
   margin-top: var(--space-2xl);
 }
-/* Three rows, full-width: brand + tagline | utility links | copyright.
-   Links stack horizontally and wrap only when the viewport can't fit
-   the full row. Centered horizontally on tablet+. */
+/* Footer layout: brand block + utility links + legal row. Mobile
+   stacks everything centered + tightens spacing; tablet+ keeps the
+   same column stack but with more breathing room. The Pikes Peak
+   credit always sits on its own line under the copyright so neither
+   competes for space with the brand or links. */
 .site-footer__inner {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  align-items: center;
+  text-align: center;
 }
-.site-footer__name { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 700; }
-.site-footer__tagline { color: var(--fg-muted); font-size: var(--fs-sm); margin-top: var(--space-3xs); }
-.site-footer__brand { text-align: left; }
-/* Single-line link row. Horizontal scroll kicks in only when the
-   viewport is too narrow to fit every label — we never wrap to a
-   second line. Scrollbar is hidden for a clean look on narrow
-   screens; users can still flick horizontally. */
+@media (min-width: 768px) {
+  .site-footer__inner { gap: var(--space-lg); }
+}
+.site-footer__brand {
+  text-align: center;
+  max-width: 60ch;
+}
+.site-footer__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  margin: 0;
+}
+.site-footer__tagline {
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  margin: var(--space-3xs) 0 0;
+}
+
+/* Utility links — wrapping flex grid that center-aligns on every
+   viewport. Mobile multi-row wrap so labels stay tappable instead
+   of cramming into a horizontal scroll bar. */
+.site-footer__nav { width: 100%; }
 .site-footer__nav ul,
 .site-footer__links {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: var(--space-md) var(--space-lg);
+  gap: var(--space-2xs) var(--space-md);
   list-style: none;
-  padding: 0;
+  padding: var(--space-sm) 0;
   margin: 0;
   border-top: 1px solid var(--border-soft);
   border-bottom: 1px solid var(--border-soft);
-  padding-block: var(--space-sm);
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
-.site-footer__nav ul::-webkit-scrollbar,
-.site-footer__links::-webkit-scrollbar { display: none; }
+@media (min-width: 768px) {
+  .site-footer__nav ul,
+  .site-footer__links { gap: var(--space-sm) var(--space-lg); padding-block: var(--space-md); }
+}
 .site-footer__nav li { flex: 0 0 auto; }
-.site-footer__nav a { color: var(--fg); text-decoration: none; font-size: var(--fs-sm); white-space: nowrap; }
-.site-footer__nav a:hover { color: var(--accent); }
-.site-footer__copy {
+.site-footer__nav a {
+  display: inline-block;
+  color: var(--fg);
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  padding: 4px 6px;
+  border-radius: var(--radius-input);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.site-footer__nav a:hover {
+  color: var(--accent);
+  background: var(--bg-elevated);
+}
+.site-footer__nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Legal row — copyright + Pikes Peak credit. Stacked on mobile
+   (the credit gets its own line per the design ask), inline on
+   tablet+ where there's room for both pieces on one line. */
+.site-footer__legal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
   font-size: var(--fs-xs);
   color: var(--fg-subtle);
+  line-height: 1.5;
+}
+@media (min-width: 768px) {
+  .site-footer__legal {
+    flex-direction: row;
+    gap: var(--space-sm);
+  }
+  .site-footer__legal::before {
+    content: "·";
+    order: 2;
+    color: var(--fg-subtle);
+    opacity: 0.6;
+  }
+  .site-footer__copy   { order: 1; }
+  .site-footer__credit { order: 3; }
+}
+.site-footer__copy,
+.site-footer__credit {
   margin: 0;
 }
-.site-footer__copy a { color: var(--fg-subtle); text-decoration: underline; }
+.site-footer__copy a,
+.site-footer__credit a {
+  color: var(--fg-subtle);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.site-footer__copy a:hover,
+.site-footer__credit a:hover {
+  color: var(--accent);
+}
 
 /* Mobile backdrop for the app sidebar. Visible only when
    sidebarOpen; below 1024px desktop layout. Sits under the sidebar
@@ -516,15 +589,15 @@ button.search-result:focus-visible {
        fall back to the grid layout. */
     position: sticky;
     /* Sidebar sticks slightly higher than the header bottom (4rem)
-       so it gets +25px of extra vertical room — visible without
+       so it gets +50px of extra vertical room — visible without
        scrolling on shorter laptops + tablet-landscape. The header's
        drop-shadow still separates the two. */
-    top: calc(4rem - 25px);
+    top: calc(4rem - 50px);
     inset: auto;
     width: auto;
-    height: calc(100vh - 4rem + 25px);
-    height: calc(100svh - 4rem + 25px);
-    min-height: calc(100vh - 4rem + 25px);
+    height: calc(100vh - 4rem + 50px);
+    height: calc(100svh - 4rem + 50px);
+    min-height: calc(100vh - 4rem + 50px);
     transform: none;
     padding-top: var(--space-sm);
     padding-bottom: var(--space-sm);
