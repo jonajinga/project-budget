@@ -459,6 +459,46 @@ function calendarView() {
       return this.dayData(this.yearDayISO);
     },
 
+    /* ---------- drag to reschedule ---------- */
+    /* The cell currently under the dragged item — drives the drop-
+       target highlight ring. Reset on dragleave or drop. */
+    dragOverISO: null,
+    /* The id of the transaction picked up — stored on this.$root
+       rather than dataTransfer alone so the @drop handler can
+       reach it without re-parsing dataTransfer (works around
+       Safari quirks where getData() returns "" on drop). */
+    _dragTxnId: null,
+
+    onDragStart(t, evt) {
+      if (!t || t.reconciled || t.transferTxnId) {
+        if (evt && evt.preventDefault) evt.preventDefault();
+        return;
+      }
+      this._dragTxnId = t.id;
+      try {
+        evt.dataTransfer.effectAllowed = "move";
+        evt.dataTransfer.setData("text/plain", t.id);
+      } catch (_e) {}
+    },
+
+    dropOnDate(iso, evt) {
+      this.dragOverISO = null;
+      var id = this._dragTxnId || (evt && evt.dataTransfer && evt.dataTransfer.getData("text/plain"));
+      this._dragTxnId = null;
+      if (!id || !iso) return;
+      var p = this.$store.budget.profile;
+      if (!p) return;
+      var t = (p.transactions || []).find(function (x) { return x.id === id; });
+      if (!t) return;
+      if (t.date === iso) return; /* dropped on same day — no-op */
+      var result = this.$store.budget.updateTransaction(id, { date: iso });
+      if (result) {
+        this.$store.budget.pushToast("Moved transaction to " + iso + ".", "ok");
+      } else {
+        this.$store.budget.pushToast("Couldn't move — transaction may be reconciled.", "warn");
+      }
+    },
+
     /* ---------- transaction modal ---------- */
     openTxn(id) {
       var p = this.$store.budget.profile;

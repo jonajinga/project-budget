@@ -339,8 +339,12 @@ eleventyExcludeFromCollections: true
               'cal__cell--today':    cell.isToday,
               'cal__cell--selected': cell.iso && cell.iso === selectedISO,
               'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
-              'cal__cell--other-month': cell.otherMonth
-            }">
+              'cal__cell--other-month': cell.otherMonth,
+              'cal__cell--drop-target': cell.iso && dragOverISO === cell.iso
+            }"
+            @dragover.prevent="cell.iso && (dragOverISO = cell.iso)"
+            @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
+            @drop.prevent="cell.iso && dropOnDate(cell.iso, $event)">
           <template x-if="!cell.blank">
             <div class="cal__cell-inner">
               <button type="button"
@@ -360,6 +364,8 @@ eleventyExcludeFromCollections: true
                     <button type="button"
                             class="cal__entry cal__entry--clickable"
                             :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
+                            :draggable="!t.reconciled && !t.transferTxnId"
+                            @dragstart="onDragStart(t, $event)"
                             @click.stop="openTxn(t.id)">
                       <span class="cal__entry-payee"
                             x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
@@ -686,7 +692,11 @@ eleventyExcludeFromCollections: true
         <template x-for="cell in weekCellsFor(wb.startISO)" :key="'w' + wb.startISO + cell.iso">
           <li class="cal-week__day"
               :class="{ 'is-today': cell.isToday,
-                        'is-empty': !(cell.posted.length + cell.scheduled.length) }">
+                        'is-empty': !(cell.posted.length + cell.scheduled.length),
+                        'cal-week__day--drop-target': dragOverISO === cell.iso }"
+              @dragover.prevent="dragOverISO = cell.iso"
+              @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
+              @drop.prevent="dropOnDate(cell.iso, $event)">
             <header class="cal-week__head">
               <p class="cal-week__weekday" x-text="cell.weekday"></p>
               <p class="cal-week__date">
@@ -702,6 +712,8 @@ eleventyExcludeFromCollections: true
                 <li>
                   <button type="button"
                           class="cal-week__entry cal-week__entry--posted cal-week__entry--clickable"
+                          :draggable="!t.reconciled && !t.transferTxnId"
+                          @dragstart="onDragStart(t, $event)"
                           @click="openTxn(t.id)">
                     <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                     <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"

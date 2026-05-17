@@ -2138,6 +2138,25 @@ body.pb-dragging { overflow: visible !important; }
 }
 .cal__cell:hover { background: color-mix(in oklab, var(--accent) 4%, var(--bg-elevated)); }
 .cal__cell--selected { box-shadow: inset 0 0 0 2px var(--accent); z-index: 1; }
+/* Drop-target highlight while a transaction is being dragged over
+   this day cell. Solid accent ring + slightly elevated bg makes it
+   obvious the drop will land here. */
+.cal__cell--drop-target {
+  background: color-mix(in oklab, var(--accent) 16%, var(--bg-elevated)) !important;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  z-index: 2;
+}
+.cal-week__day--drop-target {
+  background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Draggable entries get a grab cursor so users know they're picking
+   them up rather than triggering the click handler. */
+.cal__entry[draggable="true"],
+.cal-week__entry[draggable="true"] { cursor: grab; }
+.cal__entry[draggable="true"]:active,
+.cal-week__entry[draggable="true"]:active { cursor: grabbing; }
 
 /* Day-number pill button — sits at the top of the cell, opens the
    detail panel. Stays a small affordance so the entry cards get the
