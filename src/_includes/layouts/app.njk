@@ -5,14 +5,15 @@
 {% block content %}
 <div class="app-shell" x-data="{ sidebarOpen: false }"
      @open-sidebar.window="sidebarOpen = true"
-     @close-sidebar.window="sidebarOpen = false">
+     @close-sidebar.window="sidebarOpen = false"
+     @toggle-sidebar.window="sidebarOpen = !sidebarOpen">
   {% include "partials/app-shell.njk" %}
   {# Mobile backdrop — visible only when sidebarOpen and the sidebar
      is in its mobile slide-out state. Click anywhere off-sidebar to
      dismiss. WCAG-friendly: backdrop is purely decorative, the close
      button inside the sidebar is the keyboard-accessible affordance. #}
   <div class="app-sidebar-backdrop" x-show="sidebarOpen" x-cloak
-       @click="sidebarOpen = false" aria-hidden="true"></div>
+       @click="$dispatch('close-sidebar')" aria-hidden="true"></div>
   <div class="app-sidebar-handle" role="separator" aria-orientation="vertical"
        aria-label="Resize sidebar" tabindex="0"
        data-tip="Drag to resize the sidebar. Double-click to reset to the default width."></div>

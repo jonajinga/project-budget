@@ -5,18 +5,25 @@
   {% if isApp %}
     {# ---- App-mode header: hamburger | profile | theme toggle ---- #}
     <div class="container site-header__inner site-header__inner--app">
-      {# In app mode the hamburger opens the app SIDEBAR (Budget /
-         Register / Calendar / Accounts list / Save status / Profile
-         switcher), not the marketing site-menu. The custom event
-         flows up to the layout-level x-data="{ sidebarOpen }" that
-         drives the mobile drawer. #}
+      {# In app mode the hamburger TOGGLES the app sidebar (Budget /
+         Register / Calendar / Balances / Profile switcher). The
+         button keeps its own `open` flag in sync with the layout's
+         sidebarOpen by listening to the same window events the
+         layout listens to. Clicking the button dispatches
+         toggle-sidebar (the layout flips its state); the button
+         mirrors that on the matching event for aria-expanded +
+         label, so the same button opens AND closes the drawer. #}
       <button type="button"
               class="site-header__hamburger"
               aria-controls="app-sidebar"
-              aria-expanded="false"
-              aria-label="Open app navigation"
-              onclick="window.dispatchEvent(new CustomEvent('open-sidebar')); this.setAttribute('aria-expanded','true');"
-              data-tip="Open the app sidebar — Budget, Register, Calendar, Accounts, and profile switcher.">
+              x-data="{ open: false }"
+              @open-sidebar.window="open = true"
+              @close-sidebar.window="open = false"
+              @toggle-sidebar.window="open = !open"
+              :aria-expanded="open.toString()"
+              :aria-label="open ? 'Close app navigation' : 'Open app navigation'"
+              :data-tip="open ? 'Close the app sidebar.' : 'Open the app sidebar — Budget, Register, Calendar, Balances, and profile switcher.'"
+              @click="$dispatch('toggle-sidebar')">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <line x1="3" y1="6"  x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
