@@ -90,7 +90,7 @@ eleventyExcludeFromCollections: true
         Profile data is held in your browser's localStorage. Typical browser quota is 5&ndash;10 MB. Export to JSON if you are nearing the cap.
       </p>
       <p style="margin-bottom: var(--space-2xs); font-variant-numeric: tabular-nums;">
-        <span x-text="(($store.budget.storageStats().used / 1024).toFixed(1))"></span> KB used
+        <span x-text="fmtBytes($store.budget.storageStats().used)"></span> used
         of <span x-text="(($store.budget.storageStats().quota / 1024 / 1024).toFixed(0))"></span> MB
         (<span x-text="$store.budget.storageStats().pct"></span>%)
       </p>
@@ -193,7 +193,7 @@ eleventyExcludeFromCollections: true
                 </template>
               </td>
               <td x-text="new Date(s.createdAt).toLocaleString()"></td>
-              <td class="num" x-text="(s.size / 1024).toFixed(1) + ' KB'"></td>
+              <td class="num" x-text="fmtBytes(s.size)"></td>
               <td class="num">
                 <div class="cluster" style="justify-content: flex-end;">
                   <button class="btn btn--secondary btn--sm" type="button"
@@ -260,7 +260,7 @@ eleventyExcludeFromCollections: true
                   </form>
                 </template>
               </td>
-              <td class="num" x-text="(b.size / 1024).toFixed(1) + ' KB'"></td>
+              <td class="num" x-text="fmtBytes(b.size)"></td>
               <td class="num">
                 <button class="btn btn--secondary btn--sm" type="button"
                         @click="restoreDay = b.day; restoreValue = ''">Restore</button>
@@ -408,6 +408,15 @@ function themePicker() {
 
 function settingsView() {
   return {
+    /* Smart byte formatter. Anything under 1000 KB stays in KB; at
+       or above 1000 KB we flip to MB with two decimals so "2596.8 KB"
+       reads as "2.6 MB" once it's big enough to matter. */
+    fmtBytes(n) {
+      var bytes = Number(n) || 0;
+      var kb = bytes / 1024;
+      if (kb < 1000) return kb.toFixed(1) + " KB";
+      return (kb / 1024).toFixed(2) + " MB";
+    },
     snapLabel: "",
     restoreDay: null,
     restoreValue: "",
