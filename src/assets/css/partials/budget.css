@@ -2715,13 +2715,44 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 @media (max-width: 1023px) { .rec-summary { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 599px)  { .rec-summary { grid-template-columns: 1fr; } }
 
-/* 5-tile variant — accounts page has Accounts / On budget / Tracking
-   / Excluded / Net worth. Forced one row at desktop, 3-up at tablet
-   (avoids a lonely orphan on a second row), 2-up on phone. */
-.rec-summary--5col { grid-template-columns: repeat(5, 1fr); }
-@media (max-width: 1279px) { .rec-summary--5col { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 899px)  { .rec-summary--5col { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 479px)  { .rec-summary--5col { grid-template-columns: 1fr; } }
+/* 6-tile variant — accounts page when at least one account is
+   flagged exclude-from-net-worth: Accounts / On budget / Tracking /
+   Excluded / Net worth / Net + excluded. */
+.rec-summary--6col { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+/* Bumped the breakpoint up to 1199 so the 6-up row only fires at
+   true wide-desktop widths (>=1200 px). Below that we fall to 3-up
+   (two tidy rows of 3) to avoid tiles like "Excluded from NW" +
+   "Net + excluded" pinching their labels into two lines while the
+   final tile overflows the container. */
+@media (max-width: 1199px) { .rec-summary--6col { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 899px)  { .rec-summary--6col { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 479px)  { .rec-summary--6col { grid-template-columns: 1fr; } }
+
+/* When we're at 6-up the tiles are narrow — shrink padding + use a
+   container-query-driven clamp on the value so a 12-character
+   currency string ($1,234,567.89) fits without overflowing or
+   forcing the label to wrap mid-word. */
+.rec-summary--6col .rec-summary__tile {
+  min-width: 0;
+  padding: var(--space-sm);
+  container-type: inline-size;
+}
+.rec-summary--6col .rec-summary__label {
+  font-size: 0.65rem;
+  line-height: 1.2;
+  /* Reserve 2 lines so 1- and 2-line labels share a baseline; keeps
+     the value tier aligned across tiles even when "Excluded from NW"
+     wraps but "Tracking" doesn't. */
+  min-height: 2.4em;
+  display: flex;
+  align-items: flex-start;
+}
+.rec-summary--6col .rec-summary__value {
+  font-size: clamp(0.95rem, 9cqi, 1.5rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* Tiles are <button>s so the user can click them to apply the
    matching filter to the table below. Active filter gets a 3px
    accent rail on the left so it reads at a glance which tile is

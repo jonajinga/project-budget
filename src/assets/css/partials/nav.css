@@ -1127,6 +1127,30 @@ button.search-result:focus-visible {
 }
 .acct-link__balance.is-negative { color: var(--danger); }
 
+/* Tiny "E" badge sitting next to the account name in the sidebar
+   when the account is flagged excludeFromNetWorth. Square-ish chip
+   with muted foreground so it reads as metadata, not as an action. */
+.acct-link__excl-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  vertical-align: baseline;
+  flex-shrink: 0;
+}
+.acct-link:hover .acct-link__excl-flag { color: var(--accent); border-color: var(--accent); }
+
 /* Thin-sidebar variant — when the panel is narrower than 220px the
    side-by-side name/balance layout truncates names to 3-4 characters
    ("Sav…", "4…"). Stack the balance under the name on its own line so

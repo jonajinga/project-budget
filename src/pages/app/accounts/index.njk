@@ -33,11 +33,11 @@ eleventyExcludeFromCollections: true
      account count, and total net worth. Reuses .rec-summary chrome so
      the visual rhythm matches /app/scheduled/ and /app/categories/. #}
   {# Tile order tells a story: count → in-budget → tracked → excluded
-     → final net worth. Toggle the --5col modifier only when the
-     Excluded tile is rendering, so the layout stays a tidy 4-up when
-     no accounts are excluded. #}
+     → working net worth → all-in (net + excluded). The 6col modifier
+     fires only when accounts are flagged excluded; otherwise it
+     stays a tidy 4-up. #}
   <section class="rec-summary"
-           :class="excludedCount() > 0 ? 'rec-summary--5col' : ''"
+           :class="excludedCount() > 0 ? 'rec-summary--6col' : ''"
            x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
     <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total accounts in this profile (on-budget + tracking + excluded).">
       <span class="rec-summary__label">Accounts</span>
@@ -73,6 +73,17 @@ eleventyExcludeFromCollections: true
       <span class="rec-summary__value"
             :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : 'amount--inflow'"
             x-text="formatCents($store.budget.netWorth())"></span>
+    </div>
+    {# All-in total = Net worth + Excluded. Same render gate as the
+       Excluded tile so the row stays a clean 4-up when no accounts
+       are flagged out. #}
+    <div class="rec-summary__tile rec-summary__tile--inflow"
+         x-show="excludedCount() > 0" x-cloak
+         data-tip="Net worth plus every excluded balance. The full asset picture — useful when you want to see total wealth regardless of whose money it's earmarked for.">
+      <span class="rec-summary__label">Net + excluded</span>
+      <span class="rec-summary__value"
+            :class="($store.budget.netWorth() + excludedTotal()) < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="formatCents($store.budget.netWorth() + excludedTotal())"></span>
     </div>
   </section>
 
