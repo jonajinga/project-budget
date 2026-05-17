@@ -177,8 +177,11 @@
   background: var(--bg-elevated);
   border-right: 1px solid var(--border-soft);
   box-shadow: var(--shadow-lg);
-  padding: var(--space-lg);
+  /* Safe-area padding so the drawer respects iOS notch + home bar. */
+  padding: max(var(--space-lg), env(safe-area-inset-top)) var(--space-lg) max(var(--space-lg), env(safe-area-inset-bottom));
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   transform: translateX(-100%);
   transition: transform var(--t-base);
   z-index: 100;
@@ -192,6 +195,8 @@
   inset: 0;
   background: rgba(20, 18, 15, 0.45);
   z-index: 99;
+  /* Tap-to-close hint. JS attaches a click handler to dismiss. */
+  cursor: pointer;
 }
 .site-menu__head {
   display: flex;
