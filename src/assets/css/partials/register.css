@@ -465,3 +465,39 @@
   font-size: var(--fs-sm);
   list-style: none;
 }
+
+/* Account stats strip — six summary tiles below the page header
+   when a specific account is filtered. Auto-fits between
+   12rem-wide cards so the strip scales gracefully from 1 column
+   on a phone to 6 across on a wide desktop. */
+.acct-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+.acct-stat {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+}
+.acct-stat__label {
+  margin: 0 0 var(--space-3xs);
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.acct-stat__value {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.acct-stat__value.is-negative { color: var(--danger); }
+.acct-stat--income { border-left: 3px solid var(--ok); }
+.acct-stat--expense { border-left: 3px solid var(--danger); }

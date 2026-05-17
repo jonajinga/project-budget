@@ -467,6 +467,55 @@ function registerView() {
       this.showReconcile = false;
     },
 
+    /* ---- Account stats strip ---- */
+    /* Count of non-trashed transactions in the currently filtered
+       account. Touches _listVersion so the tile re-renders after
+       any add/edit/delete. */
+    acctTxnCount() {
+      void this.$store.budget._listVersion;
+      var id = this.filterAccountId;
+      if (!id) return 0;
+      var p = this.$store.budget.profile;
+      if (!p || !p.transactions) return 0;
+      return p.transactions.filter(function (t) { return t.accountId === id; }).length;
+    },
+    /* Sum of POSITIVE transaction amounts in the currently filtered
+       account for the active month — i.e. inflow / income / deposits
+       posted in YYYY-MM. */
+    acctMonthInflow() {
+      void this.$store.budget._listVersion;
+      var id = this.filterAccountId;
+      if (!id) return 0;
+      var m = this.$store.budget.currentMonth;
+      var p = this.$store.budget.profile;
+      if (!p || !p.transactions || !m) return 0;
+      var sum = 0;
+      p.transactions.forEach(function (t) {
+        if (t.accountId !== id) return;
+        if (!t.date || t.date.slice(0, 7) !== m) return;
+        if ((t.amount || 0) > 0) sum += t.amount;
+      });
+      return sum;
+    },
+    /* Absolute sum of NEGATIVE transaction amounts for the same
+       window — returned as a positive cents number so the tile
+       displays "$1,234.56" rather than "-$1,234.56". */
+    acctMonthOutflow() {
+      void this.$store.budget._listVersion;
+      var id = this.filterAccountId;
+      if (!id) return 0;
+      var m = this.$store.budget.currentMonth;
+      var p = this.$store.budget.profile;
+      if (!p || !p.transactions || !m) return 0;
+      var sum = 0;
+      p.transactions.forEach(function (t) {
+        if (t.accountId !== id) return;
+        if (!t.date || t.date.slice(0, 7) !== m) return;
+        if ((t.amount || 0) < 0) sum += -t.amount;
+      });
+      return sum;
+    },
+
     /* ---- Account-filter combobox ---- */
     /* Label shown in the input — the currently-selected account's
        name, or empty so the placeholder ("All accounts") shows. */

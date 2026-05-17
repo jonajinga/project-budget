@@ -38,6 +38,43 @@ eleventyExcludeFromCollections: true
     <a href="/app/accounts/">Go to accounts</a>.
   </p>
 
+  {# Account stats — only when viewing a single account. Six tiles
+     summarize the account at a glance: working balance, cleared
+     balance, uncleared, transaction count, this month's inflow,
+     this month's outflow. Computed live from the store so they
+     update on every mutation. #}
+  <section class="acct-stats" x-show="filterAccountId && hasAccounts" x-cloak
+           role="group" aria-label="Account summary">
+    <article class="acct-stat">
+      <p class="acct-stat__label">Working balance</p>
+      <p class="acct-stat__value"
+         :class="$store.budget.accountBalance(filterAccountId) < 0 ? 'is-negative' : ''"
+         x-text="formatCents($store.budget.accountBalance(filterAccountId))"></p>
+    </article>
+    <article class="acct-stat">
+      <p class="acct-stat__label">Cleared</p>
+      <p class="acct-stat__value"
+         x-text="formatCents($store.budget.accountClearedBalance(filterAccountId))"></p>
+    </article>
+    <article class="acct-stat">
+      <p class="acct-stat__label">Uncleared</p>
+      <p class="acct-stat__value"
+         x-text="formatCents($store.budget.accountBalance(filterAccountId) - $store.budget.accountClearedBalance(filterAccountId))"></p>
+    </article>
+    <article class="acct-stat">
+      <p class="acct-stat__label">Transactions</p>
+      <p class="acct-stat__value" x-text="acctTxnCount()"></p>
+    </article>
+    <article class="acct-stat acct-stat--income">
+      <p class="acct-stat__label">Inflow this month</p>
+      <p class="acct-stat__value" x-text="formatCents(acctMonthInflow())"></p>
+    </article>
+    <article class="acct-stat acct-stat--expense">
+      <p class="acct-stat__label">Outflow this month</p>
+      <p class="acct-stat__value" x-text="formatCents(acctMonthOutflow())"></p>
+    </article>
+  </section>
+
   {# Due scheduled queue #}
   <section class="card" x-show="hasAccounts && due.length" x-cloak style="border-left: 4px solid var(--warn);">
     <h2 class="card__title">Recurring transactions due</h2>
