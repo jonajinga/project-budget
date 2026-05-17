@@ -26,6 +26,10 @@ function registerView() {
        interactions. Exiting select mode clears the set. */
     selectMode: false,
     selectedTxnIds: [],
+    /* Searchable account-filter combobox state. acctQuery is the
+       typed search; acctComboOpen toggles the dropdown panel. */
+    acctComboOpen: false,
+    acctQuery: "",
     showBulkRecat: false,
     showBulkRename: false,
     bulkRecatTarget: "",
@@ -463,6 +467,23 @@ function registerView() {
       this.showReconcile = false;
     },
 
+    /* ---- Account-filter combobox ---- */
+    /* Label shown in the input — the currently-selected account's
+       name, or empty so the placeholder ("All accounts") shows. */
+    acctFilterLabel() {
+      if (this.acctComboOpen) return this.acctQuery;
+      if (!this.filterAccountId) return "";
+      var a = this.$store.budget.findAccount(this.filterAccountId);
+      return a ? a.name : "";
+    },
+    acctComboFiltered() {
+      var q = (this.acctQuery || "").trim().toLowerCase();
+      if (!q) return this.openAccounts;
+      return this.openAccounts.filter(function (a) {
+        return a.name.toLowerCase().indexOf(q) !== -1;
+      });
+    },
+
     /* ---- Bulk select + bulk operations ---- */
     toggleSelectMode() {
       this.selectMode = !this.selectMode;
@@ -473,6 +494,22 @@ function registerView() {
       var i = this.selectedTxnIds.indexOf(id);
       if (i === -1) this.selectedTxnIds.push(id);
       else this.selectedTxnIds.splice(i, 1);
+      /* Auto-arm select mode the moment a row is selected. The Select
+         button still works as an explicit toggle, but users who click
+         a row first don't need a separate step to reveal the bulk
+         actions bar / checkbox column. */
+      if (this.selectedTxnIds.length) this.selectMode = true;
+    },
+    /* Whole-row click → toggle selection. Skips clicks that came from
+       a real action (buttons, links, inputs, the inline edit form,
+       the cleared toggle, the split badge). Reconciled rows opt out
+       entirely since they're locked from bulk operations. */
+    onRowClick(t, evt) {
+      if (!t || t.reconciled) return;
+      if (this.editingId === t.id) return;
+      var target = evt && evt.target;
+      if (target && target.closest && target.closest("button,a,input,select,textarea,label,[data-tippy-bound]")) return;
+      this.toggleTxnSelected(t.id);
     },
     clearTxnSelection() {
       this.selectedTxnIds = [];

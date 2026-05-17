@@ -384,3 +384,84 @@
   background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
   border-left: 3px solid var(--accent);
 }
+
+/* Searchable account combobox — replaces the legacy <select>. Input
+   is full-width inside the filter row, chevron sits at the right,
+   options dropdown anchors below. */
+.acct-combo {
+  position: relative;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 18rem;
+}
+.acct-combo__input {
+  width: 100%;
+  padding-right: 2rem;
+}
+.acct-combo__chevron {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  padding: 0.25rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.acct-combo__chevron:hover { color: var(--fg); }
+.acct-combo__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3xs) 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  z-index: 5;
+}
+.acct-combo__option {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  cursor: pointer;
+}
+.acct-combo__option:hover,
+.acct-combo__option:focus-visible {
+  background: var(--bg-alt);
+  outline: 0;
+}
+.acct-combo__option.is-active {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--fg);
+  font-weight: 600;
+}
+.acct-combo__balance {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.acct-combo__empty {
+  padding: 0.55rem 0.75rem;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  list-style: none;
+}

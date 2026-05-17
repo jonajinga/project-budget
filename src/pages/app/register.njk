@@ -144,13 +144,42 @@ eleventyExcludeFromCollections: true
   <section class="register" x-show="hasAccounts" x-cloak>
     <div class="register__toolbar">
       <div class="register__filters">
-        <select class="select" aria-label="Filter by account"
-                x-model="filterAccountId" @change="updateUrl()">
-          <option value="">All accounts</option>
-          <template x-for="a in openAccounts" :key="a.id">
-            <option :value="a.id" x-text="a.name"></option>
-          </template>
-        </select>
+        {# Searchable account filter — type to narrow the dropdown,
+           click an option to select, Esc to close. The hidden state
+           filterAccountId still drives the rest of the page. #}
+        <div class="acct-combo" @click.outside="acctComboOpen = false" @keydown.escape="acctComboOpen = false">
+          <input class="input acct-combo__input" type="text"
+                 aria-label="Filter by account"
+                 :value="acctFilterLabel()"
+                 @focus="acctComboOpen = true; acctQuery = ''"
+                 @input="acctQuery = $event.target.value; acctComboOpen = true"
+                 placeholder="All accounts">
+          <button type="button" class="acct-combo__chevron" tabindex="-1"
+                  @click="acctComboOpen = !acctComboOpen"
+                  aria-label="Toggle account filter">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="acct-combo__list" x-show="acctComboOpen" x-cloak>
+            <li>
+              <button type="button" class="acct-combo__option"
+                      @click="filterAccountId = ''; acctComboOpen = false; acctQuery = ''; updateUrl()">
+                All accounts
+              </button>
+            </li>
+            <template x-for="a in acctComboFiltered()" :key="a.id">
+              <li>
+                <button type="button" class="acct-combo__option"
+                        :class="filterAccountId === a.id ? 'is-active' : ''"
+                        @click="filterAccountId = a.id; acctComboOpen = false; acctQuery = ''; updateUrl()">
+                  <span x-text="a.name"></span>
+                  <span class="acct-combo__balance"
+                        x-text="(($store.budget.accountBalance(a.id) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span>
+                </button>
+              </li>
+            </template>
+            <li x-show="!acctComboFiltered().length" x-cloak class="acct-combo__empty">No matches</li>
+          </ul>
+        </div>
         <input class="input register__search" type="search"
                aria-label="Search payee or memo"
                x-model.debounce.300ms="search"
@@ -198,7 +227,8 @@ eleventyExcludeFromCollections: true
       <tbody>
         <template x-for="t in visibleTransactions()" :key="t.id">
           <tr :data-txn-id="t.id"
-              :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id, 'register__row--selected': isTxnSelected(t.id) }">
+              :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id, 'register__row--selected': isTxnSelected(t.id) }"
+              @click="onRowClick(t, $event)">
             {# Per-row select checkbox — only present in select mode. #}
             <td class="col-select" x-show="selectMode" x-cloak>
               <input type="checkbox" class="register__bulk-check"
