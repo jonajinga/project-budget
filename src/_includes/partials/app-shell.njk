@@ -62,16 +62,27 @@
         <template x-if="i === 0">
           <div class="app-nav__section-block app-sidebar__accounts"
                x-show="($store.budget._listVersion, $store.budget.profile && $store.budget.profile.accounts.length)" x-cloak>
-            <button type="button"
-                    class="app-nav__section-head"
-                    :aria-expanded="(!collapsed.accounts).toString()"
-                    @click="toggle('accounts')"
-                    :data-tip="(collapsed.accounts ? 'Expand' : 'Collapse') + ' the Balances section.'">
-              <span class="app-nav__section-chevron" :class="collapsed.accounts ? 'is-collapsed' : ''" aria-hidden="true">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              </span>
-              <span class="app-nav__section-label">Balances</span>
-            </button>
+            <div class="app-nav__section-head-row">
+              <button type="button"
+                      class="app-nav__section-head"
+                      :aria-expanded="(!collapsed.accounts).toString()"
+                      @click="toggle('accounts')"
+                      :data-tip="(collapsed.accounts ? 'Expand' : 'Collapse') + ' the Balances section.'">
+                <span class="app-nav__section-chevron" :class="collapsed.accounts ? 'is-collapsed' : ''" aria-hidden="true">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+                <span class="app-nav__section-label">Balances</span>
+              </button>
+              {# Quick toggle: expand every account group (or collapse
+                 every one) in a single tap. The user can still toggle
+                 individual groups via their per-group chevrons. #}
+              <button type="button" class="app-nav__section-action"
+                      x-show="!collapsed.accounts"
+                      @click="$store.budget.setAllAcctGroupsCollapsed(!$store.budget.allAcctGroupsCollapsed())"
+                      :data-tip="$store.budget.allAcctGroupsCollapsed() ? 'Show every account in every group.' : 'Collapse every account group.'">
+                <span x-text="$store.budget.allAcctGroupsCollapsed() ? 'Expand all' : 'Collapse all'"></span>
+              </button>
+            </div>
             <div x-show="!collapsed.accounts" x-cloak>
               {# Inline the _listVersion read so Alpine tracks the dep
                  in the binding scope. Without this the cross-store

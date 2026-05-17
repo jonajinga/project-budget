@@ -67,8 +67,13 @@
        outer drag for touch/mouse events and freezes the gesture.
        This was the root cause of "category-group drag freezes" while
        individual categories worked (categories have no nested
-       sortable inside their rows). */
-    if (el.closest(".sortable-fallback, .sortable-drag, .sortable-ghost")) return;
+       sortable inside their rows).
+
+       Three guards: explicit clone classes, ANY ancestor flagged
+       as a clone, and the body's pb-dragging signal. Belt + braces
+       because SortableJS class names can shift across versions. */
+    if (el.closest(".sortable-fallback, .sortable-drag, .sortable-ghost, .sortable-chosen, [data-pb-clone]")) return;
+    if (document.body.classList.contains("pb-dragging")) return;
 
     /* Categories on /app/categories/ vs /app/budget/ are the same kind
        conceptually (both move the same entities) but live in different
@@ -134,11 +139,23 @@
   function init() {
     scan(document);
     /* Alpine renders x-for items asynchronously; rescan on any added
-       node that's either a [data-sortable-list] or contains one. */
+       node that's either a [data-sortable-list] or contains one.
+       During a drag (body.pb-dragging set by onStart), SHORT-CIRCUIT
+       — every mutation in that window comes from Sortable's own
+       clone/ghost machinery and processing it can recursively bind
+       fresh Sortable instances to the clone, freezing the gesture. */
     var obs = new MutationObserver(function (mutations) {
+      if (document.body.classList.contains("pb-dragging")) return;
       mutations.forEach(function (m) {
         m.addedNodes && m.addedNodes.forEach(function (n) {
           if (n.nodeType !== 1) return;
+          /* Defence in depth: even outside a drag, skip clones. */
+          if (n.classList && (
+            n.classList.contains("sortable-fallback") ||
+            n.classList.contains("sortable-drag") ||
+            n.classList.contains("sortable-ghost") ||
+            n.classList.contains("sortable-chosen")
+          )) return;
           if (n.matches && n.matches("[data-sortable-list]")) attach(n);
           if (n.querySelectorAll) scan(n);
         });

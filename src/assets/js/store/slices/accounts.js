@@ -69,6 +69,38 @@ export const accountsSlice = {
   },
 
   /**
+   * Bulk collapse / expand every account group in one call,
+   * persisted on each group + the collapsedAcctGroups map.
+   * Mirrors setAllCatGroupsCollapsed; used by the sidebar's
+   * "Expand all" / "Collapse all" affordance on the BALANCES
+   * section.
+   * @param {boolean} collapsed
+   */
+  setAllAcctGroupsCollapsed(collapsed) {
+    if (!this.profile) return;
+    var groups = this.profile.accountGroups || [];
+    var m = {};
+    groups.forEach(function (g) {
+      g.collapsed = !!collapsed;
+      if (collapsed) m[g.id] = true;
+    });
+    this.collapsedAcctGroups = m;
+    this._save();
+  },
+
+  /**
+   * True iff every account group is currently collapsed.
+   * @returns {boolean}
+   */
+  allAcctGroupsCollapsed() {
+    if (!this.profile) return false;
+    var groups = this.profile.accountGroups || [];
+    if (!groups.length) return false;
+    var self = this;
+    return groups.every(function (g) { return !!self.collapsedAcctGroups[g.id]; });
+  },
+
+  /**
    * Bulk collapse / expand every category group in one call.
    * Persists the collapsed flag on each group object so the state
    * survives reload, same as toggleCategoryGroupCollapsed does.
