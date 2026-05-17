@@ -102,6 +102,13 @@
     justify-content: space-between;
   }
 }
+/* Hide the floating bar while any modal is open so it doesn't
+   overlap the modal's bottom Confirm/Cancel row. Alpine's x-show
+   removes inline `display: none` when the modal is visible, so
+   `:not([style*="display: none"])` matches the open state. */
+body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
+  display: none !important;
+}
 
 .budget__activity { display: none; }
 .budget__group-header > :nth-child(3) { display: none; }
