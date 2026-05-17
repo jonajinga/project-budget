@@ -603,8 +603,31 @@ button.search-result:focus-visible {
    between the nav and the footer. The old `flex: 1 1 auto + scroll`
    rules made it own the remaining sidebar height; with the new
    placement the whole sidebar scrolls together, so the panel just
-   takes its natural height. */
-.app-sidebar__accounts { min-width: 0; }
+   takes its natural height.
+
+   Visual distinction so the Balances block doesn't read as just
+   another nav section: subtle bg tint + accent left rail + padding,
+   plus a slight top/bottom margin so it visually separates from
+   Daily above and Data below. */
+.app-sidebar__accounts {
+  min-width: 0;
+  background: color-mix(in oklab, var(--accent) 4%, var(--bg-elevated));
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-input);
+  padding: var(--space-3xs) var(--space-2xs);
+  margin: var(--space-2xs) 0;
+}
+.app-sidebar__accounts .app-nav__section-head {
+  color: var(--accent);
+}
+.app-sidebar__accounts .app-nav__section-chevron {
+  color: var(--accent);
+}
+/* Override the .app-nav__group-wrap + .section-block top border so
+   the Balances panel doesn't get a duplicate divider line above it. */
+.app-nav__group-wrap + .app-nav__group-wrap .app-sidebar__accounts {
+  margin-top: var(--space-2xs);
+}
 
 /* Floating sidebar toggle was replaced by the header hamburger. */
 .app-sidebar-toggle { display: none; }
@@ -1192,4 +1215,15 @@ button.search-result:focus-visible {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   color: var(--fg);
+}
+/* Sum rows (Net worth, Net + excluded) get a thin top border so the
+   running breakdown above reads as "On-budget + Tracking + Excluded
+   = these totals." */
+.acct-totals__sum {
+  border-top: 1px solid var(--border-soft);
+  padding-top: var(--space-3xs);
+  margin-top: var(--space-3xs) !important;
+}
+.acct-totals__sum:first-of-type {
+  border-top: 1px solid var(--border-strong);
 }
