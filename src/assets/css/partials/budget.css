@@ -86,8 +86,10 @@
   color: var(--danger);
 }
 /* Outflow button at the group level — strip the per-cat pill chrome
-   so the group total reads as a summary, not a row entry. */
-.budget__activity-btn--group {
+   so the group total reads as a summary, not a row entry. Selector
+   doubles the class to win the cascade against .budget__activity-btn
+   (which sits later in the file and would otherwise override). */
+.budget__activity-btn.budget__activity-btn--group {
   display: inline;
   min-width: 0;
   border: 0;
@@ -95,8 +97,9 @@
   font-weight: 700;
   font-size: var(--fs-md);
   border-radius: 0;
+  background: transparent;
 }
-.budget__activity-btn--group:not(:disabled):hover {
+.budget__activity-btn.budget__activity-btn--group:not(:disabled):hover {
   background: transparent;
   border-color: transparent;
   text-decoration: underline;
@@ -263,13 +266,15 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 .budget__group-header .group-toggle {
   min-width: 0;
-  overflow: hidden;
+  /* Allow the title to wrap to a second line on narrow viewports
+     rather than truncate with an ellipsis — the header grows
+     taller instead of swallowing characters. */
+  text-align: left;
+  white-space: normal;
 }
 .budget__group-header .group-toggle strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   min-width: 0;
+  white-space: normal;
 }
 /* Same fade-in pattern for the group header's inline actions.
    nowrap + flex-shrink: 0 keeps the cluster pinned next to the
