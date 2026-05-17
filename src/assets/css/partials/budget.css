@@ -297,6 +297,19 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Mobile: let the name take its natural width (no ellipsis). The
+   action cluster wraps to its own row below via the .budget__row-
+   actions flex-basis: 100% rule. Long names wrap across two lines
+   if needed — better than truncating mid-word. */
+@media (max-width: 599px) {
+  .budget__cat-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+  }
+  .budget__category-row { flex-wrap: wrap; }
+}
 /* Per-row inline edit actions (rename / delete) — hidden by default,
    fade in when the row is hovered or any child is focused so the
    default budget grid stays clean. Always visible on touch since
@@ -341,36 +354,49 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   min-width: 0;
 }
 @media (max-width: 599px) {
+  /* Action clusters wrap to their own row on mobile instead of
+     stealing space from the category/group title. Names get their
+     natural width, actions sit on a second row below. */
   .budget__group-actions,
   .budget__row-actions {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    flex-basis: 100%;
+    flex-wrap: wrap;
     max-width: 100%;
-    flex-wrap: nowrap;
-    /* Subtle right-edge fade hint that content scrolls. */
-    mask-image: linear-gradient(to right, #000 90%, transparent);
-    -webkit-mask-image: linear-gradient(to right, #000 90%, transparent);
-    padding-right: 8px;
-    scrollbar-width: none;
+    margin-top: var(--space-2xs);
+    /* Always visible on touch (no hover state) and on mobile in
+       general so the user can find the actions. */
+    opacity: 1;
   }
-  .budget__group-actions::-webkit-scrollbar,
-  .budget__row-actions::-webkit-scrollbar { display: none; }
 }
 .budget__group-header .group-toggle {
   min-width: 0;
   text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
 }
 .budget__group-header .group-toggle strong {
   min-width: 0;
-  white-space: nowrap;
-  /* Fluid font-size — full size at wide viewports, shrinks
-     smoothly down to 0.75rem on phone-width so long names like
-     "Immediate obligations" stay on one line without ellipsis or
-     wrapping. Uses vw so it tracks viewport width directly; the
-     parent budget cluster is roughly viewport-width. */
-  font-size: clamp(0.75rem, 1.8vw, var(--fs-md));
+  font-size: var(--fs-md);
+}
+/* Mobile: let the title wrap naturally — never truncate. Actions
+   cluster wraps to its own row via the rule above. */
+@media (max-width: 599px) {
+  .budget__group-header > .cluster { flex-wrap: wrap; }
+  .budget__group-header .group-toggle {
+    white-space: normal;
+    overflow: visible;
+  }
+  .budget__group-header .group-toggle strong {
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+@media (min-width: 600px) {
+  .budget__group-header .group-toggle {
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .budget__group-header .group-toggle strong {
+    white-space: nowrap;
+  }
 }
 /* Same fade-in pattern for the group header's inline actions.
    nowrap + flex-shrink: 0 keeps the cluster pinned next to the
