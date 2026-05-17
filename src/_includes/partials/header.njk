@@ -106,42 +106,32 @@
     </div>
   {% endif %}
 
-  {# ---- Slide-out menu (vanilla JS via main.js) ---- #}
-  <div class="site-menu-backdrop" hidden></div>
+  {# Slide-out site-menu is only rendered on marketing pages now —
+     on /app/* the hamburger opens the app-sidebar (which also
+     carries a Project Budget section with all the marketing links),
+     so this second menu would just duplicate it. #}
+  {% if not isApp %}
+    <div class="site-menu-backdrop" hidden></div>
 
-  <aside class="site-menu" id="site-menu" aria-label="Site menu">
-    <div class="site-menu__head">
-      <p class="site-menu__brand">{{ site.title }}</p>
-      <button type="button" class="site-menu__close" aria-label="Close menu">&times;</button>
-    </div>
+    <aside class="site-menu" id="site-menu" aria-label="Site menu">
+      <div class="site-menu__head">
+        <p class="site-menu__brand">{{ site.title }}</p>
+        <button type="button" class="site-menu__close" aria-label="Close menu">&times;</button>
+      </div>
 
-    {% if isApp %}
-      {# nav.app is now a list of { section, key, items[] } groups, so
-         render each section as its own labelled block instead of one
-         flat list. Each section's label gets its own __group-label
-         row, then the items render below. #}
-      {% for sec in nav.app %}
-        <p class="site-menu__group-label">In this app · {{ sec.section }}</p>
-        <ul class="site-menu__list">
-          {% for item in sec.items %}
-            <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
-          {% endfor %}
-        </ul>
-      {% endfor %}
-    {% endif %}
-
-    <p class="site-menu__group-label">Project Budget</p>
-    <ul class="site-menu__list">
-      <li><a href="/" class="site-menu__link">Home</a></li>
-      {% for item in nav.main %}
-        <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
-      {% endfor %}
-      {% for item in nav.footer %}
-        <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
-      {% endfor %}
-      <li><a href="{{ site.repo }}" class="site-menu__link" rel="noopener">GitHub</a></li>
-    </ul>
-  </aside>
+      <p class="site-menu__group-label">Project Budget</p>
+      <ul class="site-menu__list">
+        <li><a href="/" class="site-menu__link">Home</a></li>
+        {% for item in nav.main %}
+          <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
+        {% endfor %}
+        {% for item in nav.footer %}
+          <li><a href="{{ item.url }}" class="site-menu__link">{{ item.label }}</a></li>
+        {% endfor %}
+        <li><a href="{{ site.repo }}" class="site-menu__link" rel="noopener">GitHub</a></li>
+      </ul>
+    </aside>
+  {% endif %}
 
   {% include "partials/search-modal.njk" %}
 </header>

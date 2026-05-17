@@ -108,7 +108,35 @@
 }
 .site-nav__link--cta:hover { background: var(--accent-hover); color: #fff; }
 
-.site-header__actions { display: flex; align-items: center; gap: var(--space-2xs); }
+.site-header__actions { display: flex; align-items: center; gap: var(--space-2xs); flex-shrink: 0; }
+
+/* Mobile tightening — the app header crams hamburger + profile +
+   undo + redo + search + theme picker into a single row. Below
+   600px the row overflows and the picker chevron + theme split
+   button get clipped. Tighter padding + smaller icons + hide
+   undo/redo (they're rare on mobile, and Cmd+Z still works) keeps
+   everything on one row inside a 360-px viewport. */
+@media (max-width: 599px) {
+  .site-header__inner--app { gap: var(--space-3xs); padding-inline: var(--space-2xs); }
+  .site-header__hamburger,
+  .site-header__search,
+  .site-header__iconbtn { width: 40px; height: 40px; }
+  /* Undo/redo: hide on narrow screens. Power-users use Ctrl+Z. The
+     command palette also has explicit Undo/Redo actions. */
+  .site-header__actions .site-header__iconbtn { display: none; }
+  /* Profile name: cap aggressively so it truncates instead of
+     pushing the theme picker off-screen. */
+  .site-header__profile { padding: 0; min-width: 0; }
+  .site-header__profile-name {
+    font-size: var(--fs-sm);
+    max-width: 14ch;
+  }
+  /* Theme picker: drop the chevron-open button on narrow screens.
+     Users can still long-press / use the search modal to switch
+     themes; the quick-toggle stays. */
+  .theme-picker__open { display: none; }
+  .theme-picker__quick { width: 40px; height: 40px; }
+}
 
 /* Site-menu slide-out (shared between marketing + app headers). Always
    reachable via the hamburger button. */

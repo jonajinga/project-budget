@@ -109,6 +109,32 @@ export default {
           icon: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>' },
       ],
     },
+    {
+      /* Project Budget — marketing + utility links. Merged in here
+         so the sidebar is the single nav surface; there's no
+         separate hamburger menu on app pages anymore. */
+      section: "Project Budget",
+      key: "marketing",
+      defaultCollapsed: true,
+      items: [
+        { label: "Public site (home)", url: "/",
+          icon: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4a1 1 0 0 1-1-1v-6a2 2 0 0 0-4 0v6a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2z"/>' },
+        { label: "Docs", url: "/docs/",
+          icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
+        { label: "Blog", url: "/blog/",
+          icon: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>' },
+        { label: "Glossary", url: "/glossary/",
+          icon: '<path d="M12 6.253v13"/><path d="M20 5.5C18 5.5 15 6 13.5 7 12 6 9 5.5 7 5.5S2 6 2 6.5v13c0 .5 5 0 6 .5s3.5 1 4 2c.5-1 2-1.5 4-2s5 0 6-.5v-13c0-.5-3-.5-2-.5z"/>' },
+        { label: "Open source", url: "/open-source/",
+          icon: '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>' },
+        { label: "About", url: "/about/",
+          icon: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>' },
+        { label: "Accessibility", url: "/accessibility/",
+          icon: '<circle cx="12" cy="4" r="2"/><path d="M5 8l5 1v6l-2 6M19 8l-5 1v6l2 6M9 12h6"/>' },
+        { label: "Privacy", url: "/privacy/",
+          icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+      ],
+    },
   ],
   /* Footer-only utility links — kept separate from nav.main so the
      header hamburger menu can render every link in a single "Project
