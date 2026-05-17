@@ -1,0 +1,10 @@
+{# Canonical trash-can icon (Lucide "trash-2"). One source of truth so
+   every delete affordance across the site shows the same glyph.
+   Usage:
+     {% from "partials/icon-trash.njk" import iconTrash %}
+     {{ iconTrash() }}     -- default 18px
+     {{ iconTrash(14) }}    -- explicit size
+   Fill is currentColor so callers control color via parent CSS. #}
+{% macro iconTrash(size=18) -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
+{%- endmacro %}

@@ -32,16 +32,26 @@ export const budgetSlice = {
    */
   readyToAssign(month) {
     if (!this.profile) return 0;
-    return readyToAssignImpl(this.profile, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("rta:" + m, function () { return readyToAssignImpl(self.profile, m); });
   },
   /**
    * @param {id} categoryId
    * @param {string} [month]
    * @returns {object} {carryIn, assigned, activity, available} — all cents
+   *
+   * Memoized — the budget grid calls this PER CATEGORY on every
+   * render (40+ categories × 3 reads per row = 120+ walks per tick
+   * pre-cache). Cache invalidates on _listVersion.
    */
   categoryRow(categoryId, month) {
     if (!this.profile) return { carryIn: 0, assigned: 0, activity: 0, available: 0 };
-    return categoryRowImpl(this.profile, categoryId, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("catRow:" + categoryId + ":" + m, function () {
+      return categoryRowImpl(self.profile, categoryId, m);
+    });
   },
   /**
    * @param {string} [month]
@@ -49,7 +59,9 @@ export const budgetSlice = {
    */
   totalAssignedInMonth(month) {
     if (!this.profile) return 0;
-    return totalAssignedInMonthImpl(this.profile, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("totalAssigned:" + m, function () { return totalAssignedInMonthImpl(self.profile, m); });
   },
   /**
    * @param {string} [month]
@@ -57,7 +69,9 @@ export const budgetSlice = {
    */
   totalInflowToBudget(month) {
     if (!this.profile) return 0;
-    return totalInflowToBudgetImpl(this.profile, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("totalInflow:" + m, function () { return totalInflowToBudgetImpl(self.profile, m); });
   },
   /**
    * @param {id} categoryId
@@ -66,7 +80,9 @@ export const budgetSlice = {
    */
   assignedFor(categoryId, month) {
     if (!this.profile) return 0;
-    return budgetAssigned(this.profile, categoryId, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("assigned:" + categoryId + ":" + m, function () { return budgetAssigned(self.profile, categoryId, m); });
   },
   /**
    * @param {id} categoryId
@@ -75,7 +91,9 @@ export const budgetSlice = {
    */
   activityFor(categoryId, month) {
     if (!this.profile) return 0;
-    return budgetActivity(this.profile, categoryId, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("activity:" + categoryId + ":" + m, function () { return budgetActivity(self.profile, categoryId, m); });
   },
 
   /**

@@ -5,6 +5,7 @@ description: "Auto-categorize transactions and clean up payee names from bank im
 permalink: /app/rules/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/icon-trash.njk" import iconTrash %}
 <div class="app-page" x-data="rulesView()" x-init="init()">
 
   <header class="app-page__header">
@@ -79,7 +80,7 @@ eleventyExcludeFromCollections: true
               <button class="btn btn--icon" type="button"
                       @click="deleteCatRule(r)"
                       aria-label="Delete rule" data-tip="Delete this rule" style="color: var(--danger);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                {{ iconTrash(14) }}
               </button>
             </div>
           </div>
@@ -146,7 +147,7 @@ eleventyExcludeFromCollections: true
               <button class="btn btn--icon" type="button"
                       @click="deleteNormRule(r)"
                       aria-label="Delete rule" data-tip="Delete this rule" style="color: var(--danger);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                {{ iconTrash(14) }}
               </button>
             </div>
           </div>

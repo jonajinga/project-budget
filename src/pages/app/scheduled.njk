@@ -5,6 +5,7 @@ description: "Manage recurring transactions: edit, post on demand, skip, or remo
 permalink: /app/scheduled/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/icon-trash.njk" import iconTrash %}
 <div class="app-page" x-data="scheduledView()" x-init="init()">
   <header class="app-page__header">
     <h1 class="app-page__title">Recurring transactions</h1>
@@ -257,11 +258,7 @@ eleventyExcludeFromCollections: true
                         aria-label="Delete recurring template"
                         data-tip="Permanently remove this recurring template."
                         style="color: var(--danger);">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polyline points="3 4 13 4"></polyline>
-                    <path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1"></path>
-                    <path d="M5 4l1 9h4l1-9"></path>
-                  </svg>
+                  {{ iconTrash(16) }}
                 </button>
               </div>
             </td>

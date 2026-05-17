@@ -5,6 +5,7 @@ description: "Assign every dollar a job. Monthly envelope budget view."
 permalink: /app/budget/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/icon-trash.njk" import iconTrash %}
 <div class="app-page" x-data="budgetView()" x-init="init()">
 
   {# Visually-hidden page heading — SR users land on a clear page
@@ -190,11 +191,7 @@ eleventyExcludeFromCollections: true
                         aria-label="Delete group"
                         data-tip="Delete this group. Categories inside become ungrouped."
                         style="color: var(--danger);">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
-                    <path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"></path>
-                  </svg>
+                  {{ iconTrash(16) }}
                 </button>
               </div>
             </div>
@@ -310,11 +307,7 @@ eleventyExcludeFromCollections: true
                                     aria-label="Delete category"
                                     data-tip="Delete this category. Activity becomes uncategorized."
                                     style="color: var(--danger);">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
-                                <path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"></path>
-                              </svg>
+                              {{ iconTrash(14) }}
                             </button>
                           </span>
                         </template>
