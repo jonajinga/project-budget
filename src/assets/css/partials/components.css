@@ -410,7 +410,17 @@
   pointer-events: none;
 }
 @media (max-width: 599px) {
-  .toast-stack { bottom: calc(56px + var(--space-md) + var(--space-2xs)); right: var(--space-md); left: var(--space-md); width: auto; }
+  .toast-stack {
+    bottom: calc(56px + var(--space-md) + var(--space-2xs) + env(safe-area-inset-bottom, 0));
+    right: var(--space-md);
+    left: var(--space-md);
+    width: auto;
+  }
+}
+/* Lift toast stack above the bulk-actions bar when it's visible
+   (budget multi-select). Same :has() pattern as the FAB. */
+body:has(.bulk-actions-bar:not([style*="display: none"])) .toast-stack {
+  bottom: calc(140px + env(safe-area-inset-bottom, 0));
 }
 .toast {
   display: grid;

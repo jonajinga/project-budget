@@ -50,3 +50,11 @@
     bottom: max(var(--space-md), env(safe-area-inset-bottom, 0));
   }
 }
+
+/* When the budget bulk-actions bar is showing, lift the FAB above
+   it so the two don't overlap on phones (the bar is fixed
+   bottom-stretched on mobile, FAB is bottom-right). CSS :has()
+   detects the visible bar. */
+body:has(.bulk-actions-bar:not([style*="display: none"])) .fab-quick-add__btn {
+  bottom: calc(80px + env(safe-area-inset-bottom, 0));
+}
