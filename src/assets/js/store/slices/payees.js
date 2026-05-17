@@ -87,18 +87,28 @@ export const payeesSlice = {
   /**
    * @returns {object} map of payeeId -> transaction count
    */
+  /* Memoized — payeeUsageCounts walks ALL transactions to build
+     the per-payee count map. The payees admin page reads this in
+     every row's right-most column (one read per render, but at 35+
+     payees × every Alpine tick that's a lot of full-transaction
+     walks pre-cache). */
   payeeUsageCounts() {
-    void this._listVersion;
-    return this.profile ? payeeUsageCountsImpl(this.profile) : {};
+    if (!this.profile) return {};
+    var self = this;
+    return this._memo("payeeUsageCounts", function () {
+      return payeeUsageCountsImpl(self.profile);
+    });
   },
   /**
    * @returns {object[]} payees sorted alphabetically by name
    */
   allPayees() {
-    void this._listVersion;
     if (!this.profile) return [];
-    return (this.profile.payees || []).slice().sort(function (a, b) {
-      return a.name.localeCompare(b.name);
+    var self = this;
+    return this._memo("allPayees", function () {
+      return (self.profile.payees || []).slice().sort(function (a, b) {
+        return a.name.localeCompare(b.name);
+      });
     });
   },
 };

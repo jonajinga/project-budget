@@ -21,7 +21,25 @@ export function makeHost(slices) {
     collapsedAcctGroups: {},
     collapsedCatGroups: {},
     _listVersion: 0,
-    _bumpLists() { this._listVersion += 1; },
+    _bumpLists() {
+      this._listVersion += 1;
+      this._memoStore = null;
+      this._memoStoreVersion = -1;
+    },
+    /* Store-level memoize — mirrors the real store.js helper so slice
+       methods that call this._memo() work in tests. */
+    _memoStore: null,
+    _memoStoreVersion: -1,
+    _memo(key, compute) {
+      if (this._memoStoreVersion !== this._listVersion || !this._memoStore) {
+        this._memoStore = Object.create(null);
+        this._memoStoreVersion = this._listVersion;
+      }
+      if (key in this._memoStore) return this._memoStore[key];
+      var v = compute();
+      this._memoStore[key] = v;
+      return v;
+    },
     _save() { /* no-op for tests */ },
     _recordUndo() { /* no-op for tests */ },
     _hydrateCollapsed() { /* no-op */ },

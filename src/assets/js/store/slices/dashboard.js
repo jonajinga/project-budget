@@ -17,19 +17,24 @@ export const dashboardSlice = {
    */
   overspentCount(month) {
     if (!this.profile) return { count: 0, totalDeficit: 0 };
-    void this._listVersion;
     var m = month || this.currentMonth;
-    var count = 0, deficit = 0;
     var self = this;
-    this.profile.categories.forEach(function (c) {
-      if (isPaymentCategory(self.profile, c.id)) return;
-      var row = categoryRow(self.profile, c.id, m);
-      if (row.available < 0) {
-        count += 1;
-        deficit += Math.abs(row.available);
-      }
+    /* Memoized — overspentCount walks every category and computes
+       categoryRow (which walks all transactions) per category. At
+       40+ categories × 1k+ txns that's a major hot path. The
+       dashboard's KPI tile + alert + insight all read it. */
+    return this._memo("overspentCount:" + m, function () {
+      var count = 0, deficit = 0;
+      self.profile.categories.forEach(function (c) {
+        if (isPaymentCategory(self.profile, c.id)) return;
+        var row = categoryRow(self.profile, c.id, m);
+        if (row.available < 0) {
+          count += 1;
+          deficit += Math.abs(row.available);
+        }
+      });
+      return { count: count, totalDeficit: deficit };
     });
-    return { count: count, totalDeficit: deficit };
   },
 
   /**
@@ -41,36 +46,43 @@ export const dashboardSlice = {
    *   has {schedId, date, amount, payeeName, payeeId, accountId, categoryId}
    */
   upcomingBills(days) {
-    void this._listVersion;
     if (!this.profile || !this.profile.scheduled.length) {
       return { totalNet: 0, totalOut: 0, totalIn: 0, items: [] };
     }
+    var d = days || 14;
+    var self = this;
+    /* Memoized — dashboard reads the 7-day + 14-day variants both
+       on every render. Cache key includes the day-count and the
+       calendar day (so the result auto-rolls forward at midnight
+       UTC without needing an explicit invalidation). */
     var today = new Date().toISOString().slice(0, 10);
-    var horizon = new Date();
-    horizon.setDate(horizon.getDate() + (days || 14));
-    var endISO = horizon.toISOString().slice(0, 10);
-    var items = [];
-    var totalNet = 0, totalOut = 0, totalIn = 0;
-    this.profile.scheduled.forEach(function (s) {
-      var dates = occurrencesIn(s, today, endISO);
-      dates.forEach(function (d) {
-        var amt = (s.template && s.template.amount) || 0;
-        items.push({
-          schedId: s.id,
-          date: d,
-          amount: amt,
-          payeeName: (s.template && s.template.payeeName) || "",
-          payeeId: (s.template && s.template.payeeId) || null,
-          accountId: (s.template && s.template.accountId) || null,
-          categoryId: (s.template && s.template.categoryId) || null,
+    return this._memo("upcomingBills:" + d + ":" + today, function () {
+      var horizon = new Date();
+      horizon.setDate(horizon.getDate() + d);
+      var endISO = horizon.toISOString().slice(0, 10);
+      var items = [];
+      var totalNet = 0, totalOut = 0, totalIn = 0;
+      self.profile.scheduled.forEach(function (s) {
+        var dates = occurrencesIn(s, today, endISO);
+        dates.forEach(function (dt) {
+          var amt = (s.template && s.template.amount) || 0;
+          items.push({
+            schedId: s.id,
+            date: dt,
+            amount: amt,
+            payeeName: (s.template && s.template.payeeName) || "",
+            payeeId: (s.template && s.template.payeeId) || null,
+            accountId: (s.template && s.template.accountId) || null,
+            categoryId: (s.template && s.template.categoryId) || null,
+          });
+          totalNet += amt;
+          if (amt < 0) totalOut += amt;
+          else totalIn += amt;
         });
-        totalNet += amt;
-        if (amt < 0) totalOut += amt;
-        else totalIn += amt;
       });
+      items.sort(function (a, b) { return a.date.localeCompare(b.date); });
+      return { totalNet: totalNet, totalOut: totalOut, totalIn: totalIn, items: items };
     });
-    items.sort(function (a, b) { return a.date.localeCompare(b.date); });
-    return { totalNet: totalNet, totalOut: totalOut, totalIn: totalIn, items: items };
   },
 
   /**
@@ -112,10 +124,16 @@ export const dashboardSlice = {
    * @returns {object[]}
    */
   dashboardAlerts() {
-    void this._listVersion;
-    var out = [];
-    if (!this.profile) return out;
+    if (!this.profile) return [];
+    var self = this;
     var today = new Date().toISOString().slice(0, 10);
+    /* Memoized — alerts walks accounts, scheduled, AND transactions
+       (rule 4's recency filter is O(N)). The dashboard reads this
+       repeatedly via its insights + alerts cards. */
+    return this._memo("dashboardAlerts:" + today, function () { return self._computeAlerts(today); });
+  },
+  _computeAlerts(today) {
+    var out = [];
 
     /* Rule 1: an on-budget account is negative (excludes credit
        cards + tracking-liabilities — those are expected to be
