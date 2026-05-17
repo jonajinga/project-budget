@@ -350,3 +350,37 @@
   .register__toolbar { gap: var(--space-2xs); padding: var(--space-2xs); }
   .register__toolbar .cluster { flex: 1 1 100%; gap: var(--space-2xs); }
 }
+
+/* Bulk select — checkbox column on the table, side-tile on cards.
+   Selected rows get a tinted background so the working set is easy
+   to scan. */
+.register__toolbar-actions { gap: var(--space-xs); align-items: center; flex-shrink: 0; }
+.register__toolbar-actions .btn.is-active {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+  color: var(--fg);
+}
+.col-select { width: 2.5rem; text-align: center; }
+.register__bulk-check {
+  width: 1.1rem; height: 1.1rem;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.register__row--selected td {
+  background: color-mix(in oklab, var(--accent) 12%, transparent) !important;
+}
+.register__card { position: relative; }
+.register__card-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xs) var(--space-sm) 0;
+  cursor: pointer;
+}
+.register__card-select .register__bulk-check {
+  width: 1.25rem; height: 1.25rem;
+}
+.register__card.is-selected {
+  background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
+  border-left: 3px solid var(--accent);
+}

@@ -157,14 +157,32 @@ eleventyExcludeFromCollections: true
                @input.debounce.300ms="updateUrl()"
                placeholder="Search payee or memo">
       </div>
-      <p class="register__count">
-        <span x-text="visibleTransactions().length"></span> shown
-      </p>
+      <div class="cluster register__toolbar-actions">
+        <p class="register__count">
+          <span x-text="visibleTransactions().length"></span> shown
+        </p>
+        <button class="btn btn--ghost btn--sm" type="button"
+                @click="toggleSelectMode()"
+                :aria-pressed="selectMode.toString()"
+                :class="selectMode ? 'is-active' : ''"
+                data-tip="Pick multiple rows to recategorize, rename, or delete in one step.">
+          <span x-show="!selectMode">Select</span>
+          <span x-show="selectMode" x-cloak>Done selecting</span>
+        </button>
+      </div>
     </div>
 
     <table class="register__table" x-show="!isMobile" x-cloak>
       <thead>
         <tr>
+          <th scope="col" class="col-select" x-show="selectMode" x-cloak>
+            <input type="checkbox" class="register__bulk-check"
+                   :checked="allVisibleSelected()"
+                   :aria-checked="someVisibleSelected() && !allVisibleSelected() ? 'mixed' : (allVisibleSelected() ? 'true' : 'false')"
+                   @change="toggleSelectAllVisible()"
+                   aria-label="Select all visible transactions"
+                   data-tip="Select / deselect every transaction currently shown.">
+          </th>
           <th scope="col" class="col-date" data-tip="Date the transaction occurred.">Date</th>
           <th scope="col" data-tip="Account the entry belongs to.">Account</th>
           <th scope="col" class="col-payee" data-tip="Payee or transfer description.">Payee</th>
@@ -180,7 +198,15 @@ eleventyExcludeFromCollections: true
       <tbody>
         <template x-for="t in visibleTransactions()" :key="t.id">
           <tr :data-txn-id="t.id"
-              :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id }">
+              :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id, 'register__row--selected': isTxnSelected(t.id) }">
+            {# Per-row select checkbox — only present in select mode. #}
+            <td class="col-select" x-show="selectMode" x-cloak>
+              <input type="checkbox" class="register__bulk-check"
+                     :checked="isTxnSelected(t.id)"
+                     @change="toggleTxnSelected(t.id)"
+                     :disabled="t.reconciled"
+                     :aria-label="'Select ' + ($store.budget.payeeName(t.payeeId) || 'transaction')">
+            </td>
             {# Display mode #}
             <template x-if="editingId !== t.id">
               <td class="col-date"
@@ -344,7 +370,7 @@ eleventyExcludeFromCollections: true
         </template>
 
         <tr x-show="!visibleTransactions().length" x-cloak>
-          <td colspan="8" style="text-align: center; padding: var(--space-lg); color: var(--fg-muted);">
+          <td :colspan="selectMode ? 9 : 8" style="text-align: center; padding: var(--space-lg); color: var(--fg-muted);">
             No transactions match the current filter.
           </td>
         </tr>
@@ -355,7 +381,16 @@ eleventyExcludeFromCollections: true
     <ul class="register__cards" x-show="isMobile" x-cloak>
       <template x-for="t in visibleTransactions()" :key="t.id">
         <li class="register__card"
-            :class="{ 'is-expanded': expandedTxnId === t.id, 'is-reconciled': t.reconciled, 'is-editing': editingId === t.id }">
+            :class="{ 'is-expanded': expandedTxnId === t.id, 'is-reconciled': t.reconciled, 'is-editing': editingId === t.id, 'is-selected': isTxnSelected(t.id) }">
+          {# Select-mode checkbox on mobile cards. Sits inline before
+             the tap-to-expand summary so it doesn't fight for the tap. #}
+          <label class="register__card-select" x-show="selectMode" x-cloak>
+            <input type="checkbox" class="register__bulk-check"
+                   :checked="isTxnSelected(t.id)"
+                   @change="toggleTxnSelected(t.id)"
+                   :disabled="t.reconciled"
+                   :aria-label="'Select ' + ($store.budget.payeeName(t.payeeId) || 'transaction')">
+          </label>
           {# Compact summary — tap to expand. Becomes a heading button so it
              is keyboard reachable; the inner card form (when expanded) is
              still tab-navigable normally. #}
@@ -659,6 +694,77 @@ eleventyExcludeFromCollections: true
       </div>
     </div>
   </div>
+
+  {# Floating bulk-actions bar — visible only when at least one txn
+     is selected. Mirrors the pattern on /app/budget/ for category
+     bulk-clear. Operations are atomic via the store's batchMutate. #}
+  <div class="bulk-actions-bar" x-show="selectedTxnIds.length" x-cloak role="region" aria-label="Bulk transaction actions">
+    <div class="bulk-actions-bar__count">
+      <strong x-text="selectedTxnIds.length"></strong>
+      <span x-text="selectedTxnIds.length === 1 ? 'transaction selected' : 'transactions selected'"></span>
+    </div>
+    <div class="cluster" style="gap: var(--space-2xs); flex-wrap: wrap;">
+      <button type="button" class="btn btn--primary btn--sm" @click="openBulkRecategorize()"
+              data-tip="Reassign every selected transaction to one category.">Recategorize</button>
+      <button type="button" class="btn btn--secondary btn--sm" @click="openBulkRename()"
+              data-tip="Set the payee on every selected transaction.">Rename payee</button>
+      <button type="button" class="btn btn--danger btn--sm" @click="bulkDelete()"
+              data-tip="Move every selected transaction to Trash. Recoverable for 30 days.">Delete</button>
+      <button type="button" class="btn btn--ghost btn--sm" @click="clearTxnSelection()"
+              data-tip="Deselect every row and exit selection mode.">Cancel</button>
+    </div>
+  </div>
+
+  {# Bulk recategorize modal #}
+  <div class="modal-backdrop" x-show="showBulkRecat" x-cloak @keydown.escape.window="showBulkRecat = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bulk-recat-title"
+         @click.outside="showBulkRecat = false" style="max-width: 480px;">
+      <button class="modal__close" type="button" @click="showBulkRecat = false" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="bulk-recat-title">Recategorize selected</h3>
+      <p style="color: var(--fg-muted);">
+        Reassign every selected transaction to the chosen category. Split rows and reconciled rows are skipped.
+      </p>
+      <div class="field" style="margin-top: var(--space-sm);">
+        <label class="field__label" for="bulk-recat-cat">New category</label>
+        <select class="select" id="bulk-recat-cat" x-model="bulkRecatTarget">
+          <option value="">(uncategorized)</option>
+          <template x-for="c in selectableCategories" :key="c.id">
+            <option :value="c.id" x-text="c.name"></option>
+          </template>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="applyBulkRecategorize()">Apply</button>
+        <button class="btn btn--ghost" type="button" @click="showBulkRecat = false">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  {# Bulk rename payee modal #}
+  <div class="modal-backdrop" x-show="showBulkRename" x-cloak @keydown.escape.window="showBulkRename = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bulk-rename-title"
+         @click.outside="showBulkRename = false" style="max-width: 480px;">
+      <button class="modal__close" type="button" @click="showBulkRename = false" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="bulk-rename-title">Set payee on selected</h3>
+      <p style="color: var(--fg-muted);">
+        Sets the same payee on every selected transaction. Transfer and reconciled rows are skipped.
+      </p>
+      <div class="field" style="margin-top: var(--space-sm);">
+        <label class="field__label" for="bulk-rename-input">Payee name</label>
+        <input class="input" id="bulk-rename-input" type="text" x-model="bulkRenameTarget"
+               autocomplete="off" placeholder="e.g. Trader Joe's">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="applyBulkRename()"
+                :disabled="!bulkRenameTarget.trim()">Apply</button>
+        <button class="btn btn--ghost" type="button" @click="showBulkRename = false">Cancel</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -675,6 +781,15 @@ function registerView() {
     isMobile: false,
     expandedTxnId: null,
     showAdd: false,
+    /* Multi-select state for bulk operations. selectMode gates the
+       checkbox column; selectedTxnIds is the working set across page
+       interactions. Exiting select mode clears the set. */
+    selectMode: false,
+    selectedTxnIds: [],
+    showBulkRecat: false,
+    showBulkRename: false,
+    bulkRecatTarget: "",
+    bulkRenameTarget: "",
 
     form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false },
     edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false },
@@ -1099,6 +1214,109 @@ function registerView() {
       this.$store.budget.applyReconcile(this.filterAccountId);
       this.reconcileForm = { statementBalance: "", checked: false, diff: 0 };
       this.showReconcile = false;
+    },
+
+    /* ---- Bulk select + bulk operations ---- */
+    toggleSelectMode() {
+      this.selectMode = !this.selectMode;
+      if (!this.selectMode) this.selectedTxnIds = [];
+    },
+    isTxnSelected(id) { return this.selectedTxnIds.indexOf(id) !== -1; },
+    toggleTxnSelected(id) {
+      var i = this.selectedTxnIds.indexOf(id);
+      if (i === -1) this.selectedTxnIds.push(id);
+      else this.selectedTxnIds.splice(i, 1);
+    },
+    clearTxnSelection() {
+      this.selectedTxnIds = [];
+      this.selectMode = false;
+    },
+    /* Header checkbox helpers — operate only on the currently visible
+       (filtered + searched) rows, skipping reconciled rows since they
+       can't be bulk-edited anyway. */
+    _selectableVisibleIds() {
+      return this.visibleTransactions()
+        .filter(function (t) { return !t.reconciled; })
+        .map(function (t) { return t.id; });
+    },
+    allVisibleSelected() {
+      var ids = this._selectableVisibleIds();
+      if (!ids.length) return false;
+      var self = this;
+      return ids.every(function (id) { return self.isTxnSelected(id); });
+    },
+    someVisibleSelected() {
+      var ids = this._selectableVisibleIds();
+      var self = this;
+      return ids.some(function (id) { return self.isTxnSelected(id); });
+    },
+    toggleSelectAllVisible() {
+      var ids = this._selectableVisibleIds();
+      var self = this;
+      if (this.allVisibleSelected()) {
+        this.selectedTxnIds = this.selectedTxnIds.filter(function (id) { return ids.indexOf(id) === -1; });
+      } else {
+        ids.forEach(function (id) { if (!self.isTxnSelected(id)) self.selectedTxnIds.push(id); });
+      }
+    },
+
+    openBulkRecategorize() {
+      this.bulkRecatTarget = "";
+      this.showBulkRecat = true;
+    },
+    applyBulkRecategorize() {
+      var ids = this.selectedTxnIds.slice();
+      if (!ids.length) { this.showBulkRecat = false; return; }
+      var n = this.$store.budget.bulkRecategorize(ids, this.bulkRecatTarget || null);
+      this.$store.budget.pushToast(
+        "Recategorized " + n + " transaction" + (n === 1 ? "" : "s") + ".",
+        "ok"
+      );
+      this.showBulkRecat = false;
+      this.clearTxnSelection();
+    },
+
+    openBulkRename() {
+      this.bulkRenameTarget = "";
+      this.showBulkRename = true;
+      var self = this;
+      this.$nextTick(function () {
+        var el = document.getElementById("bulk-rename-input");
+        if (el) el.focus();
+      });
+    },
+    applyBulkRename() {
+      var name = (this.bulkRenameTarget || "").trim();
+      if (!name) return;
+      var ids = this.selectedTxnIds.slice();
+      if (!ids.length) { this.showBulkRename = false; return; }
+      var n = this.$store.budget.bulkRenamePayee(ids, name);
+      this.$store.budget.pushToast(
+        "Renamed payee on " + n + " transaction" + (n === 1 ? "" : "s") + ".",
+        "ok"
+      );
+      this.showBulkRename = false;
+      this.clearTxnSelection();
+    },
+
+    bulkDelete() {
+      var ids = this.selectedTxnIds.slice();
+      if (!ids.length) return;
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Delete " + ids.length + " transaction" + (ids.length === 1 ? "" : "s") + "?",
+        message: "Selected entries move to Trash and can be restored from /app/trash/ for 30 days. Reconciled rows are skipped.",
+        confirmLabel: "Delete " + ids.length,
+        danger: true,
+      }).then(function (ok) {
+        if (!ok) return;
+        var n = self.$store.budget.bulkDeleteTransactions(ids);
+        self.$store.budget.pushToast(
+          "Moved " + n + " transaction" + (n === 1 ? "" : "s") + " to Trash.",
+          "ok"
+        );
+        self.clearTxnSelection();
+      });
     },
   };
 }

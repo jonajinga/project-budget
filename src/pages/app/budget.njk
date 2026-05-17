@@ -71,6 +71,9 @@ eleventyExcludeFromCollections: true
                 @click="bulkClearAssigned('all')"
                 data-tip="Reset Assigned to $0 for every category in this month. Cmd/Ctrl+Z undoes.">Clear all assigned</button>
         <button type="button" class="btn btn--secondary btn--sm"
+                @click="openTemplates()"
+                data-tip="Save the current month's assigned values as a template, or apply a saved template to this month.">Templates</button>
+        <button type="button" class="btn btn--secondary btn--sm"
                 @click="newGroupOpen = true; newGroupName = ''"
                 data-tip="Create a new category group (e.g. Subscriptions, Reserves).">+ Group</button>
         <button type="button" class="btn btn--ghost btn--sm"
@@ -883,6 +886,68 @@ eleventyExcludeFromCollections: true
               data-tip="Deselect everything.">Cancel</button>
     </div>
   </div>
+
+  {# Saved budget templates modal — save current month's assigned
+     values as a named template, or apply a saved template to the
+     current month. Templates live on the profile under
+     `budgetTemplates`. #}
+  <div class="modal-backdrop" x-show="templatesOpen" x-cloak @keydown.escape.window="templatesOpen = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tpl-title"
+         @click.outside="templatesOpen = false" style="max-width: 560px;">
+      <button class="modal__close" type="button" @click="templatesOpen = false" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h3 class="modal__title" id="tpl-title">Budget templates</h3>
+      <p style="color: var(--fg-muted);">
+        Save the current month's assigned values as a named template,
+        then apply it to any other month with one click. Categories that
+        no longer exist when you apply are silently skipped.
+      </p>
+
+      <div class="field" style="margin-top: var(--space-sm);">
+        <label class="field__label" for="tpl-name">Save current month as template</label>
+        <div class="cluster" style="gap: var(--space-2xs); flex-wrap: nowrap;">
+          <input class="input" id="tpl-name" type="text" x-model="templateNewName"
+                 placeholder="e.g. Standard month" autocomplete="off" style="flex: 1 1 auto; min-width: 0;">
+          <button class="btn btn--primary" type="button"
+                  :disabled="!templateNewName.trim()"
+                  @click="saveTemplate()">Save</button>
+        </div>
+        <p class="field__hint">
+          Captures every non-zero assignment in
+          <strong x-text="$store.budget.currentMonth"></strong>.
+        </p>
+      </div>
+
+      <h4 style="margin-top: var(--space-md);">Saved templates</h4>
+      <p x-show="!$store.budget.listBudgetTemplates().length" x-cloak style="color: var(--fg-muted);">
+        No templates saved yet.
+      </p>
+      <ul x-show="$store.budget.listBudgetTemplates().length" x-cloak class="template-list" style="list-style: none; padding: 0; margin: var(--space-2xs) 0 0;">
+        <template x-for="tpl in $store.budget.listBudgetTemplates()" :key="tpl.id">
+          <li class="template-list__item" style="display: flex; align-items: center; gap: var(--space-2xs); justify-content: space-between; padding: var(--space-2xs) 0; border-bottom: 1px solid var(--border-soft);">
+            <div style="min-width: 0;">
+              <p style="margin: 0; font-weight: 600;" x-text="tpl.name"></p>
+              <p style="margin: 0; color: var(--fg-muted); font-size: var(--fs-xs);"
+                 x-text="Object.keys(tpl.assigned || {}).length + ' categories · saved ' + new Date(tpl.createdAt).toLocaleDateString()"></p>
+            </div>
+            <div class="cluster" style="gap: var(--space-2xs); flex-shrink: 0;">
+              <button class="btn btn--primary btn--sm" type="button"
+                      @click="applyTemplate(tpl.id)"
+                      :data-tip="'Overwrite assignments in ' + $store.budget.currentMonth + ' with this template.'">Apply</button>
+              <button class="btn btn--ghost btn--sm" type="button"
+                      @click="deleteTemplate(tpl.id, tpl.name)"
+                      data-tip="Delete this template.">Delete</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+
+      <div class="form-actions" style="margin-top: var(--space-md);">
+        <button class="btn btn--ghost" type="button" @click="templatesOpen = false">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -921,6 +986,50 @@ function budgetView() {
       }
     },
     clearSelection() { this.selectedCatIds = []; },
+
+    /* ---- Budget templates UI ---- */
+    templatesOpen: false,
+    templateNewName: "",
+    openTemplates() {
+      this.templateNewName = "";
+      this.templatesOpen = true;
+      var self = this;
+      this.$nextTick(function () {
+        var el = document.getElementById("tpl-name");
+        if (el) el.focus();
+      });
+    },
+    saveTemplate() {
+      var name = (this.templateNewName || "").trim();
+      if (!name) return;
+      this.$store.budget.saveBudgetTemplate(name, this.$store.budget.currentMonth);
+      this.templateNewName = "";
+    },
+    applyTemplate(id) {
+      var self = this;
+      var m = this.$store.budget.currentMonth;
+      window.PBDialog.confirm({
+        title: "Apply template to " + m + "?",
+        message: "Existing assignments for any categories in this template will be overwritten. Cmd/Ctrl+Z undoes.",
+        confirmLabel: "Apply template",
+      }).then(function (ok) {
+        if (!ok) return;
+        self.$store.budget.applyBudgetTemplate(id, m);
+        self.templatesOpen = false;
+      });
+    },
+    deleteTemplate(id, name) {
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Delete template \"" + name + "\"?",
+        message: "Saved templates can't be recovered after deletion.",
+        confirmLabel: "Delete template",
+        danger: true,
+      }).then(function (ok) {
+        if (!ok) return;
+        self.$store.budget.deleteBudgetTemplate(id);
+      });
+    },
 
     /* Keyboard alternative to drag-and-drop (WCAG 2.5.7). Arrow keys
        on the .dnd-handle reorder the row/group up or down by one

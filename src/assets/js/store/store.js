@@ -946,6 +946,70 @@ export function createStore() {
       return ok;
     },
 
+    /* ---- Bulk operations on transactions ----
+       All three are wrapped in batchMutate so the entire set commits
+       atomically — if any single row fails, the whole batch rolls
+       back to the pre-batch snapshot. Reconciled rows are silently
+       skipped (they're locked from edit by design). Returns the
+       number of rows actually mutated. */
+
+    /** Reassign every transaction in `ids` to `categoryId` (or null
+     *  for uncategorized). Skips splits (split txns derive their
+     *  category from the splits themselves) and reconciled rows. */
+    bulkRecategorize(ids, categoryId) {
+      if (!this.profile || !Array.isArray(ids) || !ids.length) return 0;
+      var self = this;
+      var catId = categoryId || null;
+      return this.batchMutate(function () {
+        var n = 0;
+        ids.forEach(function (id) {
+          var t = self.profile.transactions.find(function (x) { return x.id === id; });
+          if (!t || t.reconciled || (t.splits && t.splits.length)) return;
+          editTxnImpl(self.profile, id, { categoryId: catId });
+          n += 1;
+        });
+        return n;
+      }, "Bulk recategorize");
+    },
+
+    /** Rename the payee on every transaction in `ids`. Upserts the
+     *  payee record (creates if missing). Skips reconciled and
+     *  transfer rows. */
+    bulkRenamePayee(ids, payeeName) {
+      if (!this.profile || !Array.isArray(ids) || !ids.length) return 0;
+      var name = (payeeName || "").trim();
+      if (!name) return 0;
+      var self = this;
+      return this.batchMutate(function () {
+        var p = upsertPayee(self.profile, name, null);
+        var pid = p ? p.id : null;
+        var n = 0;
+        ids.forEach(function (id) {
+          var t = self.profile.transactions.find(function (x) { return x.id === id; });
+          if (!t || t.reconciled || t.transferTxnId) return;
+          editTxnImpl(self.profile, id, { payeeId: pid });
+          n += 1;
+        });
+        return n;
+      }, "Bulk rename payee");
+    },
+
+    /** Move every transaction in `ids` to the trash. Skips reconciled
+     *  rows. Transfers cascade via the existing deleteTxnImpl logic. */
+    bulkDeleteTransactions(ids) {
+      if (!this.profile || !Array.isArray(ids) || !ids.length) return 0;
+      var self = this;
+      return this.batchMutate(function () {
+        var n = 0;
+        ids.forEach(function (id) {
+          var t = self.profile.transactions.find(function (x) { return x.id === id; });
+          if (!t || t.reconciled) return;
+          if (deleteTxnImpl(self.profile, id)) n += 1;
+        });
+        return n;
+      }, "Bulk delete");
+    },
+
     /* ---- Trash management ---- */
     listTrashedTransactions() {
       void this._listVersion;
@@ -1483,6 +1547,96 @@ export function createStore() {
       this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
       this._bumpLists();
       this._save();
+      return true;
+    },
+
+    /* ---- Budget templates -----------------------------------------
+       A template is a named snapshot of a single month's `assigned`
+       map. Save once ("Standard month"), apply to any future month to
+       re-create the same allocation. Stored on the profile under
+       `budgetTemplates`. Categories that no longer exist when the
+       template is applied are silently dropped. */
+
+    listBudgetTemplates() {
+      void this._listVersion;
+      if (!this.profile) return [];
+      return (this.profile.budgetTemplates || []).slice().sort(function (a, b) {
+        return (a.name || "").localeCompare(b.name || "");
+      });
+    },
+
+    saveBudgetTemplate(name, month) {
+      if (!this.profile) return null;
+      var clean = (name || "").trim();
+      if (!clean) return null;
+      var m = month || this.currentMonth;
+      var src = this.profile.budgets[m] || { assigned: {} };
+      var assigned = {};
+      Object.keys(src.assigned || {}).forEach(function (catId) {
+        var cents = src.assigned[catId];
+        if (cents) assigned[catId] = cents;
+      });
+      this._recordUndo("Save budget template");
+      if (!this.profile.budgetTemplates) this.profile.budgetTemplates = [];
+      var existing = this.profile.budgetTemplates.find(function (t) { return t.name === clean; });
+      var tpl;
+      if (existing) {
+        existing.assigned = assigned;
+        existing.updatedAt = new Date().toISOString();
+        tpl = existing;
+      } else {
+        tpl = {
+          id: (typeof crypto !== "undefined" && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : ("tpl-" + Date.now().toString(36)),
+          name: clean,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          assigned: assigned,
+        };
+        this.profile.budgetTemplates.push(tpl);
+      }
+      this._bumpLists();
+      this._save();
+      this.pushToast("Saved budget template \"" + clean + "\".", "ok");
+      return tpl;
+    },
+
+    applyBudgetTemplate(templateId, month) {
+      if (!this.profile) return 0;
+      var tpl = (this.profile.budgetTemplates || []).find(function (t) { return t.id === templateId; });
+      if (!tpl) return 0;
+      var m = month || this.currentMonth;
+      var validIds = new Set((this.profile.categories || []).map(function (c) { return c.id; }));
+      this._recordUndo("Apply template: " + (tpl.name || "template"));
+      var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
+      var nextAssigned = Object.assign({}, existing.assigned || {});
+      var n = 0;
+      Object.keys(tpl.assigned || {}).forEach(function (catId) {
+        if (!validIds.has(catId)) return;
+        nextAssigned[catId] = tpl.assigned[catId];
+        n += 1;
+      });
+      this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
+      this._bumpLists();
+      this._save();
+      this.pushToast(
+        "Applied template — " + n + " categor" + (n === 1 ? "y" : "ies") + " assigned in " + m + ".",
+        "ok"
+      );
+      return n;
+    },
+
+    deleteBudgetTemplate(templateId) {
+      if (!this.profile || !this.profile.budgetTemplates) return false;
+      var i = this.profile.budgetTemplates.findIndex(function (t) { return t.id === templateId; });
+      if (i === -1) return false;
+      var name = this.profile.budgetTemplates[i].name;
+      this._recordUndo("Delete template");
+      this.profile.budgetTemplates.splice(i, 1);
+      this._bumpLists();
+      this._save();
+      this.pushToast("Deleted budget template \"" + name + "\".", "ok");
       return true;
     },
 
