@@ -127,7 +127,29 @@
    undo/redo (they're rare on mobile, and Cmd+Z still works) keeps
    everything on one row inside a 360-px viewport. */
 @media (max-width: 599px) {
-  .site-header__inner--app { gap: var(--space-3xs); padding-inline: var(--space-2xs); }
+  /* Three equal columns lock the profile name to true horizontal
+     center — `auto 1fr auto` was offsetting the profile left of
+     center because the actions column is wider than the hamburger.
+     1fr auto 1fr keeps side columns equal so the auto middle
+     centers perfectly. */
+  .site-header__inner--app {
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--space-3xs);
+    padding-inline: var(--space-2xs);
+  }
+  /* Hamburger column: pin to start. */
+  .site-header__inner--app > .site-header__hamburger {
+    justify-self: start;
+  }
+  /* Profile column: dead center via the auto middle col. */
+  .site-header__inner--app > .site-header__profile {
+    justify-self: center;
+  }
+  /* Actions column: pin to end so search + theme cluster sits
+     flush right against the screen edge. */
+  .site-header__inner--app > .site-header__actions {
+    justify-self: end;
+  }
   .site-header__hamburger,
   .site-header__search,
   .site-header__iconbtn { width: 40px; height: 40px; }
