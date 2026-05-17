@@ -10,6 +10,17 @@ import {
   freshStart, trimHistory,
 } from "./profile.js";
 import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES } from "./persist.js";
+/* loadSampleIfFirstVisit() needs to fetch the sample bundle, parse
+   it, register a fresh profile, and persist the index — pulling in
+   the JSON-import helpers + the persistence raw-key helpers below.
+   These used to live alongside the import/export slice but are
+   needed here too because sample-load happens during init() before
+   slices have done anything else. */
+import { parseFile as parseJSON, importAsNew as cloneAsNew } from "../io/import-json.js";
+import {
+  profileKey as _profileKey, profilesIndexKey as _profilesIndexKey,
+  writeJSON as _writeJSON, readJSON as _readJSON,
+} from "./persist.js";
 /* Manual snapshots + backups extracted to ./slices/snapshots.js.
    snapshotIfStale still triggered from the init / profile-switch
    paths here so daily backups always fire on app open. */
@@ -327,8 +338,16 @@ export function createStore() {
     _bootFromLocalStorage() {
       this.refreshProfiles();
       var id = getActiveId();
+      var hasV2Sample = false;
+      try { hasV2Sample = !!localStorage.getItem("projectbudget:sample-loaded-v2"); } catch (_e) {}
       if (id && this.profiles.find(function (p) { return p.id === id; })) {
         this._load(id);
+        /* Returning visitor who has data but hasn't seen the v2
+           sample — add it alongside their own profiles so they can
+           explore the new household without losing what they had. */
+        if (!hasV2Sample && !this.privateBrowsing) {
+          this.loadSampleIfFirstVisit();
+        }
       } else if (!this.profiles.length && !this.privateBrowsing) {
         /* First-time visitor — auto-load the bundled sample so the app
            isn't empty. */
@@ -341,7 +360,12 @@ export function createStore() {
        Sets the seen flag BEFORE the async fetch so concurrent calls
        (some Alpine setups re-enter init) can't both create profiles. */
     async loadSampleIfFirstVisit() {
-      var flagKey = "projectbudget:sample-loaded";
+      /* Versioned flag key — bump the suffix whenever the bundled
+         sample is meaningfully changed so previously-seeded users
+         get the new dataset on next visit (they keep all their own
+         profiles; we just add the new sample alongside). The v2
+         bump in 2026-05 ships the 6-person 1,399-txn household. */
+      var flagKey = "projectbudget:sample-loaded-v2";
       try {
         if (localStorage.getItem(flagKey)) return;
         localStorage.setItem(flagKey, "1");
