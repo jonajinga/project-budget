@@ -282,13 +282,24 @@ function dashboardView() {
       });
     },
     /* Compact form for sub-labels — "$1.2k" / "$4.5M". */
+    /* Magnitude-aware compact format. Drop the decimal once the
+       leading value is >=100 so big numbers ($754k, $1.2M) don't
+       imply false precision; keep 1 decimal for small/medium
+       magnitudes ($1.2k, $57.5k). Math.round = half-up standard
+       rounding. */
     fmtCompact(c) {
       var n = (c || 0) / 100;
       var sign = n < 0 ? "-" : "";
       var abs = Math.abs(n);
-      if (abs >= 1000000) return sign + "$" + (abs / 1000000).toFixed(1) + "M";
-      if (abs >= 1000)    return sign + "$" + (abs / 1000).toFixed(1) + "k";
-      return sign + "$" + abs.toFixed(0);
+      if (abs >= 1000000) {
+        var m = abs / 1000000;
+        return sign + "$" + (m >= 100 ? Math.round(m) : (Math.round(m * 10) / 10)) + "M";
+      }
+      if (abs >= 1000) {
+        var k = abs / 1000;
+        return sign + "$" + (k >= 100 ? Math.round(k) : (Math.round(k * 10) / 10)) + "k";
+      }
+      return sign + "$" + Math.round(abs);
     },
     shortDate(iso) {
       if (!iso) return "";

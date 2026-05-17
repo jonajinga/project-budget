@@ -606,13 +606,12 @@ button.search-result:focus-visible {
    takes its natural height.
 
    Visual distinction so the Balances block doesn't read as just
-   another nav section: subtle bg tint + accent left rail + padding,
-   plus a slight top/bottom margin so it visually separates from
-   Daily above and Data below. */
+   another nav section: subtle bg tint + accent-colored section
+   header (no left rail — the rail was visually intrusive in the
+   sidebar). */
 .app-sidebar__accounts {
   min-width: 0;
   background: color-mix(in oklab, var(--accent) 4%, var(--bg-elevated));
-  border-left: 3px solid var(--accent);
   border-radius: var(--radius-input);
   padding: var(--space-3xs) var(--space-2xs);
   margin: var(--space-2xs) 0;
@@ -622,11 +621,6 @@ button.search-result:focus-visible {
 }
 .app-sidebar__accounts .app-nav__section-chevron {
   color: var(--accent);
-}
-/* Override the .app-nav__group-wrap + .section-block top border so
-   the Balances panel doesn't get a duplicate divider line above it. */
-.app-nav__group-wrap + .app-nav__group-wrap .app-sidebar__accounts {
-  margin-top: var(--space-2xs);
 }
 
 /* Floating sidebar toggle was replaced by the header hamburger. */

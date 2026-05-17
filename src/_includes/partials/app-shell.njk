@@ -279,13 +279,31 @@ function appNav(sections, currentUrl) {
 
     /* Cents -> compact display ($12.5k, $1.2M, -$983). Keeps the
        sidebar tight when groups collapse. */
+    /* Cents → compact display with magnitude-aware precision. The
+       prior version always rounded thousands to 1 decimal, which
+       gave noisy readings like "$754.2k" for $754,186 (the .2
+       implies ~$200 of precision that doesn't exist in the rounding).
+       Now we drop the decimal once the leading value is >=100, so
+       hundreds of thousands / millions read clean ($754k, $1.2M)
+       while small/medium magnitudes keep one decimal for resolution
+       ($1.2k, $57.5k). Uses Math.round (half-up) for true standard
+       rounding rather than Number.toFixed which can banker's-round
+       in edge cases. */
     fmtCompactCents(c) {
       var n = (c || 0) / 100;
       var sign = n < 0 ? "-" : "";
       var abs = Math.abs(n);
-      if (abs >= 1000000) return sign + "$" + (abs / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-      if (abs >= 1000)    return sign + "$" + (abs / 1000).toFixed(1).replace(/\.0$/, "") + "k";
-      return sign + "$" + abs.toFixed(0);
+      if (abs >= 1000000) {
+        var m = abs / 1000000;
+        var mShown = m >= 100 ? Math.round(m) : (Math.round(m * 10) / 10);
+        return sign + "$" + mShown + "M";
+      }
+      if (abs >= 1000) {
+        var k = abs / 1000;
+        var kShown = k >= 100 ? Math.round(k) : (Math.round(k * 10) / 10);
+        return sign + "$" + kShown + "k";
+      }
+      return sign + "$" + Math.round(abs);
     },
   };
 }
