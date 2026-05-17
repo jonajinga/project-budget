@@ -684,18 +684,11 @@ button.search-result:focus-visible {
    another nav section: subtle bg tint + accent-colored section
    header (no left rail — the rail was visually intrusive in the
    sidebar). */
+/* Balances section aligns flush with the other sidebar sections —
+   no tinted highlight, no indent. Just the same section-head
+   chrome as the Daily / Data / Insights groups. */
 .app-sidebar__accounts {
   min-width: 0;
-  background: color-mix(in oklab, var(--accent) 4%, var(--bg-elevated));
-  border-radius: var(--radius-input);
-  padding: var(--space-3xs) var(--space-2xs);
-  margin: var(--space-2xs) 0;
-}
-.app-sidebar__accounts .app-nav__section-head {
-  color: var(--accent);
-}
-.app-sidebar__accounts .app-nav__section-chevron {
-  color: var(--accent);
 }
 
 /* Floating sidebar toggle was replaced by the header hamburger. */

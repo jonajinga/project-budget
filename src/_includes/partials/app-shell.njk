@@ -61,7 +61,7 @@
            accounts. #}
         <template x-if="i === 0">
           <div class="app-nav__section-block app-sidebar__accounts"
-               x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+               x-show="($store.budget._listVersion, $store.budget.profile && $store.budget.profile.accounts.length)" x-cloak>
             <button type="button"
                     class="app-nav__section-head"
                     :aria-expanded="(!collapsed.accounts).toString()"
