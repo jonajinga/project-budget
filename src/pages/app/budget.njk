@@ -76,7 +76,7 @@ eleventyExcludeFromCollections: true
         <button type="button" class="btn btn--ghost btn--sm"
                 @click="$store.budget.setAllCatGroupsCollapsed(!$store.budget.allCatGroupsCollapsed())"
                 :data-tip="$store.budget.allCatGroupsCollapsed() ? 'Expand every category group at once.' : 'Collapse every category group at once.'"
-                x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all' : 'Collapse all'"></button>
+                x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all' : 'Collapse all'">Collapse all</button>
         <a class="btn btn--ghost btn--sm" href="/app/categories/"
            data-tip="Full categories admin (reorder, goals, payment categories).">Manage categories</a>
         <button type="button" class="btn btn--ghost btn--sm"
