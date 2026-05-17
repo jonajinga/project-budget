@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Spending by category</h1>
       <p class="app-page__lead">Outflows by category over the chosen window. Transfers and uncategorized inflows are excluded.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this date range + chart type + filter as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   <section class="report">
@@ -255,6 +259,22 @@ function spendingView() {
       };
     },
 
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.from)                       parts.push("from=" + this.from);
+        if (this.to)                         parts.push("to="   + this.to);
+        if (this.chartType !== "treemap")    parts.push("type=" + encodeURIComponent(this.chartType));
+        if (this.query)                      parts.push("q="    + encodeURIComponent(this.query));
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "spending", name: "" });
+    },
+
     init() {
       var self = this;
       /* Snap to active profile's currentMonth once the store is up. */
@@ -265,6 +285,19 @@ function spendingView() {
         var fd = new Date(parts[0], parts[1] - 3, 1);
         self.from = fd.getFullYear() + "-" + String(fd.getMonth() + 1).padStart(2, "0");
       }
+      /* Honor incoming URL params from a recalled saved view — applied
+         AFTER the profile-month snap so they win. */
+      try {
+        var p = new URL(window.location.href).searchParams;
+        if (p.get("from")) self.from = p.get("from");
+        if (p.get("to"))   self.to   = p.get("to");
+        var t = p.get("type");
+        if (t && ["treemap","bar","donut"].indexOf(t) !== -1) {
+          self.chartType = t;
+          window.__pbChartType.spending = t;
+        }
+        var q = p.get("q"); if (q) self.query = q;
+      } catch (_e) {}
       /* Chart mount — polls for Alpine + chart bootstrap to be ready,
          then wires redraws via $watch on this component's reactive
          state. Uses a closure variable for the chart instance instead
@@ -278,9 +311,10 @@ function spendingView() {
         chart = window.pbMountChart("#chart-spending", window.pbRenderSpending, function () {
           return store.reportSpending(self.from, self.to);
         });
-        self.$watch("from",      function () { chart && chart.redraw(); });
-        self.$watch("to",        function () { chart && chart.redraw(); });
-        self.$watch("chartType", function () { chart && chart.redraw(); });
+        self.$watch("from",      function () { chart && chart.redraw(); self._syncUrl(); });
+        self.$watch("to",        function () { chart && chart.redraw(); self._syncUrl(); });
+        self.$watch("chartType", function () { chart && chart.redraw(); self._syncUrl(); });
+        self.$watch("query",     function () { self._syncUrl(); });
         Alpine.effect(function () {
           store.profile; store._listVersion;
           if (chart) chart.redraw();

@@ -13,7 +13,11 @@ eleventyExcludeFromCollections: true
         Starts from the current sum of on-budget account balances. Each future month subtracts net scheduled outflows and goal funding requirements. The shaded band shows the low estimate (after goal funding) and the high estimate (scheduled only).
       </p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this horizon + filter as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   {# ---- KPI strip ---- #}
@@ -225,8 +229,28 @@ function projectionView() {
       });
     },
 
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.horizon !== 12) parts.push("horizon=" + this.horizon);
+        if (this.query)          parts.push("q="       + encodeURIComponent(this.query));
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "projection", name: "" });
+    },
+
     init() {
       var self = this;
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var h = Number(p.get("horizon"));
+        if (h && [3,6,12,24].indexOf(h) !== -1) self.horizon = h;
+        var q = p.get("q"); if (q) self.query = q;
+      } catch (_e) {}
       var chart = null;
       var tries = 0;
       var poll = function () {
@@ -236,7 +260,8 @@ function projectionView() {
         chart = window.pbMountChart("#chart-proj", window.pbRenderProj, function () {
           return store.reportProjection(self.horizon);
         });
-        self.$watch("horizon", function () { chart && chart.redraw(); });
+        self.$watch("horizon", function () { chart && chart.redraw(); self._syncUrl(); });
+        self.$watch("query",   function () { self._syncUrl(); });
         Alpine.effect(function () {
           store.profile; store._listVersion;
           if (chart) chart.redraw();

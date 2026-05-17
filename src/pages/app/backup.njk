@@ -83,20 +83,44 @@ eleventyExcludeFromCollections: true
 function backupView() {
   return {
     lastBackup: null,
-    hasProfiles: false,
-    hasActiveProfile: false,
-    profileCount: 0,
-    activeName: "",
     lastDownloadMsg: "",
-
+    /* refresh() previously snapshotted the store into local fields,
+       but the snapshot ran ONCE at Alpine init — before the async
+       Dexie profile restore completed. Result: "No profiles to back
+       up" persisted even after the active profile loaded. Convert
+       to getters that read the store live; Alpine tracks the deps
+       inside the binding expression and re-evaluates on store
+       mutations via _listVersion. */
+    get hasProfiles() {
+      var s = this.$store.budget;
+      if (!s) return false;
+      void s._listVersion;
+      return !!(s.profiles && s.profiles.length);
+    },
+    get hasActiveProfile() {
+      var s = this.$store.budget;
+      if (!s) return false;
+      void s._listVersion;
+      return !!s.profile;
+    },
+    get profileCount() {
+      var s = this.$store.budget;
+      if (!s) return 0;
+      void s._listVersion;
+      return s.profiles ? s.profiles.length : 0;
+    },
+    get activeName() {
+      var s = this.$store.budget;
+      if (!s) return "";
+      void s._listVersion;
+      return s.profile ? s.profile.name : "";
+    },
     refresh() {
+      /* Only the lastBackup field still needs imperative refresh —
+         it lives in localStorage, not the store, so it's not part of
+         Alpine's reactive graph. */
       try { this.lastBackup = localStorage.getItem("projectbudget:lastBackupAt"); }
       catch (_e) { this.lastBackup = null; }
-      var s = this.$store.budget;
-      this.hasProfiles = !!(s && s.profiles && s.profiles.length);
-      this.hasActiveProfile = !!(s && s.profile);
-      this.profileCount = (s && s.profiles) ? s.profiles.length : 0;
-      this.activeName = (s && s.profile) ? s.profile.name : "";
     },
     daysSince() {
       if (!this.lastBackup) return Infinity;

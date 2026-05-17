@@ -11,7 +11,11 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">Monthly trends</h1>
       <p class="app-page__lead">Sparklines for the top spending categories. Each card shows total spent across the window and the per-month slope.</p>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
+              data-tip="Save this range + topN as a recall-able view in /app/templates/.">Save view</button>
+      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    </div>
   </header>
 
   {# ---- KPI strip ---- #}
@@ -179,9 +183,30 @@ function trendsView() {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
     },
 
+    _syncUrl() {
+      try {
+        var parts = [];
+        if (this.rangeMonths !== 12) parts.push("range=" + this.rangeMonths);
+        if (this.topN !== 12)        parts.push("topN="  + this.topN);
+        var qs = parts.length ? ("?" + parts.join("&")) : "";
+        history.replaceState(null, "", window.location.pathname + qs);
+      } catch (_e) {}
+    },
+    saveCurrentView() {
+      this._syncUrl();
+      this.$dispatch("pb:save-view", { kind: "trends", name: "" });
+    },
+
     /* ---- Lifecycle ---- */
     init() {
       var self = this;
+      try {
+        var p = new URL(window.location.href).searchParams;
+        var r = Number(p.get("range"));
+        if (r && [3,6,12,24].indexOf(r) !== -1) self.rangeMonths = r;
+        var n = Number(p.get("topN"));
+        if (n && [5,10,15,20].indexOf(n) !== -1) self.topN = n;
+      } catch (_e) {}
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderTrends;
@@ -190,8 +215,8 @@ function trendsView() {
         self.chart = window.pbMountChart("#chart-trends", window.pbRenderTrends, function () {
           return store.reportTrends(null, self.rangeMonths, self.topN);
         });
-        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
-        self.$watch("topN",        function () { self.chart && self.chart.redraw(); });
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); self._syncUrl(); });
+        self.$watch("topN",        function () { self.chart && self.chart.redraw(); self._syncUrl(); });
         Alpine.effect(function () {
           store.profile; store.currentMonth; store._listVersion;
           if (self.chart) self.chart.redraw();

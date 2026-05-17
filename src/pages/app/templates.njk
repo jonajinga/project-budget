@@ -55,10 +55,18 @@ eleventyExcludeFromCollections: true
             <select class="select" id="sv-kind" x-model="editing.kind">
               <option value="register">Register</option>
               <option value="calendar">Calendar</option>
-              <option value="spending">Reports — spending</option>
-              <option value="income-expense">Reports — income vs expense</option>
-              <option value="net-worth">Reports — net worth</option>
               <option value="budget">Budget</option>
+              <option value="income-expense">Reports — income vs expense</option>
+              <option value="savings-rate">Reports — savings rate</option>
+              <option value="net-worth">Reports — net worth</option>
+              <option value="projection">Reports — projection</option>
+              <option value="spending">Reports — spending</option>
+              <option value="trends">Reports — trends</option>
+              <option value="debt">Reports — debt</option>
+              <option value="sankey">Reports — sankey</option>
+              <option value="heatmap">Reports — heatmap</option>
+              <option value="year-over-year">Reports — year-over-year</option>
+              <option value="subscriptions">Reports — subscriptions</option>
             </select>
           </div>
           <div class="field">
@@ -157,20 +165,36 @@ function savedViewsView() {
       return ({
         register: "Register",
         calendar: "Calendar",
-        spending: "Spending report",
-        "income-expense": "Income vs expense report",
-        "net-worth": "Net worth report",
         budget: "Budget",
+        "income-expense": "Income vs expense report",
+        "savings-rate": "Savings rate report",
+        "net-worth": "Net worth report",
+        projection: "Projection report",
+        spending: "Spending report",
+        trends: "Trends report",
+        debt: "Debt report",
+        sankey: "Sankey report",
+        heatmap: "Heatmap report",
+        "year-over-year": "Year-over-year report",
+        subscriptions: "Subscriptions report",
       })[k] || k;
     },
     buildHref(v) {
       var base = ({
         register: "/app/register/",
         calendar: "/app/calendar/",
-        spending: "/app/reports/spending/",
-        "income-expense": "/app/reports/income-expense/",
-        "net-worth": "/app/reports/net-worth/",
         budget: "/app/budget/",
+        "income-expense": "/app/reports/income-expense/",
+        "savings-rate": "/app/reports/savings-rate/",
+        "net-worth": "/app/reports/net-worth/",
+        projection: "/app/reports/projection/",
+        spending: "/app/reports/spending/",
+        trends: "/app/reports/trends/",
+        debt: "/app/reports/debt/",
+        sankey: "/app/reports/sankey/",
+        heatmap: "/app/reports/heatmap/",
+        "year-over-year": "/app/reports/year-over-year/",
+        subscriptions: "/app/reports/subscriptions/",
       })[v.kind] || "/app/";
       return v.params ? base + "?" + v.params : base;
     },
