@@ -20,6 +20,24 @@
       </button>
       <h3 class="modal__title" id="fab-quick-add-title">Add transaction</h3>
       <form @submit.prevent="submit()">
+        {# Outflow / Inflow toggle — the canonical sign indicator
+           across every add-transaction surface. Mobile keypads can't
+           type a minus sign; this toggle is how the user marks
+           direction. Also filters the category dropdown to match. #}
+        <div class="txn-type-toggle" role="radiogroup" aria-label="Transaction type" style="margin-bottom: var(--space-sm);">
+          <button type="button" class="txn-type-toggle__opt"
+                  :class="form.type === 'outflow' ? 'is-active' : ''"
+                  :aria-pressed="(form.type === 'outflow').toString()"
+                  @click="form.type = 'outflow'; form.categoryId = ''">
+            <span aria-hidden="true">−</span> Outflow
+          </button>
+          <button type="button" class="txn-type-toggle__opt"
+                  :class="form.type === 'inflow' ? 'is-active' : ''"
+                  :aria-pressed="(form.type === 'inflow').toString()"
+                  @click="form.type = 'inflow'; form.categoryId = ''">
+            <span aria-hidden="true">+</span> Inflow
+          </button>
+        </div>
         <div class="form-stack">
           <div class="field">
             <label class="field__label" for="qa-account">Account</label>
@@ -55,9 +73,8 @@
           <div class="field">
             <label class="field__label" for="qa-amount">Amount</label>
             <input class="input" id="qa-amount" type="text" x-model="form.amount"
-                   placeholder="-12.34 · or 12+8.99" inputmode="decimal" required
-                   data-tip="Calculator: type expressions like 12.50 + 8.99 or 100 - 25 * 2 — they evaluate on save.">
-            <p class="field__hint">Negative = outflow.</p>
+                   placeholder="12.34 · or 12+8.99" inputmode="decimal" required
+                   data-tip="Enter a positive number — the Outflow / Inflow toggle above sets the sign. Calculator: type expressions like 12.50 + 8.99.">
             <p class="field__hint calc-preview" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
           </div>
           <div class="field">
@@ -65,10 +82,14 @@
             <select class="select" id="qa-category" x-model="form.categoryId"
                     data-tip="Envelope budget category this transaction draws from. Leave uncategorized to assign later from the register.">
               <option value="">(uncategorized)</option>
-              <template x-for="c in selectableCategories()" :key="c.id">
+              <template x-for="c in selectableCategoriesForType(form.type)" :key="c.id">
                 <option :value="c.id" x-text="c.name"></option>
               </template>
             </select>
+            <p class="field__hint"
+               x-show="form.type === 'inflow' && !selectableCategoriesForType('inflow').length" x-cloak>
+              No income categories yet — create one in a group marked as "Income".
+            </p>
           </div>
           <div class="field">
             <label class="field__label" for="qa-memo">Memo (optional)</label>
@@ -101,7 +122,10 @@
 function quickAddFab() {
   return {
     open: false,
-    form: { accountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false, date: "" },
+    /* `amount` is always positive; `type` drives the sign at submit
+       time so mobile users never need to type a minus. Default
+       outflow because that's the common case. */
+    form: { accountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false, date: "", type: "outflow" },
     payeeSuggestions: [],
 
     init() {
@@ -127,6 +151,16 @@ function quickAddFab() {
       var s = this.$store.budget;
       if (!s.profile) return [];
       return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
+    },
+    /* Filter by transaction type: outflow shows expense-group cats,
+       inflow shows income-group cats. Mirrors the register form. */
+    selectableCategoriesForType(type) {
+      var s = this.$store.budget;
+      return this.selectableCategories().filter(function (c) {
+        var isIncome = s.isIncomeCategory(c.id);
+        if (type === "inflow") return isIncome;
+        return !isIncome;
+      });
     },
     refreshSuggestions() {
       this.payeeSuggestions = this.$store.budget.suggestPayees(this.form.payeeName, 6);
@@ -156,21 +190,27 @@ function quickAddFab() {
     calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
     submit() {
       if (!this.form.accountId) return;
+      /* Toggle wins on sign; raw input is normalised to absolute
+         first so a stray minus sign doesn't double-flip the result. */
+      var raw = this.parseDollars(this.form.amount);
+      var signed = Math.abs(raw) * (this.form.type === "inflow" ? 1 : -1);
       this.$store.budget.addTransaction({
         accountId: this.form.accountId,
         date: this.form.date,
         payeeName: this.form.payeeName,
         categoryId: this.form.categoryId || null,
-        amount: this.parseDollars(this.form.amount),
+        amount: signed,
         memo: this.form.memo,
         cleared: this.form.cleared,
       });
       this.$store.budget.pushToast("Transaction added.");
       var keepAccount = this.form.accountId;
+      var keepType = this.form.type;
       this.form = {
         accountId: keepAccount, payeeName: "", amount: "",
         categoryId: "", memo: "", cleared: false,
         date: new Date().toISOString().slice(0, 10),
+        type: keepType,
       };
       this.payeeSuggestions = [];
       this.open = false;
