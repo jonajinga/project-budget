@@ -10,7 +10,10 @@ import {
   freshStart, trimHistory,
 } from "./profile.js";
 import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES } from "./persist.js";
-import { snapshotIfStale, listBackups, restoreBackup, listSnapshots, takeSnapshot, deleteSnapshot, restoreSnapshot, renameSnapshot, getBackupNote, setBackupNote } from "./backup.js";
+/* Manual snapshots + backups extracted to ./slices/snapshots.js.
+   snapshotIfStale still triggered from the init / profile-switch
+   paths here so daily backups always fire on app open. */
+import { snapshotIfStale } from "./backup.js";
 import * as dexie from "./db.js";
 
 /* JSON round-trip clone: strips Alpine reactive Proxies so the result
@@ -33,13 +36,15 @@ import {
   splitTxn as splitTxnImpl, transfer as transferImpl, syncTransferPair,
   restoreTxnFromTrash, purgeTxnFromTrash, emptyTrash as emptyTrashImpl, purgeExpiredTrash,
 } from "../domain/transactions.js";
-import { upsertPayee, suggestPayees, findPayee, findPayeeByName, renamePayee, setPayeeCategory, mergePayees, deletePayee, payeeUsageCounts } from "../domain/payees.js";
+/* Payee admin extracted to ./slices/payees.js. upsertPayee still
+   used here by the transactions methods (addTransaction, etc.). */
+import { upsertPayee } from "../domain/payees.js";
+/* Scheduled-txn mutators extracted to ./slices/scheduled.js. Only
+   the constants the templates re-expose stay imported here. */
 import {
-  addSchedule, removeSchedule, updateSchedule, dueTransactions, postScheduled, skipScheduled, FREQUENCIES, CUSTOM_UNITS, frequencyLabel, occurrencesIn,
+  FREQUENCIES, CUSTOM_UNITS, frequencyLabel, occurrencesIn,
 } from "../domain/scheduled.js";
-import {
-  reconciliationStatus, applyReconcile, addAdjustment, unlockReconciled,
-} from "../domain/reconcile.js";
+/* Reconciliation methods extracted to ./slices/reconcile.js. */
 import {
   findCategory, findCategoryGroup, categoryGroupsView,
   addCategory as addCategoryImpl, addCategoryGroup as addCategoryGroupImpl,
@@ -55,30 +60,23 @@ import {
   totalAssignedInMonth, categoryRow, totalInflowToBudget, readyToAssign,
   quickAssignLastMonth, quickAssignAverageSpending,
 } from "../domain/budget.js";
-import {
-  GOAL_TYPES, addGoal as addGoalImpl, removeGoalFor, findGoalForCategory,
-  needed as goalNeeded, statusFor as goalStatusFor,
-} from "../domain/goals.js";
-import {
-  incomeVsExpense, netWorthByMonth, spendingByCategory,
-  monthlyTrendsByCategory, debtOverview, assignmentHistory, projection,
-  savingsRate, payeeLeaderboard, budgetVsActual,
-  sankeyFlows, categoryHeatmap, yearOverYear, detectSubscriptions,
-} from "../domain/reports.js";
-
-import { download as downloadJSON, suggestedFilename, downloadBundle, suggestedBundleFilename } from "../io/export-json.js";
-import { parseFile as parseJSON, importAsNew as cloneAsNew, importReplacing } from "../io/import-json.js";
-import { parseCSV, applyMapping, dryRun as csvDryRun, detect as csvDetect } from "../io/import-csv.js";
-import { parseOFX, dryRun as ofxDryRun } from "../io/import-ofx.js";
-import { parseQIF, dryRun as qifDryRun } from "../io/import-qif.js";
-import { parseGoCardless, dryRun as gcDryRun } from "../io/import-gocardless.js";
-import {
-  profileKey as _profileKey, profilesIndexKey as _profilesIndexKey,
-  writeJSON as _writeJSON, readJSON as _readJSON,
-} from "./persist.js";
+/* GOAL_TYPES is the only top-level export the store re-exposes for
+   templates; the per-method delegations live in ./slices/goals.js. */
+import { GOAL_TYPES } from "../domain/goals.js";
+/* Page-specific slices live in ./slices/. Each one is a plain object
+   of methods that `this`-binds to the store at call time;
+   Object.assign at the end of createStore() composes them in. */
+import { reportsSlice } from "./slices/reports.js";
+import { dashboardSlice } from "./slices/dashboard.js";
+import { importExportSlice } from "./slices/import-export.js";
+import { goalsSlice } from "./slices/goals.js";
+import { reconcileSlice } from "./slices/reconcile.js";
+import { scheduledSlice } from "./slices/scheduled.js";
+import { payeesSlice } from "./slices/payees.js";
+import { snapshotsSlice } from "./slices/snapshots.js";
 
 export function createStore() {
-  return {
+  var base = {
     profiles: [],
     active: null,
     profile: null,
@@ -571,98 +569,6 @@ export function createStore() {
       return true;
     },
 
-    /* ---- Backups ---- */
-    listBackups() {
-      /* Touch the version counter so Alpine re-runs this when bumped. */
-      void this._listVersion;
-      if (!this.profile) return [];
-      return listBackups(this.profile.id);
-    },
-
-    setBackupNote(day, note) {
-      if (!this.profile) return;
-      setBackupNote(this.profile.id, day, note);
-      this._bumpLists();
-    },
-
-    getBackupNote(day) {
-      if (!this.profile) return "";
-      return getBackupNote(this.profile.id, day);
-    },
-
-    restoreBackup(day, confirmedName) {
-      if (!this.profile) return false;
-      if (confirmedName !== this.profile.name) {
-        this.pushToast("Restore cancelled — typed name did not match.", "warn");
-        return false;
-      }
-      var restored = restoreBackup(this.profile.id, day);
-      if (!restored) {
-        this.pushToast("Could not restore snapshot.", "danger");
-        return false;
-      }
-      this.profile = restored;
-      this._hydrateCollapsed();
-      this.refreshProfiles();
-      this._bumpLists();
-      this.pushToast("Restored snapshot from " + day + ".");
-      return true;
-    },
-
-    /* ---- Manual snapshots ---- */
-    listSnapshots() {
-      void this._listVersion;
-      if (!this.profile) return [];
-      return listSnapshots(this.profile.id);
-    },
-
-    takeSnapshot(label) {
-      if (!this.profile) return null;
-      var rec = takeSnapshot(this.profile, label);
-      if (rec) {
-        this._mirrorSnapshot(this.profile.id, rec);
-        this._bumpLists();
-        this.pushToast("Snapshot saved" + (rec.label ? ": '" + rec.label + "'" : "") + ".");
-      }
-      return rec;
-    },
-
-    deleteSnapshot(id) {
-      if (!this.profile) return;
-      var pid = this.profile.id;
-      deleteSnapshot(pid, id);
-      this._mirrorSnapshotDelete(pid, id);
-      this._bumpLists();
-      this.pushToast("Snapshot removed.");
-    },
-
-    renameSnapshot(id, label) {
-      if (!this.profile) return null;
-      var rec = renameSnapshot(this.profile.id, id, label);
-      if (!rec) return null;
-      this._mirrorSnapshot(this.profile.id, rec);
-      this._bumpLists();
-      return rec;
-    },
-
-    restoreSnapshot(id, confirmedName) {
-      if (!this.profile) return false;
-      if (confirmedName !== this.profile.name) {
-        this.pushToast("Restore cancelled — typed name did not match.", "warn");
-        return false;
-      }
-      var restored = restoreSnapshot(this.profile.id, id);
-      if (!restored) {
-        this.pushToast("Could not restore snapshot.", "danger");
-        return false;
-      }
-      this.profile = restored;
-      this._hydrateCollapsed();
-      this.refreshProfiles();
-      this._bumpLists();
-      this.pushToast("Snapshot restored.");
-      return true;
-    },
 
     /* ---- Storage telemetry ---- */
     storageStats() {
@@ -1088,175 +994,8 @@ export function createStore() {
       });
     },
 
-    /* ---- Payees ---- */
-    suggestPayees(q, limit) {
-      if (!this.profile) return [];
-      return suggestPayees(this.profile, q, limit);
-    },
-    findPayee(id) { return this.profile ? findPayee(this.profile, id) : null; },
-    payeeName(id) { var p = this.findPayee(id); return p ? p.name : ""; },
 
-    /* ---- Payee management ---- */
-    renamePayee(id, newName) {
-      if (!this.profile) return null;
-      this._recordUndo("Rename payee");
-      var p = renamePayee(this.profile, id, newName);
-      this._bumpLists();
-      this._save();
-      return p;
-    },
-    setPayeeCategory(id, categoryId) {
-      if (!this.profile) return null;
-      this._recordUndo("Set payee category");
-      var p = setPayeeCategory(this.profile, id, categoryId);
-      this._bumpLists();
-      this._save();
-      return p;
-    },
-    mergePayees(sourceId, targetId) {
-      if (!this.profile) return null;
-      this._recordUndo("Merge payees");
-      var p = mergePayees(this.profile, sourceId, targetId);
-      this._bumpLists();
-      this._save();
-      return p;
-    },
-    deletePayee(id) {
-      if (!this.profile) return false;
-      this._recordUndo("Delete payee");
-      var ok = deletePayee(this.profile, id);
-      if (ok) { this._bumpLists(); this._save(); }
-      return ok;
-    },
-    payeeUsageCounts() {
-      void this._listVersion;
-      return this.profile ? payeeUsageCounts(this.profile) : {};
-    },
-    allPayees() {
-      void this._listVersion;
-      if (!this.profile) return [];
-      return (this.profile.payees || []).slice().sort(function (a, b) {
-        return a.name.localeCompare(b.name);
-      });
-    },
 
-    /* ---- Scheduled ---- */
-    addSchedule(opts) {
-      if (!this.profile) return null;
-      this._recordUndo("Add recurring");
-      var s = addSchedule(this.profile, opts);
-      this._save();
-      return s;
-    },
-    removeSchedule(id) {
-      if (!this.profile) return;
-      this._recordUndo("Remove recurring");
-      removeSchedule(this.profile, id);
-      this._bumpLists();
-      this._save();
-    },
-    updateSchedule(id, patch) {
-      if (!this.profile) return null;
-      this._recordUndo("Edit recurring");
-      var s = updateSchedule(this.profile, id, patch);
-      this._bumpLists();
-      this._save();
-      return s;
-    },
-    dueScheduled() {
-      if (!this.profile) return [];
-      return dueTransactions(this.profile);
-    },
-    postScheduled(id, overrides) {
-      if (!this.profile) return null;
-      this._recordUndo("Post scheduled");
-      /* If the template carries a payeeName (set when the user authored the
-         schedule before that payee existed), upsert it on post so the
-         resulting transaction has a real payeeId. */
-      var sched = this.profile.scheduled.find(function (s) { return s.id === id; });
-      if (sched && sched.template && sched.template.payeeName && !sched.template.payeeId) {
-        var p = upsertPayee(this.profile, sched.template.payeeName, sched.template.categoryId || null);
-        if (p) sched.template.payeeId = p.id;
-      }
-      var t = postScheduled(this.profile, id, overrides);
-      /* The domain helper mutates s.nextDate in place. Replace the
-         schedule object with a shallow clone so consumers that track the
-         array (the recurring table, the calendar projection) see a new
-         reference and re-render — otherwise the date stays stale until
-         the next manual reload. */
-      var idx = this.profile.scheduled.findIndex(function (x) { return x.id === id; });
-      if (idx >= 0) {
-        var copy = this.profile.scheduled.slice();
-        copy[idx] = Object.assign({}, copy[idx]);
-        this.profile.scheduled = copy;
-      }
-      this._bumpLists();
-      this._save();
-      return t;
-    },
-    skipScheduled(id) {
-      if (!this.profile) return null;
-      this._recordUndo("Skip scheduled");
-      var s = skipScheduled(this.profile, id);
-      var idx = this.profile.scheduled.findIndex(function (x) { return x.id === id; });
-      if (idx >= 0) {
-        var copy = this.profile.scheduled.slice();
-        copy[idx] = Object.assign({}, copy[idx]);
-        this.profile.scheduled = copy;
-      }
-      this._bumpLists();
-      this._save();
-      return s;
-    },
-
-    /* Toggle a template's paused flag. Paused templates stay in the
-       list (history, frequency, nextDate preserved) but skip the due
-       queue + upcoming bills + calendar projection until resumed. */
-    setSchedulePaused(id, paused) {
-      if (!this.profile) return null;
-      var idx = this.profile.scheduled.findIndex(function (x) { return x.id === id; });
-      if (idx < 0) return null;
-      this._recordUndo(paused ? "Pause recurring" : "Resume recurring");
-      /* Replace the record so Alpine sees a fresh reference. */
-      var copy = this.profile.scheduled.slice();
-      copy[idx] = Object.assign({}, copy[idx], { paused: !!paused });
-      this.profile.scheduled = copy;
-      this._bumpLists();
-      this._save();
-      this.pushToast(paused ? "Template paused." : "Template resumed.");
-      return copy[idx];
-    },
-
-    /* ---- Reconciliation ---- */
-    reconcileStatus(accountId, statementCents) {
-      if (!this.profile) return { clearedBalance: 0, statementBalance: 0, diff: 0 };
-      return reconciliationStatus(this.profile, accountId, statementCents);
-    },
-
-    applyReconcile(accountId) {
-      if (!this.profile) return 0;
-      this._recordUndo("Reconcile account");
-      var count = applyReconcile(this.profile, accountId);
-      this._save();
-      this.pushToast("Reconciled " + count + " transaction" + (count === 1 ? "" : "s") + ".");
-      return count;
-    },
-
-    addAdjustment(accountId, amountCents, dateISO, memo) {
-      if (!this.profile) return null;
-      this._recordUndo("Add adjustment");
-      var t = addAdjustment(this.profile, accountId, amountCents, dateISO, memo);
-      this._save();
-      return t;
-    },
-
-    unlockReconciled(txnId) {
-      if (!this.profile) return false;
-      this._recordUndo("Unlock reconciled");
-      var ok = unlockReconciled(this.profile, txnId);
-      if (ok) this._save();
-      return ok;
-    },
 
     /* ---- Categories ----
        Every mutator bumps _listVersion so categoryGroupsView()'s
@@ -1655,429 +1394,20 @@ export function createStore() {
       return goal.target || 0;
     },
 
-    /* ---- Goals ---- */
-    addGoal(opts) {
-      if (!this.profile) return null;
-      this._recordUndo("Set goal");
-      var g = addGoalImpl(this.profile, opts);
-      this._bumpLists();
-      this._save();
-      return g;
-    },
-    removeGoal(categoryId) {
-      if (!this.profile) return;
-      this._recordUndo("Remove goal");
-      removeGoalFor(this.profile, categoryId);
-      this._bumpLists();
-      this._save();
-    },
-    findGoal(categoryId) {
-      return this.profile ? findGoalForCategory(this.profile, categoryId) : null;
-    },
-    goalNeeded(categoryId, month) {
-      if (!this.profile) return 0;
-      var g = findGoalForCategory(this.profile, categoryId);
-      return goalNeeded(this.profile, g, month || this.currentMonth);
-    },
-    goalStatus(categoryId, month) {
-      if (!this.profile) return null;
-      var g = findGoalForCategory(this.profile, categoryId);
-      return goalStatusFor(this.profile, g, month || this.currentMonth);
-    },
 
-    /* ---- Export ---- */
-    exportActiveJSON() {
-      if (!this.profile) return;
-      downloadJSON(this.profile);
-      this.pushToast("Profile downloaded.");
-    },
-    exportFilename() {
-      return this.profile ? suggestedFilename(this.profile) : "";
-    },
-    exportAllProfilesJSON() {
-      var index = this.profiles || [];
-      if (!index.length) return;
-      var profiles = index
-        .map(function (entry) { return loadProfile(entry.id); })
-        .filter(Boolean);
-      if (!profiles.length) {
-        this.pushToast("No profiles available to export.", "warn");
-        return;
-      }
-      downloadBundle(profiles);
-      this.pushToast("Exported " + profiles.length + " profile" + (profiles.length === 1 ? "" : "s") + " as one bundle.");
-    },
-    exportBundleFilename() { return suggestedBundleFilename(); },
 
-    /* ---- JSON import ---- */
-    parseImportJSON(text) { return parseJSON(text); },
+    /* ---- Slices composed onto this object at the bottom of
+       createStore() ----------------------------------------------
+         · Snapshots + daily backups …… ./slices/snapshots.js
+         · Payees ………………………………………………… ./slices/payees.js
+         · Scheduled txns ………………………… ./slices/scheduled.js
+         · Reconciliation …………………………… ./slices/reconcile.js
+         · Goals ………………………………………………… ./slices/goals.js
+         · Export / import …………………………… ./slices/import-export.js
+         · Reports …………………………………………… ./slices/reports.js
+         · Dashboard widgets ……………………… ./slices/dashboard.js
+       The composed slice methods all `this`-bind to this store. */
 
-    importJSONAsNew(parsed) {
-      if (!parsed || !parsed.ok) return null;
-      /* Bundle: import every profile as new. */
-      if (parsed.kind === "bundle") {
-        var self = this;
-        var index = _readJSON(_profilesIndexKey()) || [];
-        var imported = [];
-        parsed.profiles.forEach(function (p) {
-          var fresh = cloneAsNew({ ok: true, profile: p });
-          _writeJSON(_profileKey(fresh.id), fresh);
-          index.push({ id: fresh.id, name: fresh.name, lastOpenedAt: fresh.updatedAt, schemaVersion: fresh.schemaVersion });
-          imported.push(fresh);
-        });
-        _writeJSON(_profilesIndexKey(), index);
-        this.refreshProfiles();
-        if (imported.length) this._load(imported[0].id);
-        this.pushToast("Imported " + imported.length + " profile" + (imported.length === 1 ? "" : "s") + " from bundle.");
-        return imported;
-      }
-      var fresh = cloneAsNew(parsed);
-      var index = _readJSON(_profilesIndexKey()) || [];
-      _writeJSON(_profileKey(fresh.id), fresh);
-      index.push({ id: fresh.id, name: fresh.name, lastOpenedAt: fresh.updatedAt, schemaVersion: fresh.schemaVersion });
-      _writeJSON(_profilesIndexKey(), index);
-      this.refreshProfiles();
-      this._load(fresh.id);
-      this.pushToast("Imported '" + fresh.name + "' as a new profile.");
-      return fresh;
-    },
-
-    importJSONReplacing(parsed, confirmedName) {
-      if (!parsed || !parsed.ok || !this.profile) return false;
-      if (confirmedName !== this.profile.name) {
-        this.pushToast("Replace cancelled — typed name did not match.", "warn");
-        return false;
-      }
-      var replaced = importReplacing(parsed, this.profile.id);
-      _writeJSON(_profileKey(replaced.id), replaced);
-      this.profile = replaced;
-      this._hydrateCollapsed();
-      this.refreshProfiles();
-      this.pushToast("Active profile replaced with imported data.");
-      return true;
-    },
-
-    /* ---- CSV / OFX / QIF / GoCardless import ---- */
-    parseCSVText(text) {
-      var parsed = parseCSV(text);
-      var detection = csvDetect(parsed.headers);
-      return { headers: parsed.headers, rows: parsed.rows, detection: detection };
-    },
-
-    applyCSVMapping(rows, columnMap) { return applyMapping(rows, columnMap); },
-
-    dryRunCSV(accountId, rows) {
-      if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
-      return csvDryRun(this.profile, accountId, rows);
-    },
-
-    parseOFXText(text) { return parseOFX(text); },
-    dryRunOFX(accountId, rows) {
-      if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
-      return ofxDryRun(this.profile, accountId, rows);
-    },
-
-    parseQIFText(text) { return parseQIF(text); },
-    dryRunQIF(accountId, rows) {
-      if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
-      return qifDryRun(this.profile, accountId, rows);
-    },
-
-    parseGoCardlessText(text) { return parseGoCardless(text); },
-    dryRunGoCardless(accountId, rows) {
-      if (!this.profile) return rows.map(function (r) { return Object.assign({}, r, { duplicate: false }); });
-      return gcDryRun(this.profile, accountId, rows);
-    },
-
-    /* Commit non-duplicate rows as real transactions. Categories are
-       matched by name (case-insensitive); unmatched categories become
-       null. Returns { added, skipped } counts.
-       Wrapped in batchMutate so all rows commit atomically: one
-       undo entry covers the entire import, save fires once at the
-       end, and a mid-loop error rolls back to the pre-import
-       profile state (no partial imports). */
-    commitImport(accountId, rows) {
-      if (!this.profile) return { added: 0, skipped: 0 };
-      var self = this;
-      var added = 0;
-      var skipped = 0;
-      this.batchMutate(function () {
-        rows.forEach(function (r) {
-          if (r.duplicate) { skipped += 1; return; }
-          if (!r.date || !r.amount) { skipped += 1; return; }
-          var catId = null;
-          if (r.category) {
-            var match = self.profile.categories.find(function (c) {
-              return c.name.toLowerCase() === r.category.toLowerCase();
-            });
-            if (match) catId = match.id;
-          }
-          self.addTransaction({
-            accountId: accountId,
-            date: r.date,
-            payeeName: r.payee,
-            categoryId: catId,
-            amount: r.amount,
-            memo: r.memo,
-            cleared: !!r.cleared,
-          });
-          added += 1;
-        });
-      }, "Import " + rows.length + " transactions");
-      this.pushToast("Imported " + added + " transaction" + (added === 1 ? "" : "s") + (skipped ? " (" + skipped + " skipped)" : "") + ".");
-      return { added: added, skipped: skipped };
-    },
-
-    /* ---- Reports ---- */
-    reportIncomeVsExpense(endMonth, count) {
-      return this.profile ? incomeVsExpense(this.profile, endMonth || this.currentMonth, count) : [];
-    },
-    reportNetWorth(endMonth, count) {
-      return this.profile ? netWorthByMonth(this.profile, endMonth || this.currentMonth, count) : [];
-    },
-    reportSpending(fromMonth, toMonth) {
-      if (!this.profile) return [];
-      var to = toMonth || this.currentMonth;
-      var from = fromMonth || to;
-      return spendingByCategory(this.profile, from, to);
-    },
-    reportTrends(endMonth, count, topN) {
-      return this.profile ? monthlyTrendsByCategory(this.profile, endMonth || this.currentMonth, count, topN) : [];
-    },
-    reportDebt() {
-      return this.profile ? debtOverview(this.profile) : [];
-    },
-    reportAssignmentHistory(endMonth, count, topN) {
-      return this.profile ? assignmentHistory(this.profile, endMonth || this.currentMonth, count, topN) : [];
-    },
-    reportProjection(count) {
-      return this.profile ? projection(this.profile, count) : [];
-    },
-    reportSavingsRate(endMonth, count) {
-      return this.profile ? savingsRate(this.profile, endMonth || this.currentMonth, count) : [];
-    },
-    reportPayeeLeaderboard(fromMonth, toMonth, limit) {
-      if (!this.profile) return [];
-      var to = toMonth || this.currentMonth;
-      var from = fromMonth || to;
-      return payeeLeaderboard(this.profile, from, to, limit);
-    },
-    reportBudgetVsActual(month) {
-      return this.profile ? budgetVsActual(this.profile, month || this.currentMonth) : [];
-    },
-    /* ---- New reports (Phase 4) ---- */
-    reportSankey(fromMonth, toMonth) {
-      void this._listVersion;
-      var from = fromMonth || this.currentMonth;
-      var to   = toMonth   || from;
-      return this.profile ? sankeyFlows(this.profile, from, to) : { nodes: [], links: [] };
-    },
-    reportHeatmap(endMonth, count, topN) {
-      void this._listVersion;
-      return this.profile
-        ? categoryHeatmap(this.profile, endMonth || this.currentMonth, count || 12, topN || 15)
-        : { months: [], categories: [], cells: {}, max: 0 };
-    },
-    reportYearOverYear(currentRange, priorRange) {
-      void this._listVersion;
-      if (!this.profile) return { current: {}, prior: {}, paired: [], categoryRows: [], payeeRows: [], deltas: {} };
-      return yearOverYear(this.profile, currentRange, priorRange);
-    },
-    reportSubscriptions(lookbackMonths) {
-      void this._listVersion;
-      return this.profile ? detectSubscriptions(this.profile, lookbackMonths || 12) : [];
-    },
-
-    /* ---- Dashboard widgets ---- */
-
-    /* Count of categories whose net (carry + assigned + activity) is
-       below zero this month, plus the total deficit. Drives the
-       "Overspent" KPI tile + the alert. */
-    overspentCount(month) {
-      if (!this.profile) return { count: 0, totalDeficit: 0 };
-      void this._listVersion;
-      var m = month || this.currentMonth;
-      var count = 0, deficit = 0;
-      var self = this;
-      this.profile.categories.forEach(function (c) {
-        if (isPaymentCategory(self.profile, c.id)) return;
-        var row = categoryRow(self.profile, c.id, m);
-        if (row.available < 0) {
-          count += 1;
-          deficit += Math.abs(row.available);
-        }
-      });
-      return { count: count, totalDeficit: deficit };
-    },
-
-    /* Sum of every scheduled occurrence in the next `days` days plus
-       the underlying schedule records so the dashboard can list them.
-       Outflow shows as negative, inflow as positive — caller decides
-       how to render. Each returned bill carries the resolved ISO date. */
-    upcomingBills(days) {
-      void this._listVersion;
-      if (!this.profile || !this.profile.scheduled.length) {
-        return { totalNet: 0, totalOut: 0, totalIn: 0, items: [] };
-      }
-      var today = new Date().toISOString().slice(0, 10);
-      var horizon = new Date();
-      horizon.setDate(horizon.getDate() + (days || 14));
-      var endISO = horizon.toISOString().slice(0, 10);
-      var items = [];
-      var totalNet = 0, totalOut = 0, totalIn = 0;
-      this.profile.scheduled.forEach(function (s) {
-        var dates = occurrencesIn(s, today, endISO);
-        dates.forEach(function (d) {
-          var amt = (s.template && s.template.amount) || 0;
-          items.push({
-            schedId: s.id,
-            date: d,
-            amount: amt,
-            payeeName: (s.template && s.template.payeeName) || "",
-            payeeId: (s.template && s.template.payeeId) || null,
-            accountId: (s.template && s.template.accountId) || null,
-            categoryId: (s.template && s.template.categoryId) || null,
-          });
-          totalNet += amt;
-          if (amt < 0) totalOut += amt;
-          else totalIn += amt;
-        });
-      });
-      items.sort(function (a, b) { return a.date.localeCompare(b.date); });
-      return { totalNet: totalNet, totalOut: totalOut, totalIn: totalIn, items: items };
-    },
-
-    /* Goals sorted by furthest from this month's target, capped at
-       `limit`. Used by the dashboard's "Needs attention" band. */
-    goalsNeedingAttention(limit, month) {
-      void this._listVersion;
-      if (!this.profile || !this.profile.goals) return [];
-      var m = month || this.currentMonth;
-      var self = this;
-      var rows = this.profile.goals.map(function (g) {
-        var target = g.target || 0;
-        var assignedThisMonth = budgetAssigned(self.profile, g.categoryId, m);
-        var pct = target > 0 ? (assignedThisMonth / target) : 1;
-        return {
-          goal: g,
-          categoryId: g.categoryId,
-          categoryName: self.categoryName(g.categoryId) || "(deleted category)",
-          assigned: assignedThisMonth,
-          target: target,
-          pct: pct,
-          deficit: Math.max(0, target - assignedThisMonth),
-        };
-      });
-      rows = rows.filter(function (r) { return r.pct < 1; });
-      rows.sort(function (a, b) { return a.pct - b.pct; });
-      return rows.slice(0, limit || 3);
-    },
-
-    /* Surface deterministic warnings the dashboard should highlight.
-       Each alert returns { id, severity, text, href } where severity
-       is "danger" | "warn" | "info" and href is the page that resolves
-       the alert. Read-only — the user takes action from the link. */
-    dashboardAlerts() {
-      void this._listVersion;
-      var out = [];
-      if (!this.profile) return out;
-      var today = new Date().toISOString().slice(0, 10);
-
-      /* Rule 1: an on-budget account is negative (excludes credit
-         cards + tracking-liabilities — those are expected to be
-         negative). */
-      var self = this;
-      this.profile.accounts.forEach(function (a) {
-        if (a.type === "credit" || a.type === "tracking-liability") return;
-        var bal = self.accountBalance(a.id);
-        if (bal < 0) {
-          out.push({
-            id: "neg-" + a.id,
-            severity: "danger",
-            text: a.name + " is overdrawn — balance " + ((bal / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })),
-            href: "/app/register/?account=" + a.id,
-          });
-        }
-      });
-
-      /* Rule 2: scheduled templates whose nextDate is already in the
-         past — the user missed one. */
-      this.profile.scheduled.forEach(function (s) {
-        if (s.nextDate && s.nextDate.slice(0, 10) < today) {
-          var name = (s.template && s.template.payeeName) || "Scheduled item";
-          out.push({
-            id: "overdue-" + s.id,
-            severity: "warn",
-            text: name + " was due " + s.nextDate.slice(0, 10) + " — approve or skip.",
-            href: "/app/scheduled/",
-          });
-        }
-      });
-
-      /* Rule 3: more than $100 sitting in Ready to Assign — nudge the
-         user to assign it before it loses its job. */
-      var rta = this.readyToAssign(this.currentMonth);
-      if (rta > 10000) {
-        out.push({
-          id: "rta-unassigned",
-          severity: "info",
-          text: ((rta / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })) + " is unassigned this month.",
-          href: "/app/budget/",
-        });
-      }
-
-      /* Rule 4: zero transactions in the last 30 days — profile may
-         be stale or abandoned. */
-      var thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
-      var thirtyAgoISO = thirtyAgo.toISOString().slice(0, 10);
-      var recentCount = this.profile.transactions.filter(function (t) {
-        return t.date >= thirtyAgoISO;
-      }).length;
-      if (this.profile.transactions.length > 0 && recentCount === 0) {
-        out.push({
-          id: "no-recent-activity",
-          severity: "info",
-          text: "No transactions in the last 30 days — try the quick-add (N).",
-          href: "/app/register/",
-        });
-      }
-
-      /* Rule 5: any overspent category. Aggregated into one alert so
-         long lists don't drown the panel. */
-      var os = this.overspentCount();
-      if (os.count > 0) {
-        out.push({
-          id: "overspent",
-          severity: "warn",
-          text: os.count + " categor" + (os.count === 1 ? "y" : "ies") + " overspent by " + ((os.totalDeficit / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })) + ".",
-          href: "/app/budget/",
-        });
-      }
-
-      /* Rule 6: accounts flagged exclude-from-net-worth. Reminder
-         note (info, not warn) so users glancing at the dashboard
-         remember that their displayed net worth omits these
-         balances. Only fires when at least one account is excluded
-         AND its total is non-zero. */
-      var excludedSum = 0;
-      var excludedCount = 0;
-      this.profile.accounts.forEach(function (a) {
-        if (a.closedAt) return;
-        if (!a.excludeFromNetWorth) return;
-        excludedCount += 1;
-        excludedSum += self.accountBalance(a.id);
-      });
-      if (excludedCount > 0 && excludedSum !== 0) {
-        out.push({
-          id: "excluded-from-nw",
-          severity: "info",
-          text: excludedCount + " account" + (excludedCount === 1 ? "" : "s") + " totaling " + ((excludedSum / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })) + " excluded from net worth.",
-          href: "/app/accounts/",
-        });
-      }
-
-      return out;
-    },
 
     /* ---- Toast helpers ---- */
     pushToast(message, kind, sticky) {
@@ -2094,4 +1424,10 @@ export function createStore() {
       this.toasts = this.toasts.filter(function (t) { return t.id !== id; });
     },
   };
+  /* Compose extracted slices onto the base. Each slice is a plain
+     object of methods that `this`-binds to the store at call time —
+     Object.assign preserves that binding because it copies the
+     methods themselves, not bound copies. Order matters only when
+     two slices define the same method (later wins). */
+  return Object.assign(base, snapshotsSlice, payeesSlice, scheduledSlice, reconcileSlice, goalsSlice, importExportSlice, reportsSlice, dashboardSlice);
 }
