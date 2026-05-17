@@ -43,6 +43,66 @@
 .budget__group-header { background: var(--bg-alt); font-weight: 600; }
 .budget__row { border-top: 1px solid var(--border-soft); }
 
+/* Selected-row tint — accent left rail + subtle background so the
+   user can see at a glance what's in the bulk selection. */
+.budget__row--selected {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Compact, accent-tinted checkbox shared by group header + cat row.
+   data-touch="compact" exempts it from the universal 44px touch-
+   target rule (rows would jump to 44px tall otherwise). */
+.budget__bulk-check {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.budget__bulk-check:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Floating bulk-actions bar — fixed bottom-center on desktop, full-
+   width sticky bottom on mobile. Slides in from below; respects
+   reduced motion. */
+.bulk-actions-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 120;
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
+}
+.bulk-actions-bar__count {
+  font-size: var(--fs-sm);
+  color: var(--fg);
+}
+.bulk-actions-bar__count strong {
+  font-size: var(--fs-md);
+  color: var(--accent);
+  margin-right: 4px;
+}
+@media (max-width: 599px) {
+  .bulk-actions-bar {
+    left: 8px; right: 8px; bottom: 8px;
+    transform: none;
+    max-width: none;
+    justify-content: space-between;
+  }
+}
+
 .budget__activity { display: none; }
 .budget__group-header > :nth-child(3) { display: none; }
 

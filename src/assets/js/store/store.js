@@ -1327,6 +1327,74 @@ export function createStore() {
       this._save();
     },
 
+    /* ---- Bulk-clear helpers ---------------------------------------
+       Wipe many assigned values (or push them so available == 0) in
+       a single undo entry. Used by the budget page's multi-select
+       toolbar + the per-group/per-row "Clear" actions.
+
+       clearAssignedForCategories: sets assigned to 0 for every catId
+       in `categoryIds` in `month`. Empty list = no-op.
+
+       clearAvailableForCategories: walks each catId, computes the
+       assignment needed so categoryRow(cat).available == 0, and writes
+       it. For categories whose available is already 0, no-op. */
+    clearAssignedForCategories(categoryIds, month, label) {
+      if (!this.profile || !categoryIds || !categoryIds.length) return 0;
+      var m = month || this.currentMonth;
+      this._recordUndo(label || ("Clear assigned (" + categoryIds.length + ")"));
+      var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
+      var nextAssigned = Object.assign({}, existing.assigned || {});
+      var n = 0;
+      categoryIds.forEach(function (id) {
+        if (nextAssigned[id]) { nextAssigned[id] = 0; n++; }
+      });
+      this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
+      this._bumpLists();
+      this._save();
+      return n;
+    },
+    clearAvailableForCategories(categoryIds, month, label) {
+      if (!this.profile || !categoryIds || !categoryIds.length) return 0;
+      var m = month || this.currentMonth;
+      this._recordUndo(label || ("Clear available (" + categoryIds.length + ")"));
+      var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
+      var nextAssigned = Object.assign({}, existing.assigned || {});
+      var self = this;
+      var n = 0;
+      categoryIds.forEach(function (id) {
+        var row = categoryRow(self.profile, id, m);
+        if (row.available === 0) return;
+        /* available = carryIn + assigned + activity, so set
+           assigned = -carryIn - activity to land on 0. */
+        nextAssigned[id] = -row.carryIn - row.activity;
+        n++;
+      });
+      this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
+      this._bumpLists();
+      this._save();
+      return n;
+    },
+    /* Convenience: every on-budget category id for the active profile
+       (skips payment categories — those are derived from card spending
+       and don't accept direct assignment safely). */
+    allBudgetableCategoryIds() {
+      if (!this.profile) return [];
+      var self = this;
+      return (this.profile.categories || [])
+        .filter(function (c) { return !c.hidden && !self.isPaymentCategory(c.id); })
+        .map(function (c) { return c.id; });
+    },
+    /* All category ids belonging to a single group (skips payment +
+       hidden). Useful for "select entire group" / "clear assigned for
+       this group". */
+    categoryIdsInGroup(groupId) {
+      if (!this.profile) return [];
+      var self = this;
+      return (this.profile.categories || [])
+        .filter(function (c) { return c.groupId === groupId && !c.hidden && !self.isPaymentCategory(c.id); })
+        .map(function (c) { return c.id; });
+    },
+
     /* Move money from one category to another in a single transaction:
        decrement source.assigned by cents, increment target.assigned by
        cents. The net change to "Total assigned" is zero — the user is
