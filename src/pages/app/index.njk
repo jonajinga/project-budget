@@ -30,6 +30,26 @@ eleventyExcludeFromCollections: true
 
   <div x-show="$store.budget.profile" x-cloak>
 
+    {# ==== Hero band: greeting, month, and a one-line insight ==== #}
+    <section class="dash-hero" aria-label="Today's summary">
+      <div class="dash-hero__greeting">
+        <p class="dash-hero__eyebrow" x-text="heroEyebrow()"></p>
+        <h2 class="dash-hero__title" x-text="heroTitle()"></h2>
+        <p class="dash-hero__insight" x-text="heroInsight()"></p>
+      </div>
+      <div class="dash-hero__metric">
+        <p class="dash-hero__metric-label">Net worth</p>
+        <p class="dash-hero__metric-value"
+           :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : ''"
+           x-text="fmt($store.budget.netWorth())"></p>
+        <p class="dash-hero__metric-trend"
+           :class="netWorthDelta().pct >= 0 ? 'is-positive' : 'is-negative'">
+          <span x-text="(netWorthDelta().pct >= 0 ? '↑ ' : '↓ ') + Math.abs(netWorthDelta().pct).toFixed(1) + '%'"></span>
+          <span class="dash-hero__metric-sub">vs 6 months ago</span>
+        </p>
+      </div>
+    </section>
+
     {# ==== Band B: 6-tile KPI row ==== #}
     {# Reuses .rec-summary chrome from /app/scheduled/ for consistent
        semantic-rail tiles; each tile is an <a> so the whole card is
@@ -97,6 +117,31 @@ eleventyExcludeFromCollections: true
               x-text="overspent().count"></span>
         <span class="dashboard__kpi-sub" x-text="overspent().count > 0 ? ('Deficit ' + fmtCompact(overspent().totalDeficit)) : 'Everything covered'"></span>
       </a>
+    </section>
+
+    {# ==== Account balances grid ==== #}
+    <section class="card" x-show="allAccountsForGrid().length" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Account balances</h2>
+        <a href="/app/accounts/">Manage accounts &rsaquo;</a>
+      </div>
+      <ul class="dash-accts">
+        <template x-for="a in allAccountsForGrid()" :key="a.id">
+          <li class="dash-acct">
+            <a class="dash-acct__link" :href="'/app/register/?account=' + a.id">
+              <span class="dash-acct__group" x-text="a.groupName || 'Other'"></span>
+              <span class="dash-acct__name">
+                <span x-text="a.name"></span>
+                <span class="dash-acct__flag" x-show="a.excludeFromNetWorth" x-cloak
+                      data-tip="Excluded from net worth.">E</span>
+              </span>
+              <span class="dash-acct__balance"
+                    :class="a.balance < 0 ? 'is-negative' : ''"
+                    x-text="fmt(a.balance)"></span>
+            </a>
+          </li>
+        </template>
+      </ul>
     </section>
 
     {# ==== Band C: This month — sparkline + top categories ==== #}
@@ -273,6 +318,80 @@ function dashboardView() {
         });
       };
       poll();
+    },
+
+    /* ---- Hero band ---- */
+    heroEyebrow() {
+      var now = new Date();
+      var hour = now.getHours();
+      var greeting = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening");
+      var profile = this.$store.budget.profile;
+      return greeting + (profile && profile.name ? " — " + profile.name : "");
+    },
+    heroTitle() {
+      var d = new Date();
+      return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    },
+    /* One-line, plain-English summary of the most relevant signal
+       for this month. Priority order: overdrawn account > overspent
+       categories > unassigned RTA > on-track positive net. */
+    heroInsight() {
+      var s = this.$store.budget;
+      if (!s.profile) return "";
+      var rta = s.readyToAssign();
+      var os = this.overspent();
+      var net = this.thisMonthNet();
+      if (os.count > 0) {
+        return os.count + " categor" + (os.count === 1 ? "y is" : "ies are") + " overspent by " + this.fmt(os.totalDeficit) + " this month.";
+      }
+      if (rta > 10000) {
+        return this.fmt(rta) + " is unassigned for " + s.currentMonth + " — assign every dollar a job.";
+      }
+      if (net > 0) {
+        return "Net positive this month: " + this.fmt(net) + " saved so far.";
+      }
+      if (net < 0) {
+        return "Spending exceeds income this month by " + this.fmt(Math.abs(net)) + ".";
+      }
+      return "Every dollar is assigned. Keep going.";
+    },
+    /* Compare current netWorth to netWorth from ~6 months back via the
+       netWorthByMonth report. Returns { from, to, pct }. */
+    netWorthDelta() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var to = s.netWorth();
+      var series = s.reportNetWorth(null, 7) || [];
+      if (!series.length) return { from: to, to: to, pct: 0 };
+      var fromRow = series[0];
+      var from = fromRow && typeof fromRow.netWorth === "number" ? fromRow.netWorth : (fromRow && fromRow.total) || to;
+      var pct = from !== 0 ? ((to - from) / Math.abs(from)) * 100 : 0;
+      return { from: from, to: to, pct: pct };
+    },
+
+    /* ---- Account balances grid ---- */
+    allAccountsForGrid() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p || !p.accounts) return [];
+      var s = this.$store.budget;
+      var groupNameById = {};
+      (p.accountGroups || []).forEach(function (g) { groupNameById[g.id] = g.name; });
+      return p.accounts
+        .filter(function (a) { return !a.closedAt; })
+        .map(function (a) {
+          return {
+            id: a.id,
+            name: a.name,
+            groupName: groupNameById[a.groupId] || "",
+            excludeFromNetWorth: !!a.excludeFromNetWorth,
+            balance: s.accountBalance(a.id),
+          };
+        })
+        .sort(function (a, b) {
+          if (a.groupName !== b.groupName) return a.groupName.localeCompare(b.groupName);
+          return a.name.localeCompare(b.name);
+        });
     },
 
     /* ---- Formatting helpers ---- */

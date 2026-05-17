@@ -330,3 +330,155 @@
   min-height: 220px;
   margin-top: var(--space-2xs);
 }
+
+/* ---- Hero band ---------------------------------------------------- */
+/* Top-of-dashboard greeting card. Big readable date + one-line
+   plain-English insight on the left, a Net worth headline metric +
+   6-month trend chip on the right. */
+.dash-hero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  background: linear-gradient(135deg,
+    color-mix(in oklab, var(--accent) 8%, var(--bg-elevated)),
+    var(--bg-elevated));
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+.dash-hero__greeting { flex: 1 1 22rem; min-width: 0; }
+.dash-hero__eyebrow {
+  margin: 0 0 var(--space-3xs);
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+.dash-hero__title {
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+}
+.dash-hero__insight {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--fg);
+  line-height: 1.4;
+}
+.dash-hero__metric {
+  text-align: right;
+  flex: 0 1 auto;
+  min-width: 12rem;
+}
+.dash-hero__metric-label {
+  margin: 0 0 var(--space-3xs);
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.dash-hero__metric-value {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.dash-hero__metric-value.amount--outflow { color: var(--danger); }
+.dash-hero__metric-trend {
+  margin: var(--space-2xs) 0 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.dash-hero__metric-trend.is-positive { color: var(--ok); }
+.dash-hero__metric-trend.is-negative { color: var(--danger); }
+.dash-hero__metric-sub {
+  font-weight: 400;
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+@media (max-width: 599px) {
+  .dash-hero { padding: var(--space-sm) var(--space-md); }
+  .dash-hero__metric { text-align: left; }
+  .dash-hero__metric-trend { align-items: flex-start; }
+  .dash-hero__title { font-size: var(--fs-xl); }
+}
+
+/* ---- Account balances grid --------------------------------------- */
+.dash-accts {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-sm) 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-2xs);
+}
+.dash-acct__link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "group balance" "name balance";
+  gap: 0 var(--space-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--fg);
+  text-decoration: none;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.dash-acct__link:hover {
+  background: var(--bg-alt);
+  border-color: var(--accent);
+}
+.dash-acct__group {
+  grid-area: group;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--fg-muted);
+}
+.dash-acct__name {
+  grid-area: name;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.dash-acct__flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.dash-acct__balance {
+  grid-area: balance;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.dash-acct__balance.is-negative { color: var(--danger); }
