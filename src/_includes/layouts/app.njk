@@ -45,7 +45,9 @@
   <div class="app-sidebar-handle" role="separator" aria-orientation="vertical"
        aria-label="Resize sidebar" tabindex="0"
        data-tip="Drag to resize the sidebar. Double-click to reset to the default width."></div>
-  <section class="app-main">
+  <section class="app-main"
+           :inert="sidebarOpen && window.matchMedia('(max-width: 1023px)').matches ? true : null"
+           :aria-hidden="sidebarOpen && window.matchMedia('(max-width: 1023px)').matches ? 'true' : null">
     {% include "partials/sample-banner.njk" %}
     {{ content | safe }}
   </section>
