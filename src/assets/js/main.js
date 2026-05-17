@@ -459,6 +459,11 @@
   /* Export to window so onclick="" handlers can call these. */
   window.ProjectBudget = window.ProjectBudget || {};
   window.ProjectBudget.toggleTheme = toggleTheme;
+  /* Theme picker (header dropdown + diagnostics) needs the full
+     theme list + a direct setter; expose them alongside the toggle. */
+  window.ProjectBudget.themes = THEMES;
+  window.ProjectBudget.currentTheme = currentTheme;
+  window.ProjectBudget.applyTheme = applyTheme;
   window.ProjectBudget.openSearch = openSearch;
   window.ProjectBudget.closeSearch = closeSearch;
   window.ProjectBudget.toggleSiteMenu = toggleSiteMenu;

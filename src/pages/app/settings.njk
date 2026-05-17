@@ -271,49 +271,23 @@ eleventyExcludeFromCollections: true
       </table>
     </section>
 
+    {# Trash section moved to /app/trash/ so transaction trash and
+       profile trash live on one page. Settings keeps a quick link
+       + a count tile so the entry point stays discoverable. #}
     <section class="card" style="grid-column: 1 / -1;">
       <h2 class="card__title">Trash</h2>
       <p class="card__body" style="margin-bottom: var(--space-sm);">
-        Soft-deleted profiles are kept here for 7 days before they're purged. Restore brings the profile back to the active list; permanent delete removes it immediately and cannot be undone.
+        Soft-deleted transactions (30-day retention) and profiles (7-day retention) live on the dedicated Trash page now. Restore or purge from there.
       </p>
-
-      <p x-show="!$store.budget.listTrashedProfiles().length" x-cloak style="color: var(--fg-muted);">
-        Trash is empty.
+      <p style="color: var(--fg-muted); margin-bottom: var(--space-sm);">
+        <strong x-text="($store.budget.listTrashedTransactions ? $store.budget.listTrashedTransactions().length : 0)"></strong>
+        <span>transaction(s) and </span>
+        <strong x-text="$store.budget.listTrashedProfiles().length"></strong>
+        <span>profile(s) currently in trash.</span>
       </p>
-
-      <table class="table" x-show="$store.budget.listTrashedProfiles().length" x-cloak>
-        <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col" class="num">Accounts</th>
-            <th scope="col" class="num">Transactions</th>
-            <th scope="col">Deleted</th>
-            <th scope="col" class="num">Days left</th>
-            <th scope="col" class="num">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="t in $store.budget.listTrashedProfiles()" :key="t.id">
-            <tr>
-              <td x-text="t.name"></td>
-              <td class="num" x-text="t.accounts"></td>
-              <td class="num" x-text="t.transactions"></td>
-              <td x-text="t.deletedAt ? new Date(t.deletedAt).toLocaleString() : ''"></td>
-              <td class="num" x-text="t.daysLeft"></td>
-              <td class="num">
-                <div class="cluster" style="justify-content: flex-end;">
-                  <button class="btn btn--secondary btn--sm" type="button"
-                          @click="$store.budget.restoreTrashedProfile(t.id)"
-                          data-tip="Restore this profile to the active list.">Restore</button>
-                  <button class="btn btn--danger btn--sm" type="button"
-                          @click="purgeId = t.id; purgeName = t.name; purgeValue = ''"
-                          data-tip="Permanently delete. Cannot be undone.">Delete forever</button>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+      <div class="cluster">
+        <a class="btn btn--primary btn--sm" href="/app/trash/">Open Trash</a>
+      </div>
     </section>
 
     <section class="card" style="grid-column: 1 / -1;">

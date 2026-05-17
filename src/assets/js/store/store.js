@@ -31,6 +31,7 @@ import {
 import {
   addTxn as addTxnImpl, editTxn as editTxnImpl, deleteTxn as deleteTxnImpl,
   splitTxn as splitTxnImpl, transfer as transferImpl, syncTransferPair,
+  restoreTxnFromTrash, purgeTxnFromTrash, emptyTrash as emptyTrashImpl, purgeExpiredTrash,
 } from "../domain/transactions.js";
 import { upsertPayee, suggestPayees, findPayee, findPayeeByName, renamePayee, setPayeeCategory, mergePayees, deletePayee, payeeUsageCounts } from "../domain/payees.js";
 import {
@@ -317,6 +318,12 @@ export function createStore() {
     _load(id) {
       var p = loadProfile(id);
       if (!p) return;
+      /* Migration: older profiles don't have the trash array. Seed it
+         so every consumer (delete, restore, /app/trash/) sees a
+         predictable shape. Then drop anything older than 30 days so
+         the bin doesn't grow without bound. */
+      if (!p.trash) p.trash = [];
+      purgeExpiredTrash(p, 30);
       this.profile = p;
       this.active = id;
       setActiveId(id);
@@ -604,6 +611,7 @@ export function createStore() {
       this._recordUndo("Add account group");
       var g = newAccountGroup((name || "").trim() || "Group", this.profile.accountGroups.length);
       this.profile.accountGroups.push(g);
+      this._bumpLists();
       this._save();
       return g;
     },
@@ -662,6 +670,7 @@ export function createStore() {
       if (!g) return;
       this._recordUndo("Rename account group");
       g.name = (name || "").trim() || g.name;
+      this._bumpLists();
       this._save();
     },
 
@@ -673,6 +682,7 @@ export function createStore() {
         if (a.groupId === id) a.groupId = null;
       });
       this.profile.accountGroups = this.profile.accountGroups.filter(function (g) { return g.id !== id; });
+      this._bumpLists();
       this._save();
     },
 
@@ -685,11 +695,13 @@ export function createStore() {
         type: opts.type || "checking",
         openingBalance: Math.round(Number(opts.openingBalance) || 0),
         sortIndex: this.profile.accounts.length,
+        excludeFromNetWorth: !!opts.excludeFromNetWorth,
       });
       this.profile.accounts.push(a);
       if (a.type === "credit") {
         ensurePaymentCategory(this.profile, a.id, a.name);
       }
+      this._bumpLists();
       this._save();
       this.pushToast("Account '" + a.name + "' added.");
       return a;
@@ -701,6 +713,7 @@ export function createStore() {
       if (!a) return;
       this._recordUndo("Rename account");
       a.name = (name || "").trim() || a.name;
+      this._bumpLists();
       if (a.type === "credit") {
         syncPaymentCategoryName(this.profile, a.id, a.name);
       }
@@ -712,6 +725,7 @@ export function createStore() {
       var a = findAccount(this.profile, id);
       if (!a) return;
       a.groupId = groupId || null;
+      this._bumpLists();
       this._save();
     },
 
@@ -730,6 +744,9 @@ export function createStore() {
       if (patch.openingBalance !== undefined) {
         a.openingBalance = Math.round(Number(patch.openingBalance) || 0);
       }
+      if (patch.excludeFromNetWorth !== undefined) {
+        a.excludeFromNetWorth = !!patch.excludeFromNetWorth;
+      }
       if (patch.type !== undefined && patch.type !== oldType) {
         a.type = patch.type;
         var isTracking = patch.type === "tracking-asset" || patch.type === "tracking-liability";
@@ -742,6 +759,7 @@ export function createStore() {
       } else if (patch.name !== undefined && oldName !== a.name && a.type === "credit") {
         syncPaymentCategoryName(this.profile, a.id, a.name);
       }
+      this._bumpLists();
       this._save();
       return a;
     },
@@ -751,6 +769,7 @@ export function createStore() {
       var a = findAccount(this.profile, id);
       if (!a) return;
       a.closedAt = new Date().toISOString();
+      this._bumpLists();
       this._save();
       this.pushToast("Account '" + a.name + "' closed.");
     },
@@ -760,6 +779,7 @@ export function createStore() {
       var a = findAccount(this.profile, id);
       if (!a) return;
       a.closedAt = null;
+      this._bumpLists();
       this._save();
     },
 
@@ -778,6 +798,7 @@ export function createStore() {
       /* Remove the account and all its transactions. */
       this.profile.accounts = this.profile.accounts.filter(function (x) { return x.id !== id; });
       this.profile.transactions = this.profile.transactions.filter(function (t) { return t.accountId !== id; });
+      this._bumpLists();
       this._save();
       this.pushToast("Account '" + a.name + "' and its transactions deleted.");
       return true;
@@ -786,7 +807,16 @@ export function createStore() {
     /* ---- Account derivations (templates call these) ---- */
     accountBalance(id) { return this.profile ? runningBalance(this.profile, id) : 0; },
     accountClearedBalance(id) { return this.profile ? clearedBalance(this.profile, id) : 0; },
-    accountGroupsView() { return this.profile ? accountsByGroup(this.profile) : []; },
+    accountGroupsView() {
+      /* Reactivity tripwire — every list mutation (add/remove/move
+         group, add/remove/move account) calls _bumpLists() which
+         increments _listVersion. Reading it here makes Alpine
+         re-evaluate this getter on every change, so the sidebar
+         + /app/accounts/ refresh without a manual page reload.
+         Mirrors the categoryGroupsView() pattern. */
+      void this._listVersion;
+      return this.profile ? accountsByGroup(this.profile) : [];
+    },
     onBudgetTotal() { return this.profile ? onBudgetTotal(this.profile) : 0; },
     trackingAssetTotal() { return this.profile ? trackingAssetTotal(this.profile) : 0; },
     trackingLiabilityTotal() { return this.profile ? trackingLiabilityTotal(this.profile) : 0; },
@@ -839,8 +869,48 @@ export function createStore() {
       if (!this.profile) return false;
       this._recordUndo("Delete transaction");
       var ok = deleteTxnImpl(this.profile, id);
-      if (ok) this._save();
+      if (ok) {
+        this._bumpLists();
+        this._save();
+        this.pushToast("Transaction moved to Trash. Restore from /app/trash/ within 30 days.");
+      }
       return ok;
+    },
+
+    /* ---- Trash management ---- */
+    listTrashedTransactions() {
+      void this._listVersion;
+      if (!this.profile || !this.profile.trash) return [];
+      return this.profile.trash.slice().sort(function (a, b) {
+        return (b.deletedAt || "").localeCompare(a.deletedAt || "");
+      });
+    },
+    restoreTransactionFromTrash(id) {
+      if (!this.profile) return null;
+      this._recordUndo("Restore transaction");
+      var rec = restoreTxnFromTrash(this.profile, id);
+      this._bumpLists();
+      this._save();
+      if (rec) this.pushToast("Restored.");
+      return rec;
+    },
+    purgeTransactionFromTrash(id) {
+      if (!this.profile) return false;
+      this._recordUndo("Purge transaction");
+      var ok = purgeTxnFromTrash(this.profile, id);
+      this._bumpLists();
+      this._save();
+      if (ok) this.pushToast("Purged.");
+      return ok;
+    },
+    emptyTransactionTrash() {
+      if (!this.profile) return 0;
+      this._recordUndo("Empty transaction trash");
+      var n = emptyTrashImpl(this.profile);
+      this._bumpLists();
+      this._save();
+      if (n) this.pushToast("Emptied " + n + " trashed item" + (n === 1 ? "" : "s") + ".");
+      return n;
     },
 
     setSplits(id, splits) {
@@ -1004,6 +1074,24 @@ export function createStore() {
       this._bumpLists();
       this._save();
       return s;
+    },
+
+    /* Toggle a template's paused flag. Paused templates stay in the
+       list (history, frequency, nextDate preserved) but skip the due
+       queue + upcoming bills + calendar projection until resumed. */
+    setSchedulePaused(id, paused) {
+      if (!this.profile) return null;
+      var idx = this.profile.scheduled.findIndex(function (x) { return x.id === id; });
+      if (idx < 0) return null;
+      this._recordUndo(paused ? "Pause recurring" : "Resume recurring");
+      /* Replace the record so Alpine sees a fresh reference. */
+      var copy = this.profile.scheduled.slice();
+      copy[idx] = Object.assign({}, copy[idx], { paused: !!paused });
+      this.profile.scheduled = copy;
+      this._bumpLists();
+      this._save();
+      this.pushToast(paused ? "Template paused." : "Template resumed.");
+      return copy[idx];
     },
 
     /* ---- Reconciliation ---- */

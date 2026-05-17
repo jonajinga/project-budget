@@ -1,0 +1,262 @@
+---
+layout: layouts/app.njk
+title: "Trash"
+description: "Soft-deleted transactions and profiles live here before they're permanently purged. Restore or empty in a click."
+permalink: /app/trash/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="trashView()" x-init="refresh()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Trash</p>
+      <h1 class="app-page__title">Trash</h1>
+      <p class="app-page__lead">
+        Soft-deleted transactions and profiles wait here before they're purged. Transactions keep for 30 days, profiles for 7. Reconciled transactions can't be deleted in the first place.
+      </p>
+    </div>
+    <div class="cluster">
+      <button class="btn btn--ghost btn--sm" type="button" @click="refresh()">Refresh</button>
+      <button class="btn btn--danger btn--sm" type="button" @click="emptyAll()" :disabled="!items.length">Empty transactions trash</button>
+    </div>
+  </header>
+
+  <h2 style="margin: var(--space-md) 0 var(--space-sm); font-family: var(--font-display);">Transactions</h2>
+
+  <section class="rec-summary" x-show="items.length" x-cloak aria-label="Trash summary">
+    <div class="rec-summary__tile rec-summary__tile--accent">
+      <span class="rec-summary__label">Items</span>
+      <span class="rec-summary__value" x-text="items.length"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--outflow">
+      <span class="rec-summary__label">Expiring this week</span>
+      <span class="rec-summary__value" x-text="expiringSoon"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--net">
+      <span class="rec-summary__label">Net amount</span>
+      <span class="rec-summary__value"
+            :class="totalAmount < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="formatCents(totalAmount)"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--inflow">
+      <span class="rec-summary__label">Oldest</span>
+      <span class="rec-summary__value" style="font-size: var(--fs-base); line-height: 1.3;" x-text="oldestLabel"></span>
+    </div>
+  </section>
+
+  <p x-show="!items.length" x-cloak style="color: var(--fg-muted); margin-top: var(--space-md);">
+    Trash is empty. Anything you delete from the register lands here for 30 days before it's purged automatically.
+  </p>
+
+  <table class="table" x-show="items.length" x-cloak>
+    <thead>
+      <tr>
+        <th>Deleted</th>
+        <th>Date</th>
+        <th>Payee</th>
+        <th>Account</th>
+        <th>Category</th>
+        <th class="num">Amount</th>
+        <th class="num">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <template x-for="item in items" :key="item.id">
+        <tr>
+          <td x-text="formatRelative(item.deletedAt)"></td>
+          <td x-text="item.date"></td>
+          <td>
+            <span x-text="$store.budget.payeeName(item.payeeId) || (item.payeeName || '—')"></span>
+            <span x-show="item.transferTxnId" x-cloak class="badge"
+                  style="margin-left: var(--space-2xs);"
+                  data-tip="Restoring will bring the paired transfer leg back too.">transfer</span>
+          </td>
+          <td x-text="$store.budget.findAccount(item.accountId)?.name || '—'"></td>
+          <td x-text="$store.budget.categoryName(item.categoryId) || 'Uncategorized'"></td>
+          <td class="num" :class="item.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(item.amount)"></td>
+          <td class="num">
+            <div class="cluster" style="justify-content: flex-end;">
+              <button class="btn btn--ghost btn--sm" type="button" @click="restore(item.id)">Restore</button>
+              <button class="btn btn--danger btn--sm" type="button" @click="purge(item.id)">Purge</button>
+            </div>
+          </td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+
+  <h2 style="margin: var(--space-xl) 0 var(--space-sm); font-family: var(--font-display);">Profiles</h2>
+
+  <p x-show="!trashedProfiles().length" x-cloak style="color: var(--fg-muted);">
+    No profiles in trash. Deleting a profile from <a href="/app/profiles/">/app/profiles/</a> moves it here for 7 days.
+  </p>
+
+  <table class="table" x-show="trashedProfiles().length" x-cloak>
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col" class="num">Accounts</th>
+        <th scope="col" class="num">Transactions</th>
+        <th scope="col">Deleted</th>
+        <th scope="col" class="num">Days left</th>
+        <th scope="col" class="num">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <template x-for="t in trashedProfiles()" :key="t.id">
+        <tr>
+          <td x-text="t.name"></td>
+          <td class="num" x-text="t.accounts"></td>
+          <td class="num" x-text="t.transactions"></td>
+          <td x-text="t.deletedAt ? new Date(t.deletedAt).toLocaleString() : ''"></td>
+          <td class="num" x-text="t.daysLeft"></td>
+          <td class="num">
+            <div class="cluster" style="justify-content: flex-end;">
+              <button class="btn btn--secondary btn--sm" type="button"
+                      @click="$store.budget.restoreTrashedProfile(t.id)"
+                      data-tip="Restore this profile to the active list.">Restore</button>
+              <button class="btn btn--danger btn--sm" type="button"
+                      @click="purgeId = t.id; purgeName = t.name; purgeValue = ''"
+                      data-tip="Permanently delete. Cannot be undone.">Delete forever</button>
+            </div>
+          </td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+
+  <section class="card prose" style="margin-top: var(--space-lg);">
+    <h2>How retention works</h2>
+    <h3>Transactions</h3>
+    <ul>
+      <li><strong>30 days</strong> from the deletion timestamp.</li>
+      <li>Every profile load scans the bin and purges anything older than 30 days automatically.</li>
+      <li><strong>Empty trash</strong> purges every transaction right now, regardless of age — there's no further undo.</li>
+      <li>Restoring puts the transaction back exactly where it was (account, category, payee, memo, cleared flag). Transfer pairs restore together so both legs come back in sync.</li>
+      <li>Reconciled transactions can't be deleted in the first place — they never reach trash.</li>
+    </ul>
+    <h3>Profiles</h3>
+    <ul>
+      <li><strong>7 days</strong> from the deletion timestamp.</li>
+      <li>Restoring brings the entire profile back — every account, category, transaction, goal, and recurring template.</li>
+      <li><strong>Delete forever</strong> requires typing the profile name to confirm, then the data is unrecoverable from this browser.</li>
+    </ul>
+  </section>
+
+  {# Permanently-delete profile confirm modal — moved here from
+     /app/settings/ so all trash management lives on one page. #}
+  <div class="modal-backdrop" x-show="purgeId" x-cloak @keydown.escape.window="purgeId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="purgeId = null">
+      <button class="modal__close" type="button" @click="purgeId = null" aria-label="Close">&times;</button>
+      <h3 class="modal__title">Delete profile forever</h3>
+      <p style="color: var(--fg-muted);">
+        This permanently deletes <strong x-text="purgeName"></strong> and all of its history. It cannot be undone or restored. Export first if you might need it later.
+      </p>
+      <p style="margin-top: var(--space-sm);">
+        To confirm, type the profile name exactly: <strong x-text="purgeName"></strong>
+      </p>
+      <form @submit.prevent="doPurgeProfile()">
+        <div class="field" style="margin-top: var(--space-sm);">
+          <input class="input" type="text" x-model="purgeValue" required autofocus>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="submit">Delete forever</button>
+          <button class="btn btn--ghost" type="button" @click="purgeId = null">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function trashView() {
+  return {
+    items: [],
+
+    /* Profile trash purge confirm modal state — was previously on
+       /app/settings/, now lives here so all trash management is on
+       one page. */
+    purgeId: null,
+    purgeName: "",
+    purgeValue: "",
+
+    refresh() {
+      this.items = this.$store.budget.listTrashedTransactions();
+    },
+
+    trashedProfiles() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.listTrashedProfiles ? this.$store.budget.listTrashedProfiles() : [];
+    },
+
+    doPurgeProfile() {
+      if (!this.purgeId) return;
+      if (this.$store.budget.permanentlyDeleteTrashed(this.purgeId, this.purgeValue)) {
+        this.purgeId = null;
+        this.purgeName = "";
+        this.purgeValue = "";
+      }
+    },
+
+    get totalAmount() {
+      return this.items.reduce(function (s, it) { return s + (it.amount || 0); }, 0);
+    },
+    get expiringSoon() {
+      var now = Date.now();
+      var weekMs = 7 * 24 * 60 * 60 * 1000;
+      var thirtyMs = 30 * 24 * 60 * 60 * 1000;
+      return this.items.filter(function (it) {
+        var ageMs = now - new Date(it.deletedAt).getTime();
+        return (thirtyMs - ageMs) < weekMs;
+      }).length;
+    },
+    get oldestLabel() {
+      if (!this.items.length) return "—";
+      var oldest = this.items[this.items.length - 1];
+      return this.formatRelative(oldest.deletedAt);
+    },
+
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+    formatRelative(iso) {
+      if (!iso) return "—";
+      var days = (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24);
+      if (days < 1)  return "Today";
+      if (days < 2)  return "Yesterday";
+      if (days < 14) return Math.floor(days) + " days ago";
+      return new Date(iso).toLocaleDateString();
+    },
+
+    restore(id) {
+      this.$store.budget.restoreTransactionFromTrash(id);
+      this.refresh();
+    },
+    purge(id) {
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Purge this item?",
+        message: "Removes it from Trash permanently. There's no further undo.",
+        confirmLabel: "Purge",
+        danger: true,
+      }).then(function (ok) {
+        if (!ok) return;
+        self.$store.budget.purgeTransactionFromTrash(id);
+        self.refresh();
+      });
+    },
+    emptyAll() {
+      var self = this;
+      window.PBDialog.confirm({
+        title: "Empty trash?",
+        message: "All " + this.items.length + " item" + (this.items.length === 1 ? "" : "s") + " will be permanently deleted. This can't be undone.",
+        confirmLabel: "Empty trash",
+        danger: true,
+      }).then(function (ok) {
+        if (!ok) return;
+        self.$store.budget.emptyTransactionTrash();
+        self.refresh();
+      });
+    },
+  };
+}
+</script>

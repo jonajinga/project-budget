@@ -27,6 +27,11 @@ export function newProfile(name) {
     categories: [],
     payees: [],
     transactions: [],
+    /* Soft-deleted transactions wait in trash with a deletedAt
+       timestamp. They're invisible to every consumer (register,
+       reports, running balance, etc.) and auto-purge after 30 days.
+       Restoring drops the deletedAt and re-inserts into transactions. */
+    trash: [],
     scheduled: [],
     budgets: {},
     goals: [],
@@ -50,6 +55,13 @@ export function newAccount(opts) {
     openingBalance: opts.openingBalance || 0,
     closedAt: null,
     sortIndex: opts.sortIndex || 0,
+    /* Account is tracked + visible in the sidebar but its balance is
+       excluded from netWorth() / trackingAssetTotal() /
+       trackingLiabilityTotal(). Use for kids' 529s, escrow accounts,
+       employer-held RSUs the user can't liquidate — anything that
+       shouldn't roll up into "your" net worth. Defaults false; older
+       records without the field are treated as included. */
+    excludeFromNetWorth: !!opts.excludeFromNetWorth,
   };
 }
 
@@ -100,6 +112,12 @@ export function newScheduledTxn(opts) {
     customUnit: opts.customUnit || null,
     nextDate: opts.nextDate,
     lastRun: null,
+    /* Paused templates stay in the list but are skipped by the due-
+       queue, upcoming-bills helper, and calendar projection until
+       toggled active again. Lets users suspend a subscription (gym,
+       service on hold) without deleting + re-creating. Older records
+       without the field are treated as active. */
+    paused: !!opts.paused,
   };
 }
 

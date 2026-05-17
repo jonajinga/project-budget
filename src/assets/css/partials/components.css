@@ -220,6 +220,22 @@
    (#8e6620) clears 4.5:1 on the darker tint. */
 .badge--warn { background: rgba(168, 107, 20, 0.20); color: var(--warn); }
 .badge--danger { background: rgba(168, 52, 31, 0.20); color: var(--danger); }
+.badge--paused {
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  margin-left: var(--space-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.45rem;
+}
+
+/* Paused recurring row — dim everything so the user reads it as
+   "inactive but still here" instead of "missing or broken." */
+.rec-row--paused td { opacity: 0.55; }
+.rec-row--paused .badge--paused { opacity: 1; }
+.rec-card--paused .rec-card__amount,
+.rec-card--paused .rec-card__payee { opacity: 0.55; }
 
 /* Theme toggle */
 .theme-toggle {
@@ -235,6 +251,126 @@
 .theme-toggle__moon { display: block; }
 [data-theme="dark"] .theme-toggle__sun { display: block; }
 [data-theme="dark"] .theme-toggle__moon { display: none; }
+
+/* Theme picker — split button: quick-toggle on the left (sun/moon),
+   chevron on the right to open the full dropdown. */
+.theme-picker { position: relative; }
+.theme-picker__btn-group {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--radius-input);
+  overflow: hidden;
+}
+.theme-picker__quick,
+.theme-picker__open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.theme-picker__quick { width: 44px; height: 44px; }
+.theme-picker__open { width: 24px; height: 44px; border-left: 1px solid var(--border-soft); color: var(--fg-muted); }
+.theme-picker__quick:hover,
+.theme-picker__open:hover { background: var(--bg-alt); color: var(--accent); }
+.theme-picker__quick:focus-visible,
+.theme-picker__open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Dropdown menu — anchored to the picker on the right side of the
+   header. Width sized for the longest label ("Solarized Light",
+   "GitHub Light (alias)") so none of the entries truncate. Scrollbar
+   is hidden visually but wheel / touch scrolling still works on
+   smaller viewports. */
+.theme-picker__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 320px;
+  max-width: 380px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.15));
+  padding: var(--space-2xs);
+  max-height: 70vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.theme-picker__menu::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.theme-picker__group-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-subtle);
+  margin: var(--space-2xs) var(--space-sm) var(--space-3xs);
+}
+.theme-picker__list { list-style: none; padding: 0; margin: 0 0 var(--space-2xs); display: flex; flex-direction: column; }
+.theme-picker__item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: var(--space-2xs);
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-input);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.theme-picker__item:hover { background: var(--bg-alt); color: var(--accent); }
+.theme-picker__item.is-active { background: color-mix(in oklab, var(--accent) 10%, var(--bg-elevated)); color: var(--accent); font-weight: 600; }
+.theme-picker__item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Each preview swatch shows a 2-band diagonal of bg vs accent so the
+   user can spot the palette before clicking. We attach data-theme to
+   the swatch directly so the CSS-variable lookup picks the right
+   palette without touching the rest of the document. */
+.theme-picker__swatch {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+}
+.theme-picker__swatch[data-theme-preview] {
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg) 50%, var(--accent) 50%, var(--accent) 100%);
+}
+.theme-picker__swatch[data-theme-preview="light"]            { background: linear-gradient(135deg, #ffffff 0%, #ffffff 50%, #0969da 50%, #0969da 100%); }
+.theme-picker__swatch[data-theme-preview="dark"]             { background: linear-gradient(135deg, #0d1117 0%, #0d1117 50%, #58a6ff 50%, #58a6ff 100%); }
+.theme-picker__swatch[data-theme-preview="paper"]            { background: linear-gradient(135deg, #f7f2e7 0%, #f7f2e7 50%, #c0392b 50%, #c0392b 100%); }
+.theme-picker__swatch[data-theme-preview="ink"]              { background: linear-gradient(135deg, #14120f 0%, #14120f 50%, #e0a458 50%, #e0a458 100%); }
+.theme-picker__swatch[data-theme-preview="solarized-light"]  { background: linear-gradient(135deg, #fdf6e3 0%, #fdf6e3 50%, #268bd2 50%, #268bd2 100%); }
+.theme-picker__swatch[data-theme-preview="solarized-dark"]   { background: linear-gradient(135deg, #002b36 0%, #002b36 50%, #2aa198 50%, #2aa198 100%); }
+.theme-picker__swatch[data-theme-preview="github-light"]     { background: linear-gradient(135deg, #ffffff 0%, #ffffff 50%, #0969da 50%, #0969da 100%); }
+.theme-picker__swatch[data-theme-preview="github-dark"]      { background: linear-gradient(135deg, #0d1117 0%, #0d1117 50%, #58a6ff 50%, #58a6ff 100%); }
+.theme-picker__swatch[data-theme-preview="dracula"]          { background: linear-gradient(135deg, #282a36 0%, #282a36 50%, #bd93f9 50%, #bd93f9 100%); }
+.theme-picker__swatch[data-theme-preview="nord"]             { background: linear-gradient(135deg, #2e3440 0%, #2e3440 50%, #88c0d0 50%, #88c0d0 100%); }
+.theme-picker__swatch[data-theme-preview="gruvbox-dark"]     { background: linear-gradient(135deg, #282828 0%, #282828 50%, #fabd2f 50%, #fabd2f 100%); }
+.theme-picker__swatch[data-theme-preview="one-dark"]         { background: linear-gradient(135deg, #282c34 0%, #282c34 50%, #61afef 50%, #61afef 100%); }
+.theme-picker__swatch[data-theme-preview="tokyo-night"]      { background: linear-gradient(135deg, #1a1b26 0%, #1a1b26 50%, #7aa2f7 50%, #7aa2f7 100%); }
+.theme-picker__swatch[data-theme-preview="catppuccin"]       { background: linear-gradient(135deg, #1e1e2e 0%, #1e1e2e 50%, #cba6f7 50%, #cba6f7 100%); }
+.theme-picker__swatch[data-theme-preview="rose-pine"]        { background: linear-gradient(135deg, #191724 0%, #191724 50%, #c4a7e7 50%, #c4a7e7 100%); }
+
+.theme-picker__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.theme-picker__check { color: var(--accent); font-weight: 700; }
+.theme-picker__footer {
+  margin: var(--space-2xs) 0 0;
+  padding: var(--space-2xs) var(--space-sm);
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--fs-xs);
+  text-align: right;
+}
+.theme-picker__footer a { color: var(--fg-muted); text-decoration: none; }
+.theme-picker__footer a:hover { color: var(--accent); }
 
 /* Toast — stacked bottom-right with the FAB cleared (FAB sits at the
    absolute bottom-right and is ~56px tall; lift the stack above it). */

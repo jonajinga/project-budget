@@ -20,18 +20,83 @@ export function editTxn(profile, id, patch) {
   return t;
 }
 
+/* Soft-delete: moves the transaction to profile.trash with a
+   deletedAt timestamp. Stays recoverable for 30 days. Transfer pairs
+   move together so a restored transfer keeps both legs in sync.
+   Reconciled transactions can't be deleted (same rule as before). */
 export function deleteTxn(profile, id) {
+  if (!profile.trash) profile.trash = [];
   var t = profile.transactions.find(function (x) { return x.id === id; });
   if (!t || t.reconciled) return false;
-  /* If it's a transfer, drop the paired entry too. */
-  if (t.transferTxnId) {
-    profile.transactions = profile.transactions.filter(function (x) {
-      return x.id !== id && x.id !== t.transferTxnId;
-    });
-  } else {
-    profile.transactions = profile.transactions.filter(function (x) { return x.id !== id; });
-  }
+  var nowISO = new Date().toISOString();
+  var idsToTrash = [id];
+  if (t.transferTxnId) idsToTrash.push(t.transferTxnId);
+  /* Snapshot the records, mark deletedAt, push to trash. */
+  idsToTrash.forEach(function (txnId) {
+    var rec = profile.transactions.find(function (x) { return x.id === txnId; });
+    if (rec) profile.trash.push(Object.assign({}, rec, { deletedAt: nowISO }));
+  });
+  profile.transactions = profile.transactions.filter(function (x) {
+    return idsToTrash.indexOf(x.id) === -1;
+  });
   return true;
+}
+
+/* Restore a soft-deleted transaction back to the active list. Brings
+   its transfer pair back with it if both legs are in trash. Returns
+   the restored record (the first one, when restoring a transfer pair). */
+export function restoreTxnFromTrash(profile, id) {
+  if (!profile.trash || !profile.trash.length) return null;
+  var entry = profile.trash.find(function (x) { return x.id === id; });
+  if (!entry) return null;
+  var idsToRestore = [id];
+  if (entry.transferTxnId && profile.trash.some(function (x) { return x.id === entry.transferTxnId; })) {
+    idsToRestore.push(entry.transferTxnId);
+  }
+  var restored = null;
+  idsToRestore.forEach(function (txnId) {
+    var rec = profile.trash.find(function (x) { return x.id === txnId; });
+    if (!rec) return;
+    var clone = Object.assign({}, rec);
+    delete clone.deletedAt;
+    profile.transactions.push(clone);
+    if (!restored) restored = clone;
+  });
+  profile.trash = profile.trash.filter(function (x) {
+    return idsToRestore.indexOf(x.id) === -1;
+  });
+  return restored;
+}
+
+/* Permanently remove a single trash entry. Does NOT touch its
+   transfer pair — purging one leg leaves the other in trash for
+   independent handling. */
+export function purgeTxnFromTrash(profile, id) {
+  if (!profile.trash || !profile.trash.length) return false;
+  var before = profile.trash.length;
+  profile.trash = profile.trash.filter(function (x) { return x.id !== id; });
+  return profile.trash.length < before;
+}
+
+/* Empty every trash entry — irreversible. */
+export function emptyTrash(profile) {
+  if (!profile.trash) return 0;
+  var n = profile.trash.length;
+  profile.trash = [];
+  return n;
+}
+
+/* Drop trash entries older than `days` days. Returns how many were
+   dropped. Called on every store load so the bin stays fresh. */
+export function purgeExpiredTrash(profile, days) {
+  if (!profile.trash || !profile.trash.length) return 0;
+  var cutoff = Date.now() - ((days || 30) * 24 * 60 * 60 * 1000);
+  var before = profile.trash.length;
+  profile.trash = profile.trash.filter(function (x) {
+    var t = x.deletedAt ? new Date(x.deletedAt).getTime() : Infinity;
+    return t >= cutoff;
+  });
+  return before - profile.trash.length;
 }
 
 /* Convert a transaction to a split or update splits. `splits` is an array

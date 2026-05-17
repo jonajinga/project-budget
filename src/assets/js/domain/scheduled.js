@@ -99,10 +99,14 @@ export function updateSchedule(profile, id, patch) {
 }
 
 /* Returns the list of due-today (or overdue) scheduled transactions for
-   the user to approve. Does NOT post anything. */
+   the user to approve. Does NOT post anything. Paused templates are
+   excluded — they keep their nextDate but don't show up in the queue. */
 export function dueTransactions(profile, today) {
   var todayISO = today || isoDate(new Date());
-  return profile.scheduled.filter(function (s) { return s.nextDate <= todayISO; });
+  return profile.scheduled.filter(function (s) {
+    if (s.paused) return false;
+    return s.nextDate <= todayISO;
+  });
 }
 
 /* Approve a scheduled txn: post a real transaction from its template,
@@ -134,6 +138,10 @@ export function postScheduled(profile, scheduledId, overrides) {
 export function occurrencesIn(sched, startISO, endISO) {
   var out = [];
   if (!sched || !sched.nextDate) return out;
+  /* Paused templates produce no projected occurrences — calendar dots
+     and "upcoming bills" widgets stay clean while the template is
+     suspended. */
+  if (sched.paused) return out;
   var cur = sched.nextDate.slice(0, 10);
   var guard = 400;
   while (cur && cur <= endISO && guard-- > 0) {

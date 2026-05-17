@@ -1,5 +1,29 @@
 /* Contact page + thank-you page. The /contact/ page uses a two-column
-   layout on tablet+ (bio sidebar | form card) and stacks on mobile. */
+   layout on tablet+ (bio sidebar | form card) and stacks on mobile.
+   It now ships under the page.njk layout (breadcrumbs + TOC sidebar
+   + container--wide), so the grid lives inside .doc-content__prose.
+   The overrides below stop the .prose h2 rules (border-top, display
+   font, oversized type, scroll margin) from leaking into the bio
+   name + form heading, which have their own card-specific chrome. */
+
+.doc-content__prose > .contact-page,
+.doc-content__prose .contact-page__grid { margin-top: 0; }
+.doc-content__prose .contact-page__bio-name,
+.doc-content__prose .contact-page__form-heading,
+.doc-content__prose .contact-page__bio h2,
+.doc-content__prose .contact-page__form-card h2 {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  scroll-margin-top: 0;
+}
+/* Lift the prose 70ch width cap when the wrapper contains the
+   contact grid so the 2-col layout fills the container--wide shell
+   instead of squishing into a 720-pixel column. :has is supported
+   in every browser we target. */
+.doc-content__prose:has(.contact-page) { max-width: none; }
+.doc-content__prose .contact-page,
+.doc-content__prose .contact-page__grid { max-width: none; }
 
 .contact-page__grid {
   display: grid;
@@ -272,6 +296,36 @@
   flex-shrink: 0;
   width: 18px;
   height: 18px;
+}
+
+/* Account-edit modal "exclude from net worth" toggle. Mirrors the
+   review-consent treatment so the affordance reads consistently
+   across the app. */
+.acct-exclude {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--bg-alt);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--fg);
+  cursor: pointer;
+}
+.acct-exclude input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+.acct-exclude__hint {
+  display: block;
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  margin-top: 2px;
+  line-height: 1.5;
 }
 
 /* ---- Thank-you page --------------------------------------------- */

@@ -159,10 +159,16 @@ eleventyExcludeFromCollections: true
                     data-tip="Edit this template.">Edit</button>
             <button class="btn btn--secondary btn--sm" type="button"
                     @click="postNow(s.id)"
+                    x-show="!s.paused" x-cloak
                     data-tip="Post now and advance the next date.">Post now</button>
             <button class="btn btn--ghost btn--sm" type="button"
                     @click="$store.budget.skipScheduled(s.id)"
+                    x-show="!s.paused" x-cloak
                     data-tip="Skip this occurrence; advance to the next.">Skip</button>
+            <button class="btn btn--ghost btn--sm" type="button"
+                    @click="$store.budget.setSchedulePaused(s.id, !s.paused)"
+                    :data-tip="s.paused ? 'Resume this template so it queues again.' : 'Pause indefinitely. The template stays in the list but stops queuing until resumed.'"
+                    x-text="s.paused ? 'Resume' : 'Pause'"></button>
             <button class="btn btn--danger btn--sm" type="button"
                     @click="PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })"
                     data-tip="Permanently remove this template.">Remove</button>
@@ -185,8 +191,12 @@ eleventyExcludeFromCollections: true
       </thead>
       <tbody>
         <template x-for="s in filtered()" :key="s.id">
-          <tr :id="'edit-' + s.id">
-            <td style="white-space: nowrap;" x-text="formatNextDate(s.nextDate)"></td>
+          <tr :id="'edit-' + s.id" :class="s.paused ? 'rec-row--paused' : ''">
+            <td style="white-space: nowrap;">
+              <span x-text="formatNextDate(s.nextDate)"></span>
+              <span x-show="s.paused" x-cloak class="badge badge--paused"
+                    data-tip="Paused — won't queue until resumed.">Paused</span>
+            </td>
             <td x-text="$store.budget.frequencyLabel(s)"></td>
             <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
             <td>
@@ -212,6 +222,7 @@ eleventyExcludeFromCollections: true
                 </button>
                 <button class="btn btn--icon" type="button"
                         @click="postNow(s.id)"
+                        x-show="!s.paused" x-cloak
                         aria-label="Post now"
                         data-tip="Post this occurrence as a real transaction now and advance the next date.">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -220,11 +231,25 @@ eleventyExcludeFromCollections: true
                 </button>
                 <button class="btn btn--icon" type="button"
                         @click="$store.budget.skipScheduled(s.id)"
+                        x-show="!s.paused" x-cloak
                         aria-label="Skip next occurrence"
                         data-tip="Advance the next date without posting.">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polygon points="3 3 10 8 3 13 3 3"></polygon>
                     <line x1="12" y1="3" x2="12" y2="13"></line>
+                  </svg>
+                </button>
+                <button class="btn btn--icon" type="button"
+                        @click="$store.budget.setSchedulePaused(s.id, !s.paused)"
+                        :aria-label="s.paused ? 'Resume template' : 'Pause template'"
+                        :data-tip="s.paused ? 'Resume this template so it queues again.' : 'Pause indefinitely. Stops queuing until resumed; nothing is deleted.'">
+                  {# Two-bars pause / right-triangle play, swapped by x-show. #}
+                  <svg x-show="!s.paused" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="5" y1="3" x2="5" y2="13"></line>
+                    <line x1="11" y1="3" x2="11" y2="13"></line>
+                  </svg>
+                  <svg x-show="s.paused" x-cloak width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="4 3 13 8 4 13 4 3"></polygon>
                   </svg>
                 </button>
                 <button class="btn btn--icon" type="button"

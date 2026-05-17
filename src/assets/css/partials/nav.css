@@ -598,25 +598,25 @@ button.search-result:focus-visible {
   .app-sidebar-backdrop { display: none !important; }
 }
 
-/* Make the accounts panel grab all remaining vertical space between
-   the nav block above and the footer below, and scroll internally
-   when its list overflows. Without this, the sidebar element is full
-   height but the accounts content only takes its intrinsic height —
-   leaving everything below the last visible row empty. */
-.app-sidebar__accounts {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  /* Hide the scrollbar but keep wheel/touch scrolling. */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.app-sidebar__accounts::-webkit-scrollbar { display: none; }
+/* The accounts panel now lives inside the nav as a section block
+   (positioned right after Daily) instead of as a separate region
+   between the nav and the footer. The old `flex: 1 1 auto + scroll`
+   rules made it own the remaining sidebar height; with the new
+   placement the whole sidebar scrolls together, so the panel just
+   takes its natural height. */
+.app-sidebar__accounts { min-width: 0; }
 
 /* Floating sidebar toggle was replaced by the header hamburger. */
 .app-sidebar-toggle { display: none; }
 
 .app-nav__list { display: flex; flex-direction: column; gap: 1px; }
+
+/* The x-for that renders nav sections also injects the accounts
+   panel after the Daily section. Each iteration needs a single root
+   element, so we wrap the section + optional accounts block in a
+   `display: contents` div that vanishes from the layout — section
+   blocks remain direct flex children of <nav>. */
+.app-nav__group-wrap { display: contents; }
 
 /* Collapsible section group — a button header + sub-list. Toggling
    the header flips the chevron + hides the sub-list. */
@@ -1042,37 +1042,61 @@ button.search-result:focus-visible {
    needed. */
 .app-sidebar__accounts { container-type: inline-size; container-name: acctpanel; }
 
-.acct-group__name {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--fg-muted);
-  margin-bottom: var(--space-3xs);
+/* Tighter rhythm than the old standalone-panel rules. Each group
+   header reads as a small uppercase label with a chevron + name on
+   the left and an optional compact total ($12.5k) on the right when
+   the group is collapsed. */
+.acct-group + .acct-group {
+  margin-top: var(--space-2xs);
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--border-soft);
 }
+/* Mirrors .app-nav__section-head exactly so the inner group headers
+   (DAILY, RESERVES AND DEBTS) read at the same weight + size +
+   padding + letter-spacing as the outer ACCOUNTS section header
+   directly above them. */
 .acct-group__head {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
   width: 100%;
-  padding: 0.15rem 0;
+  padding: 0.35rem 0.65rem;
   background: none;
   border: 0;
-  color: var(--fg-muted);
-  font-size: var(--fs-xs);
-  font-weight: 600;
+  color: var(--fg-subtle);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   cursor: pointer;
   min-height: auto;
   text-align: left;
   line-height: 1.2;
+  border-radius: var(--radius-input);
+  transition: background var(--t-fast), color var(--t-fast);
 }
-.acct-group__head:not(:disabled):hover { color: var(--accent); }
-.acct-group__head > span:not(.group-toggle__chevron) {
+.acct-group__head:not(:disabled):hover { color: var(--fg); background: var(--bg-alt); }
+.acct-group__name {
   flex: 1;
   min-width: 0;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.acct-group__list { display: flex; flex-direction: column; gap: 0; }
+.acct-group__total {
+  flex-shrink: 0;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--fg);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.acct-group__total.is-negative { color: var(--danger); }
+.acct-group__list { display: flex; flex-direction: column; gap: 0; margin-top: var(--space-3xs); }
 
 .acct-link {
   display: flex;
@@ -1122,10 +1146,14 @@ button.search-result:focus-visible {
     line-height: 1.2;
   }
 }
+/* Totals row at the bottom of the accounts panel — bold tabular
+   numbers, slightly heavier separator above so the totals visually
+   detach from the per-group rows. */
 .acct-totals {
-  padding-top: var(--space-3xs);
-  border-top: 1px solid var(--border-soft);
-  line-height: 1.3;
+  margin-top: var(--space-2xs);
+  padding: var(--space-2xs) 0.5rem 0;
+  border-top: 1px solid var(--border-strong);
+  line-height: 1.4;
 }
 .acct-totals p {
   display: flex;
@@ -1133,5 +1161,11 @@ button.search-result:focus-visible {
   font-size: var(--fs-xs);
   color: var(--fg-muted);
   margin: 0;
+  padding: 0.1rem 0;
 }
-.acct-totals p span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--fg); }
+.acct-totals p:last-child { color: var(--fg); font-weight: 700; }
+.acct-totals p span:last-child {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--fg);
+}

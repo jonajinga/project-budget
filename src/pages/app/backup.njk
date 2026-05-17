@@ -23,6 +23,36 @@ eleventyExcludeFromCollections: true
     <p style="color: var(--fg-muted); margin: var(--space-2xs) 0 0;" x-text="recommendation()"></p>
   </section>
 
+  {# Primary action card — two clear paths (all-profile bundle vs
+     active profile only). Both buttons set lastBackupAt so the
+     "last backup" pill above stays accurate. #}
+  <section class="card" style="margin-top: var(--space-md);">
+    <h2 class="card__title" style="margin-top: 0;">Take a backup</h2>
+    <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
+      Both options download a plain JSON file. Save it somewhere you trust — a cloud folder, an external drive, or both.
+    </p>
+    <div class="backup-actions">
+      <div class="backup-action">
+        <h3 class="backup-action__title">Every profile in this browser</h3>
+        <p class="backup-action__body">Recommended — one bundle with all profiles, all transactions, and all settings. Restore one or all from <a href="/app/import/">/app/import/</a>.</p>
+        <button class="btn btn--primary" type="button"
+                @click="backupAll()" :disabled="!hasProfiles"
+                data-tip="Bundles every profile in this browser into a single JSON file."
+                x-text="hasProfiles ? ('Download bundle (' + profileCount + ' profile' + (profileCount === 1 ? '' : 's') + ')') : 'No profiles to back up'"></button>
+      </div>
+      <div class="backup-action">
+        <h3 class="backup-action__title">Active profile only</h3>
+        <p class="backup-action__body">A smaller file containing just the currently-open profile. Useful when you want to share or move one budget without exposing the others.</p>
+        <button class="btn btn--secondary" type="button"
+                @click="backupActive()" :disabled="!hasActiveProfile"
+                data-tip="Downloads only the profile currently open in the sidebar.">
+          <span x-text="hasActiveProfile ? ('Download ' + activeName) : 'No active profile'"></span>
+        </button>
+      </div>
+    </div>
+    <p x-show="lastDownloadMsg" x-cloak style="margin: var(--space-sm) 0 0; color: var(--ok); font-size: var(--fs-sm);" x-text="lastDownloadMsg"></p>
+  </section>
+
   <section class="card prose" style="margin-top: var(--space-md);">
     <h2>What gets backed up</h2>
     <ul>
@@ -54,12 +84,19 @@ function backupView() {
   return {
     lastBackup: null,
     hasProfiles: false,
+    hasActiveProfile: false,
+    profileCount: 0,
+    activeName: "",
+    lastDownloadMsg: "",
 
     refresh() {
       try { this.lastBackup = localStorage.getItem("projectbudget:lastBackupAt"); }
       catch (_e) { this.lastBackup = null; }
       var s = this.$store.budget;
       this.hasProfiles = !!(s && s.profiles && s.profiles.length);
+      this.hasActiveProfile = !!(s && s.profile);
+      this.profileCount = (s && s.profiles) ? s.profiles.length : 0;
+      this.activeName = (s && s.profile) ? s.profile.name : "";
     },
     daysSince() {
       if (!this.lastBackup) return Infinity;
@@ -89,8 +126,19 @@ function backupView() {
     },
     backupAll() {
       this.$store.budget.exportAllProfilesJSON();
+      this._markDownloaded("Bundle downloaded.");
+    },
+    backupActive() {
+      if (!this.$store.budget.profile) return;
+      this.$store.budget.exportActiveJSON();
+      this._markDownloaded("Active profile downloaded.");
+    },
+    _markDownloaded(msg) {
       try { localStorage.setItem("projectbudget:lastBackupAt", new Date().toISOString()); }
       catch (_e) {}
+      this.lastDownloadMsg = msg;
+      var self = this;
+      setTimeout(function () { self.lastDownloadMsg = ""; }, 3500);
       this.refresh();
     },
   };
@@ -101,4 +149,9 @@ function backupView() {
   .card--ok-rail     { border-left: 4px solid var(--ok) !important; }
   .card--warn-rail   { border-left: 4px solid var(--warn) !important; }
   .card--danger-rail { border-left: 4px solid var(--danger) !important; }
+  .backup-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+  @media (max-width: 899px) { .backup-actions { grid-template-columns: 1fr; } }
+  .backup-action { padding: var(--space-md); background: var(--bg-alt); border: 1px solid var(--border-soft); border-radius: var(--radius-input); }
+  .backup-action__title { margin: 0 0 var(--space-2xs); font-family: var(--font-display); font-size: var(--fs-lg); }
+  .backup-action__body { margin: 0 0 var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.5; }
 </style>

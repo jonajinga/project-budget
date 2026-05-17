@@ -74,18 +74,27 @@ export function onBudgetTotal(profile) {
 }
 
 export function trackingAssetTotal(profile) {
-  return totalByPredicate(profile, function (a) { return !a.closedAt && a.type === "tracking-asset"; });
+  return totalByPredicate(profile, function (a) {
+    return !a.closedAt && a.type === "tracking-asset" && !a.excludeFromNetWorth;
+  });
 }
 
 export function trackingLiabilityTotal(profile) {
-  return totalByPredicate(profile, function (a) { return !a.closedAt && a.type === "tracking-liability"; });
+  return totalByPredicate(profile, function (a) {
+    return !a.closedAt && a.type === "tracking-liability" && !a.excludeFromNetWorth;
+  });
 }
 
 export function netWorth(profile) {
   /* On-budget accounts already include credit cards (which carry a
      negative balance when in debt). Tracking liabilities are stored as
-     negative numbers by convention. */
-  return totalByPredicate(profile, function (a) { return !a.closedAt; });
+     negative numbers by convention. Accounts flagged
+     `excludeFromNetWorth` (kids' 529s, escrow accounts, employer-held
+     RSUs the user can't liquidate) are tracked + visible in the
+     sidebar but skipped here. */
+  return totalByPredicate(profile, function (a) {
+    return !a.closedAt && !a.excludeFromNetWorth;
+  });
 }
 
 export const ACCOUNT_TYPES = [

@@ -130,6 +130,9 @@ eleventyExcludeFromCollections: true
                 </td>
                 <td>
                   <a :href="'/app/register/?account=' + a.id" x-text="a.name"></a>
+                  <span x-show="a.excludeFromNetWorth" x-cloak class="badge"
+                        style="margin-left: var(--space-2xs);"
+                        data-tip="This account is tracked + visible but its balance is skipped when computing net worth.">excluded</span>
                 </td>
                 <td x-text="$store.budget.ACCOUNT_TYPES.find(t => t.value === a.type)?.label || a.type"></td>
                 <td class="num" :class="$store.budget.accountBalance(a.id) < 0 ? 'amount--outflow' : ''"
@@ -225,6 +228,15 @@ eleventyExcludeFromCollections: true
                    data-tip="Today's balance for the account. Calculator works here — '1234.56' or '500+700' both accepted.">
             <p class="field__hint">For credit cards and loans, enter the current balance you owe as a negative number (e.g. -1234.56).</p>
           </div>
+          <div class="field">
+            <label class="acct-exclude">
+              <input type="checkbox" x-model="newAccount.excludeFromNetWorth">
+              <span>
+                <strong>Exclude from net worth</strong>
+                <span class="acct-exclude__hint">Keep the balance visible in the sidebar but skip it when computing net worth. Common for kids' 529s, escrow accounts, employer-held RSUs you can't liquidate.</span>
+              </span>
+            </label>
+          </div>
         </div>
         <div class="form-actions">
           <button class="btn btn--primary" type="submit">Create account</button>
@@ -274,6 +286,15 @@ eleventyExcludeFromCollections: true
                    placeholder="0.00" inputmode="decimal"
                    data-tip="Calculator works here — type '8500.00' or '8000 + 500' and it evaluates on save. Changes shift every historical balance by the difference.">
             <p class="field__hint">Changing this shifts every historical and current balance by the difference. Take a manual snapshot first if you're not sure.</p>
+          </div>
+          <div class="field">
+            <label class="acct-exclude">
+              <input type="checkbox" x-model="editForm.excludeFromNetWorth">
+              <span>
+                <strong>Exclude from net worth</strong>
+                <span class="acct-exclude__hint">Keep the balance visible in the sidebar but skip it when computing net worth. Common for kids' 529s, escrow accounts, employer-held RSUs you can't liquidate.</span>
+              </span>
+            </label>
           </div>
         </div>
         <div class="form-actions">
@@ -339,16 +360,16 @@ function accountsView() {
     showAccount: false,
     showGroup: false,
     editId: null,
-    editForm: { name: "", type: "checking", groupId: "", openingBalance: "" },
+    editForm: { name: "", type: "checking", groupId: "", openingBalance: "", excludeFromNetWorth: false },
     deleteAccountId: null,
     deleteAccountValue: "",
-    newAccount: { name: "", type: "checking", groupId: "", openingBalance: "" },
+    newAccount: { name: "", type: "checking", groupId: "", openingBalance: "", excludeFromNetWorth: false },
     newGroup: { name: "" },
 
     /* Drag/drop handled by SortableJS via
        /assets/js/ui/sortable-bind.js. Markup carries data-sortable-*. */
 
-    resetNewAccount() { this.newAccount = { name: "", type: "checking", groupId: "", openingBalance: "" }; },
+    resetNewAccount() { this.newAccount = { name: "", type: "checking", groupId: "", openingBalance: "", excludeFromNetWorth: false }; },
     resetNewGroup()   { this.newGroup   = { name: "" }; },
 
     parseDollars(s) {
@@ -397,6 +418,7 @@ function accountsView() {
         type: this.newAccount.type,
         groupId: this.newAccount.groupId || null,
         openingBalance: this.parseDollars(this.newAccount.openingBalance),
+        excludeFromNetWorth: !!this.newAccount.excludeFromNetWorth,
       });
       this.resetNewAccount();
       this.showAccount = false;
@@ -413,6 +435,7 @@ function accountsView() {
         type: a.type,
         groupId: a.groupId || "",
         openingBalance: ((a.openingBalance || 0) / 100).toFixed(2),
+        excludeFromNetWorth: !!a.excludeFromNetWorth,
       };
     },
     saveEdit() {
@@ -422,6 +445,7 @@ function accountsView() {
         type: this.editForm.type,
         groupId: this.editForm.groupId || null,
         openingBalance: this.parseDollars(this.editForm.openingBalance),
+        excludeFromNetWorth: !!this.editForm.excludeFromNetWorth,
       });
       this.editId = null;
     },

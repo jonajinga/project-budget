@@ -24,68 +24,104 @@
        aria-label="App sections"
        x-data="appNav(window.__pbAppNav, window.__pbAppNavUrl)"
        x-init="init()">
-    <template x-for="sec in sections" :key="sec.key">
-      <div class="app-nav__section-block">
-        <button type="button"
-                class="app-nav__section-head"
-                :aria-expanded="(!collapsed[sec.key]).toString()"
-                @click="toggle(sec.key)"
-                :data-tip="(collapsed[sec.key] ? 'Expand' : 'Collapse') + ' the ' + sec.section + ' section.'">
-          <span class="app-nav__section-chevron" :class="collapsed[sec.key] ? 'is-collapsed' : ''" aria-hidden="true">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </span>
-          <span class="app-nav__section-label" x-text="sec.section"></span>
-        </button>
-        <ul class="app-nav__list" x-show="!collapsed[sec.key]" x-cloak>
-          <template x-for="item in sec.items" :key="item.url">
-            <li>
-              <a :href="item.url"
-                 class="app-nav__link"
-                 :aria-current="item.url === currentUrl ? 'page' : null"
-                 @click="sidebarOpen = false">
-                <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     aria-hidden="true" x-html="item.icon"></svg>
-                <span class="app-nav__label" x-text="item.label"></span>
-              </a>
-            </li>
-          </template>
-        </ul>
+    <template x-for="(sec, i) in sections" :key="sec.key">
+      <div class="app-nav__group-wrap">
+        <div class="app-nav__section-block">
+          <button type="button"
+                  class="app-nav__section-head"
+                  :aria-expanded="(!collapsed[sec.key]).toString()"
+                  @click="toggle(sec.key)"
+                  :data-tip="(collapsed[sec.key] ? 'Expand' : 'Collapse') + ' the ' + sec.section + ' section.'">
+            <span class="app-nav__section-chevron" :class="collapsed[sec.key] ? 'is-collapsed' : ''" aria-hidden="true">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+            <span class="app-nav__section-label" x-text="sec.section"></span>
+          </button>
+          <ul class="app-nav__list" x-show="!collapsed[sec.key]" x-cloak>
+            <template x-for="item in sec.items" :key="item.url">
+              <li>
+                <a :href="item.url"
+                   class="app-nav__link"
+                   :aria-current="item.url === currentUrl ? 'page' : null"
+                   @click="sidebarOpen = false">
+                  <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                       aria-hidden="true" x-html="item.icon"></svg>
+                  <span class="app-nav__label" x-text="item.label"></span>
+                </a>
+              </li>
+            </template>
+          </ul>
+        </div>
+
+        {# Accounts panel sits right under the Daily section so balances
+           are visible without scrolling past Data / Insights / etc.
+           It's its own collapsible section block (same chrome as the
+           nav sections) and only shows when the active profile has
+           accounts. #}
+        <template x-if="i === 0">
+          <div class="app-nav__section-block app-sidebar__accounts"
+               x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+            <button type="button"
+                    class="app-nav__section-head"
+                    :aria-expanded="(!collapsed.accounts).toString()"
+                    @click="toggle('accounts')"
+                    :data-tip="(collapsed.accounts ? 'Expand' : 'Collapse') + ' the Balances section.'">
+              <span class="app-nav__section-chevron" :class="collapsed.accounts ? 'is-collapsed' : ''" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </span>
+              <span class="app-nav__section-label">Balances</span>
+            </button>
+            <div x-show="!collapsed.accounts" x-cloak>
+              <template x-for="group in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+                <div class="acct-group">
+                  <button type="button" class="acct-group__head"
+                          @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
+                          :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
+                          :disabled="!group.group">
+                    {# Match the outer .app-nav__section-chevron treatment — same
+                       inline SVG at the same 10x10 size — so the inner group
+                       chevrons read at the same weight as the section chevrons
+                       above. The downward-pointing arrow rotates 90deg
+                       counter-clockwise when collapsed (is-collapsed). #}
+                    <span class="app-nav__section-chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </span>
+                    <span class="acct-group__name" x-text="group.group ? group.group.name : 'Other'"></span>
+                    {# Compact group total ($12.5k) shown always. No
+                       parentheses — accounting parens convention reads
+                       as "negative" and would mislead users glancing
+                       at a positive balance. The .is-negative red color
+                       carries the sign. #}
+                    <span class="acct-group__total"
+                          x-show="group.group" x-cloak
+                          :class="acctGroupTotal(group) < 0 ? 'is-negative' : ''"
+                          x-text="fmtCompactCents(acctGroupTotal(group))"></span>
+                  </button>
+                  <ul class="acct-group__list" x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak>
+                    <template x-for="a in group.accounts" :key="a.id">
+                      <li>
+                        <a class="acct-link" :href="'/app/register/?account=' + a.id">
+                          <span class="acct-link__name" x-text="a.name"></span>
+                          <span class="acct-link__balance"
+                                :class="{ 'is-negative': $store.budget.accountBalance(a.id) < 0 }"
+                                x-text="(($store.budget.accountBalance(a.id) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span>
+                        </a>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+              <div class="acct-totals">
+                <p><span>On-budget</span><span x-text="(($store.budget.onBudgetTotal() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
+                <p><span>Net worth</span><span x-text="(($store.budget.netWorth() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </template>
   </nav>
-
-  {# Account groups + balances. Renders only when a profile is active and has accounts. #}
-  <div class="app-sidebar__accounts" x-data x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
-    <p class="app-sidebar__heading">Accounts</p>
-    <template x-for="group in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
-      <div class="acct-group">
-        <button type="button" class="acct-group__head"
-                @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
-                :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
-                :disabled="!group.group">
-          <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
-          <span x-text="group.group ? group.group.name : 'Other'"></span>
-        </button>
-        <ul class="acct-group__list" x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak>
-          <template x-for="a in group.accounts" :key="a.id">
-            <li>
-              <a class="acct-link" :href="'/app/register/?account=' + a.id">
-                <span class="acct-link__name" x-text="a.name"></span>
-                <span class="acct-link__balance"
-                      :class="{ 'is-negative': $store.budget.accountBalance(a.id) < 0 }"
-                      x-text="(($store.budget.accountBalance(a.id) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span>
-              </a>
-            </li>
-          </template>
-        </ul>
-      </div>
-    </template>
-    <div class="acct-totals">
-      <p><span>On-budget</span><span x-text="(($store.budget.onBudgetTotal() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
-      <p><span>Net worth</span><span x-text="(($store.budget.netWorth() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
-    </div>
-  </div>
 
   <div class="app-sidebar__footer">
     {# Save-status pill: dot + label communicates that the app is
@@ -145,12 +181,43 @@ function appNav(sections, currentUrl) {
         if (hasActive) isCollapsed = false;
         self.collapsed[sec.key] = isCollapsed;
       });
+      /* Accounts panel is rendered inside the nav (after Daily) but
+         not in the sections array — seed its collapsed state too so
+         the toggle works the first time. Defaults to expanded. */
+      var acctStored = null;
+      try { acctStored = localStorage.getItem("projectbudget:nav:collapsed:accounts"); }
+      catch (_e) {}
+      this.collapsed.accounts = acctStored === "1";
     },
 
     toggle(key) {
       this.collapsed[key] = !this.collapsed[key];
       try { localStorage.setItem("projectbudget:nav:collapsed:" + key, this.collapsed[key] ? "1" : "0"); }
       catch (_e) {}
+    },
+
+    /* Sum every account balance in a single group. Powers the
+       collapsed-state ($12.5k) pill on each acct-group header. */
+    acctGroupTotal(group) {
+      if (!group || !group.accounts) return 0;
+      var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+      if (!s) return 0;
+      var sum = 0;
+      for (var i = 0; i < group.accounts.length; i++) {
+        sum += s.accountBalance(group.accounts[i].id);
+      }
+      return sum;
+    },
+
+    /* Cents -> compact display ($12.5k, $1.2M, -$983). Keeps the
+       sidebar tight when groups collapse. */
+    fmtCompactCents(c) {
+      var n = (c || 0) / 100;
+      var sign = n < 0 ? "-" : "";
+      var abs = Math.abs(n);
+      if (abs >= 1000000) return sign + "$" + (abs / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+      if (abs >= 1000)    return sign + "$" + (abs / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+      return sign + "$" + abs.toFixed(0);
     },
   };
 }
