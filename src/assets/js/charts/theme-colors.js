@@ -4,7 +4,13 @@
    a full re-render. */
 
 const VARS = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5", "--chart-6",
-              "--fg", "--fg-muted", "--fg-subtle", "--border", "--accent", "--danger", "--ok", "--warn"];
+              /* Background tokens were missing — Chart.js tooltip
+                 text/border read c["bg"] and got undefined, which
+                 made tooltips render with near-invisible defaults. */
+              "--bg", "--bg-elevated", "--bg-alt",
+              "--fg", "--fg-muted", "--fg-subtle",
+              "--border", "--border-strong",
+              "--accent", "--accent-hover", "--link", "--danger", "--ok", "--warn"];
 
 function read() {
   if (typeof document === "undefined") {

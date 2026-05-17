@@ -126,14 +126,20 @@ function projectionView() {
 
     init() {
       var self = this;
+      var chart = null;
       var tries = 0;
       var poll = function () {
-        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart;
-        if (ready) {
-          var store = Alpine.store("budget");
-          var inst = window.pbMountChart("#chart-proj", window.pbRenderProj, function () { return store.reportProjection(self.horizon); });
-          Alpine.effect(function () { self.horizon; store.profile; store._listVersion; inst.redraw(); });
-        } else if (++tries < 50) setTimeout(poll, 50);
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderProj;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        chart = window.pbMountChart("#chart-proj", window.pbRenderProj, function () {
+          return store.reportProjection(self.horizon);
+        });
+        self.$watch("horizon", function () { chart && chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store._listVersion;
+          if (chart) chart.redraw();
+        });
       };
       poll();
     },

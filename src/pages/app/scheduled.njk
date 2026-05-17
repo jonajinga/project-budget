@@ -24,7 +24,7 @@ eleventyExcludeFromCollections: true
      filters back to the full set. Active filter gets a ring so the
      user can see which tile is driving the visible list. #}
   <section class="rec-summary" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
-    <button type="button" class="rec-summary__tile"
+    <button type="button" class="rec-summary__tile rec-summary__tile--accent"
             :class="filterKind === 'all' ? 'is-active' : ''"
             :aria-pressed="(filterKind === 'all').toString()"
             @click="filterKind = 'all'"
@@ -32,7 +32,7 @@ eleventyExcludeFromCollections: true
       <span class="rec-summary__label">Active templates</span>
       <span class="rec-summary__value" x-text="totalCount()"></span>
     </button>
-    <button type="button" class="rec-summary__tile"
+    <button type="button" class="rec-summary__tile rec-summary__tile--inflow"
             :class="filterKind === 'inflow' ? 'is-active' : ''"
             :aria-pressed="(filterKind === 'inflow').toString()"
             @click="filterKind = 'inflow'"
@@ -40,7 +40,7 @@ eleventyExcludeFromCollections: true
       <span class="rec-summary__label">Monthly inflow</span>
       <span class="rec-summary__value amount--inflow" x-text="formatCents(monthlyInflow())"></span>
     </button>
-    <button type="button" class="rec-summary__tile"
+    <button type="button" class="rec-summary__tile rec-summary__tile--outflow"
             :class="filterKind === 'outflow' ? 'is-active' : ''"
             :aria-pressed="(filterKind === 'outflow').toString()"
             @click="filterKind = 'outflow'"
@@ -48,7 +48,7 @@ eleventyExcludeFromCollections: true
       <span class="rec-summary__label">Monthly outflow</span>
       <span class="rec-summary__value amount--outflow" x-text="formatCents(monthlyOutflow())"></span>
     </button>
-    <button type="button" class="rec-summary__tile"
+    <button type="button" class="rec-summary__tile rec-summary__tile--net"
             :class="filterKind === 'all' ? 'is-active' : ''"
             :aria-pressed="(filterKind === 'all').toString()"
             @click="filterKind = 'all'"

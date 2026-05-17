@@ -57,8 +57,13 @@ export function applyChartDefaults() {
   Chart.defaults.plugins.tooltip.boxPadding = 6;
   Chart.defaults.plugins.tooltip.usePointStyle = true;
   Chart.defaults.plugins.tooltip.displayColors = true;
-  Chart.defaults.plugins.tooltip.intersect = false;
-  Chart.defaults.plugins.tooltip.mode = "index";
+  /* Tooltip dismisses cleanly on mouseleave. Earlier attempt set
+     Chart.defaults.interaction + Chart.defaults.hover together,
+     which created a hover-driven redraw feedback loop that froze
+     the report pages. Leave global interaction/hover defaults
+     alone; per-tooltip mode/intersect is enough. */
+  Chart.defaults.plugins.tooltip.intersect = true;
+  Chart.defaults.plugins.tooltip.mode = "nearest";
   Chart.defaults.plugins.legend.labels.color = c["fg-muted"];
   Chart.defaults.plugins.legend.labels.usePointStyle = true;
   Chart.defaults.plugins.legend.position = "bottom";
@@ -76,12 +81,20 @@ export function upsert(el, config) {
   var canvas = ensureCanvas(el);
   var existing = canvas[HOLDER_KEY];
   if (existing) {
-    /* Update the same instance — preserves animation context + avoids
-       canvas re-allocation. */
-    existing.data = config.data;
-    existing.options = config.options || existing.options;
-    existing.update();
-    return existing;
+    /* Chart.js can't change instance type via .update() — switching
+       bar → doughnut → line silently kept the original type if we
+       just patched data+options. Detect the type change and
+       destroy+recreate; otherwise reuse for animation + perf. */
+    var existingType = existing.config && existing.config.type;
+    if (existingType && existingType !== config.type) {
+      existing.destroy();
+      canvas[HOLDER_KEY] = null;
+    } else {
+      existing.data = config.data;
+      existing.options = config.options || existing.options;
+      existing.update();
+      return existing;
+    }
   }
   var inst = new window.Chart(canvas, config);
   canvas[HOLDER_KEY] = inst;

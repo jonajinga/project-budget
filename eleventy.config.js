@@ -279,7 +279,76 @@ export default function (eleventyConfig) {
         writeFileSync(cssPath, result[0].css);
         const after = statSync(cssPath).size;
         const pct = Math.round((1 - after / before) * 100);
-        console.log(`[purgecss] ${(before/1024).toFixed(1)}KB → ${(after/1024).toFixed(1)}KB (-${pct}%) — ${allFiles.length} files scanned`);
+        console.log(`[purgecss] site-wide ${(before/1024).toFixed(1)}KB → ${(after/1024).toFixed(1)}KB (-${pct}%) — ${allFiles.length} files scanned`);
+      }
+
+      // ---- Per-page inlining pass --------------------------------------
+      // Inlines each page's used CSS as a <style> block + drops the
+      // external <link>. Trade-off: cuts first-paint round-trips
+      // (~20% per page in measurement) but DOUBLES bytes for repeat
+      // visitors because the CSS no longer caches across pages. Gated
+      // behind PB_INLINE_CSS=1 so production releases can opt in
+      // when single-visit landing pages are the priority. Default
+      // build keeps the single cached external stylesheet.
+      if (process.env.PB_INLINE_CSS !== "1") return;
+      try {
+        const purgedSiteCss = readFileSync(cssPath, "utf8");
+        const runtimeJsContent = siteJsFiles.concat(srcJsFiles).map(function (f) {
+          return { raw: readFileSync(f, "utf8"), extension: "js" };
+        });
+        const safelistShared = {
+          standard: [
+            /^is-/, /^has-/, /^x-/, /^js-/,
+            "active", "open", "show", "hidden", "expanded", "collapsed",
+            "is-dragging", "is-chosen", "is-ghost",
+            /^modal/, /^toast/, /^tippy/, /^popper/,
+            /^profile-switcher/, /^save-status/,
+            /^goal-/, /^auto-assign/, /^pool-/,
+            /^chart/, /^kpi/, /^report/, /^month-strip/,
+            /^cleared-toggle/, /^dnd-handle/,
+            /^amount--/, /^available-pill/, /^badge/,
+            /^callout/, /^fab/, /^app-sidebar-backdrop/,
+            /^theme-picker/, /^sample-/, /^thanks-/,
+            /^year-/, /^cal-mini/, /^cal-period/, /^cal-day/,
+            /^rec-/, /^cat-row/, /^cat-group/, /^acct-group/,
+            /^budget__/, /^cal-/, /^register__/,
+          ],
+          greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^aria-/],
+          deep: [/dialog/, /sortable/, /tippy/, /popper/],
+        };
+        let perPageBefore = 0, perPageAfter = 0, pagesInlined = 0;
+        const linkPattern = /<link[^>]*?href=["']?\/assets\/css\/global\.css[^>]*?>/g;
+        for (const htmlPath of htmlFiles) {
+          let html = readFileSync(htmlPath, "utf8");
+          // Skip files that don't link the global stylesheet.
+          if (!linkPattern.test(html)) { linkPattern.lastIndex = 0; continue; }
+          linkPattern.lastIndex = 0;
+
+          const pageRes = await new PurgeCSS().purge({
+            content: [{ raw: html, extension: "html" }].concat(runtimeJsContent),
+            css: [{ raw: purgedSiteCss }],
+            safelist: safelistShared,
+            defaultExtractor: (c) => c.match(/[\w-/:%@.]+(?<!:)/g) || [],
+          });
+          const pageCss = pageRes && pageRes[0] && pageRes[0].css;
+          if (!pageCss) continue;
+          perPageBefore += purgedSiteCss.length;
+          perPageAfter += pageCss.length;
+          // Replace the external <link> with an inline <style>.
+          const styleTag = "<style>" + pageCss + "</style>";
+          html = html.replace(linkPattern, styleTag);
+          linkPattern.lastIndex = 0;
+          writeFileSync(htmlPath, html);
+          pagesInlined += 1;
+        }
+        if (pagesInlined) {
+          const avgBefore = perPageBefore / pagesInlined / 1024;
+          const avgAfter = perPageAfter / pagesInlined / 1024;
+          const pct = Math.round((1 - perPageAfter / perPageBefore) * 100);
+          console.log(`[purgecss] per-page inlined into ${pagesInlined} HTML files: avg ${avgBefore.toFixed(1)}KB → ${avgAfter.toFixed(1)}KB per page (-${pct}%)`);
+        }
+      } catch (e) {
+        console.warn("PurgeCSS per-page inline failed:", e.message);
       }
     } catch (e) {
       console.warn("PurgeCSS pass failed:", e.message);

@@ -206,6 +206,22 @@ function netWorthView() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.netWorth = function () { return self.rangeMonths; };
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderNW;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-nw", window.pbRenderNW, function () {
+          return store.reportNetWorth(null, self.rangeMonths);
+        });
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
+        self.$watch("chartType",   function () { self.chart && self.chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
     },
     fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     kpis() {
@@ -231,27 +247,6 @@ function netWorthView() {
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/net-worth.js";
-  function boot() {
-    var store = Alpine.store("budget");
-    function getN() {
-      var fn = window.__pbReportState && window.__pbReportState.netWorth;
-      return (fn && fn()) || 12;
-    }
-    var inst = mountChart("#chart-nw", render, function () { return store.reportNetWorth(null, getN()); });
-    Alpine.effect(function () {
-      store.profile; store.currentMonth; store._listVersion;
-      var _ = getN();
-      inst.redraw();
-    });
-    document.addEventListener("click", function (e) {
-      if (e.target.closest && e.target.closest(".btn--sm")) {
-        setTimeout(function () { inst.redraw(); }, 0);
-      }
-    });
-    window.addEventListener("pb:chart-type", function (e) {
-      if (e.detail && e.detail.reportId === "netWorth") inst.redraw();
-    });
-  }
-  if (window.Alpine && window.Alpine.store("budget")) boot();
-  else document.addEventListener("alpine:initialized", boot);
+  window.pbMountChart = mountChart;
+  window.pbRenderNW = render;
 </script>

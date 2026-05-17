@@ -121,6 +121,55 @@
   display: inline-block;
 }
 
+/* Chart-type picker — sits above each report chart, lets the user
+   flip between Bar / Line / Area / Donut / Treemap variants. Pairs
+   with the chartTypePicker Alpine state on the page; styling
+   mirrors the segmented controls used in budget toolbars. */
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-sm);
+}
+.chart-toolbar__label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.chart-picker {
+  display: inline-flex;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 2px;
+  gap: 2px;
+}
+.chart-picker__btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: 6px 12px;
+  min-height: 36px;
+  cursor: pointer;
+  border-radius: calc(var(--radius) - 2px);
+}
+.chart-picker__btn:hover { color: var(--fg); background: var(--bg-elevated); }
+.chart-picker__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.chart-picker__btn.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* Month-cell link in report tables — drills to /app/calendar/?m=...
    Underlined to read as a clear affordance; uses accent color on
    hover so it stands out as the primary navigation target in the

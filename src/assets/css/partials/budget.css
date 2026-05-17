@@ -559,17 +559,18 @@
 .goal-status__stat dd {
   margin: 0;
   font-family: var(--font-ui);
-  /* Fluid scaling: 0.95rem → 1.25rem based on the tile's own inline
-     size. Tile widths cluster around 120-160px in the 4-up grid;
-     11cqi puts the value at ~14-18px which fits "$1,234.56" without
-     ellipsis truncation. Wraps cleanly if a value still won't fit
-     (no nowrap / no overflow:hidden / no text-overflow). */
-  font-size: clamp(0.95rem, 11cqi, 1.25rem);
+  /* Single-line values: clamp to the smallest size that still fits
+     a 7-digit currency string ("$18,750.00") at the narrowest
+     tile width. cqi unit scales with the tile's container size.
+     The previous min (0.95rem) wrapped at narrow widths because
+     7-char values exceeded the tile inline-size; dropping to
+     0.78rem keeps them on one line. */
+  font-size: clamp(0.78rem, 9.5cqi, 1.25rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1.15;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .goal-status__hint {
   margin: 0;
@@ -961,6 +962,42 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   gap: var(--space-sm);
 }
 .cal-toolbar__row--filters { gap: var(--space-2xs) var(--space-sm); }
+
+/* Mobile compaction — at <600px the toolbar was eating 360-440px
+   of vertical chrome (multiple rows of buttons + selects) before
+   the actual calendar grid showed. Tighten padding, gaps, and font
+   sizes so the grid lands above the fold on a 360x800 phone. */
+@media (max-width: 599px) {
+  .cal-toolbar {
+    padding: var(--space-2xs);
+    gap: var(--space-2xs);
+  }
+  .cal-toolbar__row { gap: var(--space-2xs); }
+  .cal-toolbar__title {
+    font-size: var(--fs-md);
+    margin-left: 0;
+    flex: 1 1 100%;
+    order: 99;
+  }
+  /* Filters collapse behind a "Filters" disclosure button on mobile.
+     The button is provided by .cal-toolbar__filters-toggle in the
+     template; the .cal-toolbar__row--filters row carries the
+     `[data-collapsed="true"]` attribute when hidden. */
+  .cal-toolbar__row--filters[data-collapsed="true"] { display: none; }
+  /* Span row's spacing scrunches — "Show grid totals" / "Show net $"
+     toggles wrap to their own row anyway. */
+  .cal-toolbar__row--span { gap: var(--space-3xs); }
+}
+/* The disclosure toggle is mobile-only — on tablet+ filters are
+   always visible inline. */
+.cal-toolbar__filters-toggle { display: none; }
+@media (max-width: 599px) {
+  .cal-toolbar__filters-toggle {
+    display: inline-flex;
+    align-self: flex-start;
+    margin: 0;
+  }
+}
 .cal-toolbar__views {
   display: inline-flex;
   background: var(--bg-alt);
@@ -1161,11 +1198,12 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   border-left: 1px solid var(--border-soft);
 }
 
-/* Labeled IN / OUT / NET / ENTRIES stats in the extra-week/month
-   header — each pair sits in a small column with the label above
-   the value so the numbers aren't ambiguous. The In/Out/Entries
-   stats are real <button>s (clickable to open the period
-   transactions modal); Net is a static div. */
+/* Header IN / OUT / NET / ENTRIES tiles — compact inline-flex
+   layout used in primary + extra month/week/day period headers
+   (NOT the modals). Stays small + tight so it sits inline next
+   to the period title without dominating the chrome. The modal
+   variant (.period-modal__filters) overrides below with the
+   full bordered-card chrome. */
 .cal-extra-period__totals {
   display: inline-flex;
   align-items: stretch;
@@ -1187,10 +1225,6 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 .cal-extra-period__stat--clickable {
   cursor: pointer;
-  /* WCAG 1.4.11 — visible 1px border on every clickable stat so
-     the affordance is discoverable without hover. --border-strong
-     gives ~3:1 contrast against the surrounding bg, clearing the
-     UI-component contrast floor. */
   border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
   transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
@@ -1204,8 +1238,6 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-/* Active filter state — period modal lights up the currently-
-   selected stat so the user knows what's filtering. */
 .cal-extra-period__stat--clickable.is-active {
   background: color-mix(in oklab, var(--accent) 22%, var(--bg-elevated));
   border-color: var(--accent);
@@ -1213,11 +1245,68 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 .cal-extra-period__stat--clickable.is-active dt { color: var(--accent); }
 
-/* Period modal — top filter strip + active-filter pill row. */
+/* Period transactions modal — the In/Out/Net/Entries row gets the
+   full day-modal chrome (4-up grid, accent-tinted background per
+   tile, semantic colored left rail, container-query fluid font on
+   the value). This is the SAME visual language as the day-modal
+   .cal-period-totals__tile so every calendar modal reads
+   consistently. */
 .period-modal__filters {
-  padding: var(--space-2xs) var(--space-sm);
-  background: var(--bg-alt);
-  border-radius: var(--radius-input);
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  margin: 0 0 var(--space-md);
+}
+@media (max-width: 1023px) {
+  .period-modal__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 599px) {
+  .period-modal__filters { grid-template-columns: 1fr; }
+}
+/* Override the compact header tile chrome with the full modal-tile
+   look — scoped to .period-modal__filters so it doesn't bleed into
+   the period headers. */
+.period-modal__filters .cal-extra-period__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-sm);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  min-width: 0;
+  container-type: inline-size;
+}
+.period-modal__filters .cal-extra-period__stat:nth-of-type(1) {
+  border-left-color: var(--ok);
+  background: color-mix(in oklab, var(--ok) 6%, var(--bg-elevated));
+}
+.period-modal__filters .cal-extra-period__stat:nth-of-type(2) {
+  border-left-color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 6%, var(--bg-elevated));
+}
+.period-modal__filters .cal-extra-period__stat:nth-of-type(3) {
+  border-left-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+}
+.period-modal__filters .cal-extra-period__stat:nth-of-type(4) {
+  border-left-color: var(--border-strong);
+}
+.period-modal__filters .cal-extra-period__stat dt {
+  font-size: 0.65rem;
+}
+.period-modal__filters .cal-extra-period__stat dd {
+  font-family: var(--font-ui);
+  font-size: clamp(0.78rem, 9.5cqi, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 .period-modal__active-filter {
   display: inline-flex;
@@ -1265,9 +1354,7 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
-/* Net stat — same bordered chrome as the In/Out/Entries buttons
-   so the row reads as a cohesive 4-tile group, plus a 3px accent
-   left rail to mark it as the bottom-line / calculated value. */
+/* Net header stat — same chrome as siblings + 3px accent left rail. */
 .cal-extra-period__stat--net {
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
@@ -1370,11 +1457,16 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 .cal__grid {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  /* 3px gap between week rows + the parent's stronger background
+     show the rows as separate cards instead of one continuous
+     stripe. The WK tiles and day cells inside each row keep their
+     1px hairline grid, so the visual hierarchy is: row separator
+     (3px / strong) > cell separator (1px / soft). */
+  gap: 3px;
   margin: 0;
   padding: 0;
-  background: var(--border-soft);
-  border: 1px solid var(--border-soft);
+  background: var(--border-strong);
+  border: 1px solid var(--border-strong);
 }
 .cal__week-row {
   display: flex;
@@ -1382,6 +1474,11 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   gap: 6px;
   background: var(--bg-elevated);
 }
+/* Alternate row tint — even week rows pick up a subtle bg shift
+   so adjacent weeks are unambiguously distinct even when the gap
+   is hard to see (mobile, dense data). */
+.cal__week-row:nth-child(even) { background: var(--bg-alt); }
+.cal__week-row:nth-child(even) .cal__wknum { background: var(--bg-elevated); }
 .cal__week-row-cells {
   flex: 1;
   display: grid;
@@ -2226,11 +2323,17 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   font-variant-numeric: tabular-nums;
 }
 .cal-week__total {
+  /* Container query context so the dollar value can fluidly shrink
+     in narrow week-day cards. Without this, 5-digit amounts like
+     "$4,200.00" pushed the label onto a separate line and overflow
+     was visible on smaller week-column widths. */
+  container-type: inline-size;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-2xs);
   font-size: var(--fs-xs);
+  min-width: 0;
 }
 .cal-week__total dt {
   font-size: 0.625rem;
@@ -2238,16 +2341,20 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--fg-muted);
+  flex: 0 0 auto;
 }
 .cal-week__total dd {
   margin: 0;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  /* Scale 0.6875rem → 0.9rem with the row's inline size so the
+     value stays on the same line as the label and never overflows
+     the bordered tile. */
+  font-size: clamp(0.6875rem, 11cqi, 0.9rem);
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
-/* Net row sits one tier above In/Out — it's the headline number for
-   the day. Solid divider, tinted background pill, bigger value, and
-   the label flips from muted gray to ink so the row visually anchors
-   the readout. */
 /* Net row in each week-day card — full bordered tile with a 3px
    accent left rail, matching the period-header Net style. */
 .cal-week__total--net {
@@ -2265,7 +2372,9 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 .cal-week__total--net dd {
   font-weight: 700;
-  font-size: var(--fs-sm);
+  /* Scale 0.75rem → 1rem with the tile width so big NET values
+     (e.g. $4,200.00) don't overflow into a wrapped row. */
+  font-size: clamp(0.75rem, 12cqi, 1rem);
 }
 .cal-week__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 /* Week-view entry cards. Stack the payee on its own line above the
@@ -2584,7 +2693,11 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
-  border-left: 3px solid transparent;
+  /* Default rail color is set per modifier below — accent / inflow
+     (--ok green) / outflow (--danger red) / net (--accent). The
+     rail is ALWAYS visible so each tile reads as semantically
+     colored, not only the active one. */
+  border-left: 3px solid var(--border-strong);
   border-radius: var(--radius);
   text-align: left;
   cursor: pointer;
@@ -2592,17 +2705,22 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
   color: inherit;
   transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
 }
+.rec-summary__tile--accent  { border-left-color: var(--accent); }
+.rec-summary__tile--inflow  { border-left-color: var(--ok); }
+.rec-summary__tile--outflow { border-left-color: var(--danger); }
+.rec-summary__tile--net     { border-left-color: var(--accent); }
 .rec-summary__tile:hover {
   background: var(--bg-alt);
-  border-left-color: var(--border-strong);
 }
 .rec-summary__tile:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Active filter tile: tinted background so the click affordance is
+   obvious; the colored rail already conveys which dimension is
+   active. */
 .rec-summary__tile.is-active {
-  border-left-color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
+  background: color-mix(in oklab, var(--accent) 8%, var(--bg-elevated));
 }
 
 /* ---- Recurring-table responsive swap ----

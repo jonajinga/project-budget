@@ -26,14 +26,19 @@ permalink: /contact/
       </p>
       <ul class="contact-page__bio-links">
         <li>
-          <strong>GitHub:</strong>
-          <a href="{{ site.repo }}/issues" rel="noopener">Open an issue</a>
-          <span class="contact-page__bio-hint">Best for bugs &amp; feature requests with reproducible steps.</span>
+          <strong>Email:</strong>
+          <a href="mailto:{{ site.email }}">{{ site.email }}</a>
+          <span class="contact-page__bio-hint">Direct line for anything not suited to the form below.</span>
         </li>
         <li>
           <strong>Docs:</strong>
           <a href="/docs/">Read the documentation</a>
           <span class="contact-page__bio-hint">Most "how do I…" questions already have an answer here.</span>
+        </li>
+        <li>
+          <strong>Glossary:</strong>
+          <a href="/glossary/">Browse plain-English definitions</a>
+          <span class="contact-page__bio-hint">If a budgeting term is tripping you up, it's probably defined here.</span>
         </li>
       </ul>
     </aside>
@@ -107,7 +112,7 @@ permalink: /contact/
 
         <div class="contact-form__actions">
           <button class="btn btn--primary" type="submit">Send message</button>
-          <a class="btn btn--ghost" href="{{ site.repo }}/issues" rel="noopener">Open a GitHub issue instead</a>
+          <a class="btn btn--ghost" href="mailto:{{ site.email }}">Email directly instead</a>
         </div>
 
         <p class="contact-form__privacy">

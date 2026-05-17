@@ -88,7 +88,18 @@ eleventyExcludeFromCollections: true
       </label>
     </div>
 
-    <div class="cal-toolbar__row cal-toolbar__row--filters">
+    {# Mobile disclosure — hides the search + filter row behind a
+       "Filters" button on phones so the calendar grid lands above
+       the fold. Hidden on tablet+ (filters always visible). #}
+    <button type="button"
+            class="btn btn--ghost btn--sm cal-toolbar__filters-toggle"
+            @click="filtersOpen = !filtersOpen"
+            :aria-expanded="filtersOpen.toString()"
+            data-tip="Show or hide search + account/kind filters."
+            x-text="filtersOpen ? 'Hide filters' : 'Filters' + ((searchQuery || filterAccountId || filterKind !== 'all') ? ' · active' : '')"></button>
+
+    <div class="cal-toolbar__row cal-toolbar__row--filters"
+         :data-collapsed="(!filtersOpen).toString()">
       <div class="field cal-toolbar__search">
         <label class="visually-hidden" for="cal-search">Search payee, memo, category</label>
         <input class="input" id="cal-search" type="search"
@@ -451,50 +462,84 @@ eleventyExcludeFromCollections: true
           </button>
         </dl>
       </header>
-      <ol class="cal__weekdays" aria-hidden="true">
-        <li>Sun</li><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li>
-      </ol>
-      <ol class="cal__grid" role="grid" :aria-label="'Calendar for ' + mb.label">
-        <template x-for="cell in monthCellsFor(mb.anchorISO)" :key="'m' + mb.monthISO + cell.key">
-          <li class="cal__cell"
-              :class="{
-                'cal__cell--blank':    cell.blank,
-                'cal__cell--today':    cell.isToday,
-                'cal__cell--selected': cell.iso && cell.iso === selectedISO,
-                'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
-                'cal__cell--other-month': cell.otherMonth
-              }">
-            <template x-if="!cell.blank">
-              <div class="cal__cell-inner">
-                <button type="button" class="cal__day-btn"
-                        @click="selectedISO = cell.iso"
-                        @dblclick="view = 'day'; anchorISO = cell.iso"
-                        :aria-label="'Open ' + cell.iso">
-                  <span class="cal__day-num" x-text="cell.day"></span>
-                </button>
-                <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
-                  <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'p-' + mb.monthISO + t.id">
-                    <li>
-                      <button type="button" class="cal__entry cal__entry--clickable"
-                              :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
-                              @click.stop="openTxn(t.id)">
-                        <span class="cal__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
-                        <span class="cal__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                              x-text="fmtCompact(t.amount)"></span>
+      {# Mirror the primary month-view's row-based structure: header
+         row with WK label + 7 day labels, then one .cal__week-row
+         per week containing the WK button + a nested 7-col grid of
+         cells. The old flat .cal__cell-under-ol layout no longer
+         had matching CSS rules (the .cal__grid rules expect
+         .cal__week-row children), so the extra months were
+         collapsing into a single vertical column. #}
+      <div class="cal__weekdays" aria-hidden="true">
+        <span class="cal__wknum cal__wknum--head">Wk</span>
+        <div class="cal__weekdays-days">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+      </div>
+      <div class="cal__grid" role="grid" :aria-label="'Calendar for ' + mb.label">
+        <template x-for="wk in monthWeeks(mb.anchorISO)" :key="'mw-' + mb.monthISO + '-' + wk.weekKey">
+          <div class="cal__week-row">
+            <button type="button"
+                    class="cal__wknum cal__wknum--btn"
+                    :disabled="!wk.startISO"
+                    @click="wk.startISO && openPeriodModal('Week ' + wk.weekNumber + ' — ' + mb.label, 'Money in/out + entries for week ' + wk.weekNumber, 'all', wk.cells)"
+                    :data-tip="wk.startISO ? ('Week ' + wk.weekNumber + ' · click to see every entry') : ''">
+              <span class="cal__wknum-num">Wk <span x-text="wk.weekNumber"></span></span>
+            </button>
+            <div class="cal__week-row-cells">
+              <template x-for="cell in wk.cells" :key="'mc-' + mb.monthISO + '-' + cell.key">
+                <div class="cal__cell"
+                     :class="{
+                       'cal__cell--blank':    cell.blank,
+                       'cal__cell--today':    cell.isToday,
+                       'cal__cell--selected': cell.iso && cell.iso === selectedISO,
+                       'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
+                       'cal__cell--other-month': cell.otherMonth
+                     }">
+                  <template x-if="!cell.blank">
+                    <div class="cal__cell-inner">
+                      <button type="button" class="cal__day-btn"
+                              @click="selectedISO = cell.iso"
+                              @dblclick="view = 'day'; anchorISO = cell.iso"
+                              :aria-label="'Open ' + cell.iso">
+                        <span class="cal__day-num" x-text="cell.day"></span>
                       </button>
-                    </li>
+                      <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
+                        <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'mp-' + mb.monthISO + '-' + t.id">
+                          <li>
+                            <button type="button" class="cal__entry cal__entry--clickable"
+                                    :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
+                                    @click.stop="openTxn(t.id)">
+                              <span class="cal__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
+                              <span class="cal__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                                    x-text="fmtCompact(t.amount)"></span>
+                            </button>
+                          </li>
+                        </template>
+                        <template x-for="s in (cell.scheduled || []).slice(0, Math.max(0, 3 - (cell.posted || []).length))" :key="'ms-' + mb.monthISO + '-' + s.id">
+                          <li>
+                            <a class="cal__entry cal__entry--clickable cal__entry--scheduled"
+                               :href="'/app/scheduled/#edit-' + s.id"
+                               @click.stop>
+                              <span class="cal__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
+                              <span class="cal__entry-amt" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                                    x-text="fmtCompact(s.template.amount)"></span>
+                            </a>
+                          </li>
+                        </template>
+                        <li x-show="((cell.posted || []).length + (cell.scheduled || []).length) > 3" x-cloak>
+                          <button type="button" class="cal__entry-more"
+                                  @click="selectedISO = cell.iso"
+                                  x-text="'+ ' + (((cell.posted || []).length + (cell.scheduled || []).length) - 3) + ' more'"></button>
+                        </li>
+                      </ul>
+                    </div>
                   </template>
-                  <li x-show="((cell.posted || []).length + (cell.scheduled || []).length) > 3" x-cloak>
-                    <button type="button" class="cal__entry-more"
-                            @click="selectedISO = cell.iso"
-                            x-text="'+ ' + (((cell.posted || []).length + (cell.scheduled || []).length) - 3) + ' more'"></button>
-                  </li>
-                </ul>
-              </div>
-            </template>
-          </li>
+                </div>
+              </template>
+            </div>
+          </div>
         </template>
-      </ol>
+      </div>
     </article>
   </template>
   </section>
@@ -1219,6 +1264,9 @@ function calendarView() {
     searchQuery: "",
     filterAccountId: "",
     filterKind: "all", // 'all' | 'posted' | 'scheduled' | 'inflow' | 'outflow'
+    /* Mobile-only filter disclosure — defaults open at tablet+ via
+     a matchMedia check in init(), closed on <600px viewports. */
+    filtersOpen: true,
 
     /* Transaction edit modal state — opened by clicking a posted row. */
     txnEditId: null,
@@ -1342,6 +1390,12 @@ function calendarView() {
 
     init() {
       this.anchorISO = this._isoDay(new Date());
+      /* Filters closed by default on phones to save vertical space. */
+      try {
+        if (window.matchMedia && window.matchMedia("(max-width: 599px)").matches) {
+          this.filtersOpen = false;
+        }
+      } catch (_e) {}
       /* Honor URL params from drill-through links — `?m=YYYY-MM` lands
          on Month view for that month; `?v=year|week|day` switches
          view. Reports' month-cell links pass these. */

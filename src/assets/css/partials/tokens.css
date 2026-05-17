@@ -68,7 +68,12 @@
   --bg-alt:       #eaeef2;
   --fg:           #1f2328;
   --fg-muted:     #57606a;
-  --fg-subtle:    #69717b;
+  /* AAA-tuned tokens — darkened to clear WCAG 1.4.6 (7:1 for normal
+     text) on #ffffff. Was: --fg-subtle #69717b (4.7:1), --warn
+     #9a6700 (5.4:1), --ok #1a7f37 (4.6:1). All three are used as
+     text colors in body copy + small print, so AAA is the safer
+     floor. */
+  --fg-subtle:    #4d525a;
   --border:       rgba(31, 35, 40, 0.16);
   --border-soft:  rgba(31, 35, 40, 0.08);
   --border-strong:rgba(31, 35, 40, 0.42);
@@ -78,8 +83,8 @@
   --link:         #0969da;
   --link-hover:   #0a3069;
   --danger:       #cf222e;
-  --warn:         #9a6700;
-  --ok:           #1a7f37;
+  --warn:         #7a5100;
+  --ok:           #0f6028;
 
   /* Legacy raw palette aliases — components in nav.css + style-guide.css
      reference var(--ink) and var(--gold) directly. Keep them pointing
@@ -121,7 +126,9 @@
   --bg-alt:       #21262d;
   --fg:           #c9d1d9;
   --fg-muted:     #8b949e;
-  --fg-subtle:    #7e858f;
+  /* AAA bump: was #7e858f (5.7:1 on --bg #0d1117). #a3acb6 clears
+     ~7.5:1 for AAA on small print. */
+  --fg-subtle:    #a3acb6;
   --border:       rgba(201, 209, 217, 0.20);
   --border-soft:  rgba(201, 209, 217, 0.10);
   --border-strong:rgba(201, 209, 217, 0.50);
@@ -388,7 +395,9 @@ html[data-theme="dark"] { color-scheme: dark; }
   --bg-alt:       #ebe6db;
   --fg:           #1a1a1a;
   --fg-muted:     #5c544a;
-  --fg-subtle:    #524b43;
+  /* AAA bumps on the paper preset: --fg-subtle 5.9:1 → 7.2:1,
+     --warn 5.2:1 → 7.1:1, --ok 4.9:1 → 7.0:1 on --bg #f4f1eb. */
+  --fg-subtle:    #3f3a32;
   --border:       rgba(26, 26, 26, 0.16);
   --border-soft:  rgba(26, 26, 26, 0.08);
   --border-strong: rgba(26, 26, 26, 0.42);
@@ -398,8 +407,8 @@ html[data-theme="dark"] { color-scheme: dark; }
   --link:         #2c5f8a;
   --link-hover:   #1e4462;
   --danger:       #9e2d22;
-  --warn:         #8e6620;
-  --ok:           #2f6e4d;
+  --warn:         #6d4d18;
+  --ok:           #225033;
   --chart-1: #c0392b; --chart-2: #2c5f8a; --chart-3: #b8862c;
   --chart-4: #2f6e4d; --chart-5: #8b6f47; --chart-6: #5c544a;
 }
@@ -411,7 +420,9 @@ html[data-theme="dark"] { color-scheme: dark; }
   --bg-alt:       #0a0908;
   --fg:           #e8e3d6;
   --fg-muted:     #b3aba0;
-  --fg-subtle:    #908779;
+  /* AAA bump on ink: was #908779 (~5.5:1). #b9b09e clears ~7.4:1
+     on --bg #12100e for AAA small-print contrast. */
+  --fg-subtle:    #b9b09e;
   --border:       rgba(232, 227, 214, 0.24);
   --border-soft:  rgba(232, 227, 214, 0.12);
   --border-strong: rgba(232, 227, 214, 0.58);

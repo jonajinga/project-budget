@@ -49,6 +49,20 @@ eleventyExcludeFromCollections: true
       </div>
     </div>
 
+    <div class="chart-toolbar">
+      <span class="chart-toolbar__label">Chart</span>
+      <span class="chart-picker" role="group" aria-label="Chart type">
+        <template x-for="opt in chartOptions" :key="opt.value">
+          <button type="button"
+                  class="chart-picker__btn"
+                  :class="chartType === opt.value ? 'is-active' : ''"
+                  :aria-pressed="(chartType === opt.value).toString()"
+                  @click="setChartType(opt.value)"
+                  :data-tip="'Render as a ' + opt.label.toLowerCase() + ' chart.'"
+                  x-text="opt.label"></button>
+        </template>
+      </span>
+    </div>
     <div class="chart" id="chart-spending" style="min-height: 360px;"></div>
 
     <div class="report-toolbar">
@@ -109,9 +123,30 @@ function spendingView() {
   var fromD = new Date(d.getFullYear(), d.getMonth() - 2, 1);
   var fromInitial = fromD.getFullYear() + "-" + String(fromD.getMonth() + 1).padStart(2, "0");
 
+  var savedChartType = "treemap";
+  try {
+    var st = localStorage.getItem("projectbudget:chart-type:spending");
+    if (st && ["treemap","bar","donut"].indexOf(st) !== -1) savedChartType = st;
+  } catch (_e) {}
+  window.__pbChartType = window.__pbChartType || {};
+  window.__pbChartType.spending = savedChartType;
+
   return {
     from: fromInitial,
     to: toInitial,
+
+    chartType: savedChartType,
+    chartOptions: [
+      { value: "treemap", label: "Treemap" },
+      { value: "bar",     label: "Bar" },
+      { value: "donut",   label: "Donut" },
+    ],
+    setChartType(t) {
+      this.chartType = t;
+      window.__pbChartType.spending = t;
+      try { localStorage.setItem("projectbudget:chart-type:spending", t); } catch (_e) {}
+      try { window.dispatchEvent(new CustomEvent("pb:chart-type", { detail: { reportId: "spending", type: t } })); } catch (_e) {}
+    },
 
     /* Report-table state (inlined). */
     query: "",
@@ -210,15 +245,26 @@ function spendingView() {
         var fd = new Date(parts[0], parts[1] - 3, 1);
         self.from = fd.getFullYear() + "-" + String(fd.getMonth() + 1).padStart(2, "0");
       }
-      /* Chart mount — polls for Alpine + chart bootstrap to be ready. */
+      /* Chart mount — polls for Alpine + chart bootstrap to be ready,
+         then wires redraws via $watch on this component's reactive
+         state. Uses a closure variable for the chart instance instead
+         of putting it on the Alpine proxy. */
+      var chart = null;
       var tries = 0;
       var poll = function () {
-        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart;
-        if (ready) {
-          var store = Alpine.store("budget");
-          var inst = window.pbMountChart("#chart-spending", window.pbRenderSpending, function () { return store.reportSpending(self.from, self.to); });
-          Alpine.effect(function () { self.from; self.to; store.profile; store._listVersion; inst.redraw(); });
-        } else if (++tries < 50) setTimeout(poll, 50);
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderSpending;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        chart = window.pbMountChart("#chart-spending", window.pbRenderSpending, function () {
+          return store.reportSpending(self.from, self.to);
+        });
+        self.$watch("from",      function () { chart && chart.redraw(); });
+        self.$watch("to",        function () { chart && chart.redraw(); });
+        self.$watch("chartType", function () { chart && chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store._listVersion;
+          if (chart) chart.redraw();
+        });
       };
       poll();
     },

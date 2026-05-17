@@ -212,6 +212,22 @@ function savingsRateView() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.savingsRate = function () { return self.rangeMonths; };
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderSR;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-sr", window.pbRenderSR, function () {
+          return store.reportSavingsRate(null, self.rangeMonths);
+        });
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
+        self.$watch("chartType",   function () { self.chart && self.chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
     },
     fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     kpis() {
@@ -311,27 +327,8 @@ function savingsRateView() {
     });
   }
 
-  function boot() {
-    var store = Alpine.store("budget");
-    function getN() {
-      var fn = window.__pbReportState && window.__pbReportState.savingsRate;
-      return (fn && fn()) || 12;
-    }
-    var inst = mountChart("#chart-sr", render, function () { return store.reportSavingsRate(null, getN()); });
-    Alpine.effect(function () {
-      store.profile; store.currentMonth; store._listVersion;
-      var _ = getN();
-      inst.redraw();
-    });
-    document.addEventListener("click", function (e) {
-      if (e.target.closest && e.target.closest(".btn--sm")) {
-        setTimeout(function () { inst.redraw(); }, 0);
-      }
-    });
-    window.addEventListener("pb:chart-type", function (e) {
-      if (e.detail && e.detail.reportId === "savingsRate") inst.redraw();
-    });
-  }
-  if (window.Alpine && window.Alpine.store("budget")) boot();
-  else document.addEventListener("alpine:initialized", boot);
+  /* Mount + redraw lifecycle now lives in the Alpine factory's init().
+     Just export the helpers — no boot logic here. */
+  window.pbMountChart = mountChart;
+  window.pbRenderSR = render;
 </script>

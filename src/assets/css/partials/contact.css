@@ -12,11 +12,13 @@
 }
 
 .contact-page__bio {
-  background: var(--bg-alt);
-  border: 1px solid var(--border-soft);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   padding: var(--space-lg);
   align-self: start;
+  box-shadow: var(--shadow-sm);
 }
 .contact-page__photo {
   width: 120px;
@@ -57,8 +59,8 @@
 .contact-page__bio-links li {
   font-size: var(--fs-sm);
   padding: var(--space-sm);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-input);
 }
 .contact-page__bio-links strong {

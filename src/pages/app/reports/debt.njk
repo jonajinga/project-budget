@@ -5,15 +5,7 @@ description: "Balances and payoff projections for every credit and liability acc
 permalink: /app/reports/debt/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="reportTable(
-  () => ($store.budget.reportDebt() || []),
-  { keys: [
-      { key: 'account',        label: 'Account' },
-      { key: 'type',           label: 'Type' },
-      { key: 'balance',        label: 'Balance',         numeric: true },
-      { key: 'avgPayment',     label: 'Avg payment',     numeric: true },
-      { key: 'monthsToPayoff', label: 'Months to payoff', numeric: true },
-    ], defaultSort: { key: 'balance', dir: 'asc' } })">
+<div class="app-page" x-data="debtView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Debt overview</h1>
@@ -23,7 +15,21 @@ eleventyExcludeFromCollections: true
   </header>
 
   <section class="report">
-    <div class="chart" id="chart-debt" style="min-height: 120px;"></div>
+    <div class="chart-toolbar">
+      <span class="chart-toolbar__label">Chart</span>
+      <span class="chart-picker" role="group" aria-label="Chart type">
+        <template x-for="opt in chartOptions" :key="opt.value">
+          <button type="button"
+                  class="chart-picker__btn"
+                  :class="chartType === opt.value ? 'is-active' : ''"
+                  :aria-pressed="(chartType === opt.value).toString()"
+                  @click="setChartType(opt.value)"
+                  :data-tip="'Render as a ' + opt.label.toLowerCase() + ' chart.'"
+                  x-text="opt.label"></button>
+        </template>
+      </span>
+    </div>
+    <div class="chart" id="chart-debt" style="min-height: 220px;"></div>
 
     <div class="report-toolbar">
       <div class="field report-toolbar__search">
@@ -65,14 +71,97 @@ eleventyExcludeFromCollections: true
   </section>
 </div>
 
+<script>
+function debtView() {
+  var savedChartType = "bar";
+  try {
+    var st = localStorage.getItem("projectbudget:chart-type:debt");
+    if (st && ["bar","donut"].indexOf(st) !== -1) savedChartType = st;
+  } catch (_e) {}
+  window.__pbChartType = window.__pbChartType || {};
+  window.__pbChartType.debt = savedChartType;
+
+  return {
+    chartType: savedChartType,
+    chartOptions: [
+      { value: "bar",   label: "Bar" },
+      { value: "donut", label: "Donut" },
+    ],
+    setChartType(t) {
+      this.chartType = t;
+      window.__pbChartType.debt = t;
+      try { localStorage.setItem("projectbudget:chart-type:debt", t); } catch (_e) {}
+      try { window.dispatchEvent(new CustomEvent("pb:chart-type", { detail: { reportId: "debt", type: t } })); } catch (_e) {}
+    },
+
+    query: "",
+    sortKey: "balance",
+    sortDir: "desc",
+    _keys: [
+      { key: "account",        label: "Account" },
+      { key: "type",           label: "Type" },
+      { key: "balance",        label: "Balance",         numeric: true },
+      { key: "avgPayment",     label: "Avg payment",     numeric: true },
+      { key: "monthsToPayoff", label: "Months to payoff", numeric: true },
+    ],
+    get rows() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportDebt() || [];
+      var q = (this.query || "").trim().toLowerCase();
+      var filtered = q ? src.filter(function (r) { return String(r.account || "").toLowerCase().indexOf(q) !== -1; }) : src;
+      var key = this.sortKey, dir = this.sortDir;
+      var keyDef = this._keys.find(function (k) { return k.key === key; });
+      var numeric = !!(keyDef && keyDef.numeric);
+      var copy = filtered.slice();
+      copy.sort(function (a, b) {
+        if (numeric) {
+          var an = Number(a[key]) || 0, bn = Number(b[key]) || 0;
+          return dir === "asc" ? an - bn : bn - an;
+        }
+        var as = String(a[key] == null ? "" : a[key]);
+        var bs = String(b[key] == null ? "" : b[key]);
+        return dir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+      });
+      return copy;
+    },
+    get visibleCount() { return this.rows.length; },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        var kd = this._keys.find(function (k) { return k.key === key; });
+        this.sortDir = kd && kd.numeric ? "desc" : "asc";
+      }
+    },
+    sortIndicator(key) {
+      if (this.sortKey !== key) return "";
+      return this.sortDir === "asc" ? "▲" : "▼";
+    },
+    print() { window.print(); },
+
+    init() {
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart;
+        if (ready) {
+          var store = Alpine.store("budget");
+          var inst = window.pbMountChart("#chart-debt", window.pbRenderDebt, function () { return store.reportDebt(); });
+          Alpine.effect(function () { store.profile; store._listVersion; inst.redraw(); });
+          window.addEventListener("pb:chart-type", function (e) {
+            if (e.detail && e.detail.reportId === "debt") inst.redraw();
+          });
+        } else if (++tries < 50) setTimeout(poll, 50);
+      };
+      poll();
+    },
+  };
+}
+</script>
+
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/debt.js";
-  function boot() {
-    var store = Alpine.store("budget");
-    var inst = mountChart("#chart-debt", render, function () { return store.reportDebt(); });
-    Alpine.effect(function () { store.profile; inst.redraw(); });
-  };
-  if (window.Alpine && window.Alpine.store("budget")) boot();
-  else document.addEventListener("alpine:initialized", boot);
+  window.pbMountChart = mountChart;
+  window.pbRenderDebt = render;
 </script>

@@ -226,6 +226,35 @@ function incomeExpenseView() {
       var self = this;
       window.__pbReportState = window.__pbReportState || {};
       window.__pbReportState.incomeExpense = function () { return self.rangeMonths; };
+
+      /* Mount the chart from inside the Alpine factory so we can wire
+         redraws via $watch on this component's own reactive state.
+         The previous boot used a separate <script type="module"> that
+         relied on Alpine.effect + click-delegation + custom events —
+         too many points of failure. Polling for the chart bootstrap
+         globals (window.pbMountChart / window.pbRenderIE) keeps the
+         dependency on the inline ESM script that exports them. */
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderIE;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-ie", window.pbRenderIE, function () {
+          return store.reportIncomeVsExpense(null, self.rangeMonths);
+        });
+        /* Native Alpine reactivity — both watches fire whenever the
+           tracked property changes, regardless of which UI element
+           triggered the change. No event-delegation needed. */
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
+        self.$watch("chartType",   function () { self.chart && self.chart.redraw(); });
+        /* Store mutations (profile switch, new transaction, etc.)
+           still trigger redraw via the existing _listVersion tripwire. */
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
     },
     fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
     rangeLabel() { return "Trailing " + this.rangeMonths + " mo"; },
@@ -255,35 +284,11 @@ function incomeExpenseView() {
 </script>
 
 <script type="module">
+  /* Export the chart bootstrap + this report's render fn so the
+     Alpine factory's init() can mount the chart and wire $watch
+     redraws directly. Decouples chart wiring from Alpine timing. */
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/income-expense.js";
-  function boot() {
-    var store = Alpine.store("budget");
-    function getN() {
-      var fn = window.__pbReportState && window.__pbReportState.incomeExpense;
-      return (fn && fn()) || 12;
-    }
-    var inst = mountChart("#chart-ie", render, function () {
-      return store.reportIncomeVsExpense(null, getN());
-    });
-    Alpine.effect(function () {
-      store.profile; store.currentMonth; store._listVersion;
-      /* Touch a polled value so a range-button click triggers a redraw
-         on the next macrotask. */
-      var _ = getN();
-      inst.redraw();
-    });
-    /* Also redraw on any click in the toolbar — covers the range buttons. */
-    document.addEventListener("click", function (e) {
-      if (e.target.closest && e.target.closest(".btn--sm")) {
-        setTimeout(function () { inst.redraw(); }, 0);
-      }
-    });
-    /* Chart-type picker dispatches a pb:chart-type event on change. */
-    window.addEventListener("pb:chart-type", function (e) {
-      if (e.detail && e.detail.reportId === "incomeExpense") inst.redraw();
-    });
-  }
-  if (window.Alpine && window.Alpine.store("budget")) boot();
-  else document.addEventListener("alpine:initialized", boot);
+  window.pbMountChart = mountChart;
+  window.pbRenderIE = render;
 </script>

@@ -1,13 +1,40 @@
-/* Treemap of spending by category over a window. */
+/* Spending by category — supports treemap (D3), bar (Chart.js),
+   and donut (Chart.js) variants. Picker UI sets
+   window.__pbChartType.spending; this renderer dispatches per type
+   on every redraw. */
 
 import { colors } from "./theme-colors.js";
+import { upsert, fmtCents, fmtCentsPrecise } from "./chartjs.js";
+
+function readType() {
+  return (window.pbReadChartType && window.pbReadChartType("spending", "treemap")) || "treemap";
+}
 
 export function render(el, data) {
-  if (!el || !window.d3) return;
-  var d3 = window.d3;
-  el.innerHTML = "";
-  if (!data || !data.length) { el.textContent = "No spending in this range."; return; }
+  if (!el) return;
+  if (!data || !data.length) { el.innerHTML = "<p style=\"padding: var(--space-md); color: var(--fg-muted);\">No spending in this range.</p>"; return; }
+  var type = readType();
+  if (type === "bar" || type === "donut") {
+    renderChartJs(el, data, type);
+  } else {
+    renderTreemap(el, data);
+  }
+}
 
+/* ---- Treemap (D3) ---- */
+function renderTreemap(el, data) {
+  if (!window.d3) return;
+  var d3 = window.d3;
+  /* If a Chart.js instance was previously mounted (e.g. user
+     switched bar → treemap), destroy it before clearing the
+     container — otherwise the orphan instance leaks event
+     listeners and may keep firing redraws on resize. */
+  var canvas = el.querySelector(":scope > canvas");
+  if (canvas && canvas.__pbChart) {
+    try { canvas.__pbChart.destroy(); } catch (_e) {}
+    canvas.__pbChart = null;
+  }
+  el.innerHTML = "";
   var c = colors();
   var rect = el.getBoundingClientRect();
   var width = Math.max(320, rect.width || 600);
@@ -54,4 +81,64 @@ export function render(el, data) {
         .attr("x", 6).attr("dy", 14).attr("font-weight", 400).attr("font-size", 11)
         .text("$" + (d.data.value / 100).toFixed(0));
     });
+}
+
+/* ---- Chart.js variants (bar + donut) ---- */
+function renderChartJs(el, data, type) {
+  if (!window.Chart) return;
+  var c = colors();
+  var palette = c.palette || [c["chart-1"], c["chart-2"], c["chart-3"], c["chart-4"], c["chart-5"], c["chart-6"]];
+  /* Show top 15 categories; group the rest into "Other" so the
+     chart doesn't become an unreadable thicket of tiny slices/bars. */
+  var top = data.slice(0, 15);
+  var rest = data.slice(15);
+  var labels = top.map(function (d) { return d.category; });
+  var values = top.map(function (d) { return d.value; });
+  if (rest.length) {
+    var otherSum = rest.reduce(function (s, r) { return s + r.value; }, 0);
+    labels.push("Other (" + rest.length + ")");
+    values.push(otherSum);
+  }
+  var bgColors = labels.map(function (_l, i) { return palette[i % palette.length]; });
+
+  var isBar = type === "bar";
+  upsert(el, {
+    type: isBar ? "bar" : "doughnut",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Spent",
+        data: values,
+        backgroundColor: bgColors,
+        borderColor: c["bg"],
+        borderWidth: isBar ? 0 : 2,
+        borderRadius: 0,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: isBar ? "y" : "x",
+      plugins: {
+        legend: { display: !isBar, position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var v = ctx.parsed && (ctx.parsed.x != null ? ctx.parsed.x : (ctx.parsed.y != null ? ctx.parsed.y : ctx.parsed));
+              return ctx.label + ": " + fmtCentsPrecise(v);
+            },
+          },
+        },
+      },
+      scales: isBar ? {
+        x: {
+          beginAtZero: true,
+          grid: { color: c["border"] },
+          ticks: { callback: function (v) { return fmtCents(v); } },
+        },
+        y: { grid: { display: false } },
+      } : {},
+    },
+  });
 }
