@@ -412,6 +412,30 @@ function dashboardView() {
        so manual entries are normalized just like imports. */
     quickForm: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "" },
 
+    /* ---- Memoization layer ----
+       The dashboard surfaces a dozen getters that each walk the full
+       transactions list (1,000+ rows at sample scale). Alpine
+       re-evaluates them on every reactivity tick, so without caching
+       a single mutation re-walks the list dozens of times — visibly
+       slow on mobile. _memo() returns a cached value keyed on
+       _listVersion + currentMonth + a per-call salt; cache is
+       invalidated automatically on any store mutation that bumps
+       lists or on a month switch. */
+    _memoCache: Object.create(null),
+    _memoKey: null,
+    _memo(key, compute) {
+      var s = this.$store.budget;
+      var cacheKey = (s._listVersion || 0) + ":" + (s.currentMonth || "") + ":" + (s.profile ? s.profile.id : "");
+      if (this._memoKey !== cacheKey) {
+        this._memoCache = Object.create(null);
+        this._memoKey = cacheKey;
+      }
+      if (key in this._memoCache) return this._memoCache[key];
+      var v = compute();
+      this._memoCache[key] = v;
+      return v;
+    },
+
     init() {
       var self = this;
       /* Seed the inline quick-add form. Account is filled in lazily
@@ -536,15 +560,17 @@ function dashboardView() {
     /* Compare current netWorth to netWorth from ~6 months back via the
        netWorthByMonth report. Returns { from, to, pct }. */
     netWorthDelta() {
-      void this.$store.budget._listVersion;
-      var s = this.$store.budget;
-      var to = s.netWorth();
-      var series = s.reportNetWorth(null, 7) || [];
-      if (!series.length) return { from: to, to: to, pct: 0 };
-      var fromRow = series[0];
-      var from = fromRow && typeof fromRow.netWorth === "number" ? fromRow.netWorth : (fromRow && fromRow.total) || to;
-      var pct = from !== 0 ? ((to - from) / Math.abs(from)) * 100 : 0;
-      return { from: from, to: to, pct: pct };
+      var self = this;
+      return this._memo("netWorthDelta", function () {
+        var s = self.$store.budget;
+        var to = s.netWorth();
+        var series = s.reportNetWorth(null, 7) || [];
+        if (!series.length) return { from: to, to: to, pct: 0 };
+        var fromRow = series[0];
+        var from = fromRow && typeof fromRow.netWorth === "number" ? fromRow.netWorth : (fromRow && fromRow.total) || to;
+        var pct = from !== 0 ? ((to - from) / Math.abs(from)) * 100 : 0;
+        return { from: from, to: to, pct: pct };
+      });
     },
 
     /* ---- Cash flow this month (mini sankey) ---- */
@@ -554,42 +580,44 @@ function dashboardView() {
        the column's biggest value so the bars scale proportionally
        without needing JS to set widths beyond a single CSS var. */
     flowThisMonth() {
-      void this.$store.budget._listVersion;
-      var s = this.$store.budget;
-      if (!s.profile) return { sources: [], sinks: [], income: 0, expense: 0, net: 0, total: 0 };
-      var month = s.currentMonth;
-      var inMap = {};
-      var outMap = {};
-      var income = 0, expense = 0;
-      (s.profile.transactions || []).forEach(function (t) {
-        if (!t || !t.date || t.date.slice(0, 7) !== month) return;
-        if (t.transferTxnId) return;
-        var label = s.categoryName(t.categoryId) || (t.amount >= 0 ? "Uncategorized income" : "Uncategorized");
-        if (t.amount > 0) {
-          inMap[label] = (inMap[label] || 0) + t.amount;
-          income += t.amount;
-        } else if (t.amount < 0) {
-          var v = -t.amount;
-          outMap[label] = (outMap[label] || 0) + v;
-          expense += v;
+      var self = this;
+      return this._memo("flowThisMonth", function () {
+        var s = self.$store.budget;
+        if (!s.profile) return { sources: [], sinks: [], income: 0, expense: 0, net: 0, total: 0 };
+        var month = s.currentMonth;
+        var inMap = {};
+        var outMap = {};
+        var income = 0, expense = 0;
+        (s.profile.transactions || []).forEach(function (t) {
+          if (!t || !t.date || t.date.slice(0, 7) !== month) return;
+          if (t.transferTxnId) return;
+          var label = s.categoryName(t.categoryId) || (t.amount >= 0 ? "Uncategorized income" : "Uncategorized");
+          if (t.amount > 0) {
+            inMap[label] = (inMap[label] || 0) + t.amount;
+            income += t.amount;
+          } else if (t.amount < 0) {
+            var v = -t.amount;
+            outMap[label] = (outMap[label] || 0) + v;
+            expense += v;
+          }
+        });
+        function topN(map) {
+          var arr = Object.keys(map).map(function (k) { return { name: k, value: map[k] }; });
+          arr.sort(function (a, b) { return b.value - a.value; });
+          arr = arr.slice(0, 5);
+          var max = arr.length ? arr[0].value : 1;
+          arr.forEach(function (r) { r.pct = Math.round((r.value / max) * 100); });
+          return arr;
         }
+        return {
+          sources: topN(inMap),
+          sinks:   topN(outMap),
+          income: income,
+          expense: expense,
+          net: income - expense,
+          total: income + expense,
+        };
       });
-      function topN(map) {
-        var arr = Object.keys(map).map(function (k) { return { name: k, value: map[k] }; });
-        arr.sort(function (a, b) { return b.value - a.value; });
-        arr = arr.slice(0, 5);
-        var max = arr.length ? arr[0].value : 1;
-        arr.forEach(function (r) { r.pct = Math.round((r.value / max) * 100); });
-        return arr;
-      }
-      return {
-        sources: topN(inMap),
-        sinks:   topN(outMap),
-        income: income,
-        expense: expense,
-        net: income - expense,
-        total: income + expense,
-      };
     },
 
     /* ---- Smart insights ---- */
@@ -598,7 +626,10 @@ function dashboardView() {
          { id, severity, icon, title, detail, href?, cta? }
        severity = ok | info | warn | danger drives the color rail. */
     insights() {
-      void this.$store.budget._listVersion;
+      var self = this;
+      return this._memo("insights", function () { return self._computeInsights(); });
+    },
+    _computeInsights() {
       var s = this.$store.budget;
       if (!s.profile) return [];
       var out = [];
@@ -713,27 +744,29 @@ function dashboardView() {
 
     /* ---- Account balances grid ---- */
     allAccountsForGrid() {
-      void this.$store.budget._listVersion;
-      var p = this.$store.budget.profile;
-      if (!p || !p.accounts) return [];
-      var s = this.$store.budget;
-      var groupNameById = {};
-      (p.accountGroups || []).forEach(function (g) { groupNameById[g.id] = g.name; });
-      return p.accounts
-        .filter(function (a) { return !a.closedAt; })
-        .map(function (a) {
-          return {
-            id: a.id,
-            name: a.name,
-            groupName: groupNameById[a.groupId] || "",
-            excludeFromNetWorth: !!a.excludeFromNetWorth,
-            balance: s.accountBalance(a.id),
-          };
-        })
-        .sort(function (a, b) {
-          if (a.groupName !== b.groupName) return a.groupName.localeCompare(b.groupName);
-          return a.name.localeCompare(b.name);
-        });
+      var self = this;
+      return this._memo("allAccountsForGrid", function () {
+        var p = self.$store.budget.profile;
+        if (!p || !p.accounts) return [];
+        var s = self.$store.budget;
+        var groupNameById = {};
+        (p.accountGroups || []).forEach(function (g) { groupNameById[g.id] = g.name; });
+        return p.accounts
+          .filter(function (a) { return !a.closedAt; })
+          .map(function (a) {
+            return {
+              id: a.id,
+              name: a.name,
+              groupName: groupNameById[a.groupId] || "",
+              excludeFromNetWorth: !!a.excludeFromNetWorth,
+              balance: s.accountBalance(a.id),
+            };
+          })
+          .sort(function (a, b) {
+            if (a.groupName !== b.groupName) return a.groupName.localeCompare(b.groupName);
+            return a.name.localeCompare(b.name);
+          });
+      });
     },
 
     /* ---- Formatting helpers ---- */
@@ -769,28 +802,29 @@ function dashboardView() {
       return months[Number(parts[1]) - 1] + " " + Number(parts[2]);
     },
 
-    /* ---- This-month flow (1-month report) ---- */
+    /* ---- This-month flow (1-month report) — memoized ---- */
     _thisMonthRow() {
-      void this.$store.budget._listVersion;
-      var rows = this.$store.budget.reportIncomeVsExpense(null, 1) || [];
-      return rows[0] || { income: 0, expense: 0, net: 0 };
+      var self = this;
+      return this._memo("_thisMonthRow", function () {
+        var rows = self.$store.budget.reportIncomeVsExpense(null, 1) || [];
+        return rows[0] || { income: 0, expense: 0, net: 0 };
+      });
     },
     thisMonthIncome()  { return this._thisMonthRow().income; },
     thisMonthExpense() { return this._thisMonthRow().expense; },
     thisMonthNet()     { return this._thisMonthRow().net; },
 
-    /* ---- Savings rate (3-month rolling) ---- */
-    _savingsRows() {
-      void this.$store.budget._listVersion;
-      return this.$store.budget.reportIncomeVsExpense(null, 3) || [];
-    },
+    /* ---- Savings rate (3-month rolling) — memoized ---- */
     savingsRatePct() {
-      var rows = this._savingsRows();
-      if (!rows.length) return null;
-      var sumI = 0, sumE = 0;
-      rows.forEach(function (r) { sumI += r.income; sumE += r.expense; });
-      if (sumI <= 0) return null;
-      return ((sumI - sumE) / sumI) * 100;
+      var self = this;
+      return this._memo("savingsRatePct", function () {
+        var rows = self.$store.budget.reportIncomeVsExpense(null, 3) || [];
+        if (!rows.length) return null;
+        var sumI = 0, sumE = 0;
+        rows.forEach(function (r) { sumI += r.income; sumE += r.expense; });
+        if (sumI <= 0) return null;
+        return ((sumI - sumE) / sumI) * 100;
+      });
     },
     savingsRateLabel() {
       var p = this.savingsRatePct();
@@ -805,46 +839,63 @@ function dashboardView() {
       return "rec-summary__tile--accent";
     },
 
-    /* ---- Upcoming bills (delegated to store) ---- */
-    upcoming7()  { return this.$store.budget.upcomingBills(7); },
-    upcoming14() { return this.$store.budget.upcomingBills(14); },
+    /* ---- Upcoming bills (delegated to store) — memoized ---- */
+    upcoming7()  {
+      var self = this;
+      return this._memo("upcoming7",  function () { return self.$store.budget.upcomingBills(7); });
+    },
+    upcoming14() {
+      var self = this;
+      return this._memo("upcoming14", function () { return self.$store.budget.upcomingBills(14); });
+    },
 
     /* ---- Overspent count ---- */
-    overspent() { return this.$store.budget.overspentCount(); },
+    overspent() {
+      var self = this;
+      return this._memo("overspent", function () { return self.$store.budget.overspentCount(); });
+    },
 
-    /* ---- Top spending categories this month ---- */
+    /* ---- Top spending categories this month — memoized ---- */
     topCategoriesRows() {
-      void this.$store.budget._listVersion;
-      var m = this.$store.budget.currentMonth;
-      var data = this.$store.budget.reportSpending(m, m) || [];
-      if (!data.length) return [];
-      var max = data[0].value || 1;
-      return data.slice(0, 5).map(function (r) {
-        return {
-          categoryId: r.categoryId,
-          category: r.category,
-          value: r.value,
-          pct: max > 0 ? Math.round((r.value / max) * 100) : 0,
-        };
+      var self = this;
+      return this._memo("topCategoriesRows", function () {
+        var m = self.$store.budget.currentMonth;
+        var data = self.$store.budget.reportSpending(m, m) || [];
+        if (!data.length) return [];
+        var max = data[0].value || 1;
+        return data.slice(0, 5).map(function (r) {
+          return {
+            categoryId: r.categoryId,
+            category: r.category,
+            value: r.value,
+            pct: max > 0 ? Math.round((r.value / max) * 100) : 0,
+          };
+        });
       });
     },
 
-    /* ---- Goals needing attention (delegated to store) ---- */
+    /* ---- Goals needing attention — memoized ---- */
     goalsAttention() {
-      return this.$store.budget.goalsNeedingAttention(3);
+      var self = this;
+      return this._memo("goalsAttention", function () { return self.$store.budget.goalsNeedingAttention(3); });
     },
 
-    /* ---- Recent transactions (last 10, newest first) ---- */
+    /* ---- Recent transactions (last 10, newest first) — memoized ---- */
     recentTransactions() {
-      void this.$store.budget._listVersion;
-      if (!this.$store.budget.profile) return [];
-      var arr = this.$store.budget.profile.transactions.slice();
-      arr.sort(function (a, b) { return b.date.localeCompare(a.date); });
-      return arr.slice(0, 10);
+      var self = this;
+      return this._memo("recentTransactions", function () {
+        if (!self.$store.budget.profile) return [];
+        var arr = self.$store.budget.profile.transactions.slice();
+        arr.sort(function (a, b) { return b.date.localeCompare(a.date); });
+        return arr.slice(0, 10);
+      });
     },
 
-    /* ---- Alerts (delegated to store) ---- */
-    alerts() { return this.$store.budget.dashboardAlerts(); },
+    /* ---- Alerts (delegated to store) — memoized ---- */
+    alerts() {
+      var self = this;
+      return this._memo("alerts", function () { return self.$store.budget.dashboardAlerts(); });
+    },
   };
 }
 </script>

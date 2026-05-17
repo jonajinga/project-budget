@@ -203,28 +203,29 @@ function registerView() {
       this.showMakeRecurring = false;
     },
 
+    /* Memoization: visibleTransactions() is called from many x-* bindings
+       per row (x-for + x-if + x-show + x-text). With 1,399 sample txns
+       running Fuse + the per-row payee/category lookups on every Alpine
+       tick chewed the main thread, especially on mobile. Cache keyed
+       on the store's _listVersion + the current filter + search so
+       legitimate mutations still invalidate, but the dozen reads per
+       tick collapse to one compute. */
+    _vtxCache: null,
+    _vtxKey: null,
     visibleTransactions() {
-      /* Touch the list-version counter so Alpine re-runs this when a
-         transaction is updated/added/deleted. Without this read, row-level
-         x-if fragments that branched between display/edit modes can hold
-         stale bindings (e.g. cleared toggle still showing the old state
-         after Save). */
-      void this.$store.budget._listVersion;
-      var p = this.$store.budget.profile;
-      if (!p) return [];
+      var s = this.$store.budget;
+      var key = (s._listVersion || 0) + "|" + (this.filterAccountId || "") + "|" + (this.search || "");
+      if (this._vtxKey === key && this._vtxCache) return this._vtxCache;
+      var p = s.profile;
+      if (!p) { this._vtxKey = key; this._vtxCache = []; return this._vtxCache; }
       var q = (this.search || "").trim();
       var self = this;
       var pool = p.transactions
         .filter(t => !self.filterAccountId || t.accountId === self.filterAccountId);
+      var result;
       if (!q) {
-        return pool.sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
-      }
-      /* Fuzzy search via Fuse.js when available; falls back to a plain
-         substring match (same behavior as before) for any environment
-         where Fuse failed to load. Index is rebuilt per call because the
-         caller (Alpine x-for) already does so on every store mutation;
-         building Fuse on ~5k rows costs <5ms. */
-      if (typeof window.Fuse === "function") {
+        result = pool.sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+      } else if (typeof window.Fuse === "function") {
         var docs = pool.map(t => ({
           t: t,
           payee: self.$store.budget.payeeName(t.payeeId) || "",
@@ -244,15 +245,18 @@ function registerView() {
             { name: "amount",   weight: 0.5 },
           ],
         });
-        return fuse.search(q).map(r => r.item.t)
+        result = fuse.search(q).map(r => r.item.t)
           .sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+      } else {
+        var ql = q.toLowerCase();
+        result = pool.filter(t => {
+          var payee = (self.$store.budget.payeeName(t.payeeId) || "").toLowerCase();
+          return payee.indexOf(ql) !== -1 || (t.memo || "").toLowerCase().indexOf(ql) !== -1;
+        }).sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
       }
-      /* Fallback: substring on payee + memo (legacy behavior). */
-      var ql = q.toLowerCase();
-      return pool.filter(t => {
-        var payee = (self.$store.budget.payeeName(t.payeeId) || "").toLowerCase();
-        return payee.indexOf(ql) !== -1 || (t.memo || "").toLowerCase().indexOf(ql) !== -1;
-      }).sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+      this._vtxKey = key;
+      this._vtxCache = result;
+      return result;
     },
 
     otherSide(t) {

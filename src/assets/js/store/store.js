@@ -263,6 +263,19 @@ export function createStore() {
     init() {
       this.loading = true;
       this.loadError = null;
+      /* Safety: never let the loading overlay trap the UI. If init
+         hasn't flipped loading=false in 4s (slow Dexie restore,
+         large profile deserialization, etc.) force-clear it. The
+         user gets to interact even if the profile is still arriving
+         in the background. */
+      var self = this;
+      var safety = setTimeout(function () {
+        if (self.loading) {
+          console.warn("Store init exceeded 4s, forcing loading=false");
+          self.loading = false;
+        }
+      }, 4000);
+      this._loadingSafety = safety;
       this.privateBrowsing = isPrivateBrowsing();
       if (this.privateBrowsing) {
         this.pushToast(
@@ -301,6 +314,7 @@ export function createStore() {
           );
         } finally {
           self.loading = false;
+          if (self._loadingSafety) { clearTimeout(self._loadingSafety); self._loadingSafety = null; }
         }
       });
     },
@@ -348,20 +362,14 @@ export function createStore() {
     _bootFromLocalStorage() {
       this.refreshProfiles();
       var id = getActiveId();
-      var hasV2Sample = false;
-      try { hasV2Sample = !!localStorage.getItem("projectbudget:sample-loaded-v2"); } catch (_e) {}
       if (id && this.profiles.find(function (p) { return p.id === id; })) {
         this._load(id);
-        /* Returning visitor who has data but hasn't seen the v2
-           sample — add it alongside their own profiles so they can
-           explore the new household without losing what they had. */
-        if (!hasV2Sample && !this.privateBrowsing) {
-          this.loadSampleIfFirstVisit();
-        }
       } else if (!this.profiles.length && !this.privateBrowsing) {
         /* First-time visitor — auto-load the bundled sample so the app
-           isn't empty. */
-        this.loadSampleIfFirstVisit();
+           isn't empty. Deferred a tick so it doesn't fight with the
+           current page's initial render. */
+        var self = this;
+        setTimeout(function () { self.loadSampleIfFirstVisit(); }, 0);
       }
     },
 
