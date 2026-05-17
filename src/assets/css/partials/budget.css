@@ -680,15 +680,20 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   box-shadow: var(--shadow-sm);
   align-items: center;
   row-gap: var(--space-sm);
-  /* Mobile-first: stack label + 3 numeric values into a single
-     column so the row never overflows a 360px viewport. The 3-up
-     desktop layout kicks in at 600px+. */
-  grid-template-columns: 1fr;
-  column-gap: var(--space-md);
+  /* Mobile: label spans full width on the top row, the three
+     numeric values sit side-by-side on the bottom row — same
+     pattern as cat/group rows so the total reads as a summary
+     of the columns above. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "cat cat cat"
+    "assigned outflow available";
+  column-gap: var(--space-sm);
 }
 @media (min-width: 600px) {
   .budget__total-row {
     grid-template-columns: minmax(0, 1fr) repeat(3, minmax(9rem, max-content));
+    grid-template-areas: "cat assigned outflow available";
   }
 }
 .budget__total-row .num {
@@ -743,6 +748,15 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
+/* Phone: shrink the big numeric so five-figure values fit in a
+   1/3-column cell. Mini-label stays the same micro size. */
+@media (max-width: 599px) {
+  .budget__total-value {
+    font-size: var(--fs-md);
+  }
+  .budget__total-label strong { font-size: var(--fs-md); }
+  .budget__total-row { padding: var(--space-sm); }
+}
 /* Outflow button inside the total row — strip the per-cat pill
    chrome so the big summary numeral reads as a total, not a
    row entry. Selector doubles the class to win the cascade against
@@ -757,6 +771,12 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   background: transparent;
   font-weight: 700;
   font-size: var(--fs-xl);
+}
+@media (max-width: 599px) {
+  .budget__total-row .budget__activity-btn.budget__total-value,
+  .budget__total-row .budget__activity-btn.budget__total-value.budget__activity-btn {
+    font-size: var(--fs-md);
+  }
 }
 .budget__total-row .budget__activity-btn.budget__total-value:not(:disabled):hover {
   background: transparent;
