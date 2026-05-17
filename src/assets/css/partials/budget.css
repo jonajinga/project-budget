@@ -40,8 +40,76 @@
   padding: 0.55rem var(--space-sm);
   font-size: var(--fs-sm);
 }
-.budget__group-header { background: var(--bg-alt); font-weight: 600; }
 .budget__row { border-top: 1px solid var(--border-soft); }
+
+/* Group header — deliberately heavier than a cat row so the visual
+   hierarchy reads at a glance:
+     - Stronger background, darker than the page (sticks out from
+       the alternating bg-elevated/bg-alt of cat rows).
+     - Taller padding for breathing room.
+     - Accent-tinted left rail when expanded, fades when collapsed.
+     - Group name renders larger + uppercase tracking so it doesn't
+       look like a cat name with a chevron pinned to it.
+     - Group totals (the new .budget__group-total spans) render in
+       a heavier, larger numeral with no pill chrome — these read
+       as summary lines, not row data.
+     - Vertical space ABOVE each group (via row > .budget__group:not(:first-child))
+       to chunk groups visually. */
+.budget__group-header {
+  background: var(--bg-alt);
+  font-weight: 600;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-top: 2px solid var(--border-strong, var(--border));
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.budget__group-header strong {
+  font-size: var(--fs-md);
+  letter-spacing: 0.02em;
+}
+.budget__group-header .group-toggle__chevron.is-collapsed ~ * {
+  /* When collapsed, sibling content is unaffected — keep selector
+     here as a hook for future opacity tweaks. */
+}
+.budget__group:not(:first-child) {
+  margin-top: var(--space-sm);
+}
+.budget__group-total {
+  font-weight: 700;
+  font-size: var(--fs-md);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  padding-right: 0.85rem;
+  text-align: right;
+}
+.budget__group-total--neg {
+  color: var(--danger);
+}
+/* Outflow button at the group level — strip the per-cat pill chrome
+   so the group total reads as a summary, not a row entry. */
+.budget__activity-btn--group {
+  display: inline;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  font-weight: 700;
+  font-size: var(--fs-md);
+  border-radius: 0;
+}
+.budget__activity-btn--group:not(:disabled):hover {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Cat rows nest under the group header — slight left indent so the
+   parent-child relationship reads visually. Apply via the
+   .budget__row inside a group, leaving the column header itself
+   un-indented. */
+.budget__group .budget__row .budget__category {
+  padding-left: var(--space-sm);
+}
 
 /* Selected-row tint — accent left rail + subtle background so the
    user can see at a glance what's in the bulk selection. */

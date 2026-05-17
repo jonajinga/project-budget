@@ -188,15 +188,22 @@ eleventyExcludeFromCollections: true
                 </button>
               </div>
             </div>
-            <span class="num" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
-            <span class="num">
-              <button type="button" class="budget__activity-btn"
+            {# Group totals stay as plain bold tabular numerals — no
+               pill chrome — so they read as summary lines rather
+               than echoing the per-cat pill row. Outflow keeps its
+               button affordance but loses the pill border at the
+               group level (.budget__group-header override below). #}
+            <span class="num budget__group-total" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
+            <span class="num budget__group-total">
+              <button type="button" class="budget__activity-btn budget__activity-btn--group"
                       :disabled="groupTotalActivity(group.categories) === 0"
                       @click="openActivity({ kind: 'group', id: group.group?.id || '__ungrouped', name: group.group ? group.group.name : 'Other categories', categoryIds: group.categories.map(c => c.id) })"
                       :data-tip="groupTotalActivity(group.categories) === 0 ? '' : ('Click to see every transaction across ' + (group.group ? group.group.name : 'Other categories') + ' this month.')"
                       x-text="formatCents(groupTotalActivity(group.categories))"></button>
             </span>
-            <span class="num" x-text="formatCents(groupTotalAvailable(group.categories))"></span>
+            <span class="num budget__group-total"
+                  :class="groupTotalAvailable(group.categories) < 0 ? 'budget__group-total--neg' : ''"
+                  x-text="formatCents(groupTotalAvailable(group.categories))"></span>
           </div>
 
           <div x-show="!(group.group && $store.budget.isCatGroupCollapsed(group.group.id))" x-cloak>
@@ -1615,6 +1622,16 @@ function budgetView() {
         var status = this.$store.budget.goalStatus(catId);
         if (status === "funded" || status === "over") return "available-pill--green";
       }
+      return "available-pill--blue";
+    },
+    /* Same color rules but driven by a sum across multiple categories
+       (a group's total). Skips the per-cat goal check — at group
+       level there's no single goal to evaluate; positive sums get
+       blue, negative red, zero muted. */
+    groupAvailablePillClass(cats) {
+      var v = this.groupTotalAvailable(cats);
+      if (v < 0) return "available-pill--red";
+      if (v === 0) return "available-pill--zero";
       return "available-pill--blue";
     },
 
