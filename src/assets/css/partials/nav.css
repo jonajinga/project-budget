@@ -4,6 +4,9 @@
   position: sticky;
   top: 0;
   z-index: 30;
+  /* Respect iOS notch — push the header chrome below the status
+     bar instead of clipping behind it. */
+  padding-top: env(safe-area-inset-top, 0);
 }
 .site-header__inner {
   display: flex;
