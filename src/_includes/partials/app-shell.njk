@@ -82,7 +82,8 @@
                   <button type="button" class="acct-group__head"
                           @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
                           :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
-                          :disabled="!group.group">
+                          :disabled="!group.group"
+                          :data-tip="group.group ? ($store.budget.isAcctGroupCollapsed(group.group.id) ? 'Expand to see ' + group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') : 'Collapse this group') : ''">
                     {# Match the outer .app-nav__section-chevron treatment — same
                        inline SVG at the same 10x10 size — so the inner group
                        chevrons read at the same weight as the section chevrons
@@ -92,13 +93,18 @@
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </span>
                     <span class="acct-group__name" x-text="group.group ? group.group.name : 'Other'"></span>
-                    {# Compact group total ($12.5k) shown always. No
-                       parentheses — accounting parens convention reads
-                       as "negative" and would mislead users glancing
-                       at a positive balance. The .is-negative red color
-                       carries the sign. #}
+                    {# Account-count pill — visible only when this group is
+                       collapsed, so the user knows there's content hidden.
+                       Replaces the previous "compact group total" pill
+                       (which read as "$12.5k" and looked like a static
+                       label, not an expand affordance). Total now lives
+                       in the totals row at the bottom of the section. #}
+                    <span class="acct-group__count"
+                          x-show="group.group && $store.budget.isAcctGroupCollapsed(group.group.id)" x-cloak
+                          x-text="group.accounts.length"
+                          :data-tip="group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' hidden — tap to expand'"></span>
                     <span class="acct-group__total"
-                          x-show="group.group" x-cloak
+                          x-show="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id)" x-cloak
                           :class="acctGroupTotal(group) < 0 ? 'is-negative' : ''"
                           x-text="fmtCompactCents(acctGroupTotal(group))"></span>
                   </button>

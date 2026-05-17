@@ -1212,7 +1212,40 @@ button.search-result:focus-visible {
   letter-spacing: 0;
 }
 .acct-group__total.is-negative { color: var(--danger); }
-.acct-group__list { display: flex; flex-direction: column; gap: 0; margin-top: var(--space-3xs); }
+/* Count pill — shown only when the group is collapsed so the user
+   knows there's content to expand. Sits where the total used to. */
+.acct-group__count {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.1rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Indent the account list one level below the group header so the
+   sidebar reads top-to-bottom as Section → Group → Account.
+   The left padding lines up with the start of the group name (after
+   the chevron). */
+.acct-group__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: var(--space-3xs);
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border-soft);
+  margin-left: 0.55rem;
+}
 
 .acct-link {
   display: flex;

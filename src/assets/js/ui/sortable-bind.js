@@ -59,6 +59,16 @@
     if (el[DATA_KEY]) return; /* already bound */
     var kind = el.getAttribute("data-sortable-kind");
     if (!kind) return;
+    /* Skip nodes inside a Sortable drag clone. With forceFallback +
+       fallbackOnBody, Sortable deep-clones the dragged element and
+       appends it to <body>. The clone carries the same
+       data-sortable-list attribute, so the MutationObserver below
+       would attach a fresh Sortable to it — which then fights the
+       outer drag for touch/mouse events and freezes the gesture.
+       This was the root cause of "category-group drag freezes" while
+       individual categories worked (categories have no nested
+       sortable inside their rows). */
+    if (el.closest(".sortable-fallback, .sortable-drag, .sortable-ghost")) return;
 
     /* Categories on /app/categories/ vs /app/budget/ are the same kind
        conceptually (both move the same entities) but live in different

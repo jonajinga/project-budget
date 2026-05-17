@@ -91,6 +91,13 @@ function registerView() {
     },
 
     get openAccounts() {
+      /* Touch _listVersion so Alpine re-runs this getter when the
+         profile finishes loading from Dexie. Without the tripwire,
+         the <select> populated by this getter stays empty on first
+         paint, and the URL's ?account=<id> filter falls back to
+         the default "All accounts" option even though filterAccountId
+         is set on init(). */
+      void this.$store.budget._listVersion;
       var p = this.$store.budget.profile;
       if (!p) return [];
       return p.accounts.filter(a => !a.closedAt).sort((a, b) => a.name.localeCompare(b.name));
