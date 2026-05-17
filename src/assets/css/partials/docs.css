@@ -149,6 +149,10 @@
   border: 1px solid var(--border-soft);
   padding: var(--space-sm);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 599px) {
+  .doc-content__prose pre { font-size: var(--fs-xs); }
 }
 .doc-content__prose pre code { background: none; padding: 0; }
 .doc-content__prose blockquote {

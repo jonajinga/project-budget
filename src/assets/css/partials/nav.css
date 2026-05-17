@@ -373,6 +373,13 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-input);
   background: var(--bg-alt);
+  /* keep kbd boxes on one line on phones — Ctrl/Cmd + K split was
+     wrapping the + and K out of the box. */
+  white-space: nowrap;
+}
+@media (max-width: 599px) {
+  .search-modal__hint { font-size: var(--fs-xs); padding: var(--space-sm); }
+  .search-modal__hint kbd { padding: 0 4px; font-size: 0.75em; }
 }
 .search-modal__results { list-style: none; padding: 0; margin: 0; }
 .search-modal__section { border-top: 1px solid var(--border-soft); }
@@ -964,6 +971,16 @@ button.search-result:focus-visible {
   hyphens: none;
   text-wrap: balance;
 }
+/* Phone: ellipsis on single line — the drawer sidebar at 88vw is
+   tall but narrow, and a 2-line wrapped profile name eats too much
+   of the trigger pill height. */
+@media (max-width: 599px) {
+  .profile-switcher__name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
 /* Establish a container so the clamp above can use container query
    units (cqi). Falls back to viewport units for browsers without
    container query unit support. */
@@ -1089,6 +1106,9 @@ button.search-result:focus-visible {
   position: absolute;
   top: calc(100% + 6px);
   left: 0; right: 0;
+  /* Phone safety: dropdown can't overflow the viewport horizontally
+     when the sidebar is in drawer mode (88vw wide). */
+  max-width: calc(100vw - var(--space-md));
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-input);

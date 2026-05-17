@@ -137,6 +137,15 @@
   flex-wrap: wrap;
 }
 .data-summary__link { font-size: var(--fs-sm); }
+/* Phone: stack label above value so long labels don't wrap into
+   towering rows. */
+@media (max-width: 599px) {
+  .data-summary__row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3xs);
+  }
+}
 
 .empty-state {
   text-align: center;
