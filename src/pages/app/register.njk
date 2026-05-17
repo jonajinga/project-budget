@@ -704,7 +704,10 @@ function registerView() {
       /* Mobile/desktop split — below 600px the table is unusable
          (8 columns at 360px). Render compact cards instead. */
       var self = this;
-      var mq = window.matchMedia("(max-width: 599px)");
+      /* Card-mode threshold matches the table's min-width media query
+         in register.css — under 768px the table forces horizontal
+         scroll, so we render the card view instead. */
+      var mq = window.matchMedia("(max-width: 767px)");
       this.isMobile = mq.matches;
       var onChange = function (e) { self.isMobile = e.matches; };
       if (mq.addEventListener) mq.addEventListener("change", onChange);

@@ -34,11 +34,21 @@
 .budget__group-header,
 .budget__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 5rem 5rem;
+  /* Mobile-first: 360px is the smallest target. Two-column at <480px
+     (Category | Available only) — Assigned input + Outflow hide via
+     .budget__activity / .budget__assigned media rules below. Pills
+     get a smaller min-width on mobile too so they fit a 360px row. */
+  grid-template-columns: minmax(0, 1fr) 5rem;
   gap: var(--space-2xs);
   align-items: center;
   padding: 0.55rem var(--space-sm);
   font-size: var(--fs-sm);
+}
+@media (min-width: 480px) {
+  .budget__group-header,
+  .budget__row {
+    grid-template-columns: minmax(0, 1fr) 5.5rem 5.5rem;
+  }
 }
 .budget__row { border-top: 1px solid var(--border-soft); }
 
@@ -180,8 +190,20 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   display: none !important;
 }
 
+/* Hide Assigned input + group total on phones — Available is the
+   most-scanned column. Users can tap the row to open the editor on
+   mobile (per-row disclosure pattern). */
+.budget__assigned { display: none; }
 .budget__activity { display: none; }
+.budget__group-header > :nth-child(2),
 .budget__group-header > :nth-child(3) { display: none; }
+@media (min-width: 480px) {
+  .budget__assigned { display: block; }
+  .budget__group-header > :nth-child(2) { display: block; }
+}
+@media (min-width: 600px) {
+  .budget__group-header > :nth-child(3) { display: block; }
+}
 
 @media (min-width: 600px) {
   .budget__group-header,
@@ -470,17 +492,23 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      the border AND digit-right-edges line up across rows (the
      convention for scanning tabular numerals). */
   justify-content: flex-end;
-  min-width: 7rem;
+  /* Mobile-first: small pill to fit narrow grid cells. Bumps up
+     at 600px+ via the @media block below. */
+  min-width: 3.5rem;
   max-width: 100%;
-  /* Extra right padding so the trailing digit doesn't kiss the
-     pill border — especially noticeable on long signed values like
-     -$1,944.27 where the $ would otherwise touch the edge. */
-  padding: 0.25rem 1.1rem;
+  padding: 0.15rem 0.4rem;
   border-radius: 999px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   line-height: 1.4;
+}
+@media (min-width: 600px) {
+  .available-pill {
+    min-width: 7rem;
+    padding: 0.25rem 1.1rem;
+    font-size: var(--fs-sm);
+  }
 }
 .available-pill--green {
   background: rgba(47, 110, 77, 0.16);
@@ -669,12 +697,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      the border AND digit-right-edges line up across rows (the
      convention for scanning tabular numerals). */
   justify-content: flex-end;
-  min-width: 7rem;
+  /* Mobile-first pill chrome — bumps up to match .available-pill at
+     600px+ via the @media block below. */
+  min-width: 3.5rem;
   max-width: 100%;
-  /* Extra right padding so the trailing digit doesn't kiss the
-     pill border — especially noticeable on long signed values like
-     -$1,944.27 where the $ would otherwise touch the edge. */
-  padding: 0.25rem 1.1rem;
+  padding: 0.15rem 0.4rem;
   background: transparent;
   border: 1px solid var(--border-soft);
   border-radius: 999px;
@@ -684,6 +711,12 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   cursor: pointer;
   line-height: 1.4;
   transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+}
+@media (min-width: 600px) {
+  .budget__activity-btn {
+    min-width: 7rem;
+    padding: 0.25rem 1.1rem;
+  }
 }
 .budget__activity-btn:not(:disabled):hover {
   color: var(--accent);

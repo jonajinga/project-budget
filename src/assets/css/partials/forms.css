@@ -46,14 +46,34 @@
 .modal {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  max-width: 540px;
+  /* Hard-clamp so the modal can never exceed the viewport on phones.
+     calc() reserves 16px total for the backdrop padding (8px each
+     side). max-height + overflow-y means tall forms scroll inside
+     the modal instead of pushing the Confirm/Cancel row off-screen. */
+  max-width: min(540px, calc(100vw - 16px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   width: 100%;
   /* Tighter padding on mobile so a 360px modal isn't 60% gutter. */
   padding: var(--space-md);
+  /* Respect iOS home-indicator safe area so the bottom of the
+     modal isn't covered by it. */
+  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
   box-shadow: var(--shadow-lg);
   /* Less top reservation on phones — was wasting 80px on 800-tall
      screens. Respect safe-area for iOS notch. */
   margin-top: max(2vh, env(safe-area-inset-top));
+}
+/* Stack any 2-column form grids inside modals to a single column on
+   phones — every form field gets full width, no truncation. */
+@media (max-width: 599px) {
+  .modal .form-row,
+  .modal .form-grid,
+  .modal [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    display: grid !important;
+  }
 }
 @media (min-width: 600px) {
   .modal {

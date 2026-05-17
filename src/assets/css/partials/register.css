@@ -4,7 +4,22 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-.register__table { min-width: 720px; }
+/* Only enforce min-width on desktop where horizontal scrolling
+   makes sense; on mobile the card view renders instead (see the
+   isMobile check in register.njk). The previous unconditional
+   720px min-width forced horizontal scroll on every viewport
+   under 768px regardless of whether the card view was showing. */
+@media (min-width: 768px) {
+  .register__table { min-width: 720px; }
+}
+.register__filters .select {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.register__filters .register__search { flex: 2 1 14rem; min-width: 0; }
+@media (min-width: 480px) {
+  .register__filters .select { flex: 0 1 12rem; }
+}
 .register__toolbar {
   display: flex;
   flex-wrap: wrap;
