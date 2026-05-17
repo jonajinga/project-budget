@@ -14,7 +14,9 @@
     "start": "npx @11ty/eleventy --serve --port=8080",
     "dev": "npx @11ty/eleventy --serve --port=8080",
     "build": "npx @11ty/eleventy",
-    "clean": "npx rimraf _site"
+    "clean": "npx rimraf _site",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
@@ -24,6 +26,7 @@
     "pagefind": "^1.4.0",
     "purgecss": "^8.0.0",
     "rimraf": "^5.0.10",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "vitest": "^4.1.6"
   }
 }
