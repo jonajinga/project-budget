@@ -96,6 +96,18 @@
   <script src="/assets/js/vendor/popper.min.js" defer></script>
   <script src="/assets/js/vendor/tippy-bundle.min.js" defer></script>
   <script src="/assets/js/vendor/sortable.min.js" defer></script>
+  {# Page-specific Alpine factories — must load BEFORE Alpine boots so
+     the x-data="…View()" attributes find their factories. All scripts
+     are `defer` so they execute in document order. #}
+  {% if page.url == "/app/register/" %}
+    <script src="/assets/js/views/register-view.js?v={{ build.hash }}" defer></script>
+  {% endif %}
+  {% if page.url == "/app/budget/" %}
+    <script src="/assets/js/views/budget-view.js?v={{ build.hash }}" defer></script>
+  {% endif %}
+  {% if page.url == "/app/calendar/" %}
+    <script src="/assets/js/views/calendar-view.js?v={{ build.hash }}" defer></script>
+  {% endif %}
   <script src="/assets/js/vendor/alpine.min.js" defer></script>
   <script src="/assets/js/ui/sortable-bind.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/ui/command-palette.js?v={{ build.hash }}" defer></script>
