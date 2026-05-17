@@ -39,6 +39,8 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download the debt overview as a CSV file.">Export CSV</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -139,6 +141,21 @@ function debtView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        /* Use a custom format function for the type column so the CSV
+           shows the human label instead of the raw key, and for the
+           months-to-payoff column so "no recent payments" lands as a
+           string rather than a 0. */
+        window.pbExportCSV("debt-overview", this.rows, [
+          { key: "account",        label: "Account" },
+          { key: "type",           label: "Type",            format: function (v) { return v === "credit" ? "Credit card" : "Tracking liability"; } },
+          { key: "balance",        label: "Balance",         numeric: true },
+          { key: "avgPayment",     label: "Avg payment (3 mo)", numeric: true },
+          { key: "monthsToPayoff", label: "Months to payoff",   format: function (v) { return v ? String(v) : "No recent payments"; } },
+        ]);
+      }
+    },
 
     init() {
       var self = this;

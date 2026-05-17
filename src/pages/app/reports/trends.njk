@@ -1,36 +1,222 @@
 ---
 layout: layouts/app.njk
 title: "Monthly trends"
-description: "Mini sparkline per top category over the last twelve months."
+description: "Mini sparkline per top category over a configurable window. Spot rising / falling categories at a glance."
 permalink: /app/reports/trends/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data>
+<div class="app-page" x-data="trendsView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Monthly trends</h1>
-      <p class="app-page__lead">Sparklines for the top 12 categories over the last twelve months. Each card shows the total spent across the window.</p>
+      <p class="app-page__lead">Sparklines for the top spending categories. Each card shows total spent across the window and the per-month slope.</p>
     </div>
-    <div class="cluster">
-      <button class="btn btn--ghost btn--sm" type="button" onclick="window.print()"
-              data-tip="Open the browser print dialog.">Print</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
   </header>
 
+  {# ---- KPI strip ---- #}
+  <div class="kpi-strip">
+    <div class="kpi kpi--accent">
+      <span class="kpi__label">Categories tracked</span>
+      <span class="kpi__value" x-text="rows.length"></span>
+      <span class="kpi__delta" x-text="'Top ' + topN + ' by spend'"></span>
+    </div>
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Total across window</span>
+      <span class="kpi__value" x-text="fmt(kpis().total)"></span>
+      <span class="kpi__delta" x-text="'Trailing ' + rangeMonths + ' mo'"></span>
+    </div>
+    <div class="kpi kpi--ok">
+      <span class="kpi__label">Avg monthly</span>
+      <span class="kpi__value" x-text="fmt(kpis().avgPerMonth)"></span>
+      <span class="kpi__delta">Across all tracked categories</span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Biggest category</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
+      <span class="kpi__delta" x-text="kpis().topName ? fmt(kpis().topTotal) + ' total' : ''"></span>
+    </div>
+  </div>
+
   <section class="report">
-    <div id="chart-trends" style="min-height: 120px;"></div>
+    {# ---- Range + top-N pickers ---- #}
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
+      <template x-for="r in ranges" :key="r.value">
+        <button type="button" class="btn btn--sm"
+                :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
+                @click="rangeMonths = r.value"
+                x-text="r.label"></button>
+      </template>
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin: 0 var(--space-2xs) 0 var(--space-md);">Top N:</span>
+      <template x-for="opt in topNOptions" :key="opt">
+        <button type="button" class="btn btn--sm"
+                :class="topN === opt ? 'btn--primary' : 'btn--ghost'"
+                @click="topN = opt"
+                x-text="opt"></button>
+      </template>
+    </div>
+
+    <div class="chart" id="chart-trends" style="min-height: 240px;"></div>
+
+    {# ---- View as table (collapsed by default) + actions ---- #}
+    <details class="report__details" style="margin-top: var(--space-md);">
+      <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
+        View as table
+      </summary>
+      <table class="table" style="margin-top: var(--space-sm);">
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th>Category</th>
+            <th>Month</th>
+            <th class="num">Spent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in flatRows()" :key="row.categoryId + ':' + row.month">
+            <tr>
+              <td x-text="row.group || '—'"></td>
+              <td x-text="row.category"></td>
+              <td>
+                <a class="report-month-link"
+                   :href="'/app/calendar/?m=' + row.month + '&v=month'"
+                   x-text="row.month"
+                   data-tip="Open this month in the calendar."></a>
+              </td>
+              <td class="num amount--outflow" x-text="'$' + (row.value / 100).toFixed(2)"></td>
+            </tr>
+          </template>
+          <tr x-show="!flatRows().length" x-cloak>
+            <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No spending in this range.</td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
+
+    <div class="report-toolbar" style="margin-top: var(--space-md);">
+      <p class="report-toolbar__count">
+        <span x-text="rows.length"></span> categories ·
+        <span x-text="flatRows().length"></span> rows in table
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download the per-category, per-month spending grid as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
   </section>
 </div>
+
+<script>
+/* Single Alpine factory — replaces the older inline-effect boot.
+   Adds: range + top-N pickers (reactive redraw via $watch), KPI strip,
+   collapsed-table view that doubles as the CSV source. */
+function trendsView() {
+  return {
+    /* ---- Pickers ---- */
+    rangeMonths: 12,
+    topN: 12,
+    ranges: [
+      { value: 3,  label: "3 mo" },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
+    ],
+    topNOptions: [5, 10, 15, 20],
+
+    /* ---- Reactive data ---- */
+    get rows() {
+      /* Read _listVersion in the binding scope (Alpine tracks deps
+         here, not deep inside store methods). Matches the pattern
+         used by the sidebar Balances panel. */
+      void this.$store.budget._listVersion;
+      return this.$store.budget.reportTrends(null, this.rangeMonths, this.topN) || [];
+    },
+
+    /* Flat row shape for the table + CSV — one row per
+       category × month, easier to consume in spreadsheets than a
+       wide grid. */
+    flatRows() {
+      var out = [];
+      this.rows.forEach(function (cat) {
+        (cat.points || []).forEach(function (p) {
+          out.push({
+            categoryId: cat.categoryId,
+            category: cat.category,
+            group: cat.group,
+            month: p.month,
+            value: p.value,
+          });
+        });
+      });
+      out.sort(function (a, b) {
+        if (a.category !== b.category) return a.category.localeCompare(b.category);
+        return a.month.localeCompare(b.month);
+      });
+      return out;
+    },
+
+    /* ---- KPIs ---- */
+    kpis() {
+      var total = 0;
+      var top = null;
+      this.rows.forEach(function (r) {
+        total += r.total || 0;
+        if (!top || (r.total || 0) > (top.total || 0)) top = r;
+      });
+      return {
+        total: total,
+        avgPerMonth: this.rangeMonths > 0 ? Math.round(total / this.rangeMonths) : 0,
+        topName: top ? top.category : "",
+        topTotal: top ? (top.total || 0) : 0,
+      };
+    },
+
+    /* ---- Formatting ---- */
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+
+    /* ---- Lifecycle ---- */
+    init() {
+      var self = this;
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderTrends;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-trends", window.pbRenderTrends, function () {
+          return store.reportTrends(null, self.rangeMonths, self.topN);
+        });
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
+        self.$watch("topN",        function () { self.chart && self.chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
+    },
+
+    /* ---- Actions ---- */
+    print() { window.print(); },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        window.pbExportCSV("monthly-trends", this.flatRows(), [
+          { key: "group",    label: "Group" },
+          { key: "category", label: "Category" },
+          { key: "month",    label: "Month" },
+          { key: "value",    label: "Spent",    numeric: true },
+        ]);
+      }
+    },
+  };
+}
+</script>
 
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/monthly-trends.js";
-  function boot() {
-    var store = Alpine.store("budget");
-    var inst = mountChart("#chart-trends", render, function () { return store.reportTrends(); });
-    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
-  };
-  if (window.Alpine && window.Alpine.store("budget")) boot();
-  else document.addEventListener("alpine:initialized", boot);
+  window.pbMountChart = mountChart;
+  window.pbRenderTrends = render;
 </script>

@@ -13,15 +13,50 @@ eleventyExcludeFromCollections: true
         Starts from the current sum of on-budget account balances. Each future month subtracts net scheduled outflows and goal funding requirements. The shaded band shows the low estimate (after goal funding) and the high estimate (scheduled only).
       </p>
     </div>
-    <div class="cluster">
-      <button class="btn btn--secondary btn--sm" type="button" @click="horizon = 3" :class="horizon === 3 ? 'is-active' : ''">3 mo</button>
-      <button class="btn btn--secondary btn--sm" type="button" @click="horizon = 6" :class="horizon === 6 ? 'is-active' : ''">6 mo</button>
-      <button class="btn btn--secondary btn--sm" type="button" @click="horizon = 12" :class="horizon === 12 ? 'is-active' : ''">12 mo</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
   </header>
 
+  {# ---- KPI strip ---- #}
+  <div class="kpi-strip">
+    <div class="kpi" :class="kpis().endExpected < kpis().startBalance ? 'kpi--danger' : 'kpi--ok'">
+      <span class="kpi__label">Projected end balance</span>
+      <span class="kpi__value"
+            :class="kpis().endExpected < 0 ? 'amount--outflow' : ''"
+            x-text="fmt(kpis().endExpected)"></span>
+      <span class="kpi__delta" x-text="'In ' + horizon + ' months (expected)'"></span>
+    </div>
+    <div class="kpi kpi--accent">
+      <span class="kpi__label">Starting balance</span>
+      <span class="kpi__value" x-text="fmt(kpis().startBalance)"></span>
+      <span class="kpi__delta">On-budget accounts today</span>
+    </div>
+    <div class="kpi" :class="kpis().netChange < 0 ? 'kpi--danger' : 'kpi--ok'">
+      <span class="kpi__label">Net change</span>
+      <span class="kpi__value"
+            :class="kpis().netChange < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="fmt(kpis().netChange)"></span>
+      <span class="kpi__delta" x-text="kpis().netChange < 0 ? 'Burning down' : 'Building up'"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Lowest projected</span>
+      <span class="kpi__value"
+            :class="kpis().lowestLow < 0 ? 'amount--outflow' : ''"
+            x-text="fmt(kpis().lowestLow)"></span>
+      <span class="kpi__delta" x-text="kpis().lowestMonth || 'No data'"></span>
+    </div>
+  </div>
+
   <section class="report">
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Horizon:</span>
+      <template x-for="r in ranges" :key="r.value">
+        <button type="button" class="btn btn--sm"
+                :class="horizon === r.value ? 'btn--primary' : 'btn--ghost'"
+                @click="horizon = r.value"
+                x-text="r.label"></button>
+      </template>
+    </div>
+
     <div class="chart" id="chart-proj" style="min-height: 320px;"></div>
 
     <div class="report-toolbar">
@@ -32,6 +67,8 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download the projected balances per month as a CSV file.">Export CSV</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -78,6 +115,12 @@ eleventyExcludeFromCollections: true
 function projectionView() {
   return {
     horizon: 12,
+    ranges: [
+      { value: 3,  label: "3 mo" },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
+    ],
 
     query: "",
     sortKey: "month",
@@ -123,6 +166,44 @@ function projectionView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+    /* KPI computations — reads the raw (unsorted, unfiltered) source
+       so the start/end + lowest-month numbers don't shift when the
+       user sorts the table. */
+    kpis() {
+      void this.$store.budget._listVersion;
+      var src = this.$store.budget.reportProjection(this.horizon || 12) || [];
+      if (!src.length) return { startBalance: 0, endExpected: 0, netChange: 0, lowestLow: 0, lowestMonth: "" };
+      var start = src[0];
+      var end = src[src.length - 1];
+      var startBalance = start.expected != null ? start.expected : (start.low || 0);
+      var endExpected  = end.expected != null ? end.expected : (end.low || 0);
+      var lowestLow = Infinity, lowestMonth = "";
+      src.forEach(function (r) {
+        var v = r.low != null ? r.low : (r.expected || 0);
+        if (v < lowestLow) { lowestLow = v; lowestMonth = r.month; }
+      });
+      if (lowestLow === Infinity) lowestLow = 0;
+      return {
+        startBalance: startBalance,
+        endExpected: endExpected,
+        netChange: endExpected - startBalance,
+        lowestLow: lowestLow,
+        lowestMonth: lowestMonth,
+      };
+    },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        window.pbExportCSV("cashflow-projection", this.rows, [
+          { key: "month",    label: "Month" },
+          { key: "low",      label: "Low",      numeric: true },
+          { key: "expected", label: "Expected", numeric: true },
+          { key: "high",     label: "High",     numeric: true },
+        ]);
+      }
+    },
 
     init() {
       var self = this;

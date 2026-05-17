@@ -1,36 +1,219 @@
 ---
 layout: layouts/app.njk
 title: "Assignment history"
-description: "Per-category assigned vs spent over the last twelve months."
+description: "Per-category assigned vs spent over a configurable window — spot chronically under- or over-funded categories."
 permalink: /app/reports/assignment-history/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data>
+<div class="app-page" x-data="assignmentHistoryView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Assignment history</h1>
-      <p class="app-page__lead">Paired bars per month — what you assigned (green) vs what you spent (red). One card per top category, last twelve months.</p>
+      <p class="app-page__lead">Paired bars per month — what you assigned (green) vs what you spent (red). One card per top category over the window.</p>
     </div>
-    <div class="cluster">
-      <button class="btn btn--ghost btn--sm" type="button" onclick="window.print()"
-              data-tip="Open the browser print dialog.">Print</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
   </header>
 
+  {# ---- KPI strip ---- #}
+  <div class="kpi-strip">
+    <div class="kpi kpi--accent">
+      <span class="kpi__label">Categories tracked</span>
+      <span class="kpi__value" x-text="rows.length"></span>
+      <span class="kpi__delta" x-text="'Top ' + topN + ' by spend'"></span>
+    </div>
+    <div class="kpi kpi--ok">
+      <span class="kpi__label">Total assigned</span>
+      <span class="kpi__value" x-text="fmt(kpis().totalAssigned)"></span>
+      <span class="kpi__delta" x-text="'Trailing ' + rangeMonths + ' mo'"></span>
+    </div>
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Total spent</span>
+      <span class="kpi__value" x-text="fmt(kpis().totalSpent)"></span>
+      <span class="kpi__delta" x-text="kpis().underFunded + ' under-funded months'"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Net delta</span>
+      <span class="kpi__value"
+            :class="kpis().netDelta < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="fmt(kpis().netDelta)"></span>
+      <span class="kpi__delta">Assigned − spent</span>
+    </div>
+  </div>
+
   <section class="report">
-    <div id="chart-ah" style="min-height: 140px;"></div>
+    {# ---- Range + top-N pickers ---- #}
+    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
+      <template x-for="r in ranges" :key="r.value">
+        <button type="button" class="btn btn--sm"
+                :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
+                @click="rangeMonths = r.value"
+                x-text="r.label"></button>
+      </template>
+      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin: 0 var(--space-2xs) 0 var(--space-md);">Top N:</span>
+      <template x-for="opt in topNOptions" :key="opt">
+        <button type="button" class="btn btn--sm"
+                :class="topN === opt ? 'btn--primary' : 'btn--ghost'"
+                @click="topN = opt"
+                x-text="opt"></button>
+      </template>
+    </div>
+
+    <div class="chart" id="chart-ah" style="min-height: 260px;"></div>
+
+    {# ---- View as table (collapsed) ---- #}
+    <details class="report__details" style="margin-top: var(--space-md);">
+      <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
+        View as table
+      </summary>
+      <table class="table" style="margin-top: var(--space-sm);">
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th>Category</th>
+            <th>Month</th>
+            <th class="num">Assigned</th>
+            <th class="num">Spent</th>
+            <th class="num">Delta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in flatRows()" :key="row.categoryId + ':' + row.month">
+            <tr>
+              <td x-text="row.group || '—'"></td>
+              <td x-text="row.category"></td>
+              <td>
+                <a class="report-month-link"
+                   :href="'/app/calendar/?m=' + row.month + '&v=month'"
+                   x-text="row.month"
+                   data-tip="Open this month in the calendar."></a>
+              </td>
+              <td class="num amount--inflow" x-text="'$' + (row.assigned / 100).toFixed(2)"></td>
+              <td class="num amount--outflow" x-text="'$' + (row.spent / 100).toFixed(2)"></td>
+              <td class="num" :class="row.delta < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="'$' + (row.delta / 100).toFixed(2)"></td>
+            </tr>
+          </template>
+          <tr x-show="!flatRows().length" x-cloak>
+            <td colspan="6" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No data in this range.</td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
+
+    <div class="report-toolbar" style="margin-top: var(--space-md);">
+      <p class="report-toolbar__count">
+        <span x-text="rows.length"></span> categories ·
+        <span x-text="flatRows().length"></span> rows in table
+      </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
+              data-tip="Download the per-category, per-month assigned vs spent grid as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
+              data-tip="Open the browser print dialog.">Print</button>
+    </div>
   </section>
 </div>
+
+<script>
+function assignmentHistoryView() {
+  return {
+    rangeMonths: 12,
+    topN: 12,
+    ranges: [
+      { value: 3,  label: "3 mo" },
+      { value: 6,  label: "6 mo" },
+      { value: 12, label: "12 mo" },
+      { value: 24, label: "24 mo" },
+    ],
+    topNOptions: [5, 10, 15, 20],
+
+    get rows() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.reportAssignmentHistory(null, this.rangeMonths, this.topN) || [];
+    },
+
+    flatRows() {
+      var out = [];
+      this.rows.forEach(function (cat) {
+        (cat.points || []).forEach(function (p) {
+          out.push({
+            categoryId: cat.categoryId,
+            category: cat.category,
+            group: cat.group,
+            month: p.month,
+            assigned: p.assigned || 0,
+            spent: p.spent || 0,
+            delta: p.delta != null ? p.delta : ((p.assigned || 0) - (p.spent || 0)),
+          });
+        });
+      });
+      out.sort(function (a, b) {
+        if (a.category !== b.category) return a.category.localeCompare(b.category);
+        return a.month.localeCompare(b.month);
+      });
+      return out;
+    },
+
+    kpis() {
+      var totalAssigned = 0, totalSpent = 0, underFunded = 0;
+      this.flatRows().forEach(function (r) {
+        totalAssigned += r.assigned;
+        totalSpent += r.spent;
+        /* under-funded = month where spent > assigned (negative delta) */
+        if (r.spent > r.assigned) underFunded += 1;
+      });
+      return {
+        totalAssigned: totalAssigned,
+        totalSpent: totalSpent,
+        netDelta: totalAssigned - totalSpent,
+        underFunded: underFunded,
+      };
+    },
+
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+
+    init() {
+      var self = this;
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderAH;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chart = window.pbMountChart("#chart-ah", window.pbRenderAH, function () {
+          return store.reportAssignmentHistory(null, self.rangeMonths, self.topN);
+        });
+        self.$watch("rangeMonths", function () { self.chart && self.chart.redraw(); });
+        self.$watch("topN",        function () { self.chart && self.chart.redraw(); });
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chart) self.chart.redraw();
+        });
+      };
+      poll();
+    },
+
+    print() { window.print(); },
+    exportRowsCSV() {
+      if (window.pbExportCSV) {
+        window.pbExportCSV("assignment-history", this.flatRows(), [
+          { key: "group",    label: "Group" },
+          { key: "category", label: "Category" },
+          { key: "month",    label: "Month" },
+          { key: "assigned", label: "Assigned", numeric: true },
+          { key: "spent",    label: "Spent",    numeric: true },
+          { key: "delta",    label: "Delta",    numeric: true },
+        ]);
+      }
+    },
+  };
+}
+</script>
 
 <script type="module">
   import { mountChart } from "/assets/js/charts/bootstrap.js";
   import { render } from "/assets/js/charts/assignment-history.js";
-  function boot() {
-    var store = Alpine.store("budget");
-    var inst = mountChart("#chart-ah", render, function () { return store.reportAssignmentHistory(); });
-    Alpine.effect(function () { store.profile; store.currentMonth; inst.redraw(); });
-  };
-  if (window.Alpine && window.Alpine.store("budget")) boot();
-  else document.addEventListener("alpine:initialized", boot);
+  window.pbMountChart = mountChart;
+  window.pbRenderAH = render;
 </script>

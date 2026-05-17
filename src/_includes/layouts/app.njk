@@ -80,6 +80,11 @@
   <script src="/assets/js/ui/command-palette.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/ui/report-table.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/ui/chart-type-picker.js?v={{ build.hash }}" defer></script>
+  {# Shared CSV-export helper used by every report's Alpine factory.
+     Module export attaches window.pbExportCSV so inline scripts can
+     call it without an import. Loaded on reports + a few other
+     pages that have Export buttons. #}
+  <script src="/assets/js/ui/csv-export.js?v={{ build.hash }}" type="module"></script>
   <script src="/assets/js/util/calc.js?v={{ build.hash }}" defer></script>
   {# dialog.js is loaded once in base.njk (covers app + marketing pages). #}
 {% endblock %}
