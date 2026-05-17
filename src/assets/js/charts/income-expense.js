@@ -60,6 +60,7 @@ export function render(el, data) {
 
   upsert(el, {
     type: (type === "line" || type === "area") ? "line" : "bar",
+    pbSubType: type,
     data: { labels: labels, datasets: datasets },
     options: {
       responsive: true,

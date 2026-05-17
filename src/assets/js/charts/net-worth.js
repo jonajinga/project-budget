@@ -51,6 +51,7 @@ export function render(el, data) {
 
   upsert(el, {
     type: type === "bar" ? "bar" : "line",
+    pbSubType: type,
     data: { labels: labels, datasets: [dataset] },
     options: {
       responsive: true,

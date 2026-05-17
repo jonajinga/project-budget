@@ -8,22 +8,51 @@
 
   {% include "partials/profile-switcher.njk" %}
 
-  <nav class="app-nav" aria-label="App sections">
-    <ul class="app-nav__list">
-      {% for item in nav.app %}
-        <li>
-          <a href="{{ item.url }}"
-             class="app-nav__link"
-             @click="sidebarOpen = false"
-             {% if page.url == item.url %}aria-current="page"{% endif %}>
-            <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                 aria-hidden="true">{{ item.icon | safe }}</svg>
-            <span class="app-nav__label">{{ item.label }}</span>
-          </a>
-        </li>
-      {% endfor %}
-    </ul>
+  {# Sidebar nav — each section is collapsible. Collapsed state is
+     persisted per-section in localStorage so the user's pick survives
+     reloads + profile switches. The section containing the active
+     page auto-expands on mount so deep links remain visible.
+
+     The nav data is emitted via a <script> tag rather than inlined
+     into x-data because the icon SVGs contain double quotes that
+     would otherwise close the attribute prematurely. #}
+  <script>
+    window.__pbAppNav = {{ nav.app | dump | safe }};
+    window.__pbAppNavUrl = "{{ page.url }}";
+  </script>
+  <nav class="app-nav"
+       aria-label="App sections"
+       x-data="appNav(window.__pbAppNav, window.__pbAppNavUrl)"
+       x-init="init()">
+    <template x-for="sec in sections" :key="sec.key">
+      <div class="app-nav__section-block">
+        <button type="button"
+                class="app-nav__section-head"
+                :aria-expanded="(!collapsed[sec.key]).toString()"
+                @click="toggle(sec.key)"
+                :data-tip="(collapsed[sec.key] ? 'Expand' : 'Collapse') + ' the ' + sec.section + ' section.'">
+          <span class="app-nav__section-chevron" :class="collapsed[sec.key] ? 'is-collapsed' : ''" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+          <span class="app-nav__section-label" x-text="sec.section"></span>
+        </button>
+        <ul class="app-nav__list" x-show="!collapsed[sec.key]" x-cloak>
+          <template x-for="item in sec.items" :key="item.url">
+            <li>
+              <a :href="item.url"
+                 class="app-nav__link"
+                 :aria-current="item.url === currentUrl ? 'page' : null"
+                 @click="sidebarOpen = false">
+                <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true" x-html="item.icon"></svg>
+                <span class="app-nav__label" x-text="item.label"></span>
+              </a>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </template>
   </nav>
 
   {# Account groups + balances. Renders only when a profile is active and has accounts. #}
@@ -89,4 +118,41 @@
     </a>
   </div>
 </aside>
+
+<script>
+/* Sidebar nav factory — manages collapsible section state.
+   - sections: array of { section, key, items, defaultCollapsed? } from nav.app
+   - currentUrl: current page.url so we know which section to auto-open
+   Per-section collapsed state persists in localStorage at
+   projectbudget:nav:collapsed:<key>. The section containing the
+   active page is force-expanded on init so deep links stay visible
+   even if the user previously collapsed it. */
+function appNav(sections, currentUrl) {
+  return {
+    sections: sections,
+    currentUrl: currentUrl,
+    collapsed: {},
+
+    init() {
+      var self = this;
+      sections.forEach(function (sec) {
+        var stored = null;
+        try { stored = localStorage.getItem("projectbudget:nav:collapsed:" + sec.key); }
+        catch (_e) {}
+        var isCollapsed = stored == null ? !!sec.defaultCollapsed : stored === "1";
+        /* Override: if the active page lives in this section, expand it. */
+        var hasActive = sec.items.some(function (i) { return i.url === currentUrl; });
+        if (hasActive) isCollapsed = false;
+        self.collapsed[sec.key] = isCollapsed;
+      });
+    },
+
+    toggle(key) {
+      this.collapsed[key] = !this.collapsed[key];
+      try { localStorage.setItem("projectbudget:nav:collapsed:" + key, this.collapsed[key] ? "1" : "0"); }
+      catch (_e) {}
+    },
+  };
+}
+</script>
 

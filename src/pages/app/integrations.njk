@@ -1,0 +1,50 @@
+---
+layout: layouts/app.njk
+title: "Integrations"
+description: "Project Budget doesn't connect to your bank. Here's why, and how to bring your transactions in instead."
+permalink: /app/integrations/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Integrations</p>
+      <h1 class="app-page__title">No bank connections — on purpose</h1>
+      <p class="app-page__lead">
+        Project Budget runs entirely in your browser. There is no server, no aggregator, and no third-party data pipe. That makes it private by default — and it means there's no "Connect bank" button. Here's how to keep your transactions current without one.
+      </p>
+    </div>
+  </header>
+
+  <section class="card prose">
+    <h2>Why no bank API?</h2>
+    <ul>
+      <li><strong>Plaid &amp; competitors</strong> require a server to store the auth tokens that talk to your bank. The instant we run a server, your transactions live somewhere besides your browser. That's the architecture we want to avoid.</li>
+      <li><strong>Aggregators are flaky.</strong> Connections silently break when banks rotate auth. The minutes you save on import you lose on troubleshooting MFA prompts.</li>
+      <li><strong>The cost is real.</strong> Aggregator API fees ($1–$5 per linked account per month) would push the app to a subscription model. The current cost is $0 to you because there's no recurring spend on our side.</li>
+    </ul>
+  </section>
+
+  <section class="card prose" style="margin-top: var(--space-md);">
+    <h2>What works instead</h2>
+    <h3>CSV import</h3>
+    <p>Every major bank exports a CSV of recent transactions. Download it, drop it into <a href="/app/import/">/app/import/</a>, map the columns once, and Project Budget remembers the mapping for next time.</p>
+    <h3>OFX / QFX / QIF</h3>
+    <p>Older bank export formats are also supported. Same path: download from your bank, drop into the importer.</p>
+    <h3>Quick add</h3>
+    <p>For one-off transactions throughout the day, press <kbd>N</kbd> from anywhere in the app and a quick-add form drops in. Faster than waiting for an import.</p>
+    <h3>Recurring templates</h3>
+    <p>For predictable transactions (rent, subscriptions, paychecks), set up a recurring template once at <a href="/app/scheduled/">/app/scheduled/</a>. The app will surface each due item for one-click approval into the register.</p>
+  </section>
+
+  <section class="card prose" style="margin-top: var(--space-md);">
+    <h2>Things we'd build if we ran a server (we don't)</h2>
+    <ul>
+      <li>Plaid / Teller / SaltEdge bank connections</li>
+      <li>Mobile push notifications when a transaction posts</li>
+      <li>Shared-household profiles synced across devices</li>
+      <li>SMS or email transaction parsing</li>
+    </ul>
+    <p>If any of those would change your mind on this tool, tell us via <a href="/app/feedback/">/app/feedback/</a> — it's the kind of signal that could justify the architecture shift.</p>
+  </section>
+</div>

@@ -6,6 +6,7 @@ permalink: /app/profiles/
 eleventyExcludeFromCollections: true
 ---
 <div class="app-page" x-data="{
+  showHelp: false,
   newName: '',
   renameId: null,
   renameValue: '',
@@ -34,11 +35,30 @@ eleventyExcludeFromCollections: true
 }">
   <header class="app-page__header">
     <h1 class="app-page__title">Profiles</h1>
+    <button class="btn btn--icon" type="button"
+            @click="showHelp = true"
+            aria-label="About profiles"
+            data-tip="What a profile is and where the data lives.">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+    </button>
   </header>
 
-  <p class="app-page__lead">
-    Each profile is a complete budget — its own accounts, categories, transactions, and goals. Profiles are isolated and live in your browser's localStorage.
-  </p>
+  {# Info / help modal — moved out of the lead paragraph so it doesn't
+     compete with the create-profile form for attention on first paint. #}
+  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="prof-help-title" @click.outside="showHelp = false">
+      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="prof-help-title">About profiles</h3>
+      <div class="prose">
+        <p>Each profile is a complete budget — its own accounts, categories, transactions, and goals. Profiles are isolated from each other and live in your browser's localStorage.</p>
+        <p><strong>Privacy:</strong> nothing leaves your browser. Switching profiles, renaming, or deleting changes only the local copy.</p>
+        <p><strong>Back up:</strong> use <a href="/app/export/">Export</a> to save a JSON snapshot you can re-import later.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
+      </div>
+    </div>
+  </div>
 
   <section class="card">
     <h2 class="card__title">Create a profile</h2>

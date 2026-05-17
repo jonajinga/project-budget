@@ -10,23 +10,29 @@
          return parts[0].slice(0, 2).toUpperCase();
        }
      }">
-  <button class="profile-switcher__current"
-          type="button"
-          aria-label="Switch profile"
-          @click="open = !open"
-          :aria-expanded="open.toString()"
-          data-tip="Switch profile or open profile management.">
-    <span class="profile-switcher__avatar" aria-hidden="true"
-          x-text="initials($store.budget && $store.budget.profile ? $store.budget.profile.name : '')"></span>
-    <span class="profile-switcher__text">
-      <span class="profile-switcher__label">Profile</span>
+  {# Split affordance: avatar + name navigate to the dashboard so the
+     name is the primary CTA (most-frequent action), and the chevron
+     opens the switch-profile menu as a secondary action. #}
+  <div class="profile-switcher__current" :class="{ 'is-open': open }">
+    <a class="profile-switcher__nav"
+       href="/app/"
+       data-tip="Open the dashboard for this profile.">
+      <span class="profile-switcher__avatar" aria-hidden="true"
+            x-text="initials($store.budget && $store.budget.profile ? $store.budget.profile.name : '')"></span>
       <span class="profile-switcher__name"
             x-text="$store.budget && $store.budget.profile ? $store.budget.profile.name : 'No profile yet'"></span>
-    </span>
-    <span class="profile-switcher__chevron" aria-hidden="true" :class="{ 'is-open': open }">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-    </span>
-  </button>
+    </a>
+    <button class="profile-switcher__toggle"
+            type="button"
+            aria-label="Switch profile"
+            @click="open = !open"
+            :aria-expanded="open.toString()"
+            data-tip="Switch profile or open profile management.">
+      <span class="profile-switcher__chevron" aria-hidden="true" :class="{ 'is-open': open }">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
+    </button>
+  </div>
 
   <ul class="profile-switcher__menu" x-show="open" @click.outside="open = false" x-cloak>
     <li class="profile-switcher__menu-head">Switch to</li>

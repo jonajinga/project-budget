@@ -1,0 +1,101 @@
+---
+layout: layouts/app.njk
+title: "Tools"
+description: "Every utility page in one place — onboarding, backup, health checks, audit log, saved views, quick reconcile, diagnostics, share."
+permalink: /app/tools/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Tools</p>
+      <h1 class="app-page__title">Tools</h1>
+      <p class="app-page__lead">
+        Every utility page in one place. The core workflows (Budget, Register, Calendar, Reports) live in the sidebar; the rarer-but-still-useful pages live here.
+      </p>
+    </div>
+  </header>
+
+  <section class="tools-grid">
+    {# Setup #}
+    <a class="tools-card" href="/app/welcome/">
+      <h2 class="tools-card__title">Welcome wizard</h2>
+      <p>Three-step guided setup for a brand new profile — name, accounts, category template.</p>
+    </a>
+    <a class="tools-card" href="/app/onboarding-checklist/">
+      <h2 class="tools-card__title">Onboarding checklist</h2>
+      <p>Five milestones from empty profile to working budget. Auto-completes as you go.</p>
+    </a>
+
+    {# Maintenance #}
+    <a class="tools-card" href="/app/about-this-profile/">
+      <h2 class="tools-card__title">About this profile</h2>
+      <p>Counts, dates, storage size, last backup — a read-only snapshot of the active profile.</p>
+    </a>
+    <a class="tools-card" href="/app/backup/">
+      <h2 class="tools-card__title">Backup</h2>
+      <p>Download a JSON snapshot of every profile. Take one weekly.</p>
+    </a>
+    <a class="tools-card" href="/app/health-check/">
+      <h2 class="tools-card__title">Health check</h2>
+      <p>Deterministic scans for orphaned references, broken templates, future-dated transactions.</p>
+    </a>
+    <a class="tools-card" href="/app/audit-log/">
+      <h2 class="tools-card__title">Audit log</h2>
+      <p>Recent transactions, recurring posts, and snapshots in one timeline.</p>
+    </a>
+
+    {# Workflow accelerators #}
+    <a class="tools-card" href="/app/quick-reconcile/">
+      <h2 class="tools-card__title">Quick reconcile</h2>
+      <p>One account at a time — type the statement ending balance, the app handles the diff.</p>
+    </a>
+    <a class="tools-card" href="/app/templates/">
+      <h2 class="tools-card__title">Saved views</h2>
+      <p>Save a register filter or report config once, recall it with a click.</p>
+    </a>
+    <a class="tools-card" href="/app/shortcuts/">
+      <h2 class="tools-card__title">Keyboard shortcuts</h2>
+      <p>Every shortcut in one place — global, modal, register, palette.</p>
+    </a>
+
+    {# Sharing + support #}
+    <a class="tools-card" href="/app/share/">
+      <h2 class="tools-card__title">Share a snapshot</h2>
+      <p>Generate a redacted view of a single report you can paste anywhere.</p>
+    </a>
+    <a class="tools-card" href="/app/diagnostics/">
+      <h2 class="tools-card__title">Diagnostics</h2>
+      <p>One-shot report of browser, theme, storage size, and recent errors for support requests.</p>
+    </a>
+
+    {# Communication #}
+    <a class="tools-card" href="/app/feedback/">
+      <h2 class="tools-card__title">Feedback</h2>
+      <p>Quick sentiment + comment — 30 seconds. Optional email if you want a reply.</p>
+    </a>
+    <a class="tools-card" href="/app/review/">
+      <h2 class="tools-card__title">Write a review</h2>
+      <p>Public testimonial submission. You control whether your name shows.</p>
+    </a>
+    <a class="tools-card" href="/app/integrations/">
+      <h2 class="tools-card__title">Integrations</h2>
+      <p>Why there's no bank-connect button, and what to use instead.</p>
+    </a>
+    <a class="tools-card" href="/app/contact/">
+      <h2 class="tools-card__title">Contact</h2>
+      <p>Full contact form — bug reports, accessibility issues, partnership inquiries.</p>
+    </a>
+  </section>
+</div>
+
+<style>
+  .tools-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); }
+  @media (max-width: 1023px) { .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 599px)  { .tools-grid { grid-template-columns: 1fr; } }
+  .tools-card { display: block; padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-input); color: var(--fg); text-decoration: none; transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast); }
+  .tools-card:hover { background: var(--bg-alt); border-color: var(--accent); transform: translateY(-1px); }
+  .tools-card__title { margin: 0 0 var(--space-2xs); font-family: var(--font-display); font-size: var(--fs-lg); color: var(--fg); }
+  .tools-card:hover .tools-card__title { color: var(--accent); }
+  .tools-card p { margin: 0; color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.5; }
+</style>

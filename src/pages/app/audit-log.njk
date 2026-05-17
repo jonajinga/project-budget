@@ -1,0 +1,188 @@
+---
+layout: layouts/app.njk
+title: "Audit log"
+description: "Append-only journal of recent mutations in this profile — useful when a household shares a profile and you want to know what changed."
+permalink: /app/audit-log/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="auditLogView()" x-init="refresh()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Audit</p>
+      <h1 class="app-page__title">Audit log</h1>
+      <p class="app-page__lead">
+        Recent activity in this profile, newest-first. Built from transaction history, scheduled-template runs, and snapshot events — read-only and useful when a household shares a profile.
+      </p>
+    </div>
+    <div class="cluster">
+      <button class="btn btn--ghost btn--sm" type="button" @click="refresh()">Refresh</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV()">Export CSV</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="cluster" style="gap: var(--space-md);">
+      <label class="field" style="margin: 0;">
+        <span class="field__label">Filter by event</span>
+        <select class="select" x-model="kind">
+          <option value="all">All events</option>
+          <option value="txn">Transactions</option>
+          <option value="sched">Recurring posts</option>
+          <option value="snap">Snapshots</option>
+        </select>
+      </label>
+      <label class="field" style="margin: 0;">
+        <span class="field__label">Account</span>
+        <select class="select" x-model="acctId">
+          <option value="">All accounts</option>
+          <template x-for="a in ($store.budget.profile?.accounts || [])" :key="a.id">
+            <option :value="a.id" x-text="a.name"></option>
+          </template>
+        </select>
+      </label>
+      <label class="field" style="margin: 0;">
+        <span class="field__label">Last</span>
+        <select class="select" x-model.number="days">
+          <option :value="7">7 days</option>
+          <option :value="30">30 days</option>
+          <option :value="90">90 days</option>
+          <option :value="365">1 year</option>
+          <option :value="3650">All time</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <p x-show="!events().length" x-cloak style="color: var(--fg-muted); margin-top: var(--space-md);">
+    No events in this window.
+  </p>
+
+  <table class="table" style="margin-top: var(--space-md);" x-show="events().length" x-cloak>
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>Event</th>
+        <th>Detail</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <template x-for="(e, i) in events()" :key="i">
+        <tr>
+          <td style="white-space: nowrap;" x-text="e.date"></td>
+          <td>
+            <span class="audit-badge" :class="'audit-badge--' + e.kind" x-text="e.label"></span>
+          </td>
+          <td x-text="e.detail"></td>
+          <td class="num" :class="e.amount < 0 ? 'amount--outflow' : (e.amount > 0 ? 'amount--inflow' : '')"
+              x-text="e.amount != null ? formatCents(e.amount) : ''"></td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+
+  <section class="card prose" style="margin-top: var(--space-lg);">
+    <h2>What's in the log</h2>
+    <ul>
+      <li><strong>Transactions</strong> — built from <code>profile.transactions</code>. Date and amount are accurate; "who created it" isn't tracked yet.</li>
+      <li><strong>Recurring posts</strong> — built from <code>scheduled.lastRun</code> for templates that have ever posted.</li>
+      <li><strong>Snapshots</strong> — every manual or auto-captured snapshot of net worth + Ready to Assign.</li>
+    </ul>
+    <p>Future: when multi-user / shared profiles ship, this log will also include "who" (which device, which member). For now everything is attributed to the active browser.</p>
+  </section>
+</div>
+
+<script>
+function auditLogView() {
+  return {
+    kind: "all",
+    acctId: "",
+    days: 30,
+
+    refresh() { /* getter is reactive — placeholder for an explicit refresh button. */ },
+
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    events() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p) return [];
+      var cutoffMs = Date.now() - (this.days * 24 * 60 * 60 * 1000);
+      var cutoffISO = new Date(cutoffMs).toISOString().slice(0, 10);
+      var rows = [];
+      var s = this.$store.budget;
+
+      /* Transactions */
+      if (this.kind === "all" || this.kind === "txn") {
+        p.transactions.forEach(function (t) {
+          if (t.date < cutoffISO) return;
+          if (this.acctId && t.accountId !== this.acctId) return;
+          rows.push({
+            date: t.date,
+            kind: "txn",
+            label: "Transaction",
+            detail: (s.payeeName(t.payeeId) || "—") + " · " + (s.findAccount(t.accountId)?.name || "—") + " · " + (s.categoryName(t.categoryId) || "Uncategorized"),
+            amount: t.amount,
+          });
+        }, this);
+      }
+
+      /* Recurring posts (lastRun) */
+      if (this.kind === "all" || this.kind === "sched") {
+        (p.scheduled || []).forEach(function (sch) {
+          if (!sch.lastRun || sch.lastRun.slice(0, 10) < cutoffISO) return;
+          if (this.acctId && sch.template && sch.template.accountId !== this.acctId) return;
+          rows.push({
+            date: sch.lastRun.slice(0, 10),
+            kind: "sched",
+            label: "Recurring posted",
+            detail: ((sch.template && sch.template.payeeName) || "Untitled template") + " · " + s.frequencyLabel(sch),
+            amount: (sch.template && sch.template.amount) || 0,
+          });
+        }, this);
+      }
+
+      /* Snapshots */
+      if (this.kind === "all" || this.kind === "snap") {
+        (p.snapshots || []).forEach(function (sn) {
+          if (sn.date.slice(0, 10) < cutoffISO) return;
+          rows.push({
+            date: sn.date.slice(0, 10),
+            kind: "snap",
+            label: "Snapshot",
+            detail: "Net worth captured: " + ((sn.netWorth || 0) / 100).toFixed(0),
+            amount: null,
+          });
+        });
+      }
+
+      rows.sort(function (a, b) { return b.date.localeCompare(a.date); });
+      return rows;
+    },
+
+    exportCSV() {
+      var rows = this.events();
+      if (!rows.length) return;
+      var header = ["Date", "Event", "Detail", "Amount"].join(",");
+      var body = rows.map(function (r) {
+        return [r.date, r.label, JSON.stringify(r.detail), r.amount != null ? (r.amount / 100).toFixed(2) : ""].join(",");
+      }).join("\r\n");
+      var blob = new Blob([header + "\r\n" + body], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "audit-log-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    },
+  };
+}
+</script>
+
+<style>
+  .audit-badge { display: inline-block; padding: 2px 8px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: var(--radius-input); background: var(--bg-alt); color: var(--fg-muted); }
+  .audit-badge--txn   { background: color-mix(in oklab, var(--accent) 12%, var(--bg)); color: var(--accent); }
+  .audit-badge--sched { background: color-mix(in oklab, var(--warn) 14%, var(--bg)); color: var(--warn); }
+  .audit-badge--snap  { background: color-mix(in oklab, var(--ok) 12%, var(--bg)); color: var(--ok); }
+</style>

@@ -403,6 +403,22 @@
   margin-left: var(--space-2xs);
   white-space: nowrap;
 }
+/* Per-group total on the accounts page — same shape as the count
+   pill but stronger weight + monospace numbers so the figure reads
+   as primary information even when the group is collapsed. */
+.group-toggle__total {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  padding: 2px 8px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-input);
+  margin-left: var(--space-2xs);
+  white-space: nowrap;
+}
+.group-toggle__total.amount--outflow { color: var(--danger); }
 
 /* Tippy.js — Project Budget theme */
 .tippy-box[data-theme~="projectbudget"] {

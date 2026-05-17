@@ -1,0 +1,330 @@
+/* Dashboard — 6-band grid layout used by /app/. KPI row, this-month
+   detail, forecast + upcoming, goal-attention cards, recent activity
+   + alerts. Reuses .rec-summary chrome for the KPI row and .card for
+   every panel; rules here cover only the dashboard-specific layout
+   + the pure-CSS horizontal-bar list. */
+
+/* ---- Band B: KPI row ---------------------------------------------- */
+.dashboard__kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+@media (max-width: 1279px) { .dashboard__kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 599px)  { .dashboard__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 359px)  { .dashboard__kpis { grid-template-columns: 1fr; } }
+
+/* KPI tile reuses .rec-summary__tile chrome from budget.css, but the
+   dashboard needs a smaller value font so longer currency strings
+   ($1,234,567.89) don't push past the column. The tile element is an
+   <a>, so reset link styling — color + underline come from the
+   semantic rail + .amount--inflow/--outflow modifiers, not the link. */
+.dashboard__kpi {
+  padding: var(--space-sm);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  container-type: inline-size;
+}
+.dashboard__kpi:hover,
+.dashboard__kpi:focus-visible { color: inherit; }
+.dashboard__kpi .rec-summary__label,
+.dashboard__kpi .rec-summary__value,
+.dashboard__kpi-sub { text-decoration: none; }
+.dashboard__kpi .rec-summary__value {
+  font-size: clamp(1rem, 8cqi, 1.5rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dashboard__kpi-sub {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  margin: 2px 0 0;
+  line-height: 1.3;
+  /* Allow a second line so labels like "On budget + tracking" don't
+     truncate to "On budget + tracki…" at 1280-px viewports. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Bands C–F: 2- and 3-col rows --------------------------------- */
+.dashboard__row {
+  display: grid;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.dashboard__row--2col { grid-template-columns: 1fr 1fr; }
+.dashboard__row--3col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 899px) {
+  .dashboard__row--2col,
+  .dashboard__row--3col { grid-template-columns: 1fr; }
+}
+
+.dashboard__card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-sm);
+}
+.dashboard__card-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+}
+.dashboard__card-head a {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+.dashboard__card-head a:hover { color: var(--accent); }
+
+/* ---- Period selector ---------------------------------------------- */
+.dashboard__period {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+}
+.dashboard__period button {
+  padding: var(--space-2xs) var(--space-sm);
+  background: var(--bg-elevated);
+  border: 0;
+  border-right: 1px solid var(--border-strong);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.dashboard__period button:last-child { border-right: 0; }
+.dashboard__period button:hover { background: var(--bg-alt); }
+.dashboard__period button.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ---- Top-categories pure-CSS bar list ----------------------------- */
+.dash-cat-bars {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.dash-cat-bars__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+.dash-cat-bars__row > a {
+  color: var(--fg);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.dash-cat-bars__row > a:hover { color: var(--accent); }
+.dash-cat-bars__amount {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+.dash-cat-bars__bar {
+  grid-column: 1 / -1;
+  position: relative;
+  background: var(--bg-alt);
+  height: 6px;
+  border-radius: var(--radius-input);
+  overflow: hidden;
+}
+.dash-cat-bars__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pct, 0%);
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width var(--t-fast);
+}
+
+/* ---- Upcoming-bills rows ------------------------------------------ */
+.dash-bill-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dash-bill {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.dash-bill:last-child { border-bottom: 0; }
+.dash-bill__date {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dash-bill__payee {
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-bill__meta {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-bill__amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---- Goal attention cards ----------------------------------------- */
+.dash-goal {
+  padding: var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--warn);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+.dash-goal--critical { border-left-color: var(--danger); }
+.dash-goal--close    { border-left-color: var(--accent); }
+.dash-goal__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  margin: 0;
+}
+.dash-goal__progress {
+  position: relative;
+  background: var(--bg-alt);
+  height: 8px;
+  border-radius: var(--radius-input);
+  overflow: hidden;
+}
+.dash-goal__progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pct, 0%);
+  background: var(--accent);
+  border-radius: inherit;
+}
+.dash-goal--critical .dash-goal__progress-fill { background: var(--danger); }
+.dash-goal--close    .dash-goal__progress-fill { background: var(--ok); }
+.dash-goal__line {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  margin: 0;
+}
+.dash-goal__line strong {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Recent activity list ----------------------------------------- */
+.dash-recent {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dash-recent__row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  align-items: baseline;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.dash-recent__row:last-child { border-bottom: 0; }
+.dash-recent__date {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.dash-recent__payee {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-recent__meta {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  display: block;
+}
+.dash-recent__amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---- Alerts list -------------------------------------------------- */
+.dash-alerts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+.dash-alert {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  color: var(--fg);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.dash-alert:hover { background: var(--bg-alt); }
+.dash-alert--danger { border-left-color: var(--danger); }
+.dash-alert--warn   { border-left-color: var(--warn); }
+.dash-alert--info   { border-left-color: var(--accent); }
+.dash-alert__cta {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.dash-alerts__empty {
+  padding: var(--space-md);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+/* ---- Sparkline tile chrome ---------------------------------------- */
+.dashboard__chart {
+  min-height: 220px;
+  margin-top: var(--space-2xs);
+}

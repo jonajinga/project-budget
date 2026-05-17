@@ -918,7 +918,11 @@
   line-height: inherit;
   color: var(--fg-muted);
 }
-.dnd-handle--inline::before { content: "⋮⋮"; }
+/* Match the three-line hamburger that the live .dnd-handle paints via
+   its background SVG so the inline reference reads as the same icon
+   the user grabs. Previously this used ⋮⋮ which looked nothing like
+   the actual handle. */
+.dnd-handle--inline::before { content: "\2630"; }
 /* Compact handle for the dense budget grid — same glyph, smaller box. */
 .dnd-handle--sm {
   width: 18px;

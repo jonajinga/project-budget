@@ -64,6 +64,49 @@
   margin-inline: auto;
 }
 
+/* .page wraps any marketing-style article (contact, accessibility,
+   etc.). The block-padding gives the content breathing room from the
+   sticky site header above and the footer below — without it the
+   first line of body text sits flush against the header bar. */
+.page {
+  padding-block: var(--space-lg) var(--space-3xl);
+}
+@media (min-width: 768px) {
+  .page { padding-block: var(--space-xl) var(--space-3xl); }
+}
+
+/* Marketing-page header — used by /contact/, /accessibility/, etc.
+   that live outside the docs sidebar shell. Gives the eyebrow + h1
+   + subtitle a consistent vertical rhythm + a soft divider before
+   the body content kicks in. */
+.page__header {
+  padding-block: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-soft);
+}
+.page__header .eyebrow {
+  display: block;
+  margin: 0 0 var(--space-2xs);
+}
+.page__header > h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.5rem + 2vw, 2.75rem);
+  line-height: 1.1;
+  margin: 0;
+}
+.page__subtitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: 1.45;
+  color: var(--fg-muted);
+  margin: var(--space-sm) 0 0;
+  max-width: 70ch;
+  font-weight: 400;
+}
+@media (min-width: 768px) {
+  .page__header { padding-block: var(--space-lg) var(--space-xl); }
+}
+
 .app-page__header {
   display: flex;
   flex-wrap: wrap;

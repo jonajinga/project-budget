@@ -24,10 +24,9 @@
         </svg>
       </button>
 
-      <a class="site-header__profile" href="/app/profiles/"
+      <a class="site-header__profile" href="/app/"
          x-data
-         data-tip="Click to manage profiles or switch to a different one.">
-        <span class="site-header__profile-eyebrow">Profile</span>
+         data-tip="Open the dashboard for this profile.">
         <span class="site-header__profile-name"
               x-text="$store.budget && $store.budget.profile ? $store.budget.profile.name : 'No profile yet'"></span>
       </a>

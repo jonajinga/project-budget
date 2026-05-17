@@ -1,0 +1,201 @@
+---
+layout: layouts/app.njk
+title: "Share a snapshot"
+description: "Generate a redacted snapshot of a single report you can share — chart shape stays, dollar amounts get hidden."
+permalink: /app/share/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="shareView()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Share</p>
+      <h1 class="app-page__title">Share a redacted snapshot</h1>
+      <p class="app-page__lead">
+        Generate a take-home view of one report — proportions and trends stay readable, but dollar amounts are scrubbed. Useful for "look at my budget" conversations where you don't want to share exact numbers.
+      </p>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2 class="card__title">Pick the report to share</h2>
+    <div class="cluster" style="gap: var(--space-sm); margin-top: var(--space-sm);">
+      <template x-for="opt in reports" :key="opt.id">
+        <button type="button" class="btn btn--ghost btn--sm"
+                :class="reportId === opt.id ? 'btn--primary' : ''"
+                @click="reportId = opt.id; render()"
+                x-text="opt.label"></button>
+      </template>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top: var(--space-md);">
+    <h2 class="card__title">Redaction</h2>
+    <div class="cluster" style="gap: var(--space-md); margin-top: var(--space-sm);">
+      <label class="cluster" style="gap: var(--space-2xs);">
+        <input type="checkbox" x-model="redactAmounts" @change="render()">
+        <span>Hide dollar amounts</span>
+      </label>
+      <label class="cluster" style="gap: var(--space-2xs);">
+        <input type="checkbox" x-model="redactCategoryNames" @change="render()">
+        <span>Replace category names with letters (Category A, B, C…)</span>
+      </label>
+      <label class="cluster" style="gap: var(--space-2xs);">
+        <input type="checkbox" x-model="showProfileName" @change="render()">
+        <span>Show profile name</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top: var(--space-md);">
+    <h2 class="card__title">Preview</h2>
+    <div class="share-preview">
+      <header style="margin-bottom: var(--space-sm);">
+        <h3 x-text="previewTitle()" style="margin: 0; font-family: var(--font-display);"></h3>
+        <p style="color: var(--fg-muted); margin: 0; font-size: var(--fs-sm);" x-text="previewSubtitle()"></p>
+      </header>
+      <ul class="dash-cat-bars" x-show="rows.length" x-cloak>
+        <template x-for="(r, i) in rows" :key="i">
+          <li class="dash-cat-bars__row">
+            <span x-text="redactCategoryNames ? letter(i) : r.label"></span>
+            <span class="dash-cat-bars__amount" x-text="redactAmounts ? r.pct.toFixed(0) + '%' : (formatCents(r.value) + ' · ' + r.pct.toFixed(0) + '%')"></span>
+            <span class="dash-cat-bars__bar">
+              <span class="dash-cat-bars__fill" :style="'--pct:' + r.pct + '%'"></span>
+            </span>
+          </li>
+        </template>
+      </ul>
+      <p x-show="!rows.length" x-cloak style="color: var(--fg-muted); padding: var(--space-md);">No data in this report yet.</p>
+    </div>
+    <div class="cluster" style="margin-top: var(--space-sm);">
+      <button class="btn btn--primary" type="button" @click="copyAsText()">Copy as text</button>
+      <button class="btn btn--secondary" type="button" @click="copyAsHTML()">Copy as HTML</button>
+      <button class="btn btn--ghost" type="button" @click="downloadJSON()">Download JSON</button>
+    </div>
+    <p x-show="status" x-cloak style="margin-top: var(--space-sm); color: var(--ok); font-size: var(--fs-sm);" x-text="status"></p>
+  </section>
+
+  <section class="card prose" style="margin-top: var(--space-md);">
+    <h2>A note on "shareable URLs"</h2>
+    <p>The app has no server, so there's no URL you can hand someone that loads your numbers from somewhere. The share output above is text / HTML / JSON you copy and paste into the channel you'd normally use (email, DM, doc). That's the privacy trade-off — you decide what travels and where.</p>
+  </section>
+</div>
+
+<script>
+function shareView() {
+  return {
+    reportId: "spending",
+    rows: [],
+    redactAmounts: true,
+    redactCategoryNames: false,
+    showProfileName: false,
+    status: "",
+    reports: [
+      { id: "spending", label: "Top categories this month" },
+      { id: "income-expense", label: "Income vs expense (6 mo)" },
+      { id: "net-worth", label: "Net worth (12 mo)" },
+    ],
+
+    init() { this.render(); },
+
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    },
+    letter(i) {
+      return "Category " + String.fromCharCode(65 + i);
+    },
+
+    render() {
+      var s = this.$store.budget;
+      if (!s.profile) { this.rows = []; return; }
+      var data = [];
+      if (this.reportId === "spending") {
+        var m = s.currentMonth;
+        data = (s.reportSpending(m, m) || []).slice(0, 10).map(function (r) { return { label: r.category, value: r.value }; });
+      } else if (this.reportId === "income-expense") {
+        data = (s.reportIncomeVsExpense(null, 6) || []).map(function (r) { return { label: r.month, value: r.net }; });
+      } else if (this.reportId === "net-worth") {
+        data = (s.reportNetWorth(null, 12) || []).map(function (r) { return { label: r.month, value: r.value }; });
+      }
+      var max = data.reduce(function (a, r) { return Math.max(a, Math.abs(r.value)); }, 1) || 1;
+      this.rows = data.map(function (r) { return { label: r.label, value: r.value, pct: (Math.abs(r.value) / max) * 100 }; });
+    },
+
+    previewTitle() {
+      var opt = this.reports.find(function (r) { return r.id === this.reportId; }, this);
+      var prefix = this.showProfileName && this.$store.budget.profile ? this.$store.budget.profile.name + " — " : "";
+      return prefix + (opt ? opt.label : "Report");
+    },
+    previewSubtitle() {
+      return "Generated " + new Date().toLocaleDateString() + (this.redactAmounts ? " · amounts redacted" : "");
+    },
+
+    asTextLines() {
+      var self = this;
+      var lines = [this.previewTitle(), this.previewSubtitle(), ""];
+      this.rows.forEach(function (r, i) {
+        var label = self.redactCategoryNames ? self.letter(i) : r.label;
+        var amount = self.redactAmounts ? r.pct.toFixed(0) + "%" : (self.formatCents(r.value) + " · " + r.pct.toFixed(0) + "%");
+        lines.push(label + " — " + amount);
+      });
+      return lines;
+    },
+    copyAsText() {
+      var text = this.asTextLines().join("\n");
+      this._copy(text, "Copied as plain text.");
+    },
+    copyAsHTML() {
+      var self = this;
+      var head = "<h3>" + this._esc(this.previewTitle()) + "</h3><p style=\"color:#666\">" + this._esc(this.previewSubtitle()) + "</p>";
+      var rows = this.rows.map(function (r, i) {
+        var label = self.redactCategoryNames ? self.letter(i) : r.label;
+        var amount = self.redactAmounts ? r.pct.toFixed(0) + "%" : (self.formatCents(r.value) + " · " + r.pct.toFixed(0) + "%");
+        return "<li>" + self._esc(label) + " — <strong>" + self._esc(amount) + "</strong></li>";
+      }).join("");
+      this._copy(head + "<ul>" + rows + "</ul>", "Copied as HTML.");
+    },
+    downloadJSON() {
+      var self = this;
+      var payload = {
+        title: this.previewTitle(),
+        generatedAt: new Date().toISOString(),
+        reportId: this.reportId,
+        redacted: { amounts: this.redactAmounts, categoryNames: this.redactCategoryNames },
+        rows: this.rows.map(function (r, i) {
+          return {
+            label: self.redactCategoryNames ? self.letter(i) : r.label,
+            amount: self.redactAmounts ? null : r.value,
+            sharePct: Number(r.pct.toFixed(1)),
+          };
+        }),
+      };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "project-budget-share-" + this.reportId + ".json";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      this.status = "Downloaded.";
+      setTimeout(function () { self.status = ""; }, 2500);
+    },
+
+    _copy(s, msg) {
+      var self = this;
+      try {
+        navigator.clipboard.writeText(s).then(function () {
+          self.status = msg; setTimeout(function () { self.status = ""; }, 2500);
+        });
+      } catch (_e) {
+        this.status = "Copy failed — your browser blocked clipboard access.";
+        setTimeout(function () { self.status = ""; }, 2500);
+      }
+    },
+    _esc(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    },
+  };
+}
+</script>
+
+<style>
+  .share-preview { padding: var(--space-md); background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--radius-input); }
+</style>

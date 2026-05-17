@@ -8,12 +8,39 @@ eleventyExcludeFromCollections: true
 <div class="app-page" x-data="payeesView()">
   <header class="app-page__header">
     <h1 class="app-page__title">Payees</h1>
-    <a class="btn btn--ghost btn--sm" href="/app/register/">Open register</a>
+    <div class="cluster">
+      <button class="btn btn--icon" type="button"
+              @click="showHelp = true"
+              aria-label="About payees"
+              data-tip="What a payee is, how default categories auto-fill, and how merging works.">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+      </button>
+      <a class="btn btn--ghost btn--sm" href="/app/register/">Open register</a>
+    </div>
   </header>
 
-  <p class="app-page__lead">
-    Every payee remembers a default category — when you start typing the payee on a new transaction, the category auto-fills. Edit the default here. Merging joins two payees into one (re-pointing every transaction that used the source); deleting a payee leaves its transactions intact but uncategorizes them.
-  </p>
+  {# Stat cards. Live snapshot of the payee list — total payees, how
+     many have a default category set, top-used payee, and the sum of
+     every transaction count. Reuses .rec-summary chrome from the
+     other app pages. #}
+  <section class="rec-summary" x-show="$store.budget.allPayees().length" x-cloak>
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total payees seen across every transaction.">
+      <span class="rec-summary__label">Payees</span>
+      <span class="rec-summary__value" x-text="payeeCount()"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--inflow" data-tip="Payees that have a default category set. Auto-fill kicks in only when this is set.">
+      <span class="rec-summary__label">With category</span>
+      <span class="rec-summary__value" x-text="withCategoryCount() + ' / ' + payeeCount()"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--net" data-tip="Most-used payee by transaction count.">
+      <span class="rec-summary__label">Most used</span>
+      <span class="rec-summary__value" style="font-size: var(--fs-base); line-height: 1.3;" x-text="topPayeeLabel()"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total transactions linked to any payee.">
+      <span class="rec-summary__label">Linked txns</span>
+      <span class="rec-summary__value" x-text="totalUses()"></span>
+    </div>
+  </section>
 
   <section class="card">
     <header class="report-toolbar">
@@ -51,10 +78,22 @@ eleventyExcludeFromCollections: true
                 </button>
               </template>
               <template x-if="editingId === p.id">
-                <form @submit.prevent="commitRename(p.id)" class="cluster" style="gap: var(--space-2xs);">
+                {# @click.outside is the reliable exit path — clicking on
+                   non-focusable areas of the page doesn't always blur an
+                   input on every browser, so we hook the document-level
+                   outside-click event too.
+
+                   @focus + setTimeout(select, 0) auto-selects the whole
+                   name so a user can start typing immediately. Wrapping
+                   in setTimeout outlasts the mouseup that would
+                   otherwise clear the selection. #}
+                <form @submit.prevent="commitRename(p.id)"
+                      @click.outside="commitRename(p.id)"
+                      class="cluster" style="gap: var(--space-2xs);">
                   <input class="input" type="text"
                          :ref="'name_' + p.id"
                          x-model="editingName"
+                         @focus="setTimeout(() => $event.target.select(), 0)"
                          @keydown.escape.prevent="cancelRename()"
                          @blur="commitRename(p.id)">
                 </form>
@@ -85,6 +124,25 @@ eleventyExcludeFromCollections: true
       </tbody>
     </table>
   </section>
+
+  {# Info / help modal — explains payees, default category auto-fill,
+     and what merge / delete do. Previously sat above the table as a
+     long lead paragraph. #}
+  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-help-title" @click.outside="showHelp = false">
+      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="pay-help-title">About payees</h3>
+      <div class="prose">
+        <p>Every payee remembers a default category — when you start typing the payee on a new transaction, the category auto-fills.</p>
+        <p><strong>Rename:</strong> click a payee's name to edit it inline. Press Enter or click outside to save, Escape to cancel.</p>
+        <p><strong>Merge:</strong> joins two payees into one and re-points every transaction that used the source to the target.</p>
+        <p><strong>Delete:</strong> leaves the payee's transactions in the register but unlinks them from the payee record.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
+      </div>
+    </div>
+  </div>
 
   {# Merge modal — pick target payee #}
   <div class="modal-backdrop" x-show="mergeSrc" x-cloak @keydown.escape.window="mergeSrc = null">
@@ -119,6 +177,7 @@ eleventyExcludeFromCollections: true
 <script>
 function payeesView() {
   return {
+    showHelp: false,
     query: "",
     sortKey: "name",
     sortDir: "asc",
@@ -154,6 +213,35 @@ function payeesView() {
     sortIndicator(key) {
       if (this.sortKey !== key) return "";
       return this.sortDir === "asc" ? "▲" : "▼";
+    },
+
+    /* ---- Stat-card aggregates ---- */
+    payeeCount() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.allPayees().length;
+    },
+    withCategoryCount() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.allPayees().filter(function (p) { return !!p.lastCategoryId; }).length;
+    },
+    totalUses() {
+      void this.$store.budget._listVersion;
+      var counts = this.$store.budget.payeeUsageCounts();
+      var sum = 0;
+      Object.keys(counts).forEach(function (k) { sum += counts[k] || 0; });
+      return sum;
+    },
+    topPayeeLabel() {
+      void this.$store.budget._listVersion;
+      var counts = this.$store.budget.payeeUsageCounts();
+      var all = this.$store.budget.allPayees();
+      var best = null; var bestCount = 0;
+      all.forEach(function (p) {
+        var n = counts[p.id] || 0;
+        if (n > bestCount) { bestCount = n; best = p; }
+      });
+      if (!best) return "—";
+      return best.name + " · " + bestCount;
     },
 
     selectableCategories() {

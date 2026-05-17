@@ -1,0 +1,147 @@
+---
+layout: layouts/app.njk
+title: "About this profile"
+description: "Read-only snapshot of the active profile — when it was created, how much data lives in it, and when you last backed it up."
+permalink: /app/about-this-profile/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="aboutProfileView()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Profile health</p>
+      <h1 class="app-page__title">About this profile</h1>
+      <p class="app-page__lead">A read-only snapshot of the active profile. Everything here lives in your browser's localStorage; nothing is sent anywhere.</p>
+    </div>
+  </header>
+
+  <p x-show="!$store.budget.profile" x-cloak style="color: var(--fg-muted);">No active profile.</p>
+
+  <div x-show="$store.budget.profile" x-cloak>
+    <section class="rec-summary" aria-label="Profile statistics">
+      <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total accounts in this profile (on-budget + tracking).">
+        <span class="rec-summary__label">Accounts</span>
+        <span class="rec-summary__value" x-text="counts().accounts"></span>
+      </div>
+      <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total transactions across all accounts.">
+        <span class="rec-summary__label">Transactions</span>
+        <span class="rec-summary__value" x-text="counts().transactions.toLocaleString()"></span>
+      </div>
+      <div class="rec-summary__tile rec-summary__tile--inflow" data-tip="Categories + groups defined in this profile.">
+        <span class="rec-summary__label">Categories</span>
+        <span class="rec-summary__value" x-text="counts().categories + ' / ' + counts().groups"></span>
+      </div>
+      <div class="rec-summary__tile rec-summary__tile--net" data-tip="Total bytes used by this profile in browser localStorage.">
+        <span class="rec-summary__label">Storage</span>
+        <span class="rec-summary__value" x-text="storageSizeLabel()"></span>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top: var(--space-md);">
+      <h2 class="card__title">Identity</h2>
+      <dl class="about-profile">
+        <div><dt>Name</dt><dd x-text="$store.budget.profile.name"></dd></div>
+        <div><dt>Profile ID</dt><dd x-text="$store.budget.profile.id"></dd></div>
+        <div><dt>Created</dt><dd x-text="formatDate($store.budget.profile.createdAt)"></dd></div>
+        <div><dt>Sample data</dt><dd x-text="$store.budget.profile.settings?.isSample ? 'Yes — the seeded sample household' : 'No'"></dd></div>
+      </dl>
+    </section>
+
+    <section class="card" style="margin-top: var(--space-md);">
+      <h2 class="card__title">Activity</h2>
+      <dl class="about-profile">
+        <div><dt>Earliest transaction</dt><dd x-text="earliest() || '—'"></dd></div>
+        <div><dt>Latest transaction</dt><dd x-text="latest() || '—'"></dd></div>
+        <div><dt>Recurring templates</dt><dd x-text="counts().scheduled"></dd></div>
+        <div><dt>Payees</dt><dd x-text="counts().payees"></dd></div>
+        <div><dt>Goals set</dt><dd x-text="counts().goals"></dd></div>
+        <div><dt>Snapshots</dt><dd x-text="counts().snapshots"></dd></div>
+      </dl>
+    </section>
+
+    <section class="card" style="margin-top: var(--space-md);">
+      <h2 class="card__title">Backups</h2>
+      <p style="color: var(--fg-muted);">
+        Last download from this browser:
+        <strong x-text="lastBackupLabel()"></strong>.
+      </p>
+      <div class="cluster" style="margin-top: var(--space-sm);">
+        <a class="btn btn--primary btn--sm" href="/app/backup/">Open backup page</a>
+        <a class="btn btn--ghost btn--sm" href="/app/export/">Export profile JSON</a>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top: var(--space-md);">
+      <h2 class="card__title">Maintenance</h2>
+      <div class="cluster">
+        <a class="btn btn--ghost btn--sm" href="/app/health-check/">Run health checks</a>
+        <a class="btn btn--ghost btn--sm" href="/app/audit-log/">View audit log</a>
+        <a class="btn btn--ghost btn--sm" href="/app/diagnostics/">Diagnostics report</a>
+        <a class="btn btn--ghost btn--sm" href="/app/profiles/">Manage all profiles</a>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+function aboutProfileView() {
+  return {
+    counts() {
+      var p = this.$store.budget.profile;
+      if (!p) return { accounts: 0, transactions: 0, groups: 0, categories: 0, payees: 0, goals: 0, scheduled: 0, snapshots: 0 };
+      return {
+        accounts: p.accounts.length,
+        transactions: p.transactions.length,
+        groups: p.categoryGroups.length,
+        categories: p.categories.length,
+        payees: p.payees ? p.payees.length : 0,
+        goals: p.goals ? p.goals.length : 0,
+        scheduled: p.scheduled ? p.scheduled.length : 0,
+        snapshots: p.snapshots ? p.snapshots.length : 0,
+      };
+    },
+    earliest() {
+      var p = this.$store.budget.profile;
+      if (!p || !p.transactions.length) return "";
+      var arr = p.transactions.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+      return arr[0].date;
+    },
+    latest() {
+      var p = this.$store.budget.profile;
+      if (!p || !p.transactions.length) return "";
+      var arr = p.transactions.slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
+      return arr[0].date;
+    },
+    storageSizeLabel() {
+      try {
+        var p = this.$store.budget.profile;
+        if (!p) return "0 KB";
+        var s = JSON.stringify(p);
+        var kb = s.length / 1024;
+        if (kb < 1024) return kb.toFixed(1) + " KB";
+        return (kb / 1024).toFixed(2) + " MB";
+      } catch (_e) { return "—"; }
+    },
+    formatDate(iso) {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }); }
+      catch (_e) { return iso; }
+    },
+    lastBackupLabel() {
+      try {
+        var raw = localStorage.getItem("projectbudget:lastBackupAt");
+        if (!raw) return "Never";
+        var d = new Date(raw);
+        return d.toLocaleString();
+      } catch (_e) { return "—"; }
+    },
+  };
+}
+</script>
+
+<style>
+  .about-profile { display: grid; grid-template-columns: 1fr; gap: var(--space-2xs); margin: 0; }
+  .about-profile > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); padding: var(--space-2xs) 0; border-bottom: 1px solid var(--border-soft); gap: var(--space-md); align-items: baseline; }
+  .about-profile > div:last-child { border-bottom: 0; }
+  .about-profile dt { color: var(--fg-muted); margin: 0; font-size: var(--fs-sm); }
+  .about-profile dd { margin: 0; font-variant-numeric: tabular-nums; }
+</style>

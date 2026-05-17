@@ -1,0 +1,147 @@
+---
+layout: layouts/app.njk
+title: "Feedback"
+description: "Tell me what's working, what's broken, and what you wish the app did differently. Quick form — 30 seconds is fine."
+permalink: /app/feedback/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="feedbackForm()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Feedback</p>
+      <h1 class="app-page__title">Tell me how it's going</h1>
+      <p class="app-page__lead" style="margin-top: var(--space-2xs);">
+        Fast questions take 30 seconds. Pick a sentiment, drop a sentence about what's working or not, and you're done. Every message is read personally — no tracking, no marketing follow-up.
+      </p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/contact/"
+       data-tip="Use the longer contact form for bug reports, support questions, or partnership inquiries.">Use contact form instead</a>
+  </header>
+
+  <div class="contact-page__grid">
+    <aside class="contact-page__bio">
+      <h2 class="contact-page__bio-name" style="font-size: var(--fs-lg); text-align: left;">Why ask?</h2>
+      <p class="contact-page__bio-body">
+        Project Budget evolves directly from user feedback. Sentiment ratings highlight what's worth changing first; specific complaints point at concrete fixes; specific wins tell me what not to break next release.
+      </p>
+      <ul class="contact-page__bio-links">
+        <li>
+          <strong>Bugs:</strong>
+          <a href="/app/contact/">File a bug report</a>
+          <span class="contact-page__bio-hint">Use the contact form so I can collect browser + steps to reproduce.</span>
+        </li>
+        <li>
+          <strong>Loved it?</strong>
+          <a href="/app/review/">Share a public review</a>
+          <span class="contact-page__bio-hint">Reviews you opt to publish appear on the site with attribution.</span>
+        </li>
+        <li>
+          <strong>Docs:</strong>
+          <a href="/docs/">Read the documentation</a>
+          <span class="contact-page__bio-hint">Most "how do I…" questions already have an answer.</span>
+        </li>
+      </ul>
+    </aside>
+
+    <section class="contact-page__form-card">
+      <h2 class="contact-page__form-heading">Quick feedback</h2>
+      <p class="contact-page__form-intro">
+        Required fields are marked <span class="contact-page__req">*</span>. Sentiment + one sentence is plenty.
+      </p>
+
+      <form id="feedbackForm"
+            data-web3forms
+            data-redirect="/thank-you/"
+            action="https://api.web3forms.com/submit"
+            method="POST"
+            class="contact-form">
+        <input type="hidden" name="access_key" value="b6c3454b-f07c-43f7-9070-0e0cb5286f55">
+        <input type="hidden" name="subject" value="Project Budget — feedback form">
+        <input type="hidden" name="from_name" value="Project Budget feedback form">
+        <input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+
+        {# Sentiment: 5-point face scale stored as both a hidden field
+           and visible state. Buttons read aria-pressed for screen
+           readers. #}
+        <div class="contact-form__field">
+          <label>How's the app feeling? <span class="contact-page__req">*</span></label>
+          <div class="feedback-faces" role="radiogroup" aria-label="Overall sentiment">
+            <template x-for="opt in sentiments" :key="opt.value">
+              <button type="button" class="feedback-face"
+                      :class="sentiment === opt.value ? 'is-active' : ''"
+                      :aria-pressed="(sentiment === opt.value).toString()"
+                      :aria-label="opt.label"
+                      :data-tip="opt.label"
+                      @click="sentiment = opt.value">
+                <span class="feedback-face__icon" x-text="opt.icon"></span>
+                <span class="feedback-face__label" x-text="opt.short"></span>
+              </button>
+            </template>
+          </div>
+          <input type="hidden" name="sentiment" :value="sentiment">
+        </div>
+
+        <div class="contact-form__field">
+          <label for="fb-area">Which part?</label>
+          <select id="fb-area" name="area">
+            <option value="">Pick the surface this is about…</option>
+            <option value="Dashboard">Dashboard</option>
+            <option value="Budget">Budget</option>
+            <option value="Register">Register</option>
+            <option value="Calendar">Calendar</option>
+            <option value="Reports">Reports</option>
+            <option value="Recurring transactions">Recurring transactions</option>
+            <option value="Accounts">Accounts</option>
+            <option value="Categories &amp; goals">Categories &amp; goals</option>
+            <option value="Profiles &amp; backups">Profiles &amp; backups</option>
+            <option value="Documentation">Documentation</option>
+            <option value="Whole app">Whole app — not specific to one page</option>
+          </select>
+        </div>
+
+        <div class="contact-form__field">
+          <label for="fb-message">What's the feedback? <span class="contact-page__req">*</span></label>
+          <textarea id="fb-message" name="message" rows="5" required
+                    placeholder="One sentence is fine. Best: a concrete moment — what happened, what surprised you, what you wish had happened instead."></textarea>
+        </div>
+
+        <div class="contact-form__row">
+          <div class="contact-form__field">
+            <label for="fb-name">Your name (optional)</label>
+            <input type="text" id="fb-name" name="name" autocomplete="name" placeholder="Anonymous">
+          </div>
+          <div class="contact-form__field">
+            <label for="fb-email">Email (only if you want a reply)</label>
+            <input type="email" id="fb-email" name="email" autocomplete="email" placeholder="optional">
+          </div>
+        </div>
+
+        <div class="contact-form__actions">
+          <button class="btn btn--primary" type="submit"
+                  :disabled="!sentiment"
+                  :data-tip="sentiment ? 'Send your feedback.' : 'Pick a sentiment first.'">Send feedback</button>
+          <button class="btn btn--ghost" type="reset" @click="sentiment = ''">Clear</button>
+        </div>
+
+        <p class="contact-form__privacy">
+          Anonymous submissions are welcome. Email is only used to reply — never stored elsewhere, never added to any list.
+        </p>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+function feedbackForm() {
+  return {
+    sentiment: "",
+    sentiments: [
+      { value: "Frustrating",   short: "Bad",     label: "Frustrating — something's wrong",  icon: "☹" },
+      { value: "Mixed",         short: "Mixed",   label: "Mixed — some good, some bad",       icon: "\u{1F610}" },
+      { value: "OK",            short: "OK",      label: "OK — it works, nothing special",    icon: "\u{1F642}" },
+      { value: "Good",          short: "Good",    label: "Good — I like it",                  icon: "\u{1F60A}" },
+      { value: "Great",         short: "Great",   label: "Great — would recommend",           icon: "\u{1F929}" },
+    ],
+  };
+}
+</script>

@@ -34,16 +34,16 @@ eleventyExcludeFromCollections: true
            dynamic label (e.g. "May 2026") once hydrated. #}
         <h1 class="cal-toolbar__title" x-text="anchorLabel() || 'Calendar'">Calendar</h1>
       </div>
-    </div>
 
-    {# ---- Year-view display toggle — swaps the cell content from
-       day numbers to per-day net $ so users can scan a 12-month
-       cash-flow heatmap at a glance. #}
-    <div class="cal-toolbar__row cal-toolbar__row--span"
-         x-show="view === 'year'" x-cloak>
+      {# Year-view display toggle — swaps each cell's date number for
+         its net $ so users can scan a 12-month cash-flow heatmap.
+         Lives on the same row as the view/nav cluster (margin-left:
+         auto pushes it to the right edge) and only renders for the
+         year view via x-show. #}
       <label class="cal-toolbar__toggle"
              :class="yearShowNet ? 'is-on' : ''"
              style="margin-left: auto;"
+             x-show="view === 'year'" x-cloak
              data-tip="Replace each day's date number with its net $ for the day. Week-number column hides so the cell has room for the amount. Toggle off to return to date numbers.">
         <input type="checkbox" x-model="yearShowNet" class="visually-hidden">
         <span class="cal-toolbar__toggle-switch" aria-hidden="true">

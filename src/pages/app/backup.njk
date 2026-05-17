@@ -1,0 +1,104 @@
+---
+layout: layouts/app.njk
+title: "Backup"
+description: "Download a JSON snapshot of every profile in this browser. The fastest path to disaster recovery if the device dies."
+permalink: /app/backup/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="backupView()" x-init="refresh()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Backup</p>
+      <h1 class="app-page__title">Back up your profiles</h1>
+      <p class="app-page__lead">
+        Everything you've entered lives in this browser's localStorage. If the device dies, the cache gets wiped, or you switch browsers, the only way back is a JSON file you downloaded earlier. Take one every week.
+      </p>
+    </div>
+    <button class="btn btn--primary" type="button" @click="backupAll()" :disabled="!hasProfiles">Download backup now</button>
+  </header>
+
+  <section class="card" :class="reminderClass()" style="border-left-width: 4px;">
+    <h2 class="card__title" style="margin-top: 0;">Last backup</h2>
+    <p style="font-size: var(--fs-lg); margin: 0;" x-text="lastBackupLabel()"></p>
+    <p style="color: var(--fg-muted); margin: var(--space-2xs) 0 0;" x-text="recommendation()"></p>
+  </section>
+
+  <section class="card prose" style="margin-top: var(--space-md);">
+    <h2>What gets backed up</h2>
+    <ul>
+      <li>Every profile in this browser (not just the active one)</li>
+      <li>All accounts, categories, transactions, payees, goals, recurring templates, snapshots</li>
+      <li>Per-profile settings: theme picks, group collapse state, table sort preferences</li>
+    </ul>
+    <p>The file is plain JSON. Open it in any text editor, store it in Dropbox / iCloud / Google Drive, attach it to an email to yourself — all of these are valid backup strategies.</p>
+  </section>
+
+  <section class="card prose" style="margin-top: var(--space-md);">
+    <h2>Restore</h2>
+    <p>If you need to bring a backup back into the app, use <a href="/app/import/">/app/import/</a>. Drop the file in, pick "Import as new" (keeps your current data) or "Replace this profile", and you're back where you were.</p>
+  </section>
+
+  <section class="card prose" style="margin-top: var(--space-md);">
+    <h2>Backup hygiene</h2>
+    <ul>
+      <li><strong>Weekly cadence</strong> — set a calendar reminder.</li>
+      <li><strong>Multiple destinations</strong> — local disk + a cloud folder is the minimum.</li>
+      <li><strong>Test restores quarterly</strong> — open one of your backups in a fresh browser to confirm it actually loads.</li>
+      <li><strong>Encrypt at rest</strong> if the backup folder isn't already encrypted (Cryptomator / OS-native FDE / VeraCrypt all work).</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+function backupView() {
+  return {
+    lastBackup: null,
+    hasProfiles: false,
+
+    refresh() {
+      try { this.lastBackup = localStorage.getItem("projectbudget:lastBackupAt"); }
+      catch (_e) { this.lastBackup = null; }
+      var s = this.$store.budget;
+      this.hasProfiles = !!(s && s.profiles && s.profiles.length);
+    },
+    daysSince() {
+      if (!this.lastBackup) return Infinity;
+      var ms = Date.now() - new Date(this.lastBackup).getTime();
+      return ms / (1000 * 60 * 60 * 24);
+    },
+    lastBackupLabel() {
+      if (!this.lastBackup) return "Never";
+      var d = new Date(this.lastBackup);
+      var days = this.daysSince();
+      if (days < 1)  return "Today — " + d.toLocaleTimeString();
+      if (days < 2)  return "Yesterday — " + d.toLocaleTimeString();
+      return Math.floor(days) + " days ago — " + d.toLocaleDateString();
+    },
+    recommendation() {
+      var d = this.daysSince();
+      if (!isFinite(d)) return "Take your first backup now. A single download covers you for the next week.";
+      if (d < 7)  return "You're in good shape. Next reminder in " + Math.ceil(7 - d) + " day" + (Math.ceil(7 - d) === 1 ? "" : "s") + ".";
+      if (d < 30) return "It's been over a week — refresh your backup.";
+      return "It's been over a month. Take a fresh backup before you make more changes.";
+    },
+    reminderClass() {
+      var d = this.daysSince();
+      if (!isFinite(d) || d >= 30) return "card--danger-rail";
+      if (d >= 7) return "card--warn-rail";
+      return "card--ok-rail";
+    },
+    backupAll() {
+      this.$store.budget.exportAllProfilesJSON();
+      try { localStorage.setItem("projectbudget:lastBackupAt", new Date().toISOString()); }
+      catch (_e) {}
+      this.refresh();
+    },
+  };
+}
+</script>
+
+<style>
+  .card--ok-rail     { border-left: 4px solid var(--ok) !important; }
+  .card--warn-rail   { border-left: 4px solid var(--warn) !important; }
+  .card--danger-rail { border-left: 4px solid var(--danger) !important; }
+</style>

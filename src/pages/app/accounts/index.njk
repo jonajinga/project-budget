@@ -9,6 +9,12 @@ eleventyExcludeFromCollections: true
   <header class="app-page__header">
     <h1 class="app-page__title">Accounts</h1>
     <div class="cluster">
+      <button class="btn btn--icon" type="button"
+              @click="showHelp = true"
+              aria-label="About accounts"
+              data-tip="How on-budget vs tracking accounts work, plus reorder tips.">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+      </button>
       <button class="btn btn--secondary" type="button" @click="showGroup = true"
               data-tip="Groups organize the sidebar (Daily, Reserves, Debts, Investments). Drag accounts into them.">New group</button>
       <button class="btn btn--primary" type="button" @click="showAccount = true">Add account</button>
@@ -23,9 +29,33 @@ eleventyExcludeFromCollections: true
     No accounts yet. Start with your everyday checking account, then add savings, credit cards, and any tracking accounts for investments or loans.
   </p>
 
-  <p class="app-page__lead" x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
-    <strong>Reorder:</strong> grab the <span class="dnd-handle dnd-handle--inline" aria-hidden="true">&#9776;</span> handle to drag a row or group, drop it where you want it. On touch devices use the up / down buttons in the row.
-  </p>
+  {# Stat cards. Live snapshot of every on-budget + tracking balance,
+     account count, and total net worth. Reuses .rec-summary chrome so
+     the visual rhythm matches /app/scheduled/ and /app/categories/. #}
+  <section class="rec-summary" x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+    <div class="rec-summary__tile rec-summary__tile--inflow" data-tip="Sum of every on-budget account balance (cash, checking, savings, credit cards).">
+      <span class="rec-summary__label">On budget</span>
+      <span class="rec-summary__value"
+            :class="$store.budget.onBudgetTotal() < 0 ? 'amount--outflow' : ''"
+            x-text="formatCents($store.budget.onBudgetTotal())"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Sum of tracking assets minus tracking liabilities (investments, loans).">
+      <span class="rec-summary__label">Tracking</span>
+      <span class="rec-summary__value"
+            :class="trackingNet() < 0 ? 'amount--outflow' : ''"
+            x-text="formatCents(trackingNet())"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total accounts in this profile (on-budget + tracking).">
+      <span class="rec-summary__label">Accounts</span>
+      <span class="rec-summary__value" x-text="accountCount()"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--net" data-tip="Net worth across every account.">
+      <span class="rec-summary__label">Net worth</span>
+      <span class="rec-summary__value"
+            :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : 'amount--inflow'"
+            x-text="formatCents($store.budget.netWorth())"></span>
+    </div>
+  </section>
 
   <div data-sortable-list data-sortable-kind="acct-group">
     <template x-for="(group, gIdx) in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
@@ -43,6 +73,12 @@ eleventyExcludeFromCollections: true
                     :disabled="!group.group">
               <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
               <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
+              <span class="group-toggle__count"
+                    x-text="group.accounts.length + (group.accounts.length === 1 ? ' account' : ' accounts')"></span>
+              <span class="group-toggle__total"
+                    :class="groupTotalCents(group) < 0 ? 'amount--outflow' : ''"
+                    x-text="formatCents(groupTotalCents(group))"
+                    :data-tip="'Total balance across ' + group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' in this group.'"></span>
             </button>
           </div>
           <div class="cluster">
@@ -129,6 +165,23 @@ eleventyExcludeFromCollections: true
         </table>
       </section>
     </template>
+  </div>
+
+  {# Info / help modal — hosts the reorder hint + a quick note on the
+     on-budget vs tracking distinction that previously lived above the
+     table as lead copy. #}
+  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="acct-help-title" @click.outside="showHelp = false">
+      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="acct-help-title">About accounts</h3>
+      <div class="prose">
+        <p>Cash, checking, savings, and credit-card accounts are <strong>on-budget</strong>: every dollar in them needs to be assigned to a category. Investment and loan accounts are <strong>tracking</strong>: they count toward net worth but do not affect Ready to Assign.</p>
+        <p><strong>Reorder:</strong> grab the <span class="dnd-handle dnd-handle--inline" aria-hidden="true"></span> handle to drag a row or group, drop it where you want it. On touch devices use the up / down buttons in the row.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
+      </div>
+    </div>
   </div>
 
   {# Add-account modal #}
@@ -282,6 +335,7 @@ eleventyExcludeFromCollections: true
 <script>
 function accountsView() {
   return {
+    showHelp: false,
     showAccount: false,
     showGroup: false,
     editId: null,
@@ -310,6 +364,31 @@ function accountsView() {
     },
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    /* ---- Stat-card aggregates ---- */
+    accountCount() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.profile ? this.$store.budget.profile.accounts.length : 0;
+    },
+    trackingNet() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      if (!s.profile) return 0;
+      return s.trackingAssetTotal() - s.trackingLiabilityTotal();
+    },
+    /* Sum of every account balance in a single group. Used to surface
+       per-group totals in the header so collapsed groups still convey
+       their net value at a glance. */
+    groupTotalCents(group) {
+      void this.$store.budget._listVersion;
+      if (!group || !group.accounts) return 0;
+      var s = this.$store.budget;
+      var sum = 0;
+      for (var i = 0; i < group.accounts.length; i++) {
+        sum += s.accountBalance(group.accounts[i].id);
+      }
+      return sum;
     },
 
     submitAccount() {

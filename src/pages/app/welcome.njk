@@ -1,0 +1,334 @@
+---
+layout: layouts/app.njk
+title: "Welcome"
+description: "Three-step guided setup — create a profile, add your first accounts, pick a starter category template. The fastest path from empty to a working budget."
+permalink: /app/welcome/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="welcomeWizard()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Welcome</p>
+      <h1 class="app-page__title">Three steps to a working budget</h1>
+      <p class="app-page__lead">
+        We'll create a profile, drop in your everyday accounts, and seed a category list you can edit later. The whole thing is local — nothing leaves your browser.
+      </p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/" data-tip="Skip the wizard and go straight to the dashboard.">Skip for now</a>
+  </header>
+
+  <ol class="welcome-steps">
+    <li class="welcome-step" :class="stepClass(1)">
+      <header class="welcome-step__head">
+        <span class="welcome-step__num">1</span>
+        <h2 class="welcome-step__title">Name your profile</h2>
+        <span class="welcome-step__status" x-text="stepStatus(1)"></span>
+      </header>
+      <div class="welcome-step__body" x-show="step >= 1" x-cloak>
+        <p>One profile per budget — most people use one for personal money and a second for a household or side business.</p>
+        <form @submit.prevent="createProfile()" class="cluster" style="gap: var(--space-sm);">
+          <input class="input" type="text" x-model="profileName" placeholder="Personal, Household, Side business…" required>
+          <button class="btn btn--primary" type="submit" :disabled="!profileName.trim()">Create profile</button>
+        </form>
+        <p class="welcome-step__hint" x-show="$store.budget.profile" x-cloak>
+          Active profile: <strong x-text="$store.budget.profile?.name"></strong>. Continue below.
+        </p>
+      </div>
+    </li>
+
+    <li class="welcome-step" :class="stepClass(2)">
+      <header class="welcome-step__head">
+        <span class="welcome-step__num">2</span>
+        <h2 class="welcome-step__title">Add your everyday accounts</h2>
+        <span class="welcome-step__status" x-text="stepStatus(2)"></span>
+      </header>
+      <div class="welcome-step__body" x-show="step >= 2" x-cloak>
+        <p>Start with checking + savings + any credit cards. You can add tracking accounts (investments, loans) later.</p>
+        <template x-for="(row, i) in accountDrafts" :key="i">
+          <div class="cluster" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
+            <input class="input" type="text" x-model="row.name" placeholder="Account name (e.g. Chase Checking)" style="flex: 1;">
+            <select class="select" x-model="row.type">
+              <template x-for="t in $store.budget.ACCOUNT_TYPES" :key="t.value">
+                <option :value="t.value" x-text="t.label"></option>
+              </template>
+            </select>
+            <input class="input" type="text" x-model="row.balance" placeholder="0.00" inputmode="decimal" style="width: 7rem;">
+            <button class="btn btn--ghost btn--sm" type="button" @click="removeDraft(i)" x-show="accountDrafts.length > 1">Remove</button>
+          </div>
+        </template>
+        <div class="cluster">
+          <button class="btn btn--ghost btn--sm" type="button" @click="addDraft()">+ Add another</button>
+          <button class="btn btn--primary" type="button" @click="createAccounts()" :disabled="!hasValidDraft()">Add these accounts</button>
+        </div>
+        <p class="welcome-step__hint" x-show="$store.budget.profile?.accounts.length" x-cloak>
+          <span x-text="$store.budget.profile?.accounts.length"></span> account<span x-text="$store.budget.profile?.accounts.length === 1 ? '' : 's'"></span> created.
+        </p>
+      </div>
+    </li>
+
+    <li class="welcome-step" :class="stepClass(3)">
+      <header class="welcome-step__head">
+        <span class="welcome-step__num">3</span>
+        <h2 class="welcome-step__title">Pick a starter category template</h2>
+        <span class="welcome-step__status" x-text="stepStatus(3)"></span>
+      </header>
+      <div class="welcome-step__body" x-show="step >= 3" x-cloak>
+        <p>Each template seeds a few groups + categories you can rename, reorder, or delete. None of these are permanent.</p>
+        <div class="welcome-templates">
+          <template x-for="tpl in templates" :key="tpl.id">
+            <button type="button" class="welcome-template"
+                    :class="selectedTemplate === tpl.id ? 'is-selected' : ''"
+                    @click="selectedTemplate = tpl.id">
+              <h3 x-text="tpl.label"></h3>
+              <p x-text="tpl.description"></p>
+              <ul>
+                <template x-for="g in tpl.preview" :key="g">
+                  <li x-text="g"></li>
+                </template>
+              </ul>
+            </button>
+          </template>
+        </div>
+        <div class="cluster" style="margin-top: var(--space-md);">
+          <button class="btn btn--ghost btn--sm" type="button" @click="skipTemplate()">Skip — I'll build my own</button>
+          <button class="btn btn--primary" type="button" @click="applyTemplate()" :disabled="!selectedTemplate">Apply template</button>
+        </div>
+      </div>
+    </li>
+  </ol>
+
+  <section class="card" x-show="step >= 4" x-cloak style="margin-top: var(--space-lg);">
+    <h2 class="card__title">You're set up.</h2>
+    <p style="color: var(--fg-muted);">Profile, accounts, and categories are all in place. Open the dashboard to see your numbers, or jump straight to the budget to assign your first dollars.</p>
+    <div class="cluster" style="margin-top: var(--space-sm);">
+      <a class="btn btn--primary" href="/app/">Open dashboard</a>
+      <a class="btn btn--secondary" href="/app/budget/">Open budget</a>
+      <a class="btn btn--ghost" href="/app/register/">Enter your first transaction</a>
+    </div>
+  </section>
+</div>
+
+<script>
+function welcomeWizard() {
+  return {
+    step: 1,
+    profileName: "",
+    accountDrafts: [
+      { name: "", type: "checking", balance: "" },
+      { name: "", type: "savings", balance: "" },
+    ],
+    selectedTemplate: "",
+    templates: [
+      {
+        id: "essentials",
+        label: "Essentials",
+        description: "Bare-minimum 4-group set. Best when you want to add categories as you discover them.",
+        preview: ["Immediate Obligations", "Quality of Life", "Just for Fun", "Savings"],
+        groups: [
+          { name: "Immediate Obligations", cats: ["Rent / Mortgage", "Electric", "Internet", "Groceries", "Transportation"] },
+          { name: "Quality of Life",      cats: ["Insurance", "Subscriptions", "Phone", "Dining out"] },
+          { name: "Just for Fun",          cats: ["Hobbies", "Entertainment", "Travel"] },
+          { name: "Savings",               cats: ["Emergency fund", "Vacation", "Holidays"] },
+        ],
+      },
+      {
+        id: "household",
+        label: "Household",
+        description: "Family-budget shape — keeps daily, kid, and pet costs in their own buckets.",
+        preview: ["Home", "Kids", "Food", "Transport", "Pets", "Savings"],
+        groups: [
+          { name: "Home",      cats: ["Mortgage / Rent", "Utilities", "Internet", "Home maintenance", "Property tax"] },
+          { name: "Kids",      cats: ["Childcare", "Activities", "School", "Clothing"] },
+          { name: "Food",      cats: ["Groceries", "Dining out", "Coffee"] },
+          { name: "Transport", cats: ["Fuel", "Car insurance", "Maintenance", "Transit"] },
+          { name: "Pets",      cats: ["Food", "Vet", "Grooming"] },
+          { name: "Savings",   cats: ["Emergency fund", "College", "Vacation"] },
+        ],
+      },
+      {
+        id: "freelance",
+        label: "Freelance / side income",
+        description: "Adds tax-set-aside + business expense buckets. Pairs with a Tracking account for taxes payable.",
+        preview: ["Business", "Taxes", "Personal", "Savings"],
+        groups: [
+          { name: "Business", cats: ["Software", "Hardware", "Subcontractors", "Marketing", "Office supplies"] },
+          { name: "Taxes",    cats: ["Federal estimated", "State estimated", "Self-employment"] },
+          { name: "Personal", cats: ["Rent / Mortgage", "Groceries", "Utilities", "Transport", "Dining out"] },
+          { name: "Savings",  cats: ["Emergency fund", "Retirement", "Hardware fund"] },
+        ],
+      },
+    ],
+
+    init() {
+      /* Advance to the highest already-satisfied step on revisit so a
+         returning user lands on the work they still have left. */
+      var s = this.$store.budget;
+      if (s.profile) {
+        this.step = Math.max(this.step, 2);
+        if (s.profile.accounts.length) this.step = Math.max(this.step, 3);
+        if (s.profile.categories.length) this.step = Math.max(this.step, 4);
+      }
+    },
+    stepClass(n) {
+      if (this.step > n) return "is-done";
+      if (this.step === n) return "is-current";
+      return "is-future";
+    },
+    stepStatus(n) {
+      if (this.step > n) return "Done";
+      if (this.step === n) return "In progress";
+      return "Up next";
+    },
+    createProfile() {
+      var name = this.profileName.trim();
+      if (!name) return;
+      this.$store.budget.createProfile(name);
+      this.step = Math.max(this.step, 2);
+    },
+    addDraft() { this.accountDrafts.push({ name: "", type: "checking", balance: "" }); },
+    removeDraft(i) { this.accountDrafts.splice(i, 1); },
+    hasValidDraft() {
+      return this.accountDrafts.some(function (r) { return r.name.trim(); });
+    },
+    parseDollars(s) {
+      if (window.PBCalc) {
+        var v = window.PBCalc.parseAmountCents(s);
+        if (isFinite(v)) return v;
+      }
+      var n = Number(String(s || "").replace(/[$,\s]/g, ""));
+      return isFinite(n) ? Math.round(n * 100) : 0;
+    },
+    createAccounts() {
+      var self = this;
+      this.accountDrafts.forEach(function (r) {
+        if (!r.name.trim()) return;
+        self.$store.budget.addAccount({
+          name: r.name.trim(),
+          type: r.type,
+          openingBalance: self.parseDollars(r.balance),
+        });
+      });
+      this.step = Math.max(this.step, 3);
+    },
+    applyTemplate() {
+      var tpl = this.templates.find(function (t) { return t.id === this.selectedTemplate; }, this);
+      if (!tpl) return;
+      var self = this;
+      tpl.groups.forEach(function (g) {
+        var grp = self.$store.budget.addCategoryGroup(g.name);
+        g.cats.forEach(function (catName) {
+          self.$store.budget.addCategory({ groupId: grp.id, name: catName });
+        });
+      });
+      this.$store.budget.pushToast("Categories created — edit them anytime on /app/categories/.");
+      this.step = 4;
+    },
+    skipTemplate() { this.step = 4; },
+  };
+}
+</script>
+
+<style>
+  .welcome-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-md); }
+  .welcome-step {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-input);
+    padding: var(--space-md);
+    transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .welcome-step.is-current { border-left-color: var(--accent); }
+  .welcome-step.is-done    { border-left-color: var(--ok); background: color-mix(in oklab, var(--ok) 4%, var(--bg-elevated)); }
+  .welcome-step.is-future  { opacity: 0.6; }
+
+  .welcome-step__head {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+  .welcome-step__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: var(--bg-alt);
+    color: var(--fg-muted);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .welcome-step.is-current .welcome-step__num { background: var(--accent); color: #fff; }
+  .welcome-step.is-done    .welcome-step__num { background: var(--ok); color: #fff; }
+  .welcome-step.is-done    .welcome-step__num::before { content: "✓"; }
+  .welcome-step.is-done    .welcome-step__num { font-size: 1.3rem; }
+  .welcome-step.is-done    .welcome-step__num span { display: none; }
+
+  .welcome-step__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-xl);
+    line-height: 1.15;
+  }
+  .welcome-step__status {
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+    font-weight: 700;
+    padding: 2px 8px;
+    background: var(--bg-alt);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .welcome-step.is-current .welcome-step__status { color: var(--accent); background: color-mix(in oklab, var(--accent) 12%, var(--bg)); }
+  .welcome-step.is-done    .welcome-step__status { color: var(--ok);     background: color-mix(in oklab, var(--ok) 14%, var(--bg)); }
+
+  .welcome-step__body { color: var(--fg); }
+  .welcome-step__body > p { margin: 0 0 var(--space-sm); color: var(--fg-muted); }
+  .welcome-step__hint { margin: var(--space-sm) 0 0; color: var(--fg-muted); font-size: var(--fs-sm); }
+
+  .welcome-templates {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+  @media (max-width: 899px) { .welcome-templates { grid-template-columns: 1fr; } }
+  .welcome-template {
+    text-align: left;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-input);
+    padding: var(--space-md);
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .welcome-template:hover { background: var(--bg-alt); border-color: var(--accent); }
+  .welcome-template.is-selected { border-left-color: var(--accent); background: color-mix(in oklab, var(--accent) 6%, var(--bg)); }
+  .welcome-template h3 {
+    margin: 0 0 var(--space-2xs);
+    font-family: var(--font-display);
+    font-size: var(--fs-lg);
+  }
+  .welcome-template p {
+    margin: 0 0 var(--space-2xs);
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+  }
+  .welcome-template ul {
+    margin: var(--space-2xs) 0 0;
+    padding-left: var(--space-md);
+    color: var(--fg-muted);
+    font-size: var(--fs-xs);
+    line-height: 1.5;
+  }
+</style>

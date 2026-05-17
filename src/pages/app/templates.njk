@@ -1,0 +1,190 @@
+---
+layout: layouts/app.njk
+title: "Saved views"
+description: "Save a register filter or report configuration once, recall it with a click. Stored per-browser."
+permalink: /app/templates/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="savedViewsView()" x-init="load()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Saved views</p>
+      <h1 class="app-page__title">Saved views</h1>
+      <p class="app-page__lead">
+        A view is a register filter or report configuration you save once and recall with a click. Stored in this browser only — they don't follow your profile to other devices, but they do survive page reloads.
+      </p>
+    </div>
+    <button class="btn btn--primary" type="button" @click="openCreate()">New saved view</button>
+  </header>
+
+  <p x-show="!views.length" x-cloak style="color: var(--fg-muted);">No saved views yet. Build one below — start with a name, pick the page, and (optionally) paste in the URL query string from your filtered view.</p>
+
+  <ul class="saved-views" x-show="views.length" x-cloak>
+    <template x-for="v in views" :key="v.id">
+      <li class="saved-view">
+        <div class="saved-view__main">
+          <h3 class="saved-view__name" x-text="v.name"></h3>
+          <p class="saved-view__detail">
+            <span class="saved-view__kind" x-text="kindLabel(v.kind)"></span>
+            <span x-show="v.params" x-cloak> · <code x-text="v.params"></code></span>
+          </p>
+          <p class="saved-view__notes" x-show="v.notes" x-cloak x-text="v.notes"></p>
+        </div>
+        <div class="saved-view__actions cluster">
+          <a class="btn btn--primary btn--sm" :href="buildHref(v)">Open</a>
+          <button class="btn btn--ghost btn--sm" type="button" @click="edit(v)">Edit</button>
+          <button class="btn btn--danger btn--sm" type="button" @click="remove(v.id)">Delete</button>
+        </div>
+      </li>
+    </template>
+  </ul>
+
+  {# Editor modal — handles both create + edit. #}
+  <div class="modal-backdrop" x-show="showEditor" x-cloak @keydown.escape.window="showEditor = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sv-title" @click.outside="showEditor = false">
+      <button class="modal__close" type="button" @click="showEditor = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="sv-title" x-text="editing.id ? 'Edit saved view' : 'New saved view'"></h3>
+      <form @submit.prevent="save()">
+        <div class="form-stack">
+          <div class="field">
+            <label class="field__label" for="sv-name">Name <span class="contact-page__req">*</span></label>
+            <input class="input" id="sv-name" type="text" x-model="editing.name" required autofocus placeholder="Amazon spending — last 90 days">
+          </div>
+          <div class="field">
+            <label class="field__label" for="sv-kind">Page</label>
+            <select class="select" id="sv-kind" x-model="editing.kind">
+              <option value="register">Register</option>
+              <option value="calendar">Calendar</option>
+              <option value="spending">Reports — spending</option>
+              <option value="income-expense">Reports — income vs expense</option>
+              <option value="net-worth">Reports — net worth</option>
+              <option value="budget">Budget</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="sv-params">Query string (optional)</label>
+            <input class="input" id="sv-params" type="text" x-model="editing.params" placeholder="account=abc&category=def&q=amazon">
+            <p class="field__hint">Paste the part after the ? in the URL when you have the page filtered the way you want it.</p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="sv-notes">Notes</label>
+            <textarea class="input" id="sv-notes" x-model="editing.notes" rows="3" placeholder="Optional — why this view exists, when to check it."></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">Save view</button>
+          <button class="btn btn--ghost" type="button" @click="showEditor = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <section class="card prose" style="margin-top: var(--space-lg);">
+    <h2>How to build a useful saved view</h2>
+    <ol>
+      <li>Open the page (register, a report, the calendar).</li>
+      <li>Apply the filters / search / date range you want.</li>
+      <li>Copy the URL from the address bar.</li>
+      <li>Click "New saved view" above. Paste the query string (the part after ?) and give it a name.</li>
+      <li>Recall the view from this page by clicking <em>Open</em> — the page loads with the same filters.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+function savedViewsView() {
+  var KEY = "projectbudget:savedViews";
+
+  return {
+    views: [],
+    showEditor: false,
+    editing: { id: null, name: "", kind: "register", params: "", notes: "" },
+
+    load() {
+      try {
+        var raw = localStorage.getItem(KEY);
+        this.views = raw ? JSON.parse(raw) : [];
+      } catch (_e) { this.views = []; }
+    },
+    persist() {
+      try { localStorage.setItem(KEY, JSON.stringify(this.views)); }
+      catch (_e) { this.$store.budget.pushToast("Couldn't save — localStorage full.", "danger"); }
+    },
+
+    openCreate() {
+      this.editing = { id: null, name: "", kind: "register", params: "", notes: "" };
+      this.showEditor = true;
+    },
+    edit(v) {
+      this.editing = Object.assign({}, v);
+      this.showEditor = true;
+    },
+    save() {
+      if (!this.editing.name.trim()) return;
+      if (this.editing.id) {
+        var idx = this.views.findIndex(function (v) { return v.id === this.editing.id; }, this);
+        if (idx >= 0) this.views[idx] = Object.assign({}, this.editing);
+      } else {
+        this.views.push({
+          id: "sv-" + Math.random().toString(36).slice(2, 9),
+          name: this.editing.name.trim(),
+          kind: this.editing.kind,
+          params: this.editing.params.trim().replace(/^\?/, ""),
+          notes: this.editing.notes.trim(),
+          createdAt: new Date().toISOString(),
+        });
+      }
+      this.persist();
+      this.showEditor = false;
+    },
+    remove(id) {
+      var self = this;
+      if (window.PBDialog) {
+        window.PBDialog.confirm({
+          title: "Delete this saved view?",
+          message: "The view will be removed. It only affects this browser — your data stays put.",
+          confirmLabel: "Delete view",
+          danger: true,
+        }).then(function (ok) {
+          if (!ok) return;
+          self.views = self.views.filter(function (v) { return v.id !== id; });
+          self.persist();
+        });
+      }
+    },
+    kindLabel(k) {
+      return ({
+        register: "Register",
+        calendar: "Calendar",
+        spending: "Spending report",
+        "income-expense": "Income vs expense report",
+        "net-worth": "Net worth report",
+        budget: "Budget",
+      })[k] || k;
+    },
+    buildHref(v) {
+      var base = ({
+        register: "/app/register/",
+        calendar: "/app/calendar/",
+        spending: "/app/reports/spending/",
+        "income-expense": "/app/reports/income-expense/",
+        "net-worth": "/app/reports/net-worth/",
+        budget: "/app/budget/",
+      })[v.kind] || "/app/";
+      return v.params ? base + "?" + v.params : base;
+    },
+  };
+}
+</script>
+
+<style>
+  .saved-views { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
+  .saved-view { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-md); padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-input); align-items: center; }
+  @media (max-width: 599px) { .saved-view { grid-template-columns: 1fr; } }
+  .saved-view__main { min-width: 0; }
+  .saved-view__name { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); }
+  .saved-view__detail { margin: var(--space-2xs) 0 0; color: var(--fg-muted); font-size: var(--fs-sm); }
+  .saved-view__kind { font-weight: 700; color: var(--fg); }
+  .saved-view__notes { margin: var(--space-2xs) 0 0; color: var(--fg-muted); font-size: var(--fs-sm); }
+  .saved-view code { background: var(--bg-alt); padding: 1px 6px; border-radius: 4px; font-size: 0.78rem; }
+</style>

@@ -27,6 +27,7 @@ const CSS_PARTIAL_ORDER = [
   "forms.css",
   "fab.css",
   "goal-progress.css",
+  "dashboard.css",
   "contact.css",
   "style-guide.css",
   "print.css",

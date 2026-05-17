@@ -390,11 +390,37 @@
       input.addEventListener("focus", function () { runSearch(input.value); });
     }
 
-    /* Global keybinds */
+    /* Global keybinds.
+       - Cmd/Ctrl+K   → search + command palette (universal convention)
+       - n            → quick-add transaction (only when not typing in a
+                        field, so it doesn't intercept actual text input)
+       - Cmd/Ctrl+Z   → undo (skipped when typing so OS-native text undo
+                        keeps working inside inputs)
+       Earlier the FAB tooltip pointed at Ctrl+K, which actually opens
+       the palette — pressing `n` jumps straight to Quick Add without
+       the intermediate palette step. */
+    function inEditableField(target) {
+      if (!target || !target.tagName) return false;
+      var tag = target.tagName.toUpperCase();
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      return !!target.isContentEditable;
+    }
     document.addEventListener("keydown", function (e) {
       if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "k") {
         e.preventDefault();
         openSearch();
+      } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "?" && !inEditableField(e.target)) {
+        /* GitHub-style: `?` opens the command palette so users can
+           discover available actions + navigation. Same destination
+           as Cmd/Ctrl+K but without a modifier — easier to remember. */
+        e.preventDefault();
+        openSearch();
+      } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "n" && !inEditableField(e.target)) {
+        /* Only fire when the FAB partial is on the page (app shell). */
+        if (document.querySelector(".fab-quick-add")) {
+          e.preventDefault();
+          try { document.dispatchEvent(new CustomEvent("pb:quick-add-open")); } catch (_e) {}
+        }
       } else if (e.key === "Escape") {
         if (searchModal() && !searchModal().hidden) closeSearch();
         if (siteMenu() && siteMenu().classList.contains("is-open")) closeSiteMenu();

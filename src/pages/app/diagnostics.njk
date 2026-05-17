@@ -1,0 +1,163 @@
+---
+layout: layouts/app.njk
+title: "Diagnostics"
+description: "Copy a one-shot report of your browser, theme, storage size, and recent errors. Paste it into a support request when something's broken."
+permalink: /app/diagnostics/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="diagnosticsView()" x-init="collect()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Diagnostics</p>
+      <h1 class="app-page__title">Diagnostics report</h1>
+      <p class="app-page__lead">
+        Copy the block below and paste it into a <a href="/app/contact/">contact form</a> message when reporting a bug. Nothing here is sent automatically.
+      </p>
+    </div>
+    <button class="btn btn--primary btn--sm" type="button" @click="copyAll()">Copy to clipboard</button>
+  </header>
+
+  <section class="card prose">
+    <h2>What's in this report</h2>
+    <ul>
+      <li>Browser user-agent + viewport size</li>
+      <li>Theme + reduced-motion preference</li>
+      <li>App build identifier (so we know which release you're on)</li>
+      <li>Profile count + active-profile shape (account count, transaction count, byte size)</li>
+      <li>Recent in-browser errors captured since the page loaded</li>
+    </ul>
+    <p>No transaction amounts, payee names, account numbers, or anything else identifying ever appears in this report.</p>
+  </section>
+
+  <section class="card" style="margin-top: var(--space-md);">
+    <h2 class="card__title">Report</h2>
+    <textarea class="diagnostics-output" readonly x-text="report" rows="22"></textarea>
+    <div class="cluster" style="margin-top: var(--space-sm);">
+      <button class="btn btn--primary" type="button" @click="copyAll()">Copy to clipboard</button>
+      <button class="btn btn--ghost" type="button" @click="collect()">Refresh</button>
+      <a class="btn btn--ghost" href="/app/contact/">Open contact form</a>
+    </div>
+    <p x-show="copied" x-cloak style="margin-top: var(--space-sm); color: var(--ok); font-size: var(--fs-sm);">Copied. Paste it into your support message.</p>
+  </section>
+</div>
+
+<script>
+function diagnosticsView() {
+  return {
+    report: "",
+    copied: false,
+
+    collect() {
+      var lines = [];
+      lines.push("=== Project Budget — Diagnostics ===");
+      lines.push("Generated: " + new Date().toISOString());
+      lines.push("");
+      lines.push("--- Browser ---");
+      lines.push("User-Agent: " + (navigator.userAgent || "(unknown)"));
+      lines.push("Language:   " + (navigator.language || "(unknown)"));
+      lines.push("Viewport:   " + window.innerWidth + " x " + window.innerHeight);
+      lines.push("Pixel-ratio: " + (window.devicePixelRatio || 1));
+      lines.push("");
+      lines.push("--- Preferences ---");
+      try {
+        lines.push("Theme attr: " + (document.documentElement.getAttribute("data-theme") || "(none)"));
+        lines.push("Stored theme: " + (localStorage.getItem("projectbudget:theme") || "(unset)"));
+        lines.push("Reduced motion: " + (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "yes" : "no"));
+        lines.push("Color scheme: " + (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+      } catch (_e) { lines.push("(localStorage unavailable — likely private browsing)"); }
+      lines.push("");
+
+      lines.push("--- Profiles ---");
+      var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+      if (!s) {
+        lines.push("(budget store not yet ready)");
+      } else {
+        lines.push("Profile count: " + (s.profiles ? s.profiles.length : 0));
+        if (s.profile) {
+          lines.push("Active profile shape (counts only):");
+          lines.push("  accounts:        " + s.profile.accounts.length);
+          lines.push("  category groups: " + s.profile.categoryGroups.length);
+          lines.push("  categories:      " + s.profile.categories.length);
+          lines.push("  transactions:    " + s.profile.transactions.length);
+          lines.push("  payees:          " + (s.profile.payees ? s.profile.payees.length : 0));
+          lines.push("  goals:           " + (s.profile.goals ? s.profile.goals.length : 0));
+          lines.push("  scheduled:       " + (s.profile.scheduled ? s.profile.scheduled.length : 0));
+          var firstTxn = s.profile.transactions.slice().sort(function (a, b) { return a.date.localeCompare(b.date); })[0];
+          if (firstTxn) lines.push("  earliest txn date: " + firstTxn.date);
+        } else {
+          lines.push("(no active profile)");
+        }
+      }
+      lines.push("");
+
+      lines.push("--- Storage ---");
+      try {
+        var total = 0;
+        for (var k in localStorage) {
+          if (Object.prototype.hasOwnProperty.call(localStorage, k)) {
+            total += k.length + (localStorage.getItem(k) || "").length;
+          }
+        }
+        lines.push("localStorage total: " + (total / 1024).toFixed(1) + " KB");
+      } catch (_e) { lines.push("(localStorage unavailable)"); }
+      lines.push("");
+
+      lines.push("--- Recent errors ---");
+      if (window.__pbDiagErrors && window.__pbDiagErrors.length) {
+        window.__pbDiagErrors.slice(-10).forEach(function (e) {
+          lines.push("[" + e.t + "] " + e.msg + (e.src ? "  @" + e.src + ":" + e.line : ""));
+        });
+      } else {
+        lines.push("(none captured since page load)");
+      }
+
+      this.report = lines.join("\n");
+    },
+
+    copyAll() {
+      var self = this;
+      try {
+        navigator.clipboard.writeText(this.report).then(function () {
+          self.copied = true;
+          setTimeout(function () { self.copied = false; }, 2500);
+        });
+      } catch (_e) {
+        /* Fallback: select the textarea so user can Ctrl+C manually. */
+        var ta = document.querySelector(".diagnostics-output");
+        if (ta) { ta.select(); document.execCommand("copy"); self.copied = true; setTimeout(function () { self.copied = false; }, 2500); }
+      }
+    },
+  };
+}
+
+/* Capture in-page errors into a small ring buffer so the diagnostics
+   report can include them. Runs at module-eval time so we don't miss
+   anything that fires before x-init. */
+(function () {
+  if (window.__pbDiagErrors) return;
+  window.__pbDiagErrors = [];
+  function record(msg, src, line) {
+    if (!msg) return;
+    window.__pbDiagErrors.push({ t: new Date().toISOString(), msg: String(msg).slice(0, 200), src: src || "", line: line || 0 });
+    if (window.__pbDiagErrors.length > 50) window.__pbDiagErrors.shift();
+  }
+  window.addEventListener("error", function (e) { record(e.message, e.filename, e.lineno); });
+  window.addEventListener("unhandledrejection", function (e) { record(e.reason && (e.reason.message || e.reason.toString())); });
+})();
+</script>
+
+<style>
+  .diagnostics-output {
+    width: 100%;
+    min-height: 22rem;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-input);
+    padding: var(--space-sm);
+    resize: vertical;
+  }
+</style>

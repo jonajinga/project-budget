@@ -1,11 +1,11 @@
 ---
 layout: layouts/app.njk
 title: "Dashboard"
-description: "Your active budget at a glance."
+description: "Your active budget at a glance — ready to assign, net worth, this month's flow, upcoming bills, goal progress, and alerts."
 permalink: /app/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data>
+<div class="app-page" x-data="dashboardView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Dashboard</h1>
@@ -16,6 +16,7 @@ eleventyExcludeFromCollections: true
     </div>
   </header>
 
+  {# ---- Empty state ---- #}
   <div class="empty-state" x-show="!$store.budget.profile" x-cloak>
     <h2 class="empty-state__title">Create your first profile</h2>
     <p class="empty-state__body">
@@ -28,29 +29,208 @@ eleventyExcludeFromCollections: true
   </div>
 
   <div x-show="$store.budget.profile" x-cloak>
-    <div class="kpi-grid">
-      <article class="kpi">
-        <p class="kpi__label">Ready to assign</p>
-        <p class="kpi__value"
-           x-text="((($store.budget.readyToAssign()) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></p>
-        <p class="kpi__hint">For <span x-text="$store.budget.currentMonth"></span>.</p>
-      </article>
-      <article class="kpi">
-        <p class="kpi__label">Net worth</p>
-        <p class="kpi__value"
-           x-text="((($store.budget.netWorth()) || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></p>
-        <p class="kpi__hint">On-budget plus tracking assets minus liabilities.</p>
-      </article>
-      <article class="kpi">
-        <p class="kpi__label">Accounts</p>
-        <p class="kpi__value" x-text="$store.budget.profile?.accounts.length ?? 0"></p>
-      </article>
-      <article class="kpi">
-        <p class="kpi__label">Transactions</p>
-        <p class="kpi__value" x-text="$store.budget.profile?.transactions.length ?? 0"></p>
-      </article>
+
+    {# ==== Band B: 6-tile KPI row ==== #}
+    {# Reuses .rec-summary chrome from /app/scheduled/ for consistent
+       semantic-rail tiles; each tile is an <a> so the whole card is
+       clickable and lands on the page that lets you act on the number. #}
+    <section class="dashboard__kpis" aria-label="Key indicators">
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="$store.budget.readyToAssign() < 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
+         href="/app/budget/"
+         data-tip="Dollars not yet assigned to any category this month. Click to open the budget.">
+        <span class="rec-summary__label">Ready to assign</span>
+        <span class="rec-summary__value"
+              :class="$store.budget.readyToAssign() < 0 ? 'amount--outflow' : ''"
+              x-text="fmt($store.budget.readyToAssign())"></span>
+        <span class="dashboard__kpi-sub" x-text="$store.budget.currentMonth"></span>
+      </a>
+
+      <a class="rec-summary__tile rec-summary__tile--net dashboard__kpi"
+         href="/app/reports/net-worth/"
+         data-tip="On-budget balances plus tracking assets minus tracking liabilities.">
+        <span class="rec-summary__label">Net worth</span>
+        <span class="rec-summary__value"
+              :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="fmt($store.budget.netWorth())"></span>
+        <span class="dashboard__kpi-sub">On budget + tracking</span>
+      </a>
+
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="thisMonthNet() < 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
+         href="/app/reports/income-expense/"
+         data-tip="Income minus expenses for the current month.">
+        <span class="rec-summary__label">This month's net</span>
+        <span class="rec-summary__value"
+              :class="thisMonthNet() < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="fmt(thisMonthNet())"></span>
+        <span class="dashboard__kpi-sub" x-text="'In ' + fmtCompact(thisMonthIncome()) + ' · Out ' + fmtCompact(thisMonthExpense())"></span>
+      </a>
+
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="savingsBandClass()"
+         href="/app/reports/savings-rate/"
+         data-tip="Trailing 3-month savings rate (income minus expenses, divided by income).">
+        <span class="rec-summary__label">Savings rate</span>
+        <span class="rec-summary__value"
+              x-text="savingsRateLabel()"></span>
+        <span class="dashboard__kpi-sub">3-month rolling</span>
+      </a>
+
+      <a class="rec-summary__tile rec-summary__tile--accent dashboard__kpi"
+         href="/app/scheduled/"
+         data-tip="Scheduled transactions hitting within the next 7 days.">
+        <span class="rec-summary__label">Next 7 days</span>
+        <span class="rec-summary__value"
+              :class="upcoming7().totalNet < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="fmt(upcoming7().totalNet)"></span>
+        <span class="dashboard__kpi-sub" x-text="upcoming7().items.length + ' due'"></span>
+      </a>
+
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="overspent().count > 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
+         href="/app/budget/"
+         data-tip="Categories whose available balance is below zero this month.">
+        <span class="rec-summary__label">Overspent</span>
+        <span class="rec-summary__value"
+              :class="overspent().count > 0 ? 'amount--outflow' : ''"
+              x-text="overspent().count"></span>
+        <span class="dashboard__kpi-sub" x-text="overspent().count > 0 ? ('Deficit ' + fmtCompact(overspent().totalDeficit)) : 'Everything covered'"></span>
+      </a>
+    </section>
+
+    {# ==== Band C: This month — sparkline + top categories ==== #}
+    <div class="dashboard__row dashboard__row--2col">
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Income vs expense</h2>
+          <a href="/app/reports/income-expense/">Full report &rsaquo;</a>
+        </div>
+        <div class="chart dashboard__chart" id="dash-chart-ie"></div>
+      </section>
+
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Top categories this month</h2>
+          <a href="/app/reports/spending/">All spending &rsaquo;</a>
+        </div>
+        <p x-show="!topCategoriesRows().length" x-cloak style="color: var(--fg-muted); margin: 0;">No spending yet this month.</p>
+        <ul class="dash-cat-bars" x-show="topCategoriesRows().length" x-cloak>
+          <template x-for="r in topCategoriesRows()" :key="r.categoryId">
+            <li class="dash-cat-bars__row">
+              <a :href="'/app/register/?category=' + r.categoryId" x-text="r.category"></a>
+              <span class="dash-cat-bars__amount" x-text="fmt(r.value)"></span>
+              <span class="dash-cat-bars__bar">
+                <span class="dash-cat-bars__fill" :style="'--pct:' + r.pct + '%'"></span>
+              </span>
+            </li>
+          </template>
+        </ul>
+      </section>
     </div>
 
+    {# ==== Band D: Forecast + upcoming bills ==== #}
+    <div class="dashboard__row dashboard__row--2col">
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>30-day cashflow</h2>
+          <a href="/app/reports/projection/">Full projection &rsaquo;</a>
+        </div>
+        <div class="chart dashboard__chart" id="dash-chart-proj"></div>
+      </section>
+
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Upcoming bills (14 days)</h2>
+          <a href="/app/scheduled/">Manage recurring &rsaquo;</a>
+        </div>
+        <p x-show="!upcoming14().items.length" x-cloak style="color: var(--fg-muted); margin: 0;">No scheduled items in the next two weeks.</p>
+        <ul class="dash-bill-list" x-show="upcoming14().items.length" x-cloak>
+          <template x-for="(b, i) in upcoming14().items.slice(0, 8)" :key="i">
+            <li class="dash-bill">
+              <span class="dash-bill__date" x-text="shortDate(b.date)"></span>
+              <span>
+                <span class="dash-bill__payee" x-text="b.payeeName || $store.budget.payeeName(b.payeeId) || '—'"></span>
+                <span class="dash-bill__meta" x-text="($store.budget.findAccount(b.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(b.categoryId) || 'Uncategorized')"></span>
+              </span>
+              <span class="dash-bill__amount" :class="b.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(b.amount)"></span>
+            </li>
+          </template>
+        </ul>
+      </section>
+    </div>
+
+    {# ==== Band E: Goals that need attention ==== #}
+    <section x-show="$store.budget.profile && $store.budget.profile.goals && $store.budget.profile.goals.length" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Goals needing attention</h2>
+        <a href="/app/categories/">Manage goals &rsaquo;</a>
+      </div>
+      <p x-show="!goalsAttention().length" x-cloak style="color: var(--fg-muted); margin: 0 0 var(--space-md);">All goals are on track this month.</p>
+      <div class="dashboard__row dashboard__row--3col" x-show="goalsAttention().length" x-cloak>
+        <template x-for="g in goalsAttention()" :key="g.goal.id">
+          <article class="dash-goal" :class="g.pct < 0.25 ? 'dash-goal--critical' : (g.pct >= 0.75 ? 'dash-goal--close' : '')">
+            <h3 class="dash-goal__name" x-text="g.categoryName"></h3>
+            <div class="dash-goal__progress">
+              <span class="dash-goal__progress-fill" :style="'--pct:' + Math.min(100, Math.max(0, g.pct * 100)) + '%'"></span>
+            </div>
+            <p class="dash-goal__line">
+              <strong x-text="fmt(g.assigned)"></strong>
+              <span> of </span>
+              <strong x-text="fmt(g.target)"></strong>
+              <span x-text="' (' + Math.round(g.pct * 100) + '%)'"></span>
+            </p>
+            <p class="dash-goal__line" x-show="g.deficit > 0" x-cloak>
+              <span>Needs </span>
+              <strong x-text="fmt(g.deficit)"></strong>
+              <span> more to fully fund this month.</span>
+            </p>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    {# ==== Band F: Recent activity + alerts ==== #}
+    <div class="dashboard__row dashboard__row--2col">
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Recent transactions</h2>
+          <a href="/app/register/">Open register &rsaquo;</a>
+        </div>
+        <p x-show="!recentTransactions().length" x-cloak style="color: var(--fg-muted); margin: 0;">No transactions yet. Press <kbd>N</kbd> to add one.</p>
+        <ul class="dash-recent" x-show="recentTransactions().length" x-cloak>
+          <template x-for="t in recentTransactions()" :key="t.id">
+            <li class="dash-recent__row">
+              <span class="dash-recent__date" x-text="shortDate(t.date)"></span>
+              <span>
+                <span class="dash-recent__payee" x-text="$store.budget.payeeName(t.payeeId) || '—'"></span>
+                <span class="dash-recent__meta" x-text="($store.budget.findAccount(t.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(t.categoryId) || 'Uncategorized')"></span>
+              </span>
+              <span class="dash-recent__amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(t.amount)"></span>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Alerts</h2>
+        </div>
+        <p class="dash-alerts__empty" x-show="!alerts().length" x-cloak>Nothing needs attention right now.</p>
+        <ul class="dash-alerts" x-show="alerts().length" x-cloak>
+          <template x-for="a in alerts()" :key="a.id">
+            <li>
+              <a class="dash-alert" :class="'dash-alert--' + a.severity" :href="a.href">
+                <span x-text="a.text"></span>
+                <span class="dash-alert__cta">Open &rsaquo;</span>
+              </a>
+            </li>
+          </template>
+        </ul>
+      </section>
+    </div>
+
+    {# ==== Quick actions cluster (kept for screen-reader users + mouse-only users who prefer buttons) ==== #}
     <section class="card" style="margin-top: var(--space-lg);">
       <h2 class="card__title">Quick actions</h2>
       <div class="cluster">
@@ -62,3 +242,219 @@ eleventyExcludeFromCollections: true
     </section>
   </div>
 </div>
+
+<script>
+function dashboardView() {
+  return {
+    chartIE: null,
+    chartProj: null,
+
+    init() {
+      var self = this;
+      /* Wait for the budget store + chart bootstrap script-modules to
+         finish loading, then mount the two sparklines. Same polling
+         pattern as the report pages so the timing is predictable. */
+      var tries = 0;
+      var poll = function () {
+        var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbDashRenderIE && window.pbDashRenderProj;
+        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        var store = Alpine.store("budget");
+        self.chartIE = window.pbMountChart("#dash-chart-ie", window.pbDashRenderIE, function () {
+          return store.reportIncomeVsExpense(null, 6);
+        });
+        self.chartProj = window.pbMountChart("#dash-chart-proj", window.pbDashRenderProj, function () {
+          return store.reportProjection(1);
+        });
+        /* Store mutations trip _listVersion; redraw both charts. */
+        Alpine.effect(function () {
+          store.profile; store.currentMonth; store._listVersion;
+          if (self.chartIE)   self.chartIE.redraw();
+          if (self.chartProj) self.chartProj.redraw();
+        });
+      };
+      poll();
+    },
+
+    /* ---- Formatting helpers ---- */
+    fmt(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", {
+        style: "currency", currency: "USD", maximumFractionDigits: 0,
+      });
+    },
+    /* Compact form for sub-labels — "$1.2k" / "$4.5M". */
+    fmtCompact(c) {
+      var n = (c || 0) / 100;
+      var sign = n < 0 ? "-" : "";
+      var abs = Math.abs(n);
+      if (abs >= 1000000) return sign + "$" + (abs / 1000000).toFixed(1) + "M";
+      if (abs >= 1000)    return sign + "$" + (abs / 1000).toFixed(1) + "k";
+      return sign + "$" + abs.toFixed(0);
+    },
+    shortDate(iso) {
+      if (!iso) return "";
+      var parts = iso.slice(0, 10).split("-");
+      var months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+      return months[Number(parts[1]) - 1] + " " + Number(parts[2]);
+    },
+
+    /* ---- This-month flow (1-month report) ---- */
+    _thisMonthRow() {
+      void this.$store.budget._listVersion;
+      var rows = this.$store.budget.reportIncomeVsExpense(null, 1) || [];
+      return rows[0] || { income: 0, expense: 0, net: 0 };
+    },
+    thisMonthIncome()  { return this._thisMonthRow().income; },
+    thisMonthExpense() { return this._thisMonthRow().expense; },
+    thisMonthNet()     { return this._thisMonthRow().net; },
+
+    /* ---- Savings rate (3-month rolling) ---- */
+    _savingsRows() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.reportIncomeVsExpense(null, 3) || [];
+    },
+    savingsRatePct() {
+      var rows = this._savingsRows();
+      if (!rows.length) return null;
+      var sumI = 0, sumE = 0;
+      rows.forEach(function (r) { sumI += r.income; sumE += r.expense; });
+      if (sumI <= 0) return null;
+      return ((sumI - sumE) / sumI) * 100;
+    },
+    savingsRateLabel() {
+      var p = this.savingsRatePct();
+      if (p === null) return "—";
+      return p.toFixed(0) + "%";
+    },
+    savingsBandClass() {
+      var p = this.savingsRatePct();
+      if (p === null) return "rec-summary__tile--accent";
+      if (p < 0)      return "rec-summary__tile--outflow";
+      if (p >= 20)    return "rec-summary__tile--net";
+      return "rec-summary__tile--accent";
+    },
+
+    /* ---- Upcoming bills (delegated to store) ---- */
+    upcoming7()  { return this.$store.budget.upcomingBills(7); },
+    upcoming14() { return this.$store.budget.upcomingBills(14); },
+
+    /* ---- Overspent count ---- */
+    overspent() { return this.$store.budget.overspentCount(); },
+
+    /* ---- Top spending categories this month ---- */
+    topCategoriesRows() {
+      void this.$store.budget._listVersion;
+      var m = this.$store.budget.currentMonth;
+      var data = this.$store.budget.reportSpending(m, m) || [];
+      if (!data.length) return [];
+      var max = data[0].value || 1;
+      return data.slice(0, 5).map(function (r) {
+        return {
+          categoryId: r.categoryId,
+          category: r.category,
+          value: r.value,
+          pct: max > 0 ? Math.round((r.value / max) * 100) : 0,
+        };
+      });
+    },
+
+    /* ---- Goals needing attention (delegated to store) ---- */
+    goalsAttention() {
+      return this.$store.budget.goalsNeedingAttention(3);
+    },
+
+    /* ---- Recent transactions (last 10, newest first) ---- */
+    recentTransactions() {
+      void this.$store.budget._listVersion;
+      if (!this.$store.budget.profile) return [];
+      var arr = this.$store.budget.profile.transactions.slice();
+      arr.sort(function (a, b) { return b.date.localeCompare(a.date); });
+      return arr.slice(0, 10);
+    },
+
+    /* ---- Alerts (delegated to store) ---- */
+    alerts() { return this.$store.budget.dashboardAlerts(); },
+  };
+}
+</script>
+
+<script type="module">
+  /* Sparkline-shaped variants of the income-expense + projection
+     renderers used by the report pages. Compact: hide the legend
+     + axis ticks so the chart reads as a sparkline, not a full
+     report visual. */
+  import { mountChart } from "/assets/js/charts/bootstrap.js";
+  import { upsert, fmtCents } from "/assets/js/charts/chartjs.js";
+  import { colors } from "/assets/js/charts/theme-colors.js";
+
+  function renderIE(el, data) {
+    if (!el || !window.Chart) return;
+    if (!data || !data.length) {
+      el.innerHTML = "<p style=\"padding: var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm);\">No data yet.</p>";
+      return;
+    }
+    var c = colors();
+    upsert(el, {
+      type: "bar",
+      pbSubType: "dash-bar",
+      data: {
+        labels: data.map(function (d) { return d.month.slice(5); }),
+        datasets: [
+          { label: "Income",  data: data.map(function (d) { return d.income; }),  backgroundColor: c["chart-1"], borderRadius: 0 },
+          { label: "Expense", data: data.map(function (d) { return d.expense; }), backgroundColor: c["chart-5"], borderRadius: 0 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 10 } } },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            grid: { color: c["border"] },
+            ticks: { callback: function (v) { return fmtCents(v); } },
+          },
+        },
+      },
+    });
+  }
+
+  function renderProj(el, data) {
+    if (!el || !window.Chart) return;
+    if (!data || !data.length) {
+      el.innerHTML = "<p style=\"padding: var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm);\">Not enough history to project yet.</p>";
+      return;
+    }
+    /* Trim to the next 30 days (~1 month) so this sparkline doesn't
+       redraw the same 12-month canvas as the full report. */
+    var trimmed = data.slice(0, 2);
+    var c = colors();
+    upsert(el, {
+      type: "line",
+      pbSubType: "dash-line",
+      data: {
+        labels: trimmed.map(function (d) { return d.month; }),
+        datasets: [
+          { label: "Low",      data: trimmed.map(function (d) { return d.low; }),      borderColor: "transparent", pointRadius: 0, fill: false, tension: 0.25 },
+          { label: "High",     data: trimmed.map(function (d) { return d.high; }),     borderColor: "transparent", backgroundColor: "rgba(192, 57, 43, 0.15)", fill: "-1", pointRadius: 0, tension: 0.25 },
+          { label: "Expected", data: trimmed.map(function (d) { return d.expected; }), borderColor: c["chart-1"], backgroundColor: c["chart-1"], fill: false, tension: 0.25, pointRadius: 3, pointHoverRadius: 6, borderWidth: 2 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { filter: function (item) { return item.text === "Expected"; }, boxWidth: 10 } },
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: c["border"] }, ticks: { callback: function (v) { return fmtCents(v); } } },
+        },
+      },
+    });
+  }
+
+  window.pbMountChart = mountChart;
+  window.pbDashRenderIE   = renderIE;
+  window.pbDashRenderProj = renderProj;
+</script>

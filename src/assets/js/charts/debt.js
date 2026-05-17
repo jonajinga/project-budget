@@ -25,6 +25,7 @@ export function render(el, rows) {
     el.style.minHeight = "300px";
     upsert(el, {
       type: "doughnut",
+      pbSubType: "donut",
       data: {
         labels: sorted.map(function (r) { return r.account; }),
         datasets: [{
@@ -61,6 +62,7 @@ export function render(el, rows) {
   el.style.minHeight = Math.max(120, sorted.length * 44 + 24) + "px";
   upsert(el, {
     type: "bar",
+    pbSubType: "bar",
     data: {
       labels: sorted.map(function (r) { return r.account; }),
       datasets: [{

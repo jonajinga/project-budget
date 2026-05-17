@@ -68,20 +68,11 @@
   transition: background var(--t-fast);
 }
 .site-header__profile:hover { background: var(--bg-alt); color: var(--accent); }
-.site-header__profile-eyebrow {
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--fg-muted);
-  font-weight: 600;
-  line-height: 1;
-}
 .site-header__profile-name {
   font-family: var(--font-display);
   font-size: var(--fs-md);
   font-weight: 700;
   line-height: 1.15;
-  margin-top: 0.15rem;
   max-width: 32ch;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -626,6 +617,52 @@ button.search-result:focus-visible {
 .app-sidebar-toggle { display: none; }
 
 .app-nav__list { display: flex; flex-direction: column; gap: 1px; }
+
+/* Collapsible section group — a button header + sub-list. Toggling
+   the header flips the chevron + hides the sub-list. */
+.app-nav__section-block { display: flex; flex-direction: column; }
+.app-nav__section-block + .app-nav__section-block {
+  margin-top: var(--space-2xs);
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--border-soft);
+}
+.app-nav__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  width: 100%;
+  padding: 0.35rem 0.65rem;
+  background: none;
+  border: 0;
+  color: var(--fg-subtle);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--radius-input);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.app-nav__section-head:hover { background: var(--bg-alt); color: var(--fg); }
+.app-nav__section-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.app-nav__section-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  transition: transform var(--t-fast);
+  color: var(--fg-subtle);
+  flex-shrink: 0;
+}
+.app-nav__section-chevron.is-collapsed { transform: rotate(-90deg); }
+.app-nav__section-head:hover .app-nav__section-chevron { color: var(--fg); }
+.app-nav__section-label { flex: 1; min-width: 0; }
 /* Tighter nav rows with icons — icon-left, label-right. 0.35rem
    vertical padding keeps the 14-ish links compact so the accounts
    panel has room. */
@@ -749,45 +786,69 @@ button.search-result:focus-visible {
 
 /* Profile switcher */
 .profile-switcher { position: relative; }
-/* Profile pill — avatar | label+name | chevron. Avatar carries the
-   monogram (first letter of each word). Hover lifts the accent
-   border so the whole pill reads as a single tappable surface.
-
-   box-sizing + max-width keep the pill inside the sidebar even when
-   the name wraps to multiple lines and the row grows. */
+/* Profile pill — split into avatar+name link (primary action, goes to
+   the dashboard) and chevron button (secondary action, opens the
+   switch-profile menu). The pill chrome lives on the wrapper so both
+   children read as one tappable surface. */
 .profile-switcher__current {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "avatar text chevron";
-  align-items: center;
-  column-gap: var(--space-2xs);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0.5rem 0.55rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-input);
   color: var(--fg);
-  text-align: left;
-  cursor: pointer;
   transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  overflow: hidden;
 }
-.profile-switcher__current:hover {
-  background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
-  border-color: var(--accent);
-}
-.profile-switcher__current:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.profile-switcher__current[aria-expanded="true"] {
+.profile-switcher__current:hover,
+.profile-switcher__current.is-open {
   background: color-mix(in oklab, var(--accent) 6%, var(--bg-elevated));
   border-color: var(--accent);
 }
 
+.profile-switcher__nav {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-2xs);
+  padding: 0.5rem 0.55rem;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.profile-switcher__nav:hover { color: var(--accent); }
+.profile-switcher__nav:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.profile-switcher__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--border-soft);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.profile-switcher__toggle:hover {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+.profile-switcher__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .profile-switcher__avatar {
-  grid-area: avatar;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -806,21 +867,6 @@ button.search-result:focus-visible {
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
 }
 
-.profile-switcher__text {
-  grid-area: text;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.profile-switcher__label {
-  font-size: 0.65rem;
-  color: var(--fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  line-height: 1;
-}
 .profile-switcher__name {
   font-family: var(--font-display);
   font-weight: 700;
@@ -843,19 +889,16 @@ button.search-result:focus-visible {
 .profile-switcher { container-type: inline-size; }
 
 .profile-switcher__chevron {
-  grid-area: chevron;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  color: var(--fg-muted);
-  transition: transform var(--t-fast), color var(--t-fast);
+  transition: transform var(--t-fast);
 }
 .profile-switcher__chevron svg { width: 14px; height: 14px; }
 .profile-switcher__chevron.is-open { transform: rotate(180deg); color: var(--accent); }
-.profile-switcher__current:hover .profile-switcher__chevron { color: var(--accent); }
 
 /* Dropdown menu items — avatar | name | check. Active item uses
    accent text + accent avatar + check, without a heavy bg tint so

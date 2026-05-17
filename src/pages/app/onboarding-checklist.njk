@@ -1,0 +1,153 @@
+---
+layout: layouts/app.njk
+title: "Onboarding checklist"
+description: "Five quick milestones to go from empty to a fully-working budget. The checklist auto-completes as you touch each surface."
+permalink: /app/onboarding-checklist/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="onboardingChecklist()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Onboarding</p>
+      <h1 class="app-page__title">Onboarding checklist</h1>
+      <p class="app-page__lead">
+        Five milestones that get you from "empty profile" to "I trust this with my real numbers." Each step auto-completes as you do it — no buttons to tick.
+      </p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/welcome/">Start the guided wizard</a>
+  </header>
+
+  <div class="onboarding-progress">
+    <div class="onboarding-progress__bar">
+      <span class="onboarding-progress__fill" :style="'--pct:' + percent() + '%'"></span>
+    </div>
+    <p class="onboarding-progress__label">
+      <strong x-text="completedCount()"></strong>
+      <span> of </span>
+      <strong x-text="steps.length"></strong>
+      <span x-text="' complete (' + percent() + '%)'"></span>
+    </p>
+  </div>
+
+  <ol class="onboarding-steps">
+    <template x-for="(s, i) in steps" :key="s.id">
+      <li class="onboarding-step" :class="s.done() ? 'is-done' : ''">
+        <span class="onboarding-step__check" aria-hidden="true" x-text="s.done() ? '✓' : (i + 1)"></span>
+        <div>
+          <h3 class="onboarding-step__title" x-text="s.title"></h3>
+          <p class="onboarding-step__body" x-text="s.body"></p>
+          <a class="btn btn--ghost btn--sm" :href="s.href" x-show="!s.done()" x-cloak x-text="s.cta"></a>
+          <p class="onboarding-step__done-note" x-show="s.done()" x-cloak x-text="s.doneNote()"></p>
+        </div>
+      </li>
+    </template>
+  </ol>
+
+  <section class="card" x-show="completedCount() === steps.length" x-cloak style="margin-top: var(--space-lg); border-left: 4px solid var(--ok);">
+    <h2 class="card__title">You're set.</h2>
+    <p style="color: var(--fg-muted);">Your profile has accounts, categories, real transactions, a goal, and a backup. There's nothing left to "set up" — just keep using it.</p>
+    <div class="cluster" style="margin-top: var(--space-sm);">
+      <a class="btn btn--primary" href="/app/">Open dashboard</a>
+      <a class="btn btn--ghost" href="/app/feedback/">Tell us how it went</a>
+    </div>
+  </section>
+</div>
+
+<script>
+function onboardingChecklist() {
+  return {
+    get steps() {
+      var s = this.$store.budget;
+      var p = s.profile;
+      return [
+        {
+          id: "profile",
+          title: "Create a profile",
+          body: "A profile is the container for one complete budget. You can have many — household, personal, side business.",
+          cta: "Create profile",
+          href: "/app/profiles/",
+          done: function () { return !!p; },
+          doneNote: function () { return p ? ("Active: " + p.name) : ""; },
+        },
+        {
+          id: "account",
+          title: "Add at least one account",
+          body: "Start with the account where your everyday spending happens. You can add more later.",
+          cta: "Add an account",
+          href: "/app/accounts/",
+          done: function () { return !!(p && p.accounts && p.accounts.length); },
+          doneNote: function () { return p ? (p.accounts.length + " account" + (p.accounts.length === 1 ? "" : "s") + " added") : ""; },
+        },
+        {
+          id: "category",
+          title: "Set up categories",
+          body: "Group dollars by where they're going (rent, groceries, savings). You can start with a template from the welcome wizard.",
+          cta: "Open categories",
+          href: "/app/categories/",
+          done: function () { return !!(p && p.categories && p.categories.length); },
+          doneNote: function () { return p ? (p.categories.length + " categor" + (p.categories.length === 1 ? "y" : "ies") + " defined") : ""; },
+        },
+        {
+          id: "transaction",
+          title: "Record your first transaction",
+          body: "Press N anywhere in the app, or open the register. Even a placeholder transaction helps shake out the workflow.",
+          cta: "Open register",
+          href: "/app/register/",
+          done: function () { return !!(p && p.transactions && p.transactions.length); },
+          doneNote: function () { return p ? (p.transactions.length + " transaction" + (p.transactions.length === 1 ? "" : "s") + " in the register") : ""; },
+        },
+        {
+          id: "goal",
+          title: "Set one goal",
+          body: "Goals tell the budget how much you want to assign to a category each month — they make underfunded buckets jump out.",
+          cta: "Manage goals",
+          href: "/app/categories/",
+          done: function () { return !!(p && p.goals && p.goals.length); },
+          doneNote: function () { return p && p.goals ? (p.goals.length + " goal" + (p.goals.length === 1 ? "" : "s") + " set") : ""; },
+        },
+        {
+          id: "backup",
+          title: "Take your first backup",
+          body: "Download a JSON snapshot so a browser cache wipe can't take your work with it.",
+          cta: "Open backup",
+          href: "/app/backup/",
+          done: function () {
+            try { return !!localStorage.getItem("projectbudget:lastBackupAt"); }
+            catch (_e) { return false; }
+          },
+          doneNote: function () {
+            try {
+              var raw = localStorage.getItem("projectbudget:lastBackupAt");
+              if (!raw) return "";
+              return "Last backup: " + new Date(raw).toLocaleDateString();
+            } catch (_e) { return ""; }
+          },
+        },
+      ];
+    },
+    completedCount() {
+      return this.steps.filter(function (s) { return s.done(); }).length;
+    },
+    percent() {
+      if (!this.steps.length) return 0;
+      return Math.round((this.completedCount() / this.steps.length) * 100);
+    },
+  };
+}
+</script>
+
+<style>
+  .onboarding-progress { margin: 0 0 var(--space-lg); }
+  .onboarding-progress__bar { position: relative; background: var(--bg-alt); height: 8px; border-radius: var(--radius-input); overflow: hidden; }
+  .onboarding-progress__fill { position: absolute; inset: 0 auto 0 0; width: var(--pct); background: var(--accent); border-radius: inherit; transition: width var(--t-fast); }
+  .onboarding-progress__label { margin: var(--space-2xs) 0 0; color: var(--fg-muted); font-size: var(--fs-sm); }
+  .onboarding-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-md); }
+  .onboarding-step { display: grid; grid-template-columns: 48px 1fr; gap: var(--space-md); padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--border-strong); border-radius: var(--radius-input); align-items: flex-start; }
+  .onboarding-step.is-done { border-left-color: var(--ok); }
+  .onboarding-step__check { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--bg-alt); color: var(--fg-muted); font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .onboarding-step.is-done .onboarding-step__check { background: var(--ok); color: #fff; }
+  .onboarding-step__title { margin: 0 0 var(--space-2xs); font-family: var(--font-display); font-size: var(--fs-lg); }
+  .onboarding-step.is-done .onboarding-step__title { color: var(--fg-muted); text-decoration: line-through; }
+  .onboarding-step__body { margin: 0 0 var(--space-sm); color: var(--fg-muted); }
+  .onboarding-step__done-note { margin: 0; color: var(--ok); font-size: var(--fs-sm); font-weight: 600; }
+</style>

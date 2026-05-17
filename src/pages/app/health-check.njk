@@ -1,0 +1,239 @@
+---
+layout: layouts/app.njk
+title: "Health check"
+description: "Run deterministic checks against your profile — orphaned transactions, missing categories, broken recurring templates — and act on each finding."
+permalink: /app/health-check/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="healthCheckView()" x-init="run()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Health</p>
+      <h1 class="app-page__title">Health check</h1>
+      <p class="app-page__lead">
+        Deterministic checks for things that quietly get out of shape — orphaned references, malformed dates, categories with no group, recurring templates pointing at deleted accounts. Each finding links to the page that lets you fix it.
+      </p>
+    </div>
+    <button class="btn btn--primary" type="button" @click="run()">Run checks</button>
+  </header>
+
+  <p x-show="!$store.budget.profile" x-cloak style="color: var(--fg-muted);">No active profile to check.</p>
+
+  <div x-show="$store.budget.profile" x-cloak>
+    <section class="rec-summary" aria-label="Health summary">
+      <div class="rec-summary__tile rec-summary__tile--inflow">
+        <span class="rec-summary__label">Checks run</span>
+        <span class="rec-summary__value" x-text="checks.length"></span>
+      </div>
+      <div class="rec-summary__tile" :class="passing > 0 ? 'rec-summary__tile--inflow' : 'rec-summary__tile--accent'">
+        <span class="rec-summary__label">Passing</span>
+        <span class="rec-summary__value" x-text="passing"></span>
+      </div>
+      <div class="rec-summary__tile" :class="warnings > 0 ? 'rec-summary__tile--accent' : 'rec-summary__tile--inflow'">
+        <span class="rec-summary__label">Warnings</span>
+        <span class="rec-summary__value" x-text="warnings"></span>
+      </div>
+      <div class="rec-summary__tile" :class="failures > 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'">
+        <span class="rec-summary__label">Failures</span>
+        <span class="rec-summary__value" :class="failures > 0 ? 'amount--outflow' : ''" x-text="failures"></span>
+      </div>
+    </section>
+
+    <ul class="health-list" style="margin-top: var(--space-md);">
+      <template x-for="c in checks" :key="c.id">
+        <li class="health-item" :class="'health-item--' + c.severity">
+          <div class="health-item__head">
+            <span class="health-item__icon" x-text="iconFor(c.severity)" aria-hidden="true"></span>
+            <h3 class="health-item__title" x-text="c.title"></h3>
+            <span class="health-item__count" x-text="c.count + ' ' + (c.count === 1 ? 'finding' : 'findings')"></span>
+          </div>
+          <p class="health-item__desc" x-text="c.description"></p>
+          <details x-show="c.findings && c.findings.length" x-cloak>
+            <summary>Show details</summary>
+            <ul class="health-item__findings">
+              <template x-for="(f, i) in c.findings" :key="i">
+                <li><a :href="f.href" x-text="f.label"></a></li>
+              </template>
+            </ul>
+          </details>
+          <div class="health-item__action" x-show="c.fix" x-cloak>
+            <a class="btn btn--ghost btn--sm" :href="c.fix.href" x-text="c.fix.label"></a>
+          </div>
+        </li>
+      </template>
+    </ul>
+  </div>
+</div>
+
+<script>
+function healthCheckView() {
+  return {
+    checks: [],
+
+    get passing()  { return this.checks.filter(function (c) { return c.severity === "ok"; }).length; },
+    get warnings() { return this.checks.filter(function (c) { return c.severity === "warn"; }).length; },
+    get failures() { return this.checks.filter(function (c) { return c.severity === "danger"; }).length; },
+
+    iconFor(sev) {
+      return sev === "ok" ? "✓" : (sev === "warn" ? "!" : "✗");
+    },
+
+    run() {
+      var p = this.$store.budget.profile;
+      if (!p) { this.checks = []; return; }
+      var out = [];
+      var self = this;
+
+      /* Account ids referenced by transactions but no longer present
+         in profile.accounts. */
+      var acctIds = new Set(p.accounts.map(function (a) { return a.id; }));
+      var orphanTxns = p.transactions.filter(function (t) {
+        return t.accountId && !acctIds.has(t.accountId);
+      });
+      out.push({
+        id: "orphan-txn-account",
+        title: "Transactions pointing at deleted accounts",
+        description: "Each of these transactions references an account that no longer exists. They're invisible in the register and don't show up in reports.",
+        severity: orphanTxns.length ? "danger" : "ok",
+        count: orphanTxns.length,
+        findings: orphanTxns.slice(0, 10).map(function (t) {
+          return { label: t.date + " · " + (t.amount/100).toFixed(2) + " · " + (t.memo || "(no memo)"), href: "/app/register/" };
+        }),
+        fix: orphanTxns.length ? { label: "Open register", href: "/app/register/" } : null,
+      });
+
+      /* Category ids referenced but missing. */
+      var catIds = new Set(p.categories.map(function (c) { return c.id; }));
+      var orphanCatTxns = p.transactions.filter(function (t) {
+        return t.categoryId && !catIds.has(t.categoryId);
+      });
+      out.push({
+        id: "orphan-txn-category",
+        title: "Transactions with deleted categories",
+        description: "These transactions had a category once, but that category has since been removed. They show up as uncategorized.",
+        severity: orphanCatTxns.length ? "warn" : "ok",
+        count: orphanCatTxns.length,
+        findings: orphanCatTxns.slice(0, 10).map(function (t) {
+          return { label: t.date + " · " + (t.amount/100).toFixed(2), href: "/app/register/" };
+        }),
+        fix: orphanCatTxns.length ? { label: "Open register", href: "/app/register/" } : null,
+      });
+
+      /* Categories not in any group. */
+      var groupIds = new Set(p.categoryGroups.map(function (g) { return g.id; }));
+      var orphanCats = p.categories.filter(function (c) {
+        return c.groupId && !groupIds.has(c.groupId);
+      });
+      out.push({
+        id: "orphan-category",
+        title: "Categories with no group",
+        description: "Each category should sit inside a category group. These don't.",
+        severity: orphanCats.length ? "warn" : "ok",
+        count: orphanCats.length,
+        findings: orphanCats.map(function (c) {
+          return { label: c.name, href: "/app/categories/" };
+        }),
+        fix: orphanCats.length ? { label: "Manage categories", href: "/app/categories/" } : null,
+      });
+
+      /* Recurring templates pointing at deleted account / category. */
+      var brokenSched = (p.scheduled || []).filter(function (s) {
+        var t = s.template || {};
+        if (t.accountId && !acctIds.has(t.accountId)) return true;
+        if (t.categoryId && !catIds.has(t.categoryId)) return true;
+        return false;
+      });
+      out.push({
+        id: "broken-scheduled",
+        title: "Recurring templates with broken references",
+        description: "These templates reference an account or category that has been deleted. When the next due date arrives, the post will fail or post uncategorized.",
+        severity: brokenSched.length ? "danger" : "ok",
+        count: brokenSched.length,
+        findings: brokenSched.map(function (s) {
+          return { label: (s.template && s.template.payeeName) || "Untitled template", href: "/app/scheduled/" };
+        }),
+        fix: brokenSched.length ? { label: "Open recurring", href: "/app/scheduled/" } : null,
+      });
+
+      /* Accounts with no opening balance — common when imported. */
+      var noOpening = p.accounts.filter(function (a) {
+        return a.openingBalance == null;
+      });
+      out.push({
+        id: "no-opening-balance",
+        title: "Accounts with no opening balance",
+        description: "Without an opening balance the account starts at zero, which usually doesn't match reality. Set one even if it's zero, to confirm.",
+        severity: noOpening.length ? "warn" : "ok",
+        count: noOpening.length,
+        findings: noOpening.map(function (a) {
+          return { label: a.name, href: "/app/accounts/" };
+        }),
+        fix: noOpening.length ? { label: "Edit accounts", href: "/app/accounts/" } : null,
+      });
+
+      /* Scheduled templates with nextDate in the past. */
+      var today = new Date().toISOString().slice(0, 10);
+      var overdue = (p.scheduled || []).filter(function (s) {
+        return s.nextDate && s.nextDate.slice(0, 10) < today;
+      });
+      out.push({
+        id: "overdue-scheduled",
+        title: "Recurring templates with overdue next-date",
+        description: "Either approve or skip these in the register so the queue stays current.",
+        severity: overdue.length ? "warn" : "ok",
+        count: overdue.length,
+        findings: overdue.map(function (s) {
+          return { label: ((s.template && s.template.payeeName) || "Untitled") + " · due " + s.nextDate.slice(0, 10), href: "/app/scheduled/" };
+        }),
+        fix: overdue.length ? { label: "Open recurring", href: "/app/scheduled/" } : null,
+      });
+
+      /* Goals on deleted categories. */
+      var orphanGoals = (p.goals || []).filter(function (g) { return !catIds.has(g.categoryId); });
+      out.push({
+        id: "orphan-goals",
+        title: "Goals on deleted categories",
+        description: "The goal will never apply — its category no longer exists.",
+        severity: orphanGoals.length ? "warn" : "ok",
+        count: orphanGoals.length,
+        findings: orphanGoals.map(function (g) {
+          return { label: "Goal target: " + ((g.target||0)/100).toFixed(0), href: "/app/categories/" };
+        }),
+        fix: orphanGoals.length ? { label: "Manage categories", href: "/app/categories/" } : null,
+      });
+
+      /* Future-dated transactions — usually a typo. */
+      var future = p.transactions.filter(function (t) { return t.date > today; });
+      out.push({
+        id: "future-txns",
+        title: "Transactions dated in the future",
+        description: "Could be a typo (2206 instead of 2026) or an intentional future-dated entry. Worth a quick eyeball.",
+        severity: future.length ? "warn" : "ok",
+        count: future.length,
+        findings: future.slice(0, 10).map(function (t) {
+          return { label: t.date + " · " + (t.amount/100).toFixed(2), href: "/app/register/" };
+        }),
+        fix: future.length ? { label: "Open register", href: "/app/register/" } : null,
+      });
+
+      this.checks = out;
+    },
+  };
+}
+</script>
+
+<style>
+  .health-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
+  .health-item { padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--ok); border-radius: var(--radius-input); }
+  .health-item--warn   { border-left-color: var(--warn); }
+  .health-item--danger { border-left-color: var(--danger); }
+  .health-item__head { display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-2xs); }
+  .health-item__icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: var(--ok); color: #fff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+  .health-item--warn   .health-item__icon { background: var(--warn); }
+  .health-item--danger .health-item__icon { background: var(--danger); }
+  .health-item__title { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); }
+  .health-item__count { margin-left: auto; color: var(--fg-muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+  .health-item__desc { margin: 0 0 var(--space-sm); color: var(--fg-muted); }
+  .health-item__findings { padding-left: var(--space-md); margin: var(--space-2xs) 0 0; }
+  .health-item__action { margin-top: var(--space-sm); }
+</style>

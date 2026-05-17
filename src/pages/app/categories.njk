@@ -9,6 +9,12 @@ eleventyExcludeFromCollections: true
   <header class="app-page__header">
     <h1 class="app-page__title">Categories</h1>
     <div class="cluster">
+      <button class="btn btn--icon" type="button"
+              @click="showHelp = true"
+              aria-label="About categories"
+              data-tip="How groups, categories, goals, and reordering work.">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+      </button>
       <button class="btn btn--ghost btn--sm" type="button"
               x-show="hasGroups"
               x-cloak
@@ -19,17 +25,32 @@ eleventyExcludeFromCollections: true
     </div>
   </header>
 
-  <p class="app-page__lead">
-    Categories live inside groups (for example: Immediate Obligations, True Expenses, Quality of Life). Add a goal to any category to track how much you should assign each month.
-  </p>
-
-  <p class="app-page__lead">
-    <strong>Reorder:</strong> grab the <span class="dnd-handle dnd-handle--inline" aria-hidden="true">&#9776;</span> handle to drag a row or group, drop it where you want it. On touch devices use the up / down buttons in the row.
-  </p>
-
   <p class="app-page__lead" x-show="!hasGroups" x-cloak>
     Start by creating a group, then add categories inside it.
   </p>
+
+  {# Stat cards. Live summary of the category list — total groups +
+     categories, how many have goals set, and the sum of every monthly
+     target. Reuses the .rec-summary chrome from the scheduled page so
+     the visual rhythm matches across app pages. #}
+  <section class="rec-summary" x-show="hasGroups" x-cloak>
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Number of category groups in this profile.">
+      <span class="rec-summary__label">Groups</span>
+      <span class="rec-summary__value" x-text="groupCount()"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total categories across every group.">
+      <span class="rec-summary__label">Categories</span>
+      <span class="rec-summary__value" x-text="categoryCount()"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--inflow" data-tip="Categories that have a goal set.">
+      <span class="rec-summary__label">With goals</span>
+      <span class="rec-summary__value" x-text="goalCount() + ' / ' + categoryCount()"></span>
+    </div>
+    <div class="rec-summary__tile rec-summary__tile--net" data-tip="Sum of every monthly-fixed and top-up goal target.">
+      <span class="rec-summary__label">Monthly target</span>
+      <span class="rec-summary__value" x-text="formatCents(monthlyTargetCents())"></span>
+    </div>
+  </section>
 
   <div data-sortable-list data-sortable-kind="cat-group">
     <template x-for="(group, gIdx) in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
@@ -200,6 +221,24 @@ eleventyExcludeFromCollections: true
     </div>
   </div>
 
+  {# Info / help modal — hosts the "what is this page" + reorder
+     instructions that previously sat above the table as lead copy.
+     Pulling them into a modal keeps the header tight and lets us
+     show the icon-rich reorder hint without it dominating the page. #}
+  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cat-help-title" @click.outside="showHelp = false">
+      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="cat-help-title">About categories</h3>
+      <div class="prose">
+        <p>Categories live inside groups (for example: Immediate Obligations, True Expenses, Quality of Life). Add a goal to any category to track how much you should assign each month.</p>
+        <p><strong>Reorder:</strong> grab the <span class="dnd-handle dnd-handle--inline" aria-hidden="true"></span> handle to drag a row or group, drop it where you want it. On touch devices use the up / down buttons in the row.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
+      </div>
+    </div>
+  </div>
+
   {# Goal modal #}
   <div class="modal-backdrop" x-show="goalCatId" x-cloak @keydown.escape.window="goalCatId = null">
     <div class="modal" role="dialog" aria-modal="true" @click.outside="goalCatId = null">
@@ -240,6 +279,7 @@ eleventyExcludeFromCollections: true
 <script>
 function categoriesView() {
   return {
+    showHelp: false,
     showGroup: false,
     showCat: false,
     addCatGroupId: "",
@@ -272,6 +312,42 @@ function categoriesView() {
 
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    /* ---- Stat-card aggregates ---- */
+    groupCount() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.profile ? this.$store.budget.profile.categoryGroups.length : 0;
+    },
+    categoryCount() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p) return 0;
+      /* Exclude card-payment categories — they're system-created and
+         counting them inflates the user-visible category total. */
+      var self = this;
+      return p.categories.filter(function (c) {
+        return !self.$store.budget.isPaymentCategory(c.id);
+      }).length;
+    },
+    goalCount() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p || !p.goals) return 0;
+      return p.goals.length;
+    },
+    monthlyTargetCents() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p || !p.goals) return 0;
+      /* Only fixed-monthly and top-up goals carry a clear monthly cost;
+         refill-up-to depends on prior balance, target-by-date depends
+         on the deadline math. Summing only the deterministic ones
+         keeps the headline number honest. */
+      return p.goals.reduce(function (sum, g) {
+        if (g.type === "monthlyFixed" || g.type === "monthlyTopUp") return sum + (g.target || 0);
+        return sum;
+      }, 0);
     },
 
     goalLabel(catId) {

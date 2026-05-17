@@ -83,21 +83,32 @@ export function upsert(el, config) {
   if (existing) {
     /* Chart.js can't change instance type via .update() — switching
        bar → doughnut → line silently kept the original type if we
-       just patched data+options. Detect the type change and
-       destroy+recreate; otherwise reuse for animation + perf. */
-    var existingType = existing.config && existing.config.type;
-    if (existingType && existingType !== config.type) {
+       just patched data+options. Also: sub-types that map to the
+       same Chart.js type (bar↔stack, line↔area) need a recreate
+       too because .update() doesn't pick up structural option
+       changes (scales.x.stacked, dataset.fill, borderRadius). The
+       render fn passes `pbSubType` so we can detect those swaps. */
+    var existingType    = existing.config && existing.config.type;
+    var existingSubType = canvas.__pbSubType;
+    var subTypeChanged  = (config.pbSubType != null) && (existingSubType !== config.pbSubType);
+    if ((existingType && existingType !== config.type) || subTypeChanged) {
       existing.destroy();
       canvas[HOLDER_KEY] = null;
     } else {
       existing.data = config.data;
       existing.options = config.options || existing.options;
       existing.update();
+      if (config.pbSubType != null) canvas.__pbSubType = config.pbSubType;
       return existing;
     }
   }
+  /* Strip the marker before handing the config to Chart.js so it
+     doesn't warn about an unknown top-level key. */
+  var subType = config.pbSubType;
+  if ("pbSubType" in config) delete config.pbSubType;
   var inst = new window.Chart(canvas, config);
   canvas[HOLDER_KEY] = inst;
+  if (subType != null) canvas.__pbSubType = subType;
   return inst;
 }
 

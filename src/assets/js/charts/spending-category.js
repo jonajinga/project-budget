@@ -104,6 +104,7 @@ function renderChartJs(el, data, type) {
   var isBar = type === "bar";
   upsert(el, {
     type: isBar ? "bar" : "doughnut",
+    pbSubType: type,
     data: {
       labels: labels,
       datasets: [{

@@ -7,15 +7,35 @@ eleventyExcludeFromCollections: true
 ---
 <div class="app-page" x-data="scheduledView()" x-init="init()">
   <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Recurring transactions</h1>
-      <p class="app-page__lead" style="margin-top: var(--space-2xs);">
-        Templates sit in a queue. When the due date arrives, the entry surfaces in the
-        <a href="/app/register/">register</a> for you to approve or skip — it never posts automatically.
-      </p>
+    <h1 class="app-page__title">Recurring transactions</h1>
+    <div class="cluster">
+      <button class="btn btn--icon" type="button"
+              @click="showHelp = true"
+              aria-label="About recurring transactions"
+              data-tip="How templates, frequencies, and the approval queue work.">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+      </button>
+      <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">+ Add recurring</button>
     </div>
-    <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">+ Add recurring</button>
   </header>
+
+  {# Info / help modal — replaces the inline "Templates sit in a queue"
+     lead with a richer explanation users only see when they want it. #}
+  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rec-help-title" @click.outside="showHelp = false">
+      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="rec-help-title">About recurring transactions</h3>
+      <div class="prose">
+        <p>Templates sit in a queue. When the due date arrives, the entry surfaces in the <a href="/app/register/">register</a> for you to approve or skip — it never posts automatically.</p>
+        <p><strong>Frequency:</strong> pick from weekly, biweekly, monthly, semi-monthly, quarterly, annual, or build a custom interval (every <em>N</em> days / weeks / months).</p>
+        <p><strong>Inflow vs outflow:</strong> any template with a positive amount is an inflow (income, refunds); negative amounts are outflows (bills, subscriptions). The summary tiles let you filter the list by kind.</p>
+        <p><strong>Post on demand:</strong> use the row's <em>Post now</em> action to apply the template ahead of schedule. <em>Skip</em> advances the next-due date without posting.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
+      </div>
+    </div>
+  </div>
 
   {# Summary tiles — quick view of monthly cash flow committed to
      recurring. Every tile is a button that wires straight into the
@@ -324,6 +344,7 @@ eleventyExcludeFromCollections: true
 <script>
 function scheduledView() {
   return {
+    showHelp: false,
     show: false,
     mode: "create", // 'create' | 'edit'
     editId: null,

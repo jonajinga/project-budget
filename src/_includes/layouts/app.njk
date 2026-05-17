@@ -31,12 +31,15 @@
      load before tippy. #}
   <script src="/assets/js/app.js?v={{ build.hash }}" type="module"></script>
   <script src="/assets/js/vendor/dexie.min.js" defer></script>
-  {# D3 + Chart.js together are ~486KB. They're only used by /app/reports/*.
-     Load them ONLY on report pages so every other app page (budget,
-     register, calendar, accounts, etc.) skips the cost. #}
-  {% if page.url and (page.url.startsWith("/app/reports/") or page.url == "/app/reports/") %}
-    <script src="/assets/js/vendor/d3.min.js" defer></script>
+  {# Chart.js is used by every page that draws a chart — reports + the
+     dashboard sparklines. D3 is only used by the spending treemap, so
+     it loads only on /app/reports/spending/. Splitting saves ~280 KB
+     on every page that doesn't need the treemap. #}
+  {% if page.url and (page.url.startsWith("/app/reports/") or page.url == "/app/") %}
     <script src="/assets/js/vendor/chart.umd.min.js" defer></script>
+  {% endif %}
+  {% if page.url == "/app/reports/spending/" %}
+    <script src="/assets/js/vendor/d3.min.js" defer></script>
   {% endif %}
   <script src="/assets/js/vendor/fuse.min.js" defer></script>
   <script src="/assets/js/vendor/papaparse.min.js" defer></script>

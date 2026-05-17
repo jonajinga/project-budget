@@ -1,0 +1,183 @@
+---
+layout: layouts/app.njk
+title: "Write a review"
+description: "Loved the app? Write a short public review. Reviews you opt to publish appear on the site with attribution."
+permalink: /app/review/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="reviewForm()">
+  <header class="app-page__header">
+    <div>
+      <p class="eyebrow">Review</p>
+      <h1 class="app-page__title">Write a short review</h1>
+      <p class="app-page__lead" style="margin-top: var(--space-2xs);">
+        If Project Budget helps you stay on top of your money, a few sentences mean a lot. Reviews you mark publishable appear on the site with attribution — you control whether your name + city show.
+      </p>
+    </div>
+    <a class="btn btn--ghost btn--sm" href="/app/feedback/"
+       data-tip="Use the feedback form for private notes — bug reports, suggestions, what's not working.">Private feedback instead</a>
+  </header>
+
+  <div class="contact-page__grid">
+    <aside class="contact-page__bio">
+      <h2 class="contact-page__bio-name" style="font-size: var(--fs-lg); text-align: left;">What makes a useful review?</h2>
+      <p class="contact-page__bio-body">
+        Specifics. The single feature that hooked you. The previous tool you replaced. The moment Project Budget saved your bacon. Generic praise is fine but specifics help other readers self-identify.
+      </p>
+      <ul class="contact-page__bio-links">
+        <li>
+          <strong>Privacy:</strong>
+          <span class="contact-page__bio-hint">Nothing is published without your explicit checkbox below. Even then, you choose what shows — full name, first name only, or "Anonymous".</span>
+        </li>
+        <li>
+          <strong>Editing:</strong>
+          <span class="contact-page__bio-hint">I'll lightly edit for typos / clarity but never alter meaning. If a review needs more than a typo fix I'll reply first.</span>
+        </li>
+        <li>
+          <strong>Removal:</strong>
+          <span class="contact-page__bio-hint">Want a published review taken down later? Email and it's gone within 24h.</span>
+        </li>
+      </ul>
+    </aside>
+
+    <section class="contact-page__form-card">
+      <h2 class="contact-page__form-heading">Your review</h2>
+      <p class="contact-page__form-intro">
+        Required fields are marked <span class="contact-page__req">*</span>. Star rating + a paragraph is the minimum.
+      </p>
+
+      <form id="reviewForm"
+            data-web3forms
+            data-redirect="/thank-you/"
+            action="https://api.web3forms.com/submit"
+            method="POST"
+            class="contact-form">
+        <input type="hidden" name="access_key" value="b6c3454b-f07c-43f7-9070-0e0cb5286f55">
+        <input type="hidden" name="subject" value="Project Budget — review submission">
+        <input type="hidden" name="from_name" value="Project Budget review form">
+        <input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+
+        {# Star rating — 5 buttons, click sets state + writes hidden field
+           for Web3Forms. Hover preview shows fill up to the cursor. #}
+        <div class="contact-form__field">
+          <label>Rating <span class="contact-page__req">*</span></label>
+          <div class="review-stars" role="radiogroup" aria-label="Overall rating">
+            <template x-for="n in [1, 2, 3, 4, 5]" :key="n">
+              <button type="button"
+                      class="review-star"
+                      :class="((hoverRating || rating) >= n) ? 'is-on' : ''"
+                      :aria-pressed="(rating === n).toString()"
+                      :aria-label="n + (n === 1 ? ' star' : ' stars')"
+                      :data-tip="ratingLabel(n)"
+                      @click="rating = n"
+                      @mouseenter="hoverRating = n"
+                      @mouseleave="hoverRating = 0">★</button>
+            </template>
+          </div>
+          <input type="hidden" name="rating" :value="rating">
+          <p class="contact-form__hint" x-text="rating ? ratingLabel(rating) : 'Click a star.'"></p>
+        </div>
+
+        <div class="contact-form__field">
+          <label for="rv-headline">Headline <span class="contact-page__req">*</span></label>
+          <input type="text" id="rv-headline" name="headline" required maxlength="80"
+                 placeholder="One line — 'Finally a budget app that respects my data'">
+          <p class="contact-form__hint">Up to 80 characters. This is the line that shows above the review body.</p>
+        </div>
+
+        <div class="contact-form__field">
+          <label for="rv-body">Review <span class="contact-page__req">*</span></label>
+          <textarea id="rv-body" name="body" rows="7" required
+                    placeholder="What clicked? What did you switch from? What's the one thing you tell friends about?"></textarea>
+        </div>
+
+        <div class="contact-form__row">
+          <div class="contact-form__field">
+            <label for="rv-tool-from">Switched from (optional)</label>
+            <input type="text" id="rv-tool-from" name="switchedFrom" placeholder="YNAB, Quicken, spreadsheet, nothing…">
+          </div>
+          <div class="contact-form__field">
+            <label for="rv-tenure">How long have you been using it?</label>
+            <select id="rv-tenure" name="tenure">
+              <option value="">Pick a range…</option>
+              <option value="Just started">Just started — first week</option>
+              <option value="A few weeks">A few weeks</option>
+              <option value="A few months">A few months</option>
+              <option value="6+ months">6+ months</option>
+              <option value="1+ year">1+ year</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="contact-form__row">
+          <div class="contact-form__field">
+            <label for="rv-name">Your name <span class="contact-page__req">*</span></label>
+            <input type="text" id="rv-name" name="name" required autocomplete="name" placeholder="Jane Doe">
+          </div>
+          <div class="contact-form__field">
+            <label for="rv-email">Email <span class="contact-page__req">*</span></label>
+            <input type="email" id="rv-email" name="email" required autocomplete="email" placeholder="jane@example.com">
+            <p class="contact-form__hint">Email is never published — just for verification.</p>
+          </div>
+        </div>
+
+        <div class="contact-form__field">
+          <label for="rv-city">City &amp; country (optional, for attribution)</label>
+          <input type="text" id="rv-city" name="city" autocomplete="address-level2" placeholder="Denver, CO · USA">
+        </div>
+
+        {# Publish consent — opt-in. Without this checkbox the review
+           stays private and is treated like feedback. #}
+        <div class="contact-form__field">
+          <label class="review-consent">
+            <input type="checkbox" id="rv-publish" name="publishConsent" x-model="publish">
+            <span>
+              <strong>Publish my review</strong> on the Project Budget site with the attribution I select below. (Without this checkbox the review stays private.)
+            </span>
+          </label>
+        </div>
+
+        <div class="contact-form__field" x-show="publish" x-cloak>
+          <label for="rv-attribution">Publish as</label>
+          <select id="rv-attribution" name="attribution" :required="publish">
+            <option value="Full name">Full name (e.g. "Jane Doe")</option>
+            <option value="First name + initial">First name + last initial (e.g. "Jane D.")</option>
+            <option value="First name only">First name only (e.g. "Jane")</option>
+            <option value="Anonymous">Anonymous (e.g. "A Project Budget user")</option>
+          </select>
+        </div>
+
+        <div class="contact-form__actions">
+          <button class="btn btn--primary" type="submit"
+                  :disabled="!rating"
+                  :data-tip="rating ? 'Submit your review.' : 'Pick a star rating first.'">Submit review</button>
+          <a class="btn btn--ghost" href="/app/feedback/"
+             data-tip="Switch to the private feedback form.">Cancel</a>
+        </div>
+
+        <p class="contact-form__privacy">
+          Reviews are reviewed before they appear publicly. You'll get a reply within a few business days.
+        </p>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+function reviewForm() {
+  return {
+    rating: 0,
+    hoverRating: 0,
+    publish: false,
+    ratingLabel(n) {
+      return ({
+        1: "1 star — disappointed",
+        2: "2 stars — has issues",
+        3: "3 stars — fine, room to grow",
+        4: "4 stars — solid, recommend",
+        5: "5 stars — outstanding",
+      })[n] || "";
+    },
+  };
+}
+</script>
