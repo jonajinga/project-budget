@@ -201,7 +201,7 @@ eleventyExcludeFromCollections: true
         <h2>Account balances</h2>
         <a href="/app/accounts/">Manage accounts &rsaquo;</a>
       </div>
-      <ul class="dash-accts">
+      <ul class="dash-accts" data-no-tippy>
         <template x-for="a in allAccountsForGrid()" :key="a.id">
           <li class="dash-acct">
             <a class="dash-acct__link" :href="'/app/register/?account=' + a.id">
@@ -374,7 +374,7 @@ eleventyExcludeFromCollections: true
           <a href="/app/register/">Open register &rsaquo;</a>
         </div>
         <p x-show="!recentTransactions().length" x-cloak style="color: var(--fg-muted); margin: 0;">No transactions yet. Press <kbd>N</kbd> to add one.</p>
-        <ul class="dash-recent" x-show="recentTransactions().length" x-cloak>
+        <ul class="dash-recent" x-show="recentTransactions().length" x-cloak data-no-tippy>
           <template x-for="t in recentTransactions()" :key="t.id">
             <li class="dash-recent__row">
               <span class="dash-recent__date" x-text="shortDate(t.date)"></span>

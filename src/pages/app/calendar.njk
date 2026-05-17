@@ -282,7 +282,7 @@ eleventyExcludeFromCollections: true
       </dl>
     </header>
 
-  <div class="cal" :class="{ 'cal--no-totals': !showDayTotals }">
+  <div class="cal" :class="{ 'cal--no-totals': !showDayTotals }" data-no-tippy>
     <div class="cal__main">
     {# Header row mirrors the row layout below: WK column + 7 day
        labels in their own grid container. #}
@@ -588,7 +588,7 @@ eleventyExcludeFromCollections: true
     </header>
 
   <div class="cal-week">
-    <ol class="cal-week__strip">
+    <ol class="cal-week__strip" data-no-tippy>
       <template x-for="cell in weekCells()" :key="cell.iso">
         <li class="cal-week__day"
             :class="{
@@ -696,7 +696,7 @@ eleventyExcludeFromCollections: true
           </button>
         </dl>
       </header>
-      <ol class="cal-week__strip">
+      <ol class="cal-week__strip" data-no-tippy>
         <template x-for="cell in weekCellsFor(wb.startISO)" :key="'w' + wb.startISO + cell.iso">
           <li class="cal-week__day"
               :class="{ 'is-today': cell.isToday,

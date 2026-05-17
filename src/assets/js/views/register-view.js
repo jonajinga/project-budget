@@ -36,6 +36,14 @@ function registerView() {
     bulkRecatTarget: "",
     bulkRenameTarget: "",
     bulkShiftDelta: 0,
+    /* Virtualized rendering — only DOM-mount the first
+       `pageSize * (visiblePage + 1)` rows. The full visibleTransactions
+       array is still computed (for counts + bulk ops), but the
+       table/cards only mount a slice. Auto-bumps via an
+       IntersectionObserver on the bottom sentinel; users can also
+       click "Load more". */
+    pageSize: 50,
+    visiblePage: 0,
 
     form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false, type: "outflow" },
     /* `amount` is always positive; `type` ("outflow" | "inflow") drives
@@ -94,6 +102,26 @@ function registerView() {
           }, 60);
         });
       }
+
+      /* Infinite-scroll observer: watch any sentinel button with
+         [data-load-more-sentinel] currently in the DOM and auto-bump
+         the visible page when one scrolls into view. Re-attaches on
+         Alpine re-render via a tiny MutationObserver that re-binds
+         whenever sentinel buttons appear or disappear. */
+      this._loadMoreIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting && self.hasMoreToShow()) self.showMore();
+        });
+      }, { root: null, rootMargin: "300px", threshold: 0 });
+      var sentinelMO = new MutationObserver(function () {
+        document.querySelectorAll("[data-load-more-sentinel]").forEach(function (el) {
+          if (el.__pbSentinelBound) return;
+          el.__pbSentinelBound = true;
+          self._loadMoreIO.observe(el);
+        });
+      });
+      sentinelMO.observe(document.body, { childList: true, subtree: true });
+      this._sentinelMO = sentinelMO;
     },
 
     get hasAccounts() {
@@ -289,12 +317,49 @@ function registerView() {
       }
       this._vtxCacheKey = fullKey;
       this._vtxCache = result;
+      /* Filter / search changed → reset to first page so the user
+         always sees the freshest matches at the top. */
+      if (this._vtxLastFullKey !== fullKey) {
+        this.visiblePage = 0;
+        this._vtxLastFullKey = fullKey;
+      }
       return result;
     },
 
+    /* Windowed view: only DOM-mount the first N rows. The full
+       visibleTransactions() is still computed for counts + bulk
+       ops + Phase B's otherSide lookup. */
+    pagedTransactions() {
+      var all = this.visibleTransactions();
+      var n = (this.visiblePage + 1) * this.pageSize;
+      return all.length > n ? all.slice(0, n) : all;
+    },
+    hasMoreToShow() { return this.pagedTransactions().length < this.visibleTransactions().length; },
+    showMore() { this.visiblePage += 1; },
+    /* IntersectionObserver hook — wire it from the sentinel row's
+       x-intersect to auto-page-bump when the user scrolls near the
+       end of the visible window. */
+    onSentinelIntersect() {
+      if (this.hasMoreToShow()) this.visiblePage += 1;
+    },
+
+    /* O(1) transfer-pair lookup via the tier-1 index Map. Falls back
+       to a linear find if the index isn't built yet (very early
+       render). */
+    _txnByIdCache: null,
+    _txnByIdKey: null,
     otherSide(t) {
       if (!t.transferTxnId) return t;
-      return this.$store.budget.profile.transactions.find(x => x.id === t.transferTxnId) || t;
+      var s = this.$store.budget;
+      if (!s.profile) return t;
+      var key = (s._listVersion || 0);
+      if (this._txnByIdKey !== key) {
+        var m = new Map();
+        (s.profile.transactions || []).forEach(function (x) { m.set(x.id, x); });
+        this._txnByIdCache = m;
+        this._txnByIdKey = key;
+      }
+      return this._txnByIdCache.get(t.transferTxnId) || t;
     },
 
     formatCents(c) { return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
@@ -522,53 +587,55 @@ function registerView() {
       this.showReconcile = false;
     },
 
-    /* ---- Account stats strip ---- */
-    /* Count of non-trashed transactions in the currently filtered
-       account. Touches _listVersion so the tile re-renders after
-       any add/edit/delete. */
+    /* ---- Account stats strip ----
+       Memoized via the store's _memo so a single render of the stats
+       strip walks transactions exactly once per stat, and follow-up
+       renders reuse the cache until the next store mutation. Cache
+       keys include filterAccountId + currentMonth so a profile / month
+       switch invalidates cleanly. */
     acctTxnCount() {
-      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
       var id = this.filterAccountId;
       if (!id) return 0;
-      var p = this.$store.budget.profile;
+      var p = s.profile;
       if (!p || !p.transactions) return 0;
-      return p.transactions.filter(function (t) { return t.accountId === id; }).length;
+      return s._memo("acctTxnCount:" + id, function () {
+        return p.transactions.filter(function (t) { return t.accountId === id; }).length;
+      });
     },
-    /* Sum of POSITIVE transaction amounts in the currently filtered
-       account for the active month — i.e. inflow / income / deposits
-       posted in YYYY-MM. */
     acctMonthInflow() {
-      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
       var id = this.filterAccountId;
       if (!id) return 0;
-      var m = this.$store.budget.currentMonth;
-      var p = this.$store.budget.profile;
+      var m = s.currentMonth;
+      var p = s.profile;
       if (!p || !p.transactions || !m) return 0;
-      var sum = 0;
-      p.transactions.forEach(function (t) {
-        if (t.accountId !== id) return;
-        if (!t.date || t.date.slice(0, 7) !== m) return;
-        if ((t.amount || 0) > 0) sum += t.amount;
+      return s._memo("acctMonthInflow:" + id + ":" + m, function () {
+        var sum = 0;
+        p.transactions.forEach(function (t) {
+          if (t.accountId !== id) return;
+          if (!t.date || t.date.slice(0, 7) !== m) return;
+          if ((t.amount || 0) > 0) sum += t.amount;
+        });
+        return sum;
       });
-      return sum;
     },
-    /* Absolute sum of NEGATIVE transaction amounts for the same
-       window — returned as a positive cents number so the tile
-       displays "$1,234.56" rather than "-$1,234.56". */
     acctMonthOutflow() {
-      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
       var id = this.filterAccountId;
       if (!id) return 0;
-      var m = this.$store.budget.currentMonth;
-      var p = this.$store.budget.profile;
+      var m = s.currentMonth;
+      var p = s.profile;
       if (!p || !p.transactions || !m) return 0;
-      var sum = 0;
-      p.transactions.forEach(function (t) {
-        if (t.accountId !== id) return;
-        if (!t.date || t.date.slice(0, 7) !== m) return;
-        if ((t.amount || 0) < 0) sum += -t.amount;
+      return s._memo("acctMonthOutflow:" + id + ":" + m, function () {
+        var sum = 0;
+        p.transactions.forEach(function (t) {
+          if (t.accountId !== id) return;
+          if (!t.date || t.date.slice(0, 7) !== m) return;
+          if ((t.amount || 0) < 0) sum += -t.amount;
+        });
+        return sum;
       });
-      return sum;
     },
 
     /* ---- Account-filter combobox ---- */

@@ -241,21 +241,28 @@ function calendarView() {
     /* Build a { iso: [scheduledTpl...] } map for all schedules over the
        projection window. Read _listVersion as the reactivity tripwire so
        the calendar re-renders whenever a schedule is added/posted/skipped. */
+    /* _scheduledByISO walks every scheduled template and expands its
+       occurrences up to the projection horizon — pure function of
+       profile.scheduled. Memoized via the store's _memo so the
+       calendar's per-cell reads don't re-expand on every render
+       (was the hottest unmemoized walker in the calendar view). */
     _scheduledByISO() {
-      void this.$store.budget._listVersion;
-      var p = this.$store.budget.profile;
-      var out = {};
-      if (!p || !p.scheduled || !p.scheduled.length) return out;
+      var s = this.$store.budget;
+      var p = s.profile;
+      if (!p || !p.scheduled || !p.scheduled.length) return {};
       var endISO = this._projectionEnd();
-      var occurrencesIn = this.$store.budget.occurrencesIn;
-      p.scheduled.forEach(function (s) {
-        if (!s || !s.nextDate) return;
-        var occ = occurrencesIn(s, "1970-01-01", endISO);
-        occ.forEach(function (iso) {
-          (out[iso] = out[iso] || []).push(s);
+      var occurrencesIn = s.occurrencesIn;
+      return s._memo("calScheduledByISO:" + endISO, function () {
+        var out = {};
+        p.scheduled.forEach(function (sch) {
+          if (!sch || !sch.nextDate) return;
+          var occ = occurrencesIn(sch, "1970-01-01", endISO);
+          occ.forEach(function (iso) {
+            (out[iso] = out[iso] || []).push(sch);
+          });
         });
+        return out;
       });
-      return out;
     },
 
     anchorMonthISO() { return this._isoMonth(this._parseISO(this.anchorISO)); },
@@ -597,21 +604,48 @@ function calendarView() {
 
     /* Returns { posted, scheduled, totalInflow, totalOutflow, count }.
        Scheduled entries come from the projection map so recurring
-       templates surface on every future occurrence within the window. */
+       templates surface on every future occurrence within the window.
+
+       Indexed for speed: _txnsByDay() pre-buckets all transactions
+       by ISO date in ONE pass, then dayData() does an O(1) lookup +
+       a per-day filter walk (usually ≤5 rows). Previously walked all
+       transactions per cell — at 1,399 txns × 35 month cells = ~49K
+       iterations per render. Now: 1,399 once, 5 per cell. */
+    _txnsByDayCache: null,
+    _txnsByDayKey: null,
+    _txnsByDay() {
+      var s = this.$store.budget;
+      var key = (s._listVersion || 0) + "|" + (this.filterAccountId || "") + "|" + (this.filterKind || "") + "|" + (this.searchQuery || "");
+      if (this._txnsByDayKey === key && this._txnsByDayCache) return this._txnsByDayCache;
+      var p = s.profile;
+      var by = {};
+      if (p && p.transactions) {
+        var self = this;
+        p.transactions.forEach(function (t) {
+          if (!self._matchTxn(t)) return;
+          var d = (t.date || "").slice(0, 10);
+          if (!d) return;
+          (by[d] = by[d] || []).push(t);
+        });
+      }
+      this._txnsByDayCache = by;
+      this._txnsByDayKey = key;
+      return by;
+    },
+
     dayData(iso) {
       var p = this.$store.budget.profile;
       var out = { posted: [], scheduled: [], totalInflow: 0, totalOutflow: 0, count: 0 };
       if (!p || !iso) return out;
-      var prefix = iso;
-      var self = this;
-      (p.transactions || []).forEach(function (t) {
-        if ((t.date || "").slice(0, 10) !== prefix) return;
-        if (!self._matchTxn(t)) return;
-        out.posted.push(t);
-        if (t.amount > 0) out.totalInflow  += t.amount;
-        if (t.amount < 0) out.totalOutflow += t.amount;
-      });
+      var dayPosted = this._txnsByDay()[iso] || [];
+      out.posted = dayPosted;
+      for (var i = 0; i < dayPosted.length; i++) {
+        var amt = dayPosted[i].amount || 0;
+        if (amt > 0) out.totalInflow  += amt;
+        if (amt < 0) out.totalOutflow += amt;
+      }
       var projected = (this._cachedProjected || this._scheduledByISO())[iso] || [];
+      var self = this;
       projected.forEach(function (s) {
         if (!self._matchSched(s)) return;
         out.scheduled.push(s);
@@ -649,16 +683,17 @@ function calendarView() {
       return { inflow: inflow, outflow: outflow, net: inflow + outflow, count: count };
     },
 
-    /* Net (inflow + outflow) across the named month (YYYY-MM). */
+    /* Net (inflow + outflow) across the named month (YYYY-MM).
+       Sums from the pre-bucketed _txnsByDay map so it touches only
+       the matching days, not every transaction. */
     monthNet(monthISO) {
       var p = this.$store.budget.profile;
       if (!p) return 0;
+      var by = this._txnsByDay();
       var sum = 0;
-      var self = this;
-      (p.transactions || []).forEach(function (t) {
-        if ((t.date || "").slice(0, 7) !== monthISO) return;
-        if (!self._matchTxn(t)) return;
-        sum += t.amount || 0;
+      Object.keys(by).forEach(function (d) {
+        if (d.slice(0, 7) !== monthISO) return;
+        by[d].forEach(function (t) { sum += t.amount || 0; });
       });
       return sum;
     },

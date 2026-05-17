@@ -65,6 +65,13 @@ document.addEventListener("alpine:initialized", function () {
 
   function attachOne(el) {
     if (!el || el.nodeType !== 1 || el.getAttribute("data-tippy-bound") === "1") return;
+    /* Opt-out for high-volume list containers (register table, calendar
+       grid, payees list, dashboard balances) where per-row Tippy
+       instances multiplied to thousands at scale. Inside any element
+       with [data-no-tippy], the per-row data-tip attrs are migrated to
+       native title="" so users still get hover help on desktop with
+       zero JS cost. */
+    if (el.closest && el.closest("[data-no-tippy]")) return;
     var content = el.getAttribute("data-tip");
     if (!content) return;
     el.setAttribute("data-tippy-bound", "1");

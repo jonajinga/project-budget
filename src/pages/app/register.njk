@@ -262,7 +262,7 @@ eleventyExcludeFromCollections: true
       </div>
     </div>
 
-    <table class="register__table" x-show="!isMobile" x-cloak>
+    <table class="register__table" x-show="!isMobile" x-cloak data-no-tippy>
       <thead>
         <tr>
           <th scope="col" class="col-select" x-show="selectMode" x-cloak>
@@ -286,7 +286,7 @@ eleventyExcludeFromCollections: true
         </tr>
       </thead>
       <tbody>
-        <template x-for="t in visibleTransactions()" :key="t.id">
+        <template x-for="t in pagedTransactions()" :key="t.id">
           <tr :data-txn-id="t.id"
               :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id, 'register__row--selected': isTxnSelected(t.id) }"
               @click="onRowClick(t, $event)">
@@ -483,12 +483,28 @@ eleventyExcludeFromCollections: true
             No transactions match the current filter.
           </td>
         </tr>
+        {# Load-more sentinel row. Auto-bumps via the scroll-into-view
+           handler so users who scroll near the bottom get more rows
+           without having to click. The button is the keyboard / no-JS
+           fallback path. #}
+        <tr x-show="hasMoreToShow()" x-cloak class="register__load-more-row">
+          <td :colspan="selectMode ? 9 : 8" style="text-align: center; padding: var(--space-md);">
+            <button type="button" class="btn btn--ghost btn--sm"
+                    @click="showMore()"
+                    data-load-more-sentinel>
+              <span>Load 50 more</span>
+              <span style="color: var(--fg-muted); margin-left: var(--space-2xs);">
+                (<span x-text="visibleTransactions().length - pagedTransactions().length"></span> remaining)
+              </span>
+            </button>
+          </td>
+        </tr>
       </tbody>
     </table>
 
     {# Mobile card list — replaces the 8-column table under 600px wide. #}
-    <ul class="register__cards" x-show="isMobile" x-cloak>
-      <template x-for="t in visibleTransactions()" :key="t.id">
+    <ul class="register__cards" x-show="isMobile" x-cloak data-no-tippy>
+      <template x-for="t in pagedTransactions()" :key="t.id">
         <li class="register__card"
             :class="{ 'is-expanded': expandedTxnId === t.id, 'is-reconciled': t.reconciled, 'is-editing': editingId === t.id, 'is-selected': isTxnSelected(t.id) }">
           {# Select-mode checkbox on mobile cards. Sits inline before
@@ -617,6 +633,16 @@ eleventyExcludeFromCollections: true
 
       <li class="register__card-empty" x-show="!visibleTransactions().length" x-cloak>
         No transactions match the current filter.
+      </li>
+      <li class="register__card-empty" x-show="hasMoreToShow()" x-cloak>
+        <button type="button" class="btn btn--ghost btn--sm"
+                @click="showMore()"
+                x-intersect.once="onSentinelIntersect()">
+          <span>Load 50 more</span>
+          <span style="color: var(--fg-muted); margin-left: var(--space-2xs);">
+            (<span x-text="visibleTransactions().length - pagedTransactions().length"></span> remaining)
+          </span>
+        </button>
       </li>
     </ul>
   </section>
