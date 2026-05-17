@@ -132,7 +132,33 @@ export function createStore() {
        to register a dependency. Mutators bump the counter so x-for / x-show
        bindings re-evaluate on next tick. */
     _listVersion: 0,
-    _bumpLists() { this._listVersion += 1; },
+    _bumpLists() {
+      this._listVersion += 1;
+      /* Invalidate the store-level memoization cache. Callers
+         pre-bumped will compute fresh values on next read. */
+      this._memoStore = null;
+      this._memoStoreVersion = -1;
+    },
+
+    /* Store-level memoization for expensive derivations (accountBalance,
+       reportSpending, reportIncomeVsExpense, netWorth, etc.). The cache
+       is keyed implicitly on _listVersion — any mutation that calls
+       _bumpLists() drops the cache, so cached values are always fresh.
+       Use for any pure function of `this.profile` that's called from
+       multiple bindings per render (dashboard reads accountBalance for
+       every account; reports walk all transactions). */
+    _memoStore: null,
+    _memoStoreVersion: -1,
+    _memo(key, compute) {
+      if (this._memoStoreVersion !== this._listVersion || !this._memoStore) {
+        this._memoStore = Object.create(null);
+        this._memoStoreVersion = this._listVersion;
+      }
+      if (key in this._memoStore) return this._memoStore[key];
+      var v = compute();
+      this._memoStore[key] = v;
+      return v;
+    },
 
     /* Transactional bulk-mutation wrapper. Snapshot the profile,
        run the mutator. If it throws, restore the snapshot. On

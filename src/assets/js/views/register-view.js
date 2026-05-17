@@ -38,7 +38,10 @@ function registerView() {
     bulkShiftDelta: 0,
 
     form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false, type: "outflow" },
-    edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false, type: "outflow" },
+    /* `amount` (positive number) + `type` drive the mobile-card edit;
+       `amountSigned` is the literal signed string the desktop inline
+       row uses. saveEdit picks whichever field is non-empty. */
+    edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", amountSigned: "", cleared: false, type: "outflow" },
     transferForm: { fromAccountId: "", toAccountId: "", amount: "", date: "", memo: "" },
     reconcileForm: { statementBalance: "", checked: false, diff: 0 },
     showMakeRecurring: false,
@@ -219,58 +222,71 @@ function registerView() {
       this.showMakeRecurring = false;
     },
 
-    /* Memoization: visibleTransactions() is called from many x-* bindings
-       per row (x-for + x-if + x-show + x-text). With 1,399 sample txns
-       running Fuse + the per-row payee/category lookups on every Alpine
-       tick chewed the main thread, especially on mobile. Cache keyed
-       on the store's _listVersion + the current filter + search so
-       legitimate mutations still invalidate, but the dozen reads per
-       tick collapse to one compute. */
+    /* Two-tier cache.
+       Tier 1 (_vtxIndex): the pool + Fuse index, keyed on
+         _listVersion + filterAccountId. Building Fuse over 1,399
+         docs is the expensive step — it only re-runs when the data
+         or account filter actually changes.
+       Tier 2 (_vtxCache): the final sorted result, keyed on the
+         tier-1 key plus the search query. Searching the prebuilt
+         Fuse index for a new query is O(N), not the index-build
+         cost. Typing in the search box only re-runs tier 2. */
+    _vtxIndex: null,        // { pool, fuse, key }
     _vtxCache: null,
-    _vtxKey: null,
+    _vtxCacheKey: null,
     visibleTransactions() {
       var s = this.$store.budget;
-      var key = (s._listVersion || 0) + "|" + (this.filterAccountId || "") + "|" + (this.search || "");
-      if (this._vtxKey === key && this._vtxCache) return this._vtxCache;
+      var dataKey = (s._listVersion || 0) + "|" + (this.filterAccountId || "");
+      var fullKey = dataKey + "|" + (this.search || "");
+      if (this._vtxCacheKey === fullKey && this._vtxCache) return this._vtxCache;
       var p = s.profile;
-      if (!p) { this._vtxKey = key; this._vtxCache = []; return this._vtxCache; }
-      var q = (this.search || "").trim();
+      if (!p) { this._vtxCacheKey = fullKey; this._vtxCache = []; return this._vtxCache; }
       var self = this;
-      var pool = p.transactions
-        .filter(t => !self.filterAccountId || t.accountId === self.filterAccountId);
+      /* Tier 1: rebuild pool + Fuse only when dataKey changed. */
+      if (!this._vtxIndex || this._vtxIndex.key !== dataKey) {
+        var pool = p.transactions
+          .filter(t => !self.filterAccountId || t.accountId === self.filterAccountId);
+        var fuse = null;
+        if (typeof window.Fuse === "function") {
+          var docs = pool.map(t => ({
+            t: t,
+            payee: self.$store.budget.payeeName(t.payeeId) || "",
+            category: self.$store.budget.categoryName(t.categoryId) || "",
+            memo: t.memo || "",
+            amount: ((t.amount || 0) / 100).toFixed(2),
+          }));
+          fuse = new window.Fuse(docs, {
+            includeScore: true,
+            threshold: 0.35,
+            ignoreLocation: true,
+            minMatchCharLength: 2,
+            keys: [
+              { name: "payee",    weight: 3 },
+              { name: "category", weight: 1.5 },
+              { name: "memo",     weight: 1 },
+              { name: "amount",   weight: 0.5 },
+            ],
+          });
+        }
+        this._vtxIndex = { pool: pool, fuse: fuse, key: dataKey };
+      }
+      /* Tier 2: search the prebuilt index. */
+      var q = (this.search || "").trim();
+      var pool2 = this._vtxIndex.pool;
       var result;
       if (!q) {
-        result = pool.sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
-      } else if (typeof window.Fuse === "function") {
-        var docs = pool.map(t => ({
-          t: t,
-          payee: self.$store.budget.payeeName(t.payeeId) || "",
-          category: self.$store.budget.categoryName(t.categoryId) || "",
-          memo: t.memo || "",
-          amount: ((t.amount || 0) / 100).toFixed(2),
-        }));
-        var fuse = new window.Fuse(docs, {
-          includeScore: true,
-          threshold: 0.35,
-          ignoreLocation: true,
-          minMatchCharLength: 2,
-          keys: [
-            { name: "payee",    weight: 3 },
-            { name: "category", weight: 1.5 },
-            { name: "memo",     weight: 1 },
-            { name: "amount",   weight: 0.5 },
-          ],
-        });
-        result = fuse.search(q).map(r => r.item.t)
+        result = pool2.slice().sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+      } else if (this._vtxIndex.fuse) {
+        result = this._vtxIndex.fuse.search(q).map(r => r.item.t)
           .sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
       } else {
         var ql = q.toLowerCase();
-        result = pool.filter(t => {
+        result = pool2.filter(t => {
           var payee = (self.$store.budget.payeeName(t.payeeId) || "").toLowerCase();
           return payee.indexOf(ql) !== -1 || (t.memo || "").toLowerCase().indexOf(ql) !== -1;
         }).sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
       }
-      this._vtxKey = key;
+      this._vtxCacheKey = fullKey;
       this._vtxCache = result;
       return result;
     },
@@ -368,10 +384,9 @@ function registerView() {
 
     startEdit(t) {
       this.editingId = t.id;
-      /* Derive the toggle state from the existing amount sign so the
-         edit form shows the same Outflow/Inflow state the user
-         originally entered. Amount field always shows the absolute
-         value — sign lives on the toggle. */
+      /* Two parallel amount fields: amountSigned (signed string) for
+         the compact desktop inline edit, amount (positive) + type for
+         the mobile card edit. saveEdit picks whichever is non-empty. */
       var amt = t.amount || 0;
       this.edit = {
         date: t.date,
@@ -380,6 +395,7 @@ function registerView() {
         categoryId: t.categoryId || "",
         memo: t.memo,
         amount: (Math.abs(amt) / 100).toFixed(2),
+        amountSigned: (amt / 100).toFixed(2),
         cleared: t.cleared,
         type: amt >= 0 ? "inflow" : "outflow",
       };
@@ -387,10 +403,17 @@ function registerView() {
 
     saveEdit() {
       if (!this.editingId) return;
-      /* Same sign rule as submitAdd — toggle wins, raw input is
-         normalised to absolute value first. */
-      var raw = this.parseDollars(this.edit.amount);
-      var signed = Math.abs(raw) * (this.edit.type === "inflow" ? 1 : -1);
+      /* Prefer the literal signed input when the desktop inline row
+         touched it; otherwise the mobile card edit toggle + positive
+         amount applies. Either way the store receives a signed
+         integer-cents amount. */
+      var signed;
+      if (this.edit.amountSigned !== "" && this.edit.amountSigned != null) {
+        signed = this.parseDollars(this.edit.amountSigned);
+      } else {
+        var raw = this.parseDollars(this.edit.amount);
+        signed = Math.abs(raw) * (this.edit.type === "inflow" ? 1 : -1);
+      }
       this.$store.budget.updateTransaction(this.editingId, {
         date: this.edit.date,
         accountId: this.edit.accountId,

@@ -339,16 +339,28 @@ export const accountsSlice = {
   /* ---- Account derivations (templates call these) ---- */
   /**
    * Current running balance (cents) summing all transactions.
+   * Memoized — accountBalance is called per-account on every
+   * dashboard + sidebar render; without caching this is O(accounts ×
+   * transactions) per tick.
    * @param {id} id
    * @returns {number} cents
    */
-  accountBalance(id) { return this.profile ? runningBalance(this.profile, id) : 0; },
+  accountBalance(id) {
+    if (!this.profile) return 0;
+    var self = this;
+    return this._memo("accountBalance:" + id, function () { return runningBalance(self.profile, id); });
+  },
   /**
    * Balance (cents) counting only cleared + reconciled transactions.
+   * Memoized for the same reason as accountBalance.
    * @param {id} id
    * @returns {number} cents
    */
-  accountClearedBalance(id) { return this.profile ? clearedBalance(this.profile, id) : 0; },
+  accountClearedBalance(id) {
+    if (!this.profile) return 0;
+    var self = this;
+    return this._memo("accountClearedBalance:" + id, function () { return clearedBalance(self.profile, id); });
+  },
   /**
    * Sidebar/accounts-page view of groups with their accounts attached.
    * Reads _listVersion so Alpine re-evaluates on any list mutation.
@@ -365,13 +377,29 @@ export const accountsSlice = {
     return this.profile ? accountsByGroup(this.profile) : [];
   },
   /** @returns {number} cents summed across all on-budget accounts */
-  onBudgetTotal() { return this.profile ? onBudgetTotalImpl(this.profile) : 0; },
+  onBudgetTotal() {
+    if (!this.profile) return 0;
+    var self = this;
+    return this._memo("onBudgetTotal", function () { return onBudgetTotalImpl(self.profile); });
+  },
   /** @returns {number} cents summed across tracking-asset accounts */
-  trackingAssetTotal() { return this.profile ? trackingAssetTotalImpl(this.profile) : 0; },
+  trackingAssetTotal() {
+    if (!this.profile) return 0;
+    var self = this;
+    return this._memo("trackingAssetTotal", function () { return trackingAssetTotalImpl(self.profile); });
+  },
   /** @returns {number} cents summed across tracking-liability accounts */
-  trackingLiabilityTotal() { return this.profile ? trackingLiabilityTotalImpl(this.profile) : 0; },
+  trackingLiabilityTotal() {
+    if (!this.profile) return 0;
+    var self = this;
+    return this._memo("trackingLiabilityTotal", function () { return trackingLiabilityTotalImpl(self.profile); });
+  },
   /** @returns {number} cents — net worth excluding accounts flagged excludeFromNetWorth */
-  netWorth() { return this.profile ? netWorthImpl(this.profile) : 0; },
+  netWorth() {
+    if (!this.profile) return 0;
+    var self = this;
+    return this._memo("netWorth", function () { return netWorthImpl(self.profile); });
+  },
   /**
    * @param {id} id
    * @returns {object|null}

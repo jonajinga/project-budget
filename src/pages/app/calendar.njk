@@ -342,7 +342,8 @@ eleventyExcludeFromCollections: true
               'cal__cell--other-month': cell.otherMonth,
               'cal__cell--drop-target': cell.iso && dragOverISO === cell.iso
             }"
-            @dragover.prevent="cell.iso && (dragOverISO = cell.iso)"
+            @dragenter="cell.iso && dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
+            @dragover.prevent
             @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
             @drop.prevent="cell.iso && dropOnDate(cell.iso, $event)">
           <template x-if="!cell.blank">
@@ -694,7 +695,8 @@ eleventyExcludeFromCollections: true
               :class="{ 'is-today': cell.isToday,
                         'is-empty': !(cell.posted.length + cell.scheduled.length),
                         'cal-week__day--drop-target': dragOverISO === cell.iso }"
-              @dragover.prevent="dragOverISO = cell.iso"
+              @dragenter="dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
+              @dragover.prevent
               @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
               @drop.prevent="dropOnDate(cell.iso, $event)">
             <header class="cal-week__head">
