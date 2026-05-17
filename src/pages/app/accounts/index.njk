@@ -32,24 +32,43 @@ eleventyExcludeFromCollections: true
   {# Stat cards. Live snapshot of every on-budget + tracking balance,
      account count, and total net worth. Reuses .rec-summary chrome so
      the visual rhythm matches /app/scheduled/ and /app/categories/. #}
-  <section class="rec-summary" x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+  {# Tile order tells a story: count → in-budget → tracked → excluded
+     → final net worth. Toggle the --5col modifier only when the
+     Excluded tile is rendering, so the layout stays a tidy 4-up when
+     no accounts are excluded. #}
+  <section class="rec-summary"
+           :class="excludedCount() > 0 ? 'rec-summary--5col' : ''"
+           x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total accounts in this profile (on-budget + tracking + excluded).">
+      <span class="rec-summary__label">Accounts</span>
+      <span class="rec-summary__value" x-text="accountCount()"></span>
+    </div>
     <div class="rec-summary__tile rec-summary__tile--inflow" data-tip="Sum of every on-budget account balance (cash, checking, savings, credit cards).">
       <span class="rec-summary__label">On budget</span>
       <span class="rec-summary__value"
             :class="$store.budget.onBudgetTotal() < 0 ? 'amount--outflow' : ''"
             x-text="formatCents($store.budget.onBudgetTotal())"></span>
     </div>
-    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Sum of tracking assets minus tracking liabilities (investments, loans).">
+    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Sum of tracking assets minus tracking liabilities (investments, loans). Excluded accounts are skipped.">
       <span class="rec-summary__label">Tracking</span>
       <span class="rec-summary__value"
             :class="trackingNet() < 0 ? 'amount--outflow' : ''"
             x-text="formatCents(trackingNet())"></span>
     </div>
-    <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total accounts in this profile (on-budget + tracking).">
-      <span class="rec-summary__label">Accounts</span>
-      <span class="rec-summary__value" x-text="accountCount()"></span>
+    {# Excluded-from-net-worth roll-up — shown only when at least one
+       account in the profile has the flag, so households without any
+       529s / escrow / RSU accounts don't see a confusing $0 tile. #}
+    <div class="rec-summary__tile rec-summary__tile--accent"
+         x-show="excludedCount() > 0" x-cloak
+         data-tip="Sum of every account flagged exclude-from-net-worth — kids' 529s, escrow accounts, employer-held RSUs. Tracked + visible but not counted in the Net worth tile.">
+      <span class="rec-summary__label">Excluded from NW</span>
+      <span class="rec-summary__value"
+            :class="excludedTotal() < 0 ? 'amount--outflow' : ''"
+            x-text="formatCents(excludedTotal())"></span>
+      <span style="font-size: var(--fs-xs); color: var(--fg-muted); margin-top: 2px; display: block;"
+            x-text="excludedCount() + (excludedCount() === 1 ? ' account' : ' accounts')"></span>
     </div>
-    <div class="rec-summary__tile rec-summary__tile--net" data-tip="Net worth across every account.">
+    <div class="rec-summary__tile rec-summary__tile--net" data-tip="Net worth across every account (excluded accounts skipped).">
       <span class="rec-summary__label">Net worth</span>
       <span class="rec-summary__value"
             :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -79,9 +98,26 @@ eleventyExcludeFromCollections: true
                     :class="groupTotalCents(group) < 0 ? 'amount--outflow' : ''"
                     x-text="formatCents(groupTotalCents(group))"
                     :data-tip="'Total balance across ' + group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' in this group.'"></span>
+              {# Excluded-from-net-worth subtotal — only renders when at
+                 least one account in the group has the flag, so groups
+                 without any 529 / escrow / RSU accounts stay clean. #}
+              <span class="group-toggle__total group-toggle__total--excluded"
+                    x-show="groupExcludedCents(group) !== 0" x-cloak
+                    x-text="'excl. ' + formatCents(groupExcludedCents(group))"
+                    :data-tip="'Of the total above, ' + formatCents(groupExcludedCents(group)) + ' belongs to accounts flagged exclude-from-net-worth and is not counted in the dashboard net-worth roll-up.'"></span>
             </button>
           </div>
           <div class="cluster">
+            <button class="btn btn--icon" type="button"
+                    x-show="group.group"
+                    @click="openAddForGroup(group.group.id)"
+                    aria-label="Add account to this group"
+                    data-tip="Add a new account directly into this group.">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="8" y1="3" x2="8" y2="13"></line>
+                <line x1="3" y1="8" x2="13" y2="8"></line>
+              </svg>
+            </button>
             <button class="btn btn--icon" type="button"
                     x-show="group.group"
                     :disabled="gIdx === 0"
@@ -398,6 +434,29 @@ function accountsView() {
       if (!s.profile) return 0;
       return s.trackingAssetTotal() - s.trackingLiabilityTotal();
     },
+    /* Sum of every account flagged excludeFromNetWorth across the
+       whole profile. Drives the "Excluded from NW" stat tile so the
+       roll-up sitting outside Net Worth is visible at a glance. */
+    excludedTotal() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      if (!s.profile) return 0;
+      var sum = 0;
+      s.profile.accounts.forEach(function (a) {
+        if (a.closedAt) return;
+        if (!a.excludeFromNetWorth) return;
+        sum += s.accountBalance(a.id);
+      });
+      return sum;
+    },
+    excludedCount() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      if (!s.profile) return 0;
+      return s.profile.accounts.filter(function (a) {
+        return !a.closedAt && a.excludeFromNetWorth;
+      }).length;
+    },
     /* Sum of every account balance in a single group. Used to surface
        per-group totals in the header so collapsed groups still convey
        their net value at a glance. */
@@ -410,6 +469,30 @@ function accountsView() {
         sum += s.accountBalance(group.accounts[i].id);
       }
       return sum;
+    },
+    /* Sum of accounts in the group flagged excludeFromNetWorth so
+       users can see how much of the group total is sitting outside
+       their net-worth roll-up (529s, escrow, etc.). Returns 0 when
+       no excluded accounts exist so the badge stays hidden. */
+    groupExcludedCents(group) {
+      void this.$store.budget._listVersion;
+      if (!group || !group.accounts) return 0;
+      var s = this.$store.budget;
+      var sum = 0;
+      for (var i = 0; i < group.accounts.length; i++) {
+        var a = group.accounts[i];
+        if (!a.excludeFromNetWorth) continue;
+        sum += s.accountBalance(a.id);
+      }
+      return sum;
+    },
+    /* Open the Add-account modal with the group preselected so users
+       can drop a new account straight into the right bucket from the
+       group header instead of picking from the dropdown by hand. */
+    openAddForGroup(groupId) {
+      this.resetNewAccount();
+      this.newAccount.groupId = groupId || "";
+      this.showAccount = true;
     },
 
     submitAccount() {

@@ -2714,6 +2714,14 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 }
 @media (max-width: 1023px) { .rec-summary { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 599px)  { .rec-summary { grid-template-columns: 1fr; } }
+
+/* 5-tile variant — accounts page has Accounts / On budget / Tracking
+   / Excluded / Net worth. Forced one row at desktop, 3-up at tablet
+   (avoids a lonely orphan on a second row), 2-up on phone. */
+.rec-summary--5col { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 1279px) { .rec-summary--5col { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 899px)  { .rec-summary--5col { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 479px)  { .rec-summary--5col { grid-template-columns: 1fr; } }
 /* Tiles are <button>s so the user can click them to apply the
    matching filter to the table below. Active filter gets a 3px
    accent rail on the left so it reads at a glance which tile is
