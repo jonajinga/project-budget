@@ -21,6 +21,16 @@
   align-items: center;
   gap: var(--space-sm);
 }
+
+/* App header drops the 1180-px container cap so the hamburger sits
+   flush with the sidebar's left edge and the actions cluster sits
+   flush with the main area's right edge — matching the full-viewport
+   app-shell layout below. Marketing pages keep the centered
+   container width because their content IS centered. */
+.site-header--app > .container {
+  max-width: none;
+  padding-inline: var(--space-md);
+}
 .site-header__brand {
   display: flex;
   align-items: baseline;
