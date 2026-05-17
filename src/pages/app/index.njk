@@ -202,6 +202,61 @@ eleventyExcludeFromCollections: true
       </ul>
     </section>
 
+    {# ==== Cash flow this month (mini sankey, pure CSS) ==== #}
+    <section class="card" x-show="flowThisMonth().total > 0" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Cash flow this month</h2>
+        <a href="/app/reports/sankey/">Full sankey &rsaquo;</a>
+      </div>
+      <div class="dash-flow">
+        <ul class="dash-flow__col dash-flow__col--in">
+          <li class="dash-flow__col-head">Income sources</li>
+          <template x-for="row in flowThisMonth().sources" :key="'src-' + row.name">
+            <li class="dash-flow__row">
+              <span class="dash-flow__row-bar">
+                <span class="dash-flow__row-fill dash-flow__row-fill--in"
+                      :style="'--pct:' + row.pct + '%'"></span>
+              </span>
+              <span class="dash-flow__row-meta">
+                <span class="dash-flow__row-name" x-text="row.name"></span>
+                <span class="dash-flow__row-amt" x-text="fmt(row.value)"></span>
+              </span>
+            </li>
+          </template>
+          <li x-show="!flowThisMonth().sources.length" x-cloak class="dash-flow__empty">No income yet.</li>
+        </ul>
+
+        <div class="dash-flow__pivot">
+          <span class="dash-flow__pivot-label">Net</span>
+          <span class="dash-flow__pivot-value"
+                :class="flowThisMonth().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="fmt(flowThisMonth().net)"></span>
+          <span class="dash-flow__pivot-sub">
+            <span x-text="fmt(flowThisMonth().income)"></span> in
+            &middot;
+            <span x-text="fmt(flowThisMonth().expense)"></span> out
+          </span>
+        </div>
+
+        <ul class="dash-flow__col dash-flow__col--out">
+          <li class="dash-flow__col-head">Top spending</li>
+          <template x-for="row in flowThisMonth().sinks" :key="'sink-' + row.name">
+            <li class="dash-flow__row dash-flow__row--right">
+              <span class="dash-flow__row-meta">
+                <span class="dash-flow__row-name" x-text="row.name"></span>
+                <span class="dash-flow__row-amt" x-text="fmt(row.value)"></span>
+              </span>
+              <span class="dash-flow__row-bar">
+                <span class="dash-flow__row-fill dash-flow__row-fill--out"
+                      :style="'--pct:' + row.pct + '%'"></span>
+              </span>
+            </li>
+          </template>
+          <li x-show="!flowThisMonth().sinks.length" x-cloak class="dash-flow__empty">No spending yet.</li>
+        </ul>
+      </div>
+    </section>
+
     {# ==== Band C: This month — sparkline + top categories ==== #}
     <div class="dashboard__row dashboard__row--2col">
       <section class="card">
@@ -490,6 +545,51 @@ function dashboardView() {
       var from = fromRow && typeof fromRow.netWorth === "number" ? fromRow.netWorth : (fromRow && fromRow.total) || to;
       var pct = from !== 0 ? ((to - from) / Math.abs(from)) * 100 : 0;
       return { from: from, to: to, pct: pct };
+    },
+
+    /* ---- Cash flow this month (mini sankey) ---- */
+    /* Aggregates current-month transactions into top-5 income
+       sources (categorized inflows) and top-5 expense categories,
+       plus totals. Each row carries a `pct` (0..100) relative to
+       the column's biggest value so the bars scale proportionally
+       without needing JS to set widths beyond a single CSS var. */
+    flowThisMonth() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      if (!s.profile) return { sources: [], sinks: [], income: 0, expense: 0, net: 0, total: 0 };
+      var month = s.currentMonth;
+      var inMap = {};
+      var outMap = {};
+      var income = 0, expense = 0;
+      (s.profile.transactions || []).forEach(function (t) {
+        if (!t || !t.date || t.date.slice(0, 7) !== month) return;
+        if (t.transferTxnId) return;
+        var label = s.categoryName(t.categoryId) || (t.amount >= 0 ? "Uncategorized income" : "Uncategorized");
+        if (t.amount > 0) {
+          inMap[label] = (inMap[label] || 0) + t.amount;
+          income += t.amount;
+        } else if (t.amount < 0) {
+          var v = -t.amount;
+          outMap[label] = (outMap[label] || 0) + v;
+          expense += v;
+        }
+      });
+      function topN(map) {
+        var arr = Object.keys(map).map(function (k) { return { name: k, value: map[k] }; });
+        arr.sort(function (a, b) { return b.value - a.value; });
+        arr = arr.slice(0, 5);
+        var max = arr.length ? arr[0].value : 1;
+        arr.forEach(function (r) { r.pct = Math.round((r.value / max) * 100); });
+        return arr;
+      }
+      return {
+        sources: topN(inMap),
+        sinks:   topN(outMap),
+        income: income,
+        expense: expense,
+        net: income - expense,
+        total: income + expense,
+      };
     },
 
     /* ---- Smart insights ---- */
