@@ -24,6 +24,16 @@
   font-size: var(--fs-sm);
 }
 .chart svg { display: block; width: 100%; height: auto; }
+/* Cap chart container height on phones so the chart doesn't shove
+   the table + KPIs off-screen. Each report sets a generous
+   `style="min-height: 420px"` inline for desktop; clamp those on
+   small viewports so the table appears above the fold. */
+@media (max-width: 599px) {
+  .chart[id^="chart-"] { min-height: 220px !important; }
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  .chart[id^="chart-"] { min-height: 320px !important; }
+}
 .chart text { fill: var(--fg); font-family: var(--font-body); font-size: 12px; }
 .chart .axis line, .chart .axis path { stroke: var(--border); }
 .chart .axis text { fill: var(--fg-muted); }

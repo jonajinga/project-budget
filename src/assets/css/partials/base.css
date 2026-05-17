@@ -54,6 +54,44 @@ a.btn:not([data-touch="compact"]) {
   min-width: 44px;
 }
 
+/* iOS Safari auto-zooms when a focused input has font-size < 16px.
+   Force every form input to >= 16px on touch-only devices so the
+   page doesn't jump on every tap into a field. */
+@media (any-hover: none) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
+/* Long-content overflow protection — flex containers with text
+   children blow out the layout unless every child has min-width: 0.
+   Apply selectively to the patterns we KNOW are at risk: nav items,
+   card content, modal headers, table cells. The .cluster utility
+   already wraps; this catches the rest. */
+.app-main, .app-page,
+.card, .modal,
+.kpi, .report, .budget__category {
+  min-width: 0;
+}
+
+/* iOS safe-area for any fixed-position bottom UI (bulk-actions bar,
+   FAB, toasts). The container can opt in via env() — providing the
+   token at root so it's available globally. */
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0);
+  --safe-top: env(safe-area-inset-top, 0);
+}
+
+/* Prevent horizontal scroll at the document root — the most common
+   cause of unsightly mobile layouts is one runaway child element.
+   overflow-x: clip is safer than overflow-x: hidden (which can
+   trap fixed-position scroll). */
+html, body {
+  overflow-x: clip;
+}
+
 /* <sup> inside flex containers — see CLAUDE.md mistake #6 */
 sup {
   font-size: 0.55em;

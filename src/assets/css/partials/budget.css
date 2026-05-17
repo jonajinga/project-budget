@@ -152,7 +152,7 @@
 .bulk-actions-bar {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0));
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -176,10 +176,20 @@
 }
 @media (max-width: 599px) {
   .bulk-actions-bar {
-    left: 8px; right: 8px; bottom: 8px;
+    left: 8px; right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0));
     transform: none;
     max-width: none;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-sm);
+  }
+  .bulk-actions-bar .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: var(--space-2xs);
+    padding-right: var(--space-2xs);
   }
 }
 /* Hide the floating bar while any modal is open so it doesn't
@@ -280,10 +290,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    parent `.cluster` utility wraps by default, so the action
    buttons would drop below the title on narrow viewports. The
    toggle button is allowed to truncate via min-width: 0 +
-   text-overflow on its <strong>. */
+   text-overflow on its <strong>. On phones the actions cluster
+   becomes horizontally scrollable so all icons remain reachable
+   without the row growing taller. */
 .budget__group-header > .cluster {
   flex-wrap: nowrap;
   min-width: 0;
+}
+@media (max-width: 599px) {
+  .budget__group-actions,
+  .budget__row-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    /* Subtle right-edge fade hint that content scrolls. */
+    mask-image: linear-gradient(to right, #000 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 90%, transparent);
+    padding-right: 8px;
+    scrollbar-width: none;
+  }
+  .budget__group-actions::-webkit-scrollbar,
+  .budget__row-actions::-webkit-scrollbar { display: none; }
 }
 .budget__group-header .group-toggle {
   min-width: 0;
