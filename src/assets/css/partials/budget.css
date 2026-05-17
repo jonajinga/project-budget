@@ -296,18 +296,26 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
+  /* flex-wrap: wrap so the action cluster drops to a new line
+     when there isn't enough room — name never gets clipped to 0
+     by competing siblings. */
+  flex-wrap: wrap;
   min-width: 0;
 }
 .budget__cat-name {
-  min-width: 0;
+  /* flex: 1 lets the name grow to fill available width AFTER the
+     fixed-width siblings (checkbox, handle, chevron, badges). The
+     4ch min-width is a floor: name will never shrink below ~4
+     characters; once that's the case the row-actions cluster wraps
+     to the next line via flex-wrap above. */
+  flex: 1 1 auto;
+  min-width: 4ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Mobile: let the name take its natural width (no ellipsis). The
-   action cluster wraps to its own row below via the .budget__row-
-   actions flex-basis: 100% rule. Long names wrap across two lines
-   if needed — better than truncating mid-word. */
+.budget__row-actions { flex: 0 0 auto; }
+/* Mobile: let the name take its natural width (no ellipsis). */
 @media (max-width: 599px) {
   .budget__cat-name {
     white-space: normal;
@@ -315,7 +323,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     text-overflow: clip;
     word-break: break-word;
   }
-  .budget__category-row { flex-wrap: wrap; }
 }
 /* Per-row inline edit actions (rename / delete) — hidden by default,
    fade in when the row is hovered or any child is focused so the
@@ -349,17 +356,18 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 @media (hover: none) {
   .budget__row-actions { opacity: 1; }
 }
-/* Keep the title + actions on one row at the group header — the
-   parent `.cluster` utility wraps by default, so the action
-   buttons would drop below the title on narrow viewports. The
-   toggle button is allowed to truncate via min-width: 0 +
-   text-overflow on its <strong>. On phones the actions cluster
-   becomes horizontally scrollable so all icons remain reachable
-   without the row growing taller. */
+/* Group header layout — title can grow, actions cluster wraps to
+   a new line when there isn't enough room. Same pattern as the
+   per-cat row so names are NEVER invisible. */
 .budget__group-header > .cluster {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
 }
+.budget__group-header .group-toggle {
+  flex: 1 1 auto;
+  min-width: 4ch;
+}
+.budget__group-actions { flex: 0 0 auto; }
 @media (max-width: 599px) {
   /* Action clusters wrap to their own row on mobile instead of
      stealing space from the category/group title. Names get their
@@ -398,11 +406,18 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 @media (min-width: 600px) {
   .budget__group-header .group-toggle {
-    white-space: nowrap;
+    /* Tablet+: allow ellipsis if the title is too long, but DO
+       NOT clip to invisible. text-overflow: ellipsis only kicks
+       in when overflow is hidden AND there's content overflowing —
+       safe because flex: 1 on the toggle keeps it growing first. */
+    text-overflow: ellipsis;
     overflow: hidden;
+    white-space: nowrap;
   }
   .budget__group-header .group-toggle strong {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 /* Same fade-in pattern for the group header's inline actions.
