@@ -1371,8 +1371,13 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   background-size: 14px 14px;
 }
 
-/* SortableJS-applied state classes. */
-.is-ghost {
+/* SortableJS-applied state classes. The heavy opacity dim only
+   applies while a drag is actively in progress (body.pb-dragging).
+   If Sortable's onEnd never fires (touch cancelled, scrolled away)
+   and the class is stranded, the row still renders at full opacity
+   so categories don't appear invisible until a hard refresh. */
+.is-ghost { opacity: 1; background: transparent !important; }
+body.pb-dragging .is-ghost {
   opacity: 0.35;
   background: var(--accent-soft) !important;
 }
@@ -1388,8 +1393,12 @@ body.pb-dragging, body.pb-dragging * { cursor: grabbing !important; }
 /* While a Sortable drag is active, lift the document-root overflow
    clip so the dragged ghost element can render outside the
    viewport without being cut off. Especially important on phones
-   where the user's finger naturally drags past viewport edges. */
-html:has(body.pb-dragging),
+   where the user's finger naturally drags past viewport edges.
+   Uses direct class selectors instead of :has() — :has() doesn't
+   re-evaluate fast enough during active touchmove events, which
+   caused the drag clone to stay clipped → freeze on touch. JS adds
+   the class to both <html> and <body> on onStart. */
+html.pb-dragging,
 body.pb-dragging { overflow: visible !important; }
 /* Bigger touch target on the drag handle when actual touch is
    detected — 22-28px is too small for a finger but right for

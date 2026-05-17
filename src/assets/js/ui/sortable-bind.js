@@ -91,9 +91,13 @@
       scroll: true,
       scrollSensitivity: 60,
       scrollSpeed: 12,
-      onStart: function () { document.body.classList.add("pb-dragging"); },
+      onStart: function () {
+        document.body.classList.add("pb-dragging");
+        document.documentElement.classList.add("pb-dragging");
+      },
       onEnd: function (evt) {
         document.body.classList.remove("pb-dragging");
+        document.documentElement.classList.remove("pb-dragging");
         var item = evt.item;
         if (!item) return;
         var itemId = item.getAttribute("data-sortable-id");
@@ -146,4 +150,21 @@
   } else {
     document.addEventListener("alpine:initialized", init);
   }
+
+  /* Safety net for aborted touch drags. SortableJS's onEnd doesn't
+     fire if the OS cancels the touch sequence (user scrolls away,
+     phone call interrupts, browser loses track). The .is-ghost class
+     stays stranded on the row, fading it to opacity 0.35 — looks like
+     "categories invisible on mobile" the next visit. Clearing on every
+     touchend/touchcancel is a no-op when drag completes normally
+     (Sortable already removed the class) and a rescue otherwise. */
+  function clearStrandedGhosts() {
+    document.querySelectorAll(".is-ghost").forEach(function (el) {
+      el.classList.remove("is-ghost");
+    });
+    document.body.classList.remove("pb-dragging");
+    document.documentElement.classList.remove("pb-dragging");
+  }
+  document.addEventListener("touchend", clearStrandedGhosts, { passive: true });
+  document.addEventListener("touchcancel", clearStrandedGhosts, { passive: true });
 })();
