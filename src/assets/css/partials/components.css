@@ -195,6 +195,30 @@
 .table tbody tr:hover { background: var(--bg-alt); }
 .table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
+/* Mobile fallback for any .table not already inside a scrolling
+   container (.report, .card) AND not the register table which
+   swaps to card view. display: block lets the table itself
+   scroll horizontally so its many columns don't force the whole
+   page to scroll. */
+@media (max-width: 599px) {
+  .app-page .table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    /* white-space: nowrap on cells stops payee/category names from
+       wrapping vertically and making the row 3-4 lines tall. */
+    white-space: nowrap;
+  }
+  /* Reset for tables that have their own treatment. */
+  .report .table,
+  .card .table {
+    display: table;
+    overflow-x: visible;
+    white-space: normal;
+  }
+}
+
 /* Any table inside a .card scrolls horizontally on narrow screens
    instead of forcing the whole page to overflow. The card wrap stays
    in place so the table doesn't escape its bounds. */

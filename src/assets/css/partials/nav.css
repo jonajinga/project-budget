@@ -620,6 +620,11 @@ button.search-result:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Hide the × on desktop — sidebar is sticky there, no drawer to
+   close. The button is mobile-only chrome. */
+@media (min-width: 1024px) {
+  .app-sidebar__close { display: none; }
+}
 @media (min-width: 1024px) {
   .app-sidebar {
     /* Desktop: sidebar is a grid child of .app-shell sized by the
