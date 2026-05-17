@@ -75,43 +75,40 @@ function themePicker() {
     open: false,
     activeId: "light",
     scheme: "light",
-    /* Reactive Alpine prop — methods on window.ProjectBudget aren't
-       observed by Alpine so the picker would render once with [] and
-       never refresh if main.js hadn't run yet. Setting themesList
-       through Alpine triggers a re-render. */
-    themesList: [],
+    /* Bumped on each pb:theme-change to force the list getters to
+       re-evaluate. Themes themselves are read LIVE from
+       window.ProjectBudget.themes on every render so the dropdown
+       never stays empty if main.js loads after the picker's init
+       (slow mobile / cold SW cache). */
+    _tick: 0,
 
     init() {
       var self = this;
       this._sync();
-      window.addEventListener("pb:theme-change", function () { self._sync(); });
-      /* Retry up to ~2s in case main.js executes after this factory's
-         init (e.g. when the partial is parsed before the deferred
-         main.js script runs). Without this the picker shows zero
-         themes and clicks do nothing. */
-      var tries = 0;
-      var poll = function () {
-        var PB = window.ProjectBudget;
-        if (PB && PB.themes && PB.themes.length) {
-          self.themesList = PB.themes;
-          self._sync();
-          return;
-        }
-        if (++tries < 40) setTimeout(poll, 50);
-      };
-      poll();
+      window.addEventListener("pb:theme-change", function () {
+        self._tick += 1;
+        self._sync();
+      });
     },
     _sync() {
       var PB = window.ProjectBudget;
       if (!PB || !PB.currentTheme) return;
       this.activeId = PB.currentTheme();
       var active = this.activeId;
-      var def = (PB.themes || this.themesList || []).find(function (t) { return t.id === active; });
+      var def = (PB.themes || []).find(function (t) { return t.id === active; });
       this.scheme = def ? def.scheme : "light";
     },
 
-    lightThemes() { return this.themesList.filter(function (t) { return t.scheme === "light"; }); },
-    darkThemes()  { return this.themesList.filter(function (t) { return t.scheme === "dark"; }); },
+    /* Read live from window.ProjectBudget — never cache. main.js sets
+       window.ProjectBudget.themes during its module init; if the
+       picker rendered before that completed, the next open just sees
+       the populated list. */
+    _allThemes() {
+      void this._tick;
+      return (window.ProjectBudget && window.ProjectBudget.themes) || [];
+    },
+    lightThemes() { return this._allThemes().filter(function (t) { return t.scheme === "light"; }); },
+    darkThemes()  { return this._allThemes().filter(function (t) { return t.scheme === "dark"; }); },
 
     quickToggle() {
       if (window.ProjectBudget && window.ProjectBudget.toggleTheme) window.ProjectBudget.toggleTheme();

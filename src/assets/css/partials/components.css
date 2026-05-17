@@ -317,6 +317,10 @@
    is hidden visually but wheel / touch scrolling still works on
    smaller viewports. */
 .theme-picker__menu {
+  /* Default-hidden in CSS so the menu never flashes visible while
+     Alpine boots / re-binds during a navigation. Alpine's x-show
+     and x-cloak still apply; this is the floor. */
+  display: none;
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -333,6 +337,12 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+/* Alpine x-show writes display:none/empty; once it flips display
+   away from none we want a flex column. The combinator below catches
+   the moment Alpine sets display via inline style. */
+.theme-picker__menu[style*="display:"] { display: block; }
+.theme-picker__menu[style*="display: none"],
+.theme-picker__menu[style*="display:none"] { display: none; }
 .theme-picker__menu::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .theme-picker__group-label {
   font-size: 0.65rem;
