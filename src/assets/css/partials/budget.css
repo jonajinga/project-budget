@@ -49,21 +49,53 @@
 .budget__group-header,
 .budget__row {
   display: grid;
-  /* Mobile-first: 360px is the smallest target. Two-column at <480px
-     (Category | Available only) — Assigned input + Outflow hide via
-     .budget__activity / .budget__assigned media rules below. Pills
-     get a smaller min-width on mobile too so they fit a 360px row. */
-  grid-template-columns: minmax(0, 1fr) 5rem;
-  gap: var(--space-2xs);
+  /* Mobile-first: 360px is the smallest target. Use a 2-row grid
+     with the category cell spanning the top row and Assigned /
+     Outflow / Available pills sharing the bottom row equally.
+     This keeps every number visible on phones — hiding Assigned
+     or Outflow makes the budget unusable. The grid promotes to
+     horizontal columns at 600px+ via the @media rule. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "cat cat cat"
+    "assigned outflow available";
+  row-gap: var(--space-2xs);
+  column-gap: var(--space-2xs);
   align-items: center;
   padding: 0.55rem var(--space-sm);
   font-size: var(--fs-sm);
 }
-@media (min-width: 480px) {
-  .budget__group-header,
-  .budget__row {
-    grid-template-columns: minmax(0, 1fr) 5.5rem 5.5rem;
-  }
+.budget__category { grid-area: cat; }
+.budget__assigned { grid-area: assigned; }
+.budget__activity { grid-area: outflow; }
+.budget__available { grid-area: available; }
+/* The 3 totals spans inside the group header pick up the same
+   areas via nth-child since they don't have semantic classes. */
+.budget__group-header > :nth-child(1) { grid-area: cat; }
+.budget__group-header > :nth-child(2) { grid-area: assigned; }
+.budget__group-header > :nth-child(3) { grid-area: outflow; }
+.budget__group-header > :nth-child(4) { grid-area: available; }
+/* Tiny mobile-only labels above each pill so users know which
+   number is which without the column header above. Hidden on
+   desktop (the column header bar does the job there). */
+.budget__assigned::before,
+.budget__activity::before,
+.budget__available::before {
+  content: attr(data-label);
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  margin-bottom: 2px;
+  text-align: right;
+  padding-right: 0.65rem;
+}
+@media (min-width: 600px) {
+  .budget__assigned::before,
+  .budget__activity::before,
+  .budget__available::before { display: none; }
 }
 .budget__row { border-top: 1px solid var(--border-soft); }
 
@@ -215,33 +247,22 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   display: none !important;
 }
 
-/* Hide Assigned input + group total on phones — Available is the
-   most-scanned column. Users can tap the row to open the editor on
-   mobile (per-row disclosure pattern). */
-.budget__assigned { display: none; }
-.budget__activity { display: none; }
-.budget__group-header > :nth-child(2),
-.budget__group-header > :nth-child(3) { display: none; }
-@media (min-width: 480px) {
-  .budget__assigned { display: block; }
-  .budget__group-header > :nth-child(2) { display: block; }
-}
-@media (min-width: 600px) {
-  .budget__group-header > :nth-child(3) { display: block; }
-}
+/* All three numeric cells stay visible on mobile via the
+   grid-template-areas row at the top of this file. Outflow's old
+   display: none has been replaced by the grid layout. */
+.budget__activity { display: block; }
 
 @media (min-width: 600px) {
   .budget__group-header,
   .budget__row {
     /* Number columns sized so a five-figure signed pill ("-$25,662.50")
-       plus the pill chrome fits without overflowing the grid cell.
-       Earlier 6.5rem was tight for negative four-figure amounts and
-       any five-figure values clipped/spilled into the next column. */
+       plus the pill chrome fits without overflowing the grid cell. */
     grid-template-columns: minmax(0, 1fr) 9rem 9rem 9rem;
-    gap: var(--space-sm);
+    grid-template-areas: "cat assigned outflow available";
+    column-gap: var(--space-sm);
+    row-gap: 0;
   }
-  .budget__activity { display: block; text-align: right; font-variant-numeric: tabular-nums; }
-  .budget__group-header > :nth-child(3) { display: block; }
+  .budget__activity { text-align: right; font-variant-numeric: tabular-nums; }
 }
 @media (min-width: 1180px) {
   .budget__group-header,
@@ -388,6 +409,24 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   background: var(--bg-elevated);
   border-color: var(--accent);
   padding: 0.3rem 0.65rem;
+}
+/* On phones the input lives in the 3-pill bottom row next to the
+   Outflow + Available pills, so give it matching pill chrome so
+   the row reads as three equal entries. */
+@media (max-width: 599px) {
+  .budget__assigned input {
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    background: var(--bg);
+    /* font-size left to inherit (or to the global iOS 16px floor on
+       touch devices — prevents the focus-zoom). */
+    min-height: 0;
+    text-align: right;
+  }
+  .budget__assigned input:focus {
+    padding: 0.15rem 0.55rem;
+  }
 }
 .budget__activity, .budget__available {
   text-align: right;

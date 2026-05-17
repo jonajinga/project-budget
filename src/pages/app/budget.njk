@@ -320,7 +320,7 @@ eleventyExcludeFromCollections: true
                             x-text="goalPercent(c.id) >= 100 ? '✓ 100%' : (goalPercent(c.id) + '%')"></span>
                     </div>
                   </div>
-                  <div class="budget__assigned">
+                  <div class="budget__assigned" data-label="Assigned">
                     <input type="text" inputmode="decimal"
                            data-touch="compact"
                            :aria-label="'Assigned for ' + c.name"
@@ -329,14 +329,14 @@ eleventyExcludeFromCollections: true
                            @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
                            @keydown.enter="$event.target.blur()">
                   </div>
-                  <div class="budget__activity">
+                  <div class="budget__activity" data-label="Outflow">
                     <button type="button" class="budget__activity-btn"
                             :disabled="$store.budget.activityFor(c.id) === 0"
                             @click="openActivity({ kind: 'category', id: c.id, name: c.name })"
                             :data-tip="$store.budget.activityFor(c.id) === 0 ? '' : ('Click to see every transaction in ' + c.name + ' this month.')"
                             x-text="formatCents($store.budget.activityFor(c.id))"></button>
                   </div>
-                  <div class="budget__available">
+                  <div class="budget__available" data-label="Available">
                     <button type="button"
                             class="available-pill available-pill--btn"
                             :class="availablePillClass(c.id)"
