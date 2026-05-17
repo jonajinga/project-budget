@@ -607,6 +607,15 @@
 
 /* Hero */
 .hero { padding-block: var(--space-3xl); }
+/* Smaller vertical chrome on phones so the CTA buttons land above
+   the fold on 360x640. The clamp() title + responsive lead already
+   handle horizontal sizing. */
+@media (max-width: 599px) {
+  .hero { padding-block: var(--space-lg); }
+  .hero__title { font-size: clamp(1.5rem, 7vw, 2rem); max-width: 18ch; }
+  .hero__lead { margin-top: var(--space-sm); font-size: var(--fs-sm); }
+  .hero__actions { margin-top: var(--space-md); }
+}
 .hero__eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.08em;

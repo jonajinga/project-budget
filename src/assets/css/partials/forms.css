@@ -74,6 +74,13 @@
     grid-template-columns: 1fr !important;
     display: grid !important;
   }
+  /* Several modals carry inline style="max-width: 680px" / 760px
+     for desktop. Inline styles beat the .modal rule's clamp so
+     they'd overflow phones. !important is the only way to win
+     specificity against inline. */
+  .modal[style*="max-width"] {
+    max-width: calc(100vw - 16px) !important;
+  }
 }
 @media (min-width: 600px) {
   .modal {
