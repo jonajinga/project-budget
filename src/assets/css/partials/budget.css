@@ -11,6 +11,21 @@
   padding: var(--space-sm);
   border-bottom: 1px solid var(--border-soft);
 }
+/* Phone: tighter gap, and the right-side cluster (Total + collapse
+   toggle) drops to its own row so the primary action cluster on
+   the left has room to breathe. */
+@media (max-width: 599px) {
+  .budget__toolbar { gap: var(--space-2xs); padding: var(--space-2xs); }
+  .budget__toolbar > .cluster {
+    flex-basis: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .budget__toolbar > .cluster::-webkit-scrollbar { display: none; }
+  .budget__toolbar > .cluster .btn { flex-shrink: 0; }
+}
 .budget__month {
   display: flex;
   align-items: center;
