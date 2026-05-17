@@ -109,6 +109,40 @@
       onStart: function () {
         document.body.classList.add("pb-dragging");
         document.documentElement.classList.add("pb-dragging");
+        /* SortableJS appends the fallback clone synchronously during
+           dragstart, but the class isn't necessarily set yet — defer
+           neutralisation to the next frame. Strip every attribute
+           that Alpine, Tippy, or our own MutationObserver would key
+           on, and slap `inert` so the browser ignores pointer/
+           keyboard interaction inside the clone. Belt-and-braces
+           against the freeze cascade: the clone now CANNOT be
+           re-bound, re-tipped, or re-observed. */
+        requestAnimationFrame(function () {
+          var clones = document.querySelectorAll(".sortable-fallback, .sortable-drag");
+          clones.forEach(function (clone) {
+            clone.setAttribute("data-pb-clone", "1");
+            try { clone.setAttribute("inert", ""); } catch (_e) {}
+            clone.style.pointerEvents = "none";
+            /* Walk descendants and strip any attribute that would
+               cause a framework / observer to re-process them. */
+            var walker = document.createTreeWalker(clone, NodeFilter.SHOW_ELEMENT);
+            var node = walker.currentNode;
+            while (node) {
+              if (node.nodeType === 1) {
+                node.removeAttribute("data-sortable-list");
+                node.removeAttribute("data-sortable-kind");
+                node.removeAttribute("data-sortable-id");
+                node.removeAttribute("data-tip");
+                node.removeAttribute("data-tippy-bound");
+                if (node._tippy) { try { node._tippy.destroy(); } catch (_e) {} }
+                /* Alpine ignores anything inside x-ignore. The clone's
+                   root suffices since x-ignore is hereditary. */
+              }
+              node = walker.nextNode();
+            }
+            clone.setAttribute("x-ignore", "");
+          });
+        });
       },
       onEnd: function (evt) {
         document.body.classList.remove("pb-dragging");

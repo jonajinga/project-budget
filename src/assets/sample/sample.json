@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "exportedAt": "2026-05-17T00:00:00.000Z",
+  "exportedAt": "2026-05-17T18:39:28.104Z",
   "profile": {
     "id": "d88e8baa-9b60-41f9-9c6a-ef64d3d76054",
     "name": "The Brennan-Park household",
@@ -21528,7 +21528,292 @@
     },
     "snapshots": [],
     "savedViews": [],
-    "rules": [],
+    "rules": {
+      "categorize": [
+        {
+          "id": "r-0af2wcya-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "whole foods",
+          "categoryId": "2e8c6f15-a8ad-46af-b585-fdf473f1b9bd"
+        },
+        {
+          "id": "r-dryllw0n-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "trader joe",
+          "categoryId": "2e8c6f15-a8ad-46af-b585-fdf473f1b9bd"
+        },
+        {
+          "id": "r-fx1ynxis-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "costco",
+          "categoryId": "2e8c6f15-a8ad-46af-b585-fdf473f1b9bd"
+        },
+        {
+          "id": "r-a3tnvoc0-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "starbucks",
+          "categoryId": "a697ef18-1b45-4e5f-b5b6-5be72c8b62f2"
+        },
+        {
+          "id": "r-qi8xrd0z-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "blue bottle",
+          "categoryId": "a697ef18-1b45-4e5f-b5b6-5be72c8b62f2"
+        },
+        {
+          "id": "r-1pv3mdop-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "netflix",
+          "categoryId": "0dde921a-9ae5-40e1-bedd-9b3c5fd1131c"
+        },
+        {
+          "id": "r-1phv8kl1-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "spotify",
+          "categoryId": "0dde921a-9ae5-40e1-bedd-9b3c5fd1131c"
+        },
+        {
+          "id": "r-veq5l80o-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "hulu",
+          "categoryId": "0dde921a-9ae5-40e1-bedd-9b3c5fd1131c"
+        },
+        {
+          "id": "r-irjj4kil-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "disney",
+          "categoryId": "0dde921a-9ae5-40e1-bedd-9b3c5fd1131c"
+        },
+        {
+          "id": "r-ou1f0xti-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "verizon",
+          "categoryId": "f8706bd0-b4cc-429a-b679-de355622d705"
+        },
+        {
+          "id": "r-sxe3843g-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "t-mobile",
+          "categoryId": "f8706bd0-b4cc-429a-b679-de355622d705"
+        },
+        {
+          "id": "r-g1mscrbx-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "conedison",
+          "categoryId": "f8706bd0-b4cc-429a-b679-de355622d705"
+        },
+        {
+          "id": "r-baf8o1px-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "con edison",
+          "categoryId": "f8706bd0-b4cc-429a-b679-de355622d705"
+        },
+        {
+          "id": "r-4k6367ef-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "shell",
+          "categoryId": "4119ee29-cdc7-46bd-99d3-071a03a3b0fe"
+        },
+        {
+          "id": "r-rjobathc-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "chevron",
+          "categoryId": "4119ee29-cdc7-46bd-99d3-071a03a3b0fe"
+        },
+        {
+          "id": "r-0cv76lmg-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "geico",
+          "categoryId": "c62405aa-9516-40a7-bef9-0ad0286f24c8"
+        },
+        {
+          "id": "r-5xdvamhb-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "state farm",
+          "categoryId": "c62405aa-9516-40a7-bef9-0ad0286f24c8"
+        },
+        {
+          "id": "r-c7c9p1lz-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "cvs",
+          "categoryId": "2f716bfb-ef08-47b4-9e66-79186c178e24"
+        },
+        {
+          "id": "r-va8f6azp-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "walgreens",
+          "categoryId": "2f716bfb-ef08-47b4-9e66-79186c178e24"
+        },
+        {
+          "id": "r-lxwrnewk-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "amazon",
+          "categoryId": "716d23d9-be2f-4343-9370-da066f3bd8a3"
+        },
+        {
+          "id": "r-qjp0rk6e-d9wo",
+          "enabled": true,
+          "matchType": "starts-with",
+          "pattern": "uber eats",
+          "categoryId": "06d47fa0-474d-4cd1-87d3-8baf3b4ad935"
+        },
+        {
+          "id": "r-luhayu51-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "doordash",
+          "categoryId": "06d47fa0-474d-4cd1-87d3-8baf3b4ad935"
+        },
+        {
+          "id": "r-qmmn6c9v-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "chase mortgage",
+          "categoryId": "ece464aa-a89e-4a43-966d-d54e79279ddf"
+        },
+        {
+          "id": "r-u1se2kpw-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "church",
+          "categoryId": "c29b2b20-4dce-4483-9b37-c25062010f11"
+        },
+        {
+          "id": "r-ihf21lzg-d9wo",
+          "enabled": true,
+          "matchType": "contains",
+          "pattern": "piano",
+          "categoryId": "716d23d9-be2f-4343-9370-da066f3bd8a3"
+        }
+      ],
+      "normalizePayee": [
+        {
+          "id": "r-7sy95frz-d9wo",
+          "enabled": true,
+          "matchType": "starts-with",
+          "pattern": "SQ *",
+          "replacement": ""
+        },
+        {
+          "id": "r-ithljkjx-d9wo",
+          "enabled": true,
+          "matchType": "starts-with",
+          "pattern": "SQ*",
+          "replacement": ""
+        },
+        {
+          "id": "r-si41zpet-d9wo",
+          "enabled": true,
+          "matchType": "starts-with",
+          "pattern": "TST*",
+          "replacement": ""
+        },
+        {
+          "id": "r-7b9rxejs-d9wo",
+          "enabled": true,
+          "matchType": "starts-with",
+          "pattern": "TST *",
+          "replacement": ""
+        },
+        {
+          "id": "r-7ctg90xh-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "^AMZN MKTP US.*",
+          "replacement": "Amazon"
+        },
+        {
+          "id": "r-odod261s-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "^AMAZON.COM.*",
+          "replacement": "Amazon"
+        },
+        {
+          "id": "r-2zcyfuwp-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "WHOLEFDS.*",
+          "replacement": "Whole Foods"
+        },
+        {
+          "id": "r-1b4htli3-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "TRADER JOE.*",
+          "replacement": "Trader Joe's"
+        },
+        {
+          "id": "r-ontywr94-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "^COSTCO WHSE.*",
+          "replacement": "Costco"
+        },
+        {
+          "id": "r-wqvnv2rd-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "^STARBUCKS #d+",
+          "replacement": "Starbucks"
+        },
+        {
+          "id": "r-gldtngrf-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "NETFLIX.COM",
+          "replacement": "Netflix"
+        },
+        {
+          "id": "r-9uc03z3e-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "SPOTIFY.*",
+          "replacement": "Spotify"
+        },
+        {
+          "id": "r-0vctvk0a-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "SHELL OIL.*",
+          "replacement": "Shell"
+        },
+        {
+          "id": "r-4rnbkumu-d9wo",
+          "enabled": true,
+          "matchType": "regex",
+          "pattern": "CHEVRON d+",
+          "replacement": "Chevron"
+        },
+        {
+          "id": "r-nyyqxj49-d9wo",
+          "enabled": true,
+          "matchType": "starts-with",
+          "pattern": "POS DEBIT ",
+          "replacement": ""
+        }
+      ]
+    },
     "budgetTemplates": {}
   }
 }
