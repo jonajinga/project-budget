@@ -78,6 +78,8 @@ eleventyExcludeFromCollections: true
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('income-vs-expense')"
               data-tip="Download the visible rows as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -201,6 +203,24 @@ function incomeExpenseView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Income vs expense",
+        subtitle: "Trailing " + this.rangeMonths + " months",
+        filename: "income-vs-expense",
+        kpis: [
+          { label: "Avg monthly income",  value: this.fmt(k.avgIncome) },
+          { label: "Avg monthly expense", value: this.fmt(k.avgExpense) },
+          { label: "Avg monthly net",     value: this.fmt(k.netAvg), delta: k.savingsRate === null ? "" : ("Savings rate " + (k.savingsRate * 100).toFixed(1) + "%") },
+          { label: "Best / worst",        value: k.bestMonth ? (k.bestMonth + " / " + (k.worstMonth || "—")) : "—" },
+        ],
+        chartEl: document.getElementById("chart-ie"),
+        columns: this._keys,
+        rows: this.rows,
+      });
+    },
     exportCSV(name) {
       var self = this;
       var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");

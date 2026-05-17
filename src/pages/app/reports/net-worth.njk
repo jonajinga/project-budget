@@ -75,6 +75,8 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('net-worth')"
               data-tip="Download the visible rows as a CSV file.">Export CSV</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
@@ -182,6 +184,24 @@ function netWorthView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Net worth over time",
+        subtitle: "Trailing " + this.rangeMonths + " months",
+        filename: "net-worth",
+        kpis: [
+          { label: "Current net worth", value: this.fmt(k.current) },
+          { label: "Month over month",  value: (k.mom >= 0 ? "+" : "") + this.fmt(k.mom), delta: k.momPct === null ? "" : ((k.momPct >= 0 ? "+" : "") + k.momPct.toFixed(1) + "%") },
+          { label: "Window growth",     value: (k.rangeGrowth >= 0 ? "+" : "") + this.fmt(k.rangeGrowth), delta: k.rangeGrowthPct === null ? "" : ((k.rangeGrowthPct >= 0 ? "+" : "") + k.rangeGrowthPct.toFixed(1) + "%") },
+          { label: "Avg monthly trend", value: (k.avgMonthly >= 0 ? "+" : "") + this.fmt(k.avgMonthly), delta: k.forecastNext === null ? "" : ("Next: " + this.fmt(k.forecastNext)) },
+        ],
+        chartEl: document.getElementById("chart-nw"),
+        columns: this._keys,
+        rows: this.rows,
+      });
+    },
     exportCSV(name) {
       var self = this;
       var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");

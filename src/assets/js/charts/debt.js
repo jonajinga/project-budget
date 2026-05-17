@@ -52,6 +52,17 @@ export function render(el, rows) {
               },
             },
           },
+          datalabels: {
+            display: "auto",
+            color: "#fff",
+            font: { weight: "700", size: 11 },
+            formatter: function (v, ctx) {
+              var total = ctx.chart.data.datasets[0].data.reduce(function (s, x) { return s + (x || 0); }, 0);
+              if (!total) return "";
+              var pct = (v / total) * 100;
+              return pct < 5 ? "" : pct.toFixed(0) + "%";
+            },
+          },
         },
       },
     });
@@ -96,6 +107,23 @@ export function render(el, rows) {
               else lines.push("No recent payments");
               return lines;
             },
+          },
+        },
+        /* Datalabels: balance + months-to-payoff at the right of
+           each horizontal bar so the user can read the figures
+           without hover. */
+        datalabels: {
+          display: "auto",
+          anchor: "end",
+          align: "end",
+          color: c["fg"],
+          font: { weight: "600", size: 11 },
+          clamp: true,
+          formatter: function (v, ctx) {
+            var r = sorted[ctx.dataIndex];
+            var label = fmtCents(v);
+            if (r && r.monthsToPayoff) label += "  ·  " + r.monthsToPayoff + " mo";
+            return label;
           },
         },
       },

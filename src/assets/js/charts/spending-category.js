@@ -131,6 +131,28 @@ function renderChartJs(el, data, type) {
             },
           },
         },
+        /* Datalabels: show the formatted dollar amount on bars and a
+           percentage inside donut slices. Skipped automatically on
+           cells too small to fit a label (display "auto" anchors). */
+        datalabels: isBar ? {
+          display: "auto",
+          anchor: "end",
+          align: "end",
+          formatter: function (v) { return fmtCents(v); },
+          color: c["fg"],
+          font: { weight: "600", size: 11 },
+          clamp: true,
+        } : {
+          display: "auto",
+          color: "#fff",
+          font: { weight: "700", size: 11 },
+          formatter: function (v, ctx) {
+            var total = ctx.chart.data.datasets[0].data.reduce(function (s, x) { return s + (x || 0); }, 0);
+            if (!total) return "";
+            var pct = (v / total) * 100;
+            return pct < 4 ? "" : pct.toFixed(0) + "%";
+          },
+        },
       },
       scales: isBar ? {
         x: {

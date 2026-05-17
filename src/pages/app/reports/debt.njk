@@ -41,6 +41,8 @@ eleventyExcludeFromCollections: true
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
               data-tip="Download the debt overview as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -155,6 +157,38 @@ function debtView() {
           { key: "monthsToPayoff", label: "Months to payoff",   format: function (v) { return v ? String(v) : "No recent payments"; } },
         ]);
       }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var rows = this.rows || [];
+      var totalBalance = rows.reduce(function (s, r) { return s + (r.balance || 0); }, 0);
+      var totalPayment = rows.reduce(function (s, r) { return s + (r.avgPayment || 0); }, 0);
+      var soonest = rows.reduce(function (best, r) {
+        if (!r.monthsToPayoff) return best;
+        if (!best || r.monthsToPayoff < best.monthsToPayoff) return r;
+        return best;
+      }, null);
+      var fmt = function (c) { return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); };
+      window.pbExportReportPDF({
+        title: "Debt overview",
+        subtitle: "All credit + tracking-liability accounts",
+        filename: "debt-overview",
+        kpis: [
+          { label: "Total balance",   value: fmt(totalBalance) },
+          { label: "Total payments (3 mo avg)", value: fmt(totalPayment) },
+          { label: "Accounts tracked", value: String(rows.length) },
+          { label: "Next paid off",   value: soonest ? soonest.account : "—", delta: soonest ? (soonest.monthsToPayoff + " months") : "" },
+        ],
+        chartEl: document.getElementById("chart-debt"),
+        columns: [
+          { key: "account",        label: "Account" },
+          { key: "type",           label: "Type",         format: function (v) { return v === "credit" ? "Credit card" : "Tracking liability"; } },
+          { key: "balance",        label: "Balance",      numeric: true },
+          { key: "avgPayment",     label: "Avg payment",  numeric: true },
+          { key: "monthsToPayoff", label: "Payoff (mo)",  format: function (v) { return v ? String(v) : "—"; } },
+        ],
+        rows: rows,
+      });
     },
 
     init() {

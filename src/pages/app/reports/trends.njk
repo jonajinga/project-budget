@@ -101,6 +101,8 @@ eleventyExcludeFromCollections: true
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
               data-tip="Download the per-category, per-month spending grid as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -209,6 +211,29 @@ function trendsView() {
           { key: "value",    label: "Spent",    numeric: true },
         ]);
       }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Monthly trends",
+        subtitle: "Top " + this.topN + " categories · trailing " + this.rangeMonths + " months",
+        filename: "monthly-trends",
+        kpis: [
+          { label: "Categories tracked", value: String(this.rows.length) },
+          { label: "Total across window", value: this.fmt(k.total) },
+          { label: "Avg monthly",        value: this.fmt(k.avgPerMonth) },
+          { label: "Biggest category",   value: k.topName || "—", delta: k.topName ? (this.fmt(k.topTotal) + " total") : "" },
+        ],
+        chartEl: document.getElementById("chart-trends"),
+        columns: [
+          { key: "group",    label: "Group" },
+          { key: "category", label: "Category" },
+          { key: "month",    label: "Month" },
+          { key: "value",    label: "Spent",    numeric: true },
+        ],
+        rows: this.flatRows(),
+      });
     },
   };
 }

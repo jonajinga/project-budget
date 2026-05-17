@@ -55,6 +55,8 @@ eleventyExcludeFromCollections: true
         <span x-text="visibleCount"></span> rows
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('budget-vs-actual')">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
     </div>
 
@@ -157,6 +159,24 @@ function budgetVsActualView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Budget vs actual",
+        subtitle: this.month,
+        filename: "budget-vs-actual",
+        kpis: [
+          { label: "Assigned",   value: this.fmt(k.assigned) },
+          { label: "Spent",      value: this.fmt(k.spent), delta: k.pctUsed.toFixed(1) + "% of assigned" },
+          { label: "Remaining",  value: this.fmt(k.remaining) },
+          { label: "Over budget", value: (k.over + " / " + k.total), delta: k.unbudgeted > 0 ? (k.unbudgeted + " unbudgeted with spend") : "No unbudgeted spend" },
+        ],
+        chartEl: null,
+        columns: this._keys,
+        rows: this.rows,
+      });
+    },
     exportCSV(name) {
       var self = this;
       var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");

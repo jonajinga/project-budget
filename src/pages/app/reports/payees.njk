@@ -67,6 +67,8 @@ eleventyExcludeFromCollections: true
         <span x-text="visibleCount"></span> rows
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('payee-leaderboard')">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
     </div>
 
@@ -162,6 +164,24 @@ function payeeLeaderboardView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Payee leaderboard",
+        subtitle: this.from + " through " + this.to,
+        filename: "payee-leaderboard",
+        kpis: [
+          { label: "Total spent (top payees)", value: this.fmt(k.total), delta: k.count + " payees · " + k.txns + " txns" },
+          { label: "Top payee",                value: k.topName || "—", delta: k.topShare === null ? "" : (k.topShare.toFixed(1) + "% of top spend") },
+          { label: "Average per transaction",  value: this.fmt(k.avgTxn) },
+          { label: "Top 5 concentration",      value: k.top5Share === null ? "—" : (k.top5Share.toFixed(0) + "%") },
+        ],
+        chartEl: null,
+        columns: this._keys,
+        rows: this.rows,
+      });
+    },
     exportCSV(name) {
       var self = this;
       var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");

@@ -69,6 +69,8 @@ eleventyExcludeFromCollections: true
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
               data-tip="Download the projected balances per month as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -203,6 +205,24 @@ function projectionView() {
           { key: "high",     label: "High",     numeric: true },
         ]);
       }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Cashflow projection",
+        subtitle: "Next " + this.horizon + " months",
+        filename: "cashflow-projection",
+        kpis: [
+          { label: "Projected end balance", value: this.fmt(k.endExpected), delta: "In " + this.horizon + " months" },
+          { label: "Starting balance",      value: this.fmt(k.startBalance) },
+          { label: "Net change",            value: this.fmt(k.netChange) },
+          { label: "Lowest projected",      value: this.fmt(k.lowestLow), delta: k.lowestMonth || "" },
+        ],
+        chartEl: document.getElementById("chart-proj"),
+        columns: this._keys,
+        rows: this.rows,
+      });
     },
 
     init() {

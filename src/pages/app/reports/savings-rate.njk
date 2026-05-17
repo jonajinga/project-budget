@@ -75,6 +75,8 @@ eleventyExcludeFromCollections: true
         <span x-text="visibleCount"></span> rows
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('savings-rate')">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
     </div>
 
@@ -188,6 +190,24 @@ function savingsRateView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Savings rate",
+        subtitle: "Trailing " + this.rangeMonths + " months",
+        filename: "savings-rate",
+        kpis: [
+          { label: "Trailing savings rate", value: k.rate === null ? "—" : ((k.rate * 100).toFixed(1) + "%") },
+          { label: "Total savings",         value: this.fmt(k.totalSavings), delta: "Avg " + this.fmt(k.avgSavings) + " / mo" },
+          { label: "Best month",            value: k.bestMonth ? (k.bestMonth + " · " + (k.bestRate * 100).toFixed(0) + "%") : "—" },
+          { label: "Negative months",       value: (k.negCount + " / " + k.totalCount) },
+        ],
+        chartEl: document.getElementById("chart-sr"),
+        columns: this._keys,
+        rows: this.rows,
+      });
+    },
     exportCSV(name) {
       var self = this;
       var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");

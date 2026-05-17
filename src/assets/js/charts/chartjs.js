@@ -33,6 +33,17 @@ export function applyChartDefaults() {
   if (!window.Chart) return;
   var c = colors();
   var Chart = window.Chart;
+  /* Register the datalabels plugin if vendored on this page. Default
+     to display:false so existing charts opt in explicitly via their
+     options.plugins.datalabels block — no surprise labels on every
+     bar of every chart. */
+  if (window.ChartDataLabels && !Chart._pbDataLabelsRegistered) {
+    Chart.register(window.ChartDataLabels);
+    Chart._pbDataLabelsRegistered = true;
+  }
+  if (Chart.defaults.plugins && Chart.defaults.plugins.datalabels) {
+    Chart.defaults.plugins.datalabels.display = false;
+  }
   Chart.defaults.font.family = getComputedStyle(document.documentElement)
     .getPropertyValue("--font-ui").trim() || "system-ui, sans-serif";
   Chart.defaults.color = c["fg-muted"];

@@ -73,6 +73,8 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('spending-by-category')"
               data-tip="Download the visible rows as a CSV file.">Export CSV</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
@@ -194,6 +196,24 @@ function spendingView() {
       return this.sortDir === "asc" ? "▲" : "▼";
     },
     print() { window.print(); },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Spending by category",
+        subtitle: this.from + " through " + this.to,
+        filename: "spending-by-category",
+        kpis: [
+          { label: "Total spent",        value: this.fmt(k.total), delta: k.months + " month" + (k.months === 1 ? "" : "s") },
+          { label: "Monthly average",    value: this.fmt(k.monthlyAvg) },
+          { label: "Top category",       value: k.topName || "—", delta: k.topShare === null ? "" : (k.topShare.toFixed(1) + "% of total") },
+          { label: "Categories",         value: String(k.count) },
+        ],
+        chartEl: document.getElementById("chart-spending"),
+        columns: this._keys,
+        rows: this.rows,
+      });
+    },
     exportCSV(name) {
       var self = this;
       var header = this._keys.map(function (k) { return JSON.stringify(k.label); }).join(",");

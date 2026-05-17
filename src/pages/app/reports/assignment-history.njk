@@ -108,6 +108,8 @@ eleventyExcludeFromCollections: true
       </p>
       <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
               data-tip="Download the per-category, per-month assigned vs spent grid as a CSV file.">Export CSV</button>
+      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
+              data-tip="Download a printable PDF of this report.">Export PDF</button>
       <button class="btn btn--ghost btn--sm" type="button" @click="print()"
               data-tip="Open the browser print dialog.">Print</button>
     </div>
@@ -206,6 +208,31 @@ function assignmentHistoryView() {
           { key: "delta",    label: "Delta",    numeric: true },
         ]);
       }
+    },
+    exportPDF() {
+      if (!window.pbExportReportPDF) return;
+      var k = this.kpis();
+      window.pbExportReportPDF({
+        title: "Assignment history",
+        subtitle: "Top " + this.topN + " categories · trailing " + this.rangeMonths + " months",
+        filename: "assignment-history",
+        kpis: [
+          { label: "Categories tracked",  value: String(this.rows.length) },
+          { label: "Total assigned",      value: this.fmt(k.totalAssigned) },
+          { label: "Total spent",         value: this.fmt(k.totalSpent), delta: k.underFunded + " under-funded months" },
+          { label: "Net delta",           value: this.fmt(k.netDelta) },
+        ],
+        chartEl: document.getElementById("chart-ah"),
+        columns: [
+          { key: "group",    label: "Group" },
+          { key: "category", label: "Category" },
+          { key: "month",    label: "Month" },
+          { key: "assigned", label: "Assigned", numeric: true },
+          { key: "spent",    label: "Spent",    numeric: true },
+          { key: "delta",    label: "Delta",    numeric: true },
+        ],
+        rows: this.flatRows(),
+      });
     },
   };
 }
