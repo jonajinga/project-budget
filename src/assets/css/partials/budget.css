@@ -188,7 +188,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
        plus the pill chrome fits without overflowing the grid cell.
        Earlier 6.5rem was tight for negative four-figure amounts and
        any five-figure values clipped/spilled into the next column. */
-    grid-template-columns: minmax(0, 1fr) 8.5rem 8.5rem 8.5rem;
+    grid-template-columns: minmax(0, 1fr) 9rem 9rem 9rem;
     gap: var(--space-sm);
   }
   .budget__activity { display: block; text-align: right; font-variant-numeric: tabular-nums; }
@@ -198,7 +198,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget__group-header,
   .budget__row {
     /* Roomier columns on wide desktops where there's plenty of space. */
-    grid-template-columns: minmax(0, 1fr) 9.5rem 9.5rem 9.5rem;
+    grid-template-columns: minmax(0, 1fr) 10rem 10rem 10rem;
   }
 }
 .budget__category {
@@ -434,10 +434,16 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 .available-pill {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  /* Center the value inside the pill so $-sign + digits look
+     balanced — was flex-end which butted the trailing digit
+     against the right padding. */
+  justify-content: center;
   min-width: 6rem;
   max-width: 100%;
-  padding: 0.25rem 0.85rem;
+  /* Extra right padding so the trailing digit doesn't kiss the
+     pill border — especially noticeable on long signed values like
+     -$1,944.27 where the $ would otherwise touch the edge. */
+  padding: 0.25rem 1.1rem;
   border-radius: 999px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -563,10 +569,22 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   font-variant-numeric: tabular-nums;
 }
 /* Outflow button inside the total row keeps the same big numeric
-   treatment but stays inline (no background button chrome). */
+   treatment but stays inline (no pill chrome — the total row is a
+   summary, like group headers). */
 .budget__total-row .budget__activity-btn.budget__total-value {
+  display: inline;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
   font-weight: 700;
   font-size: var(--fs-xl);
+}
+.budget__total-row .budget__activity-btn.budget__total-value:not(:disabled):hover {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Right-edge alignment across every row type. Every number cell sits
@@ -612,10 +630,16 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      stretching across the entire grid column. */
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  /* Center the value inside the pill so $-sign + digits look
+     balanced — was flex-end which butted the trailing digit
+     against the right padding. */
+  justify-content: center;
   min-width: 6rem;
   max-width: 100%;
-  padding: 0.25rem 0.85rem;
+  /* Extra right padding so the trailing digit doesn't kiss the
+     pill border — especially noticeable on long signed values like
+     -$1,944.27 where the $ would otherwise touch the edge. */
+  padding: 0.25rem 1.1rem;
   background: transparent;
   border: 1px solid var(--border-soft);
   border-radius: 999px;
