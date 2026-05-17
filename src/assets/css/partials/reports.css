@@ -194,34 +194,107 @@
 /* Reports hub — recents strip, pinned, icons, tag pills.
    The hub tile gets a small icon at top, a pin button at the
    top-right corner, and an optional "New" tag at bottom. */
-.report-recents {
+.report-recents__head {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-2xs);
+}
+.report-recents__clear {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.report-recents__clear:hover {
+  color: var(--danger, #c0392b);
+  border-color: var(--danger, #c0392b);
+  background: var(--bg-alt);
+}
+.report-recents__clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.report-recents {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: var(--space-2xs);
-  margin-top: var(--space-2xs);
+}
+@media (min-width: 600px) {
+  .report-recents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .report-recents { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-sm); }
+}
+@media (min-width: 1280px) {
+  .report-recents { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 .report-recent {
-  display: inline-flex;
-  align-items: baseline;
+  display: flex;
+  align-items: center;
   gap: var(--space-2xs);
-  padding: 6px 10px;
+  padding: 10px 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
   color: var(--fg);
   text-decoration: none;
-  font-size: var(--fs-sm);
-  transition: border-color var(--t-fast), background var(--t-fast);
-  min-height: 36px;
+  min-height: 56px;
+  transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast);
 }
 .report-recent:hover {
   border-color: var(--accent);
+  border-left-color: var(--accent);
   background: var(--bg-alt);
+  transform: translateY(-1px);
 }
-.report-recent__title { font-weight: 600; }
+.report-recent:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.report-recent__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-soft);
+  color: var(--accent);
+}
+.report-recent__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.report-recent__title {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .report-recent__time {
   color: var(--fg-muted);
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 
 /* Hub tile (re-uses .report .report--link) is now a relative wrapper
