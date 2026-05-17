@@ -1,12 +1,24 @@
 /* Pure derivations over the active profile.
    All inputs are arrays; nothing here mutates. */
 
+/**
+ * All transactions belonging to an account.
+ * @param {Profile} profile
+ * @param {string} accountId
+ * @returns {Array<object>}
+ */
 export function transactionsFor(profile, accountId) {
   return profile.transactions.filter(function (t) { return t.accountId === accountId; });
 }
 
 /* Running balance = opening + sum of all transaction amounts. Amounts are
    signed cents (outflow negative, inflow positive). */
+/**
+ * Opening balance plus every transaction amount (signed cents).
+ * @param {Profile} profile
+ * @param {string} accountId
+ * @returns {number} balance in cents
+ */
 export function runningBalance(profile, accountId) {
   var acct = findAccount(profile, accountId);
   if (!acct) return 0;
@@ -18,6 +30,12 @@ export function runningBalance(profile, accountId) {
 }
 
 /* Cleared balance = opening + sum of cleared (or reconciled) transactions only. */
+/**
+ * Opening balance plus only cleared/reconciled transaction amounts.
+ * @param {Profile} profile
+ * @param {string} accountId
+ * @returns {number} balance in cents
+ */
 export function clearedBalance(profile, accountId) {
   var acct = findAccount(profile, accountId);
   if (!acct) return 0;
@@ -29,16 +47,33 @@ export function clearedBalance(profile, accountId) {
   return sum;
 }
 
+/**
+ * Looks up an account by id.
+ * @param {Profile} profile
+ * @param {string} accountId
+ * @returns {object|undefined}
+ */
 export function findAccount(profile, accountId) {
   return profile.accounts.find(function (a) { return a.id === accountId; });
 }
 
+/**
+ * Looks up an account group by id.
+ * @param {Profile} profile
+ * @param {string} groupId
+ * @returns {object|undefined}
+ */
 export function findAccountGroup(profile, groupId) {
   return profile.accountGroups.find(function (g) { return g.id === groupId; });
 }
 
 /* Accounts grouped by AccountGroup, with an "ungrouped" bucket for any
    account whose groupId is null or points at a missing group. */
+/**
+ * Open accounts bucketed by their AccountGroup (with an ungrouped trailer).
+ * @param {Profile} profile
+ * @returns {Array<{ group: object|null, accounts: Array<object> }>}
+ */
 export function accountsByGroup(profile) {
   var groups = profile.accountGroups
     .slice()
@@ -60,6 +95,12 @@ export function accountsByGroup(profile) {
 }
 
 /* Sum totals — used by sidebar and net-worth math. */
+/**
+ * Sums runningBalance of every account matching the predicate.
+ * @param {Profile} profile
+ * @param {(account: object) => boolean} predicate
+ * @returns {number} cents
+ */
 export function totalByPredicate(profile, predicate) {
   var sum = 0;
   profile.accounts.forEach(function (a) {
@@ -69,22 +110,42 @@ export function totalByPredicate(profile, predicate) {
   return sum;
 }
 
+/**
+ * Sum of balances across all open on-budget accounts.
+ * @param {Profile} profile
+ * @returns {number} cents
+ */
 export function onBudgetTotal(profile) {
   return totalByPredicate(profile, function (a) { return !a.closedAt && a.onBudget; });
 }
 
+/**
+ * Sum of tracking-asset balances (excluding net-worth-excluded accounts).
+ * @param {Profile} profile
+ * @returns {number} cents
+ */
 export function trackingAssetTotal(profile) {
   return totalByPredicate(profile, function (a) {
     return !a.closedAt && a.type === "tracking-asset" && !a.excludeFromNetWorth;
   });
 }
 
+/**
+ * Sum of tracking-liability balances (excluding net-worth-excluded accounts).
+ * @param {Profile} profile
+ * @returns {number} cents
+ */
 export function trackingLiabilityTotal(profile) {
   return totalByPredicate(profile, function (a) {
     return !a.closedAt && a.type === "tracking-liability" && !a.excludeFromNetWorth;
   });
 }
 
+/**
+ * Total net worth across all open, net-worth-eligible accounts.
+ * @param {Profile} profile
+ * @returns {number} cents
+ */
 export function netWorth(profile) {
   /* On-budget accounts already include credit cards (which carry a
      negative balance when in debt). Tracking liabilities are stored as

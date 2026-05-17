@@ -85,8 +85,59 @@
       });
   }
 
+  /* Data actions: search across the user's payees, categories, and
+     accounts. Each match navigates to the register pre-filtered by
+     that name (?q=<name>) or to the dedicated admin page when more
+     useful. Built lazily on every render so list mutations show up
+     immediately without an explicit refresh. */
+  function dataActions() {
+    var s = $store();
+    if (!s || !s.profile) return [];
+    var actions = [];
+
+    /* Payees */
+    var payees = s.profile.payees || [];
+    payees.forEach(function (p) {
+      if (!p || !p.name) return;
+      actions.push({
+        id: "data-payee-" + p.id,
+        label: "Payee: " + p.name,
+        hint: "Open the register filtered to this payee",
+        run: function () { go("/app/register/?q=" + encodeURIComponent(p.name)); },
+      });
+    });
+
+    /* Categories — skip payment cats (those are derived, not directly
+       budgetable). */
+    var cats = s.profile.categories || [];
+    cats.forEach(function (c) {
+      if (!c || !c.name) return;
+      if (s.isPaymentCategory && s.isPaymentCategory(c.id)) return;
+      actions.push({
+        id: "data-cat-" + c.id,
+        label: "Category: " + c.name,
+        hint: "Open the register filtered to this category",
+        run: function () { go("/app/register/?q=" + encodeURIComponent(c.name)); },
+      });
+    });
+
+    /* Accounts */
+    var accts = s.profile.accounts || [];
+    accts.forEach(function (a) {
+      if (!a || !a.name || a.closedAt) return;
+      actions.push({
+        id: "data-acct-" + a.id,
+        label: "Account: " + a.name,
+        hint: "Open this account's register",
+        run: function () { go("/app/register/?account=" + encodeURIComponent(a.id)); },
+      });
+    });
+
+    return actions;
+  }
+
   function allActions() {
-    return staticActions().concat(dynamicActions());
+    return staticActions().concat(dynamicActions()).concat(dataActions());
   }
 
   function go(url) {

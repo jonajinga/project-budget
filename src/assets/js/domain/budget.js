@@ -15,13 +15,28 @@
 
 import { paymentCardId, paymentMap } from "./categories.js";
 
+/**
+ * ISO YYYY-MM string for the given date (defaults to now).
+ * @param {Date} [d]
+ * @returns {string} YYYY-MM
+ */
 export function thisMonth(d) {
   var dt = d || new Date();
   return dt.toISOString().slice(0, 7);
 }
 
+/**
+ * First day of a month as YYYY-MM-DD.
+ * @param {string} month YYYY-MM
+ * @returns {string} YYYY-MM-DD
+ */
 export function monthStart(month) { return month + "-01"; }
 
+/**
+ * Last day of a month as YYYY-MM-DD.
+ * @param {string} month YYYY-MM
+ * @returns {string} YYYY-MM-DD
+ */
 export function monthEnd(month) {
   var parts = month.split("-").map(Number);
   /* Day 0 of next month is the last day of `month` in JS Date. */
@@ -31,12 +46,22 @@ export function monthEnd(month) {
   return d.getFullYear() + "-" + m + "-" + day;
 }
 
+/**
+ * Month before the given month.
+ * @param {string} month YYYY-MM
+ * @returns {string} YYYY-MM
+ */
 export function prevMonth(month) {
   var parts = month.split("-").map(Number);
   var d = new Date(parts[0], parts[1] - 2, 1);
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
 }
 
+/**
+ * Month after the given month.
+ * @param {string} month YYYY-MM
+ * @returns {string} YYYY-MM
+ */
 export function nextMonth(month) {
   var parts = month.split("-").map(Number);
   var d = new Date(parts[0], parts[1], 1);
@@ -45,6 +70,12 @@ export function nextMonth(month) {
 
 /* All months that have any data (assigned, activity, or scheduled txns)
    plus the requested upper bound, sorted ascending. */
+/**
+ * Months with budget data or transactions, up to and including throughMonth.
+ * @param {Profile} profile
+ * @param {string} throughMonth YYYY-MM upper bound (inclusive)
+ * @returns {Array<string>} ascending YYYY-MM list
+ */
 export function relevantMonths(profile, throughMonth) {
   var set = new Set();
   Object.keys(profile.budgets || {}).forEach(function (m) { set.add(m); });
@@ -66,6 +97,14 @@ function txnsForCategoryInMonth(profile, categoryId, month) {
 
 /* Activity in a category, signed (negative = outflow). For payment
    categories we derive it from credit-card spending and payments. */
+/**
+ * Signed activity (cents) for a category in a month. Payment categories
+ * derive activity from credit-card spending and payments.
+ * @param {Profile} profile
+ * @param {string} categoryId
+ * @param {string} month YYYY-MM
+ * @returns {number} cents (negative = outflow)
+ */
 export function activity(profile, categoryId, month) {
   var paymentForCard = paymentCardId(profile, categoryId);
   if (paymentForCard) {
@@ -111,10 +150,23 @@ export function activity(profile, categoryId, month) {
   return sum;
 }
 
+/**
+ * Amount assigned to a category in a month.
+ * @param {Profile} profile
+ * @param {string} categoryId
+ * @param {string} month YYYY-MM
+ * @returns {number} cents
+ */
 export function assigned(profile, categoryId, month) {
   return (profile.budgets[month] && profile.budgets[month].assigned && profile.budgets[month].assigned[categoryId]) || 0;
 }
 
+/**
+ * Sum of all category assignments in a month.
+ * @param {Profile} profile
+ * @param {string} month YYYY-MM
+ * @returns {number} cents
+ */
 export function totalAssignedInMonth(profile, month) {
   var m = profile.budgets[month];
   if (!m || !m.assigned) return 0;
@@ -123,6 +175,13 @@ export function totalAssignedInMonth(profile, month) {
 
 /* Per-category row at the requested month. Walks all relevant prior months
    to compute carryIn (negative balances are zeroed out at month-end). */
+/**
+ * Budget row for a category in a month — { carryIn, assigned, activity, available }.
+ * @param {Profile} profile
+ * @param {string} categoryId
+ * @param {string} month YYYY-MM
+ * @returns {{ carryIn: number, assigned: number, activity: number, available: number }}
+ */
 export function categoryRow(profile, categoryId, month) {
   var months = relevantMonths(profile, month);
   var carry = 0;
@@ -145,6 +204,12 @@ export function categoryRow(profile, categoryId, month) {
 }
 
 /* Total inflow to budget up to and including the end of `month`. */
+/**
+ * Sum of uncategorized positive (income) transactions through end of month.
+ * @param {Profile} profile
+ * @param {string} month YYYY-MM
+ * @returns {number} cents
+ */
 export function totalInflowToBudget(profile, month) {
   var endISO = monthEnd(month);
   var sum = 0;
@@ -163,6 +228,13 @@ export function totalInflowToBudget(profile, month) {
    - total_assigned_through_month
    - overspending_lost_in_prior_months
 */
+/**
+ * Ready-to-Assign value at the start of a month (inflow minus assignments
+ * minus prior-month overspending losses).
+ * @param {Profile} profile
+ * @param {string} month YYYY-MM
+ * @returns {number} cents
+ */
 export function readyToAssign(profile, month) {
   var inflow = totalInflowToBudget(profile, month);
   var months = relevantMonths(profile, month);
@@ -197,11 +269,26 @@ export function readyToAssign(profile, month) {
 }
 
 /* Quick-assign helpers for the budget UI. */
+/**
+ * Absolute outflow from the prior month — suggested assignment amount.
+ * @param {Profile} profile
+ * @param {string} categoryId
+ * @param {string} month YYYY-MM (current month)
+ * @returns {number} cents
+ */
 export function quickAssignLastMonth(profile, categoryId, month) {
   var last = prevMonth(month);
   return Math.abs(activity(profile, categoryId, last));
 }
 
+/**
+ * Rounded average absolute spending across the prior n months (default 3).
+ * @param {Profile} profile
+ * @param {string} categoryId
+ * @param {string} month YYYY-MM (current month, excluded from window)
+ * @param {number} [n] window size in months
+ * @returns {number} cents
+ */
 export function quickAssignAverageSpending(profile, categoryId, month, n) {
   var window = n || 3;
   var total = 0;

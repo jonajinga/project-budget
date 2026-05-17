@@ -9,6 +9,13 @@
 import { clearedBalance } from "./accounts.js";
 import { addTxn } from "./transactions.js";
 
+/**
+ * Snapshot of the reconciliation gap between cleared and statement balance.
+ * @param {Profile} profile
+ * @param {string} accountId
+ * @param {number} statementBalanceCents
+ * @returns {{ clearedBalance: number, statementBalance: number, diff: number }}
+ */
 export function reconciliationStatus(profile, accountId, statementBalanceCents) {
   var cleared = clearedBalance(profile, accountId);
   var diff = (statementBalanceCents || 0) - cleared;
@@ -16,6 +23,13 @@ export function reconciliationStatus(profile, accountId, statementBalanceCents) 
 }
 
 /* Lock every cleared transaction in this account as reconciled. */
+/**
+ * Marks every cleared (not yet reconciled) transaction as reconciled.
+ * Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} accountId
+ * @returns {number} count of transactions locked
+ */
 export function applyReconcile(profile, accountId) {
   var changed = 0;
   profile.transactions.forEach(function (t) {
@@ -31,6 +45,16 @@ export function applyReconcile(profile, accountId) {
 /* Insert an adjustment transaction sized to close the reconciliation gap.
    The transaction is cleared but not yet reconciled — the caller invokes
    applyReconcile next. */
+/**
+ * Inserts a cleared adjustment transaction to close a reconciliation gap.
+ * Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} accountId
+ * @param {number} amountCents signed cents
+ * @param {string} [dateISO] YYYY-MM-DD (defaults to today)
+ * @param {string} [memo]
+ * @returns {object} the new transaction
+ */
 export function addAdjustment(profile, accountId, amountCents, dateISO, memo) {
   return addTxn(profile, {
     accountId: accountId,
@@ -45,6 +69,13 @@ export function addAdjustment(profile, accountId, amountCents, dateISO, memo) {
 /* Unlock a reconciled transaction so it can be edited or removed. The
    surrounding UI should ask the user to confirm — once unlocked the
    account's reconciliation invariant is broken until they reconcile again. */
+/**
+ * Unlocks a reconciled transaction so it can be edited or removed.
+ * Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} txnId
+ * @returns {boolean} true if the txn was previously reconciled and is now unlocked
+ */
 export function unlockReconciled(profile, txnId) {
   var t = profile.transactions.find(function (x) { return x.id === txnId; });
   if (!t || !t.reconciled) return false;

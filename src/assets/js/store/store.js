@@ -120,6 +120,49 @@ export function createStore() {
     _listVersion: 0,
     _bumpLists() { this._listVersion += 1; },
 
+    /* Transactional bulk-mutation wrapper. Snapshot the profile,
+       run the mutator. If it throws, restore the snapshot. On
+       success, _bumpLists + _save fire ONCE at the end instead of
+       N times during the mutator loop. Use for CSV import, profile
+       restore, bulk recategorize — anything that mutates many
+       items in a row.
+
+       Returns whatever the mutator returns (so callers can
+       capture row counts, error lists, etc.). Re-throws on
+       failure after rollback so callers can catch + toast.
+
+       Note: nested batchMutate calls are no-ops — the outer call
+       owns the save. Useful when a high-level operation wraps
+       another batched helper. */
+    _inBatch: false,
+    batchMutate(fn, label) {
+      if (this._inBatch) return fn();
+      if (!this.profile) return;
+      this._inBatch = true;
+      this._recordUndo(label || "Bulk operation");
+      var snapshot = JSON.parse(JSON.stringify(this.profile));
+      try {
+        var result = fn();
+        this._bumpLists();
+        this._save();
+        return result;
+      } catch (err) {
+        /* Roll back to the snapshot — undo entry stays so the user
+           can also undo manually if they want. */
+        this.profile = snapshot;
+        this._bumpLists();
+        this._save();
+        this.pushToast(
+          "Bulk operation failed: " + (err && err.message ? err.message : err),
+          "danger",
+          true
+        );
+        throw err;
+      } finally {
+        this._inBatch = false;
+      }
+    },
+
     /* ---- Undo / redo ----
        Snapshot-based history. _recordUndo("…") deep-clones the active
        profile and pushes it onto _undoStack BEFORE the caller mutates.
@@ -1594,33 +1637,39 @@ export function createStore() {
 
     /* Commit non-duplicate rows as real transactions. Categories are
        matched by name (case-insensitive); unmatched categories become
-       null. Returns { added, skipped } counts. */
+       null. Returns { added, skipped } counts.
+       Wrapped in batchMutate so all rows commit atomically: one
+       undo entry covers the entire import, save fires once at the
+       end, and a mid-loop error rolls back to the pre-import
+       profile state (no partial imports). */
     commitImport(accountId, rows) {
       if (!this.profile) return { added: 0, skipped: 0 };
       var self = this;
       var added = 0;
       var skipped = 0;
-      rows.forEach(function (r) {
-        if (r.duplicate) { skipped += 1; return; }
-        if (!r.date || !r.amount) { skipped += 1; return; }
-        var catId = null;
-        if (r.category) {
-          var match = self.profile.categories.find(function (c) {
-            return c.name.toLowerCase() === r.category.toLowerCase();
+      this.batchMutate(function () {
+        rows.forEach(function (r) {
+          if (r.duplicate) { skipped += 1; return; }
+          if (!r.date || !r.amount) { skipped += 1; return; }
+          var catId = null;
+          if (r.category) {
+            var match = self.profile.categories.find(function (c) {
+              return c.name.toLowerCase() === r.category.toLowerCase();
+            });
+            if (match) catId = match.id;
+          }
+          self.addTransaction({
+            accountId: accountId,
+            date: r.date,
+            payeeName: r.payee,
+            categoryId: catId,
+            amount: r.amount,
+            memo: r.memo,
+            cleared: !!r.cleared,
           });
-          if (match) catId = match.id;
-        }
-        self.addTransaction({
-          accountId: accountId,
-          date: r.date,
-          payeeName: r.payee,
-          categoryId: catId,
-          amount: r.amount,
-          memo: r.memo,
-          cleared: !!r.cleared,
+          added += 1;
         });
-        added += 1;
-      });
+      }, "Import " + rows.length + " transactions");
       this.pushToast("Imported " + added + " transaction" + (added === 1 ? "" : "s") + (skipped ? " (" + skipped + " skipped)" : "") + ".");
       return { added: added, skipped: skipped };
     },

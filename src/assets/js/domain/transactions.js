@@ -3,12 +3,26 @@
 
 import { newTransaction, newId } from "../store/schema.js";
 
+/**
+ * Appends a new transaction. Mutates profile in place.
+ * @param {Profile} profile
+ * @param {object} opts - { accountId, date, amount, payeeId?, categoryId?, memo?, cleared?, transferTxnId? }
+ * @returns {object} the new transaction
+ */
 export function addTxn(profile, opts) {
   var t = newTransaction(opts);
   profile.transactions.push(t);
   return t;
 }
 
+/**
+ * Patches a transaction in place. Reconciled txns are rejected unless
+ * patch.__forceReconciledEdit is true.
+ * @param {Profile} profile
+ * @param {string} id
+ * @param {object} patch any subset of transaction fields
+ * @returns {object|null} the updated transaction or null
+ */
 export function editTxn(profile, id, patch) {
   var t = profile.transactions.find(function (x) { return x.id === id; });
   if (!t) return null;
@@ -24,6 +38,13 @@ export function editTxn(profile, id, patch) {
    deletedAt timestamp. Stays recoverable for 30 days. Transfer pairs
    move together so a restored transfer keeps both legs in sync.
    Reconciled transactions can't be deleted (same rule as before). */
+/**
+ * Soft-deletes a transaction (and its transfer pair) into profile.trash.
+ * Reconciled txns are rejected. Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} id
+ * @returns {boolean} true if removed
+ */
 export function deleteTxn(profile, id) {
   if (!profile.trash) profile.trash = [];
   var t = profile.transactions.find(function (x) { return x.id === id; });
@@ -45,6 +66,13 @@ export function deleteTxn(profile, id) {
 /* Restore a soft-deleted transaction back to the active list. Brings
    its transfer pair back with it if both legs are in trash. Returns
    the restored record (the first one, when restoring a transfer pair). */
+/**
+ * Restores a soft-deleted transaction from trash (with its transfer pair
+ * if both legs are present). Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} id
+ * @returns {object|null} the restored transaction
+ */
 export function restoreTxnFromTrash(profile, id) {
   if (!profile.trash || !profile.trash.length) return null;
   var entry = profile.trash.find(function (x) { return x.id === id; });
@@ -71,6 +99,13 @@ export function restoreTxnFromTrash(profile, id) {
 /* Permanently remove a single trash entry. Does NOT touch its
    transfer pair — purging one leg leaves the other in trash for
    independent handling. */
+/**
+ * Permanently removes one trash entry. Does NOT touch its transfer pair.
+ * Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} id
+ * @returns {boolean} true if an entry was purged
+ */
 export function purgeTxnFromTrash(profile, id) {
   if (!profile.trash || !profile.trash.length) return false;
   var before = profile.trash.length;
@@ -79,6 +114,11 @@ export function purgeTxnFromTrash(profile, id) {
 }
 
 /* Empty every trash entry — irreversible. */
+/**
+ * Empties trash. Irreversible. Mutates profile in place.
+ * @param {Profile} profile
+ * @returns {number} count of entries removed
+ */
 export function emptyTrash(profile) {
   if (!profile.trash) return 0;
   var n = profile.trash.length;
@@ -88,6 +128,12 @@ export function emptyTrash(profile) {
 
 /* Drop trash entries older than `days` days. Returns how many were
    dropped. Called on every store load so the bin stays fresh. */
+/**
+ * Drops trash entries older than `days` (default 30). Mutates profile.
+ * @param {Profile} profile
+ * @param {number} [days] default 30
+ * @returns {number} count of entries dropped
+ */
 export function purgeExpiredTrash(profile, days) {
   if (!profile.trash || !profile.trash.length) return 0;
   var cutoff = Date.now() - ((days || 30) * 24 * 60 * 60 * 1000);
@@ -102,6 +148,14 @@ export function purgeExpiredTrash(profile, days) {
 /* Convert a transaction to a split or update splits. `splits` is an array
    of { categoryId, amount, memo }. The parent txn's amount must equal the
    sum of split amounts; we recompute it here to enforce the invariant. */
+/**
+ * Sets (or clears, when <2 entries) splits on a transaction; parent amount
+ * is recomputed as the sum of split amounts. Reconciled txns are rejected.
+ * @param {Profile} profile
+ * @param {string} id
+ * @param {Array<{ categoryId: string|null, amount: number, memo?: string }>} splits
+ * @returns {object|null}
+ */
 export function splitTxn(profile, id, splits) {
   var t = profile.transactions.find(function (x) { return x.id === id; });
   if (!t || t.reconciled) return null;
@@ -124,6 +178,13 @@ export function splitTxn(profile, id, splits) {
 /* Create a transfer between two of the user's accounts. Generates two
    paired transactions with linked transferTxnId and opposite signs.
    `amount` is the absolute amount moved (cents). */
+/**
+ * Creates a paired transfer between two accounts (linked transferTxnId,
+ * opposite signs). Mutates profile in place.
+ * @param {Profile} profile
+ * @param {object} opts - { fromAccountId, toAccountId, amount (abs cents), date?, memo? }
+ * @returns {{ out: object, in: object }|null}
+ */
 export function transfer(profile, opts) {
   var fromId = opts.fromAccountId;
   var toId = opts.toAccountId;
@@ -162,6 +223,12 @@ export function transfer(profile, opts) {
 
 /* When the user edits one side of a transfer, mirror the change to the
    paired entry — keeps the two halves in sync. */
+/**
+ * Mirrors a transfer leg's date/amount/memo/cleared to its paired txn.
+ * Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} sourceId the edited leg
+ */
 export function syncTransferPair(profile, sourceId) {
   var src = profile.transactions.find(function (x) { return x.id === sourceId; });
   if (!src || !src.transferTxnId) return;
@@ -175,6 +242,13 @@ export function syncTransferPair(profile, sourceId) {
 
 /* Dedupe key used by import pipelines (Phase 5) to skip rows already in
    the profile. Lives here so the format is canonical. */
+/**
+ * Canonical dedupe key for import pipelines. Pipe-joined:
+ * accountId | date | amount | payeeId | fitOrTxnId.
+ * @param {object} t transaction-shaped object
+ * @param {string} [fitOrTxnId] bank-provided id
+ * @returns {string}
+ */
 export function dedupeKey(t, fitOrTxnId) {
   return [
     t.accountId,

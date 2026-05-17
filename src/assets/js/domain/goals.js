@@ -20,6 +20,12 @@ export const GOAL_TYPES = [
   { value: "targetByDate", label: "Reach a target by a date" },
 ];
 
+/**
+ * Adds a goal, replacing any existing goal on the same category. Mutates profile.
+ * @param {Profile} profile
+ * @param {object} opts - { categoryId, type, target, byDate? }
+ * @returns {object} the new goal
+ */
 export function addGoal(profile, opts) {
   /* Replace any existing goal on the same category. */
   removeGoalFor(profile, opts.categoryId);
@@ -31,12 +37,23 @@ export function addGoal(profile, opts) {
   return g;
 }
 
+/**
+ * Removes whatever goal is set on a category. Mutates profile in place.
+ * @param {Profile} profile
+ * @param {string} categoryId
+ */
 export function removeGoalFor(profile, categoryId) {
   profile.goals = profile.goals.filter(function (g) { return g.categoryId !== categoryId; });
   var c = profile.categories.find(function (x) { return x.id === categoryId; });
   if (c) c.goalId = null;
 }
 
+/**
+ * Returns the goal attached to a category, or null.
+ * @param {Profile} profile
+ * @param {string} categoryId
+ * @returns {object|null}
+ */
 export function findGoalForCategory(profile, categoryId) {
   return profile.goals.find(function (g) { return g.categoryId === categoryId; }) || null;
 }
@@ -53,6 +70,14 @@ function monthsBetween(fromMonth, toISO) {
   return Math.max(0, diff + 1);
 }
 
+/**
+ * Cents the user should assign this month to keep the goal on track.
+ * Dispatches on goal.type (monthlyFixed, monthlyTopUp, refillUpTo, targetByDate).
+ * @param {Profile} profile
+ * @param {object|null} goal
+ * @param {string} month YYYY-MM
+ * @returns {number} cents (always >= 0)
+ */
 export function needed(profile, goal, month) {
   if (!goal) return 0;
   var row = categoryRow(profile, goal.categoryId, month);
@@ -90,6 +115,13 @@ export function needed(profile, goal, month) {
 }
 
 /* Status for the UI badge: 'funded' | 'partial' | 'needed' | 'over'. */
+/**
+ * Goal status badge: 'funded' | 'partial' | 'needed' | 'over'.
+ * @param {Profile} profile
+ * @param {object|null} goal
+ * @param {string} month YYYY-MM
+ * @returns {string|null}
+ */
 export function statusFor(profile, goal, month) {
   if (!goal) return null;
   var n = needed(profile, goal, month);

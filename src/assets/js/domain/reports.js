@@ -9,6 +9,12 @@ import { findGoalForCategory, needed as goalNeeded } from "./goals.js";
 
 /* Helpers ---------------------------------------------------------------- */
 
+/**
+ * Ascending list of `count` months ending at endMonth.
+ * @param {string} endMonth YYYY-MM
+ * @param {number} count
+ * @returns {Array<string>} YYYY-MM, oldest first
+ */
 export function monthRangeBack(endMonth, count) {
   var out = [];
   var cursor = endMonth || thisMonth();
@@ -19,6 +25,12 @@ export function monthRangeBack(endMonth, count) {
   return out;
 }
 
+/**
+ * Ascending list of `count` months starting at startMonth.
+ * @param {string} startMonth YYYY-MM
+ * @param {number} count
+ * @returns {Array<string>} YYYY-MM
+ */
 export function monthRangeForward(startMonth, count) {
   var out = [];
   var cursor = startMonth || thisMonth();
@@ -44,6 +56,13 @@ function endOfMonthBalance(profile, accountId, month) {
 
 /* Income vs Expense ------------------------------------------------------ */
 
+/**
+ * Per-month income, expense, and net totals across the last `count` months.
+ * @param {Profile} profile
+ * @param {string} endMonth YYYY-MM
+ * @param {number} [count] default 12
+ * @returns {Array<{ month: string, income: number, expense: number, net: number }>}
+ */
 export function incomeVsExpense(profile, endMonth, count) {
   var months = monthRangeBack(endMonth || thisMonth(), count || 12);
   return months.map(function (m) {
@@ -62,6 +81,13 @@ export function incomeVsExpense(profile, endMonth, count) {
 
 /* Net worth over time ---------------------------------------------------- */
 
+/**
+ * End-of-month net worth across the last `count` months.
+ * @param {Profile} profile
+ * @param {string} endMonth YYYY-MM
+ * @param {number} [count] default 12
+ * @returns {Array<{ month: string, value: number }>}
+ */
 export function netWorthByMonth(profile, endMonth, count) {
   var months = monthRangeBack(endMonth || thisMonth(), count || 12);
   return months.map(function (m) {
@@ -75,6 +101,14 @@ export function netWorthByMonth(profile, endMonth, count) {
 
 /* Spending by category --------------------------------------------------- */
 
+/**
+ * Total spending per category over a month range, sorted descending.
+ * Skips transfers; uncategorized rolls into "__uncat__".
+ * @param {Profile} profile
+ * @param {string} fromMonth YYYY-MM
+ * @param {string} toMonth YYYY-MM
+ * @returns {Array<{ categoryId: string, category: string, group: string, value: number }>}
+ */
 export function spendingByCategory(profile, fromMonth, toMonth) {
   /* Sum negative activity per category over the month range. Skips
      transfers and credit-card payment categories (they're derived). */
@@ -111,6 +145,14 @@ export function spendingByCategory(profile, fromMonth, toMonth) {
 
 /* Monthly trends --------------------------------------------------------- */
 
+/**
+ * Top-N spending categories with per-month spend points across the window.
+ * @param {Profile} profile
+ * @param {string} endMonth YYYY-MM
+ * @param {number} [count] window size (default 12)
+ * @param {number} [topN] default 12
+ * @returns {Array<{ categoryId: string, category: string, group: string, points: Array<{ month: string, value: number }>, total: number }>}
+ */
 export function monthlyTrendsByCategory(profile, endMonth, count, topN) {
   var months = monthRangeBack(endMonth || thisMonth(), count || 12);
   var ranking = spendingByCategory(profile, months[0], months[months.length - 1]);
@@ -128,6 +170,11 @@ export function monthlyTrendsByCategory(profile, endMonth, count, topN) {
 /* For each credit and tracking-liability account, surface current balance
    (absolute), recent 3-month payment average, and a payoff projection
    based on that average. Returns rows ready for table + stacked bar. */
+/**
+ * Per-debt-account snapshot with 3-month average payment + payoff projection.
+ * @param {Profile} profile
+ * @returns {Array<{ accountId: string, account: string, type: string, balance: number, avgPayment: number, monthsToPayoff: number|null }>}
+ */
 export function debtOverview(profile) {
   var today = new Date().toISOString().slice(0, 10);
   var currentMonth = today.slice(0, 7);
@@ -165,6 +212,14 @@ export function debtOverview(profile) {
 
 /* Per-category: assigned + spent (absolute activity) per month over the
    window. UI renders it as a small table or stacked bar pair. */
+/**
+ * Per-month assigned vs spent for top-N categories over the window.
+ * @param {Profile} profile
+ * @param {string} endMonth YYYY-MM
+ * @param {number} [count] default 12
+ * @param {number} [topN] default 8
+ * @returns {Array<{ categoryId: string, category: string, group: string, points: Array<{ month: string, assigned: number, spent: number, delta: number }> }>}
+ */
 export function assignmentHistory(profile, endMonth, count, topN) {
   var months = monthRangeBack(endMonth || thisMonth(), count || 12);
   var ranking = spendingByCategory(profile, months[0], months[months.length - 1]);
@@ -187,6 +242,13 @@ export function assignmentHistory(profile, endMonth, count, topN) {
    band = scheduled + average discretionary spending baseline of zero
    (since discretionary is hard to predict without categories analysis).
    v1 keeps the band tight; later phases can compute it from history. */
+/**
+ * On-budget cashflow projection forward `count` months from today, with
+ * expected/high/low bands derived from scheduled txns and goal needs.
+ * @param {Profile} profile
+ * @param {number} [count] months forward (default 12)
+ * @returns {Array<{ month: string, expected: number, low: number, high: number }>}
+ */
 export function projection(profile, count) {
   var months = monthRangeForward(thisMonth(), (count || 12) + 1);
   var startBalance = profile.accounts
@@ -239,6 +301,13 @@ export function projection(profile, count) {
 /* Per-month savings rate = (income - expense) / income. NaN-safe (returns
    null when income is 0 so the chart can skip that point). Carries the
    underlying numbers so the table can show them alongside the rate. */
+/**
+ * Per-month savings rate (savings / income). `rate` is null when income is 0.
+ * @param {Profile} profile
+ * @param {string} endMonth YYYY-MM
+ * @param {number} [count] default 12
+ * @returns {Array<{ month: string, income: number, expense: number, savings: number, rate: number|null }>}
+ */
 export function savingsRate(profile, endMonth, count) {
   var rows = incomeVsExpense(profile, endMonth, count);
   return rows.map(function (r) {
@@ -254,6 +323,14 @@ export function savingsRate(profile, endMonth, count) {
    one row per payee with usage count, total spend, average per
    transaction, and last-used date so the table can rank merchants
    the same way YNAB / Mint do. */
+/**
+ * Top payees ranked by outflow over a month range.
+ * @param {Profile} profile
+ * @param {string} [fromMonth] YYYY-MM (open lower bound when omitted)
+ * @param {string} [toMonth] YYYY-MM (open upper bound when omitted)
+ * @param {number} [limit] default 25
+ * @returns {Array<{ payeeId: string, payee: string, total: number, count: number, avg: number, lastDate: string }>}
+ */
 export function payeeLeaderboard(profile, fromMonth, toMonth, limit) {
   var n = limit || 25;
   var bucket = {};
@@ -295,6 +372,13 @@ export function payeeLeaderboard(profile, fromMonth, toMonth, limit) {
 /* For a given month, per-category snapshot: assigned, spent (absolute),
    remaining, and a status flag (under / at / over). Drives the
    envelope-health dashboard. Skips internal payment categories. */
+/**
+ * Per-category snapshot of assigned / spent / remaining for a month, sorted
+ * with attention-needing rows first. Skips payment categories.
+ * @param {Profile} profile
+ * @param {string} [month] YYYY-MM (defaults to current month)
+ * @returns {Array<{ categoryId: string, category: string, group: string, assigned: number, spent: number, remaining: number, pct: number, status: ('over'|'unbudgeted'|'at'|'under') }>}
+ */
 export function budgetVsActual(profile, month) {
   var m = month || thisMonth();
   return profile.categories
@@ -356,6 +440,14 @@ function occurrencesIn(month, schedule) {
    Currently produces a single time slice — fromMonth/toMonth bound the
    transactions considered. The renderer + page can re-call for new
    ranges. */
+/**
+ * Sankey-ready { nodes, links } for income -> Cash Flow pivot -> spending.
+ * Link values are in dollars (not cents).
+ * @param {Profile} profile
+ * @param {string} [fromMonth] YYYY-MM
+ * @param {string} [toMonth] YYYY-MM
+ * @returns {{ nodes: Array<{ name: string }>, links: Array<{ source: number, target: number, value: number }> }}
+ */
 export function sankeyFlows(profile, fromMonth, toMonth) {
   var from = (fromMonth || thisMonth()) + "-01";
   var to   = monthEnd(toMonth || fromMonth || thisMonth());
@@ -435,6 +527,14 @@ export function sankeyFlows(profile, fromMonth, toMonth) {
      }
    The renderer uses `max` to scale the sequential color ramp so the
    busiest cells hit full saturation and quiet cells stay light. */
+/**
+ * Heatmap grid of spending: top categories x months, plus `max` for color scaling.
+ * @param {Profile} profile
+ * @param {string} endMonth YYYY-MM
+ * @param {number} [monthCount] default 12
+ * @param {number} [topN] default 15
+ * @returns {{ months: Array<string>, categories: Array<object>, cells: Object<string, Object<string, number>>, max: number }}
+ */
 export function categoryHeatmap(profile, endMonth, monthCount, topN) {
   var months = monthRangeBack(endMonth || thisMonth(), monthCount || 12);
   var byCat = {};
@@ -487,6 +587,14 @@ export function categoryHeatmap(profile, endMonth, monthCount, topN) {
    prior = the preceding 12 months. Returns per-month, per-category,
    per-payee paired totals + KPI deltas. Each range is { from, to }
    in YYYY-MM. */
+/**
+ * Compares two month ranges. Each range is { from, to } in YYYY-MM. Returns
+ * aggregated totals, paired-by-index month rows, top movers, and KPI deltas.
+ * @param {Profile} profile
+ * @param {{ from: string, to: string }} currentRange
+ * @param {{ from: string, to: string }} priorRange
+ * @returns {object}
+ */
 export function yearOverYear(profile, currentRange, priorRange) {
   function bucket(range) {
     var months = [];
@@ -617,6 +725,13 @@ export function yearOverYear(profile, currentRange, priorRange) {
      ]
    sorted by annualCost desc. Pure function — no UI / dates assumed
    except for the lookback window. */
+/**
+ * Detects subscription-like charges (stable amount + cadence) from history.
+ * Cadence is one of Monthly / Weekly / Biweekly / Quarterly / Yearly.
+ * @param {Profile} profile
+ * @param {number} [lookbackMonths] default 12
+ * @returns {Array<{ payeeId: string, payee: string, typicalAmount: number, cadence: string, occurrences: number, annualCost: number, lastCharge: string, lastChargeAccountId: string }>}
+ */
 export function detectSubscriptions(profile, lookbackMonths) {
   var monthsBack = lookbackMonths || 12;
   var cutoffMonth = thisMonth();
