@@ -443,7 +443,13 @@ function accountsView() {
       void this.$store.budget._listVersion;
       var s = this.$store.budget;
       if (!s.profile) return 0;
-      return s.trackingAssetTotal() - s.trackingLiabilityTotal();
+      /* trackingLiabilityTotal returns a SIGNED sum (negative for
+         money owed), so add — subtracting a negative inflates the
+         net. Bug fix: prior `- s.trackingLiabilityTotal()` made an
+         $18.5k auto loan show as +$18.5k instead of -$18.5k, so
+         Tracking read $143.5k instead of $106.5k for a profile
+         whose actual non-excluded tracking net is 401k − auto loan. */
+      return s.trackingAssetTotal() + s.trackingLiabilityTotal();
     },
     /* Sum of every account flagged excludeFromNetWorth across the
        whole profile. Drives the "Excluded from NW" stat tile so the

@@ -127,11 +127,11 @@
                   </ul>
                 </div>
               </template>
-              {# Totals breakdown. Tracking line is shown when there
-                 are tracking accounts so users see where Net worth
-                 comes from (On-budget + Tracking). Excluded + Net +
-                 excluded rows only render when at least one account
-                 is flagged exclude-from-net-worth. */ #}
+              {# Totals breakdown. Order tells a story:
+                 On-budget + Tracking → Net worth, then Excluded
+                 sits below Net worth (since it's NOT included in it)
+                 + Net+excluded is the grand total. Tracking + Excluded
+                 + Net+excluded rows hide when they'd be zero. */ #}
               <div class="acct-totals">
                 <p><span>On-budget</span><span x-text="(($store.budget.onBudgetTotal() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
                 <p x-show="trackingNetTotal() !== 0" x-cloak>
@@ -139,12 +139,12 @@
                   <span :class="trackingNetTotal() < 0 ? 'amount--outflow' : ''"
                         x-text="(trackingNetTotal() / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span>
                 </p>
+                <p class="acct-totals__sum"><span>Net worth</span><span x-text="(($store.budget.netWorth() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
                 <p x-show="excludedFromNetWorthTotal() !== 0" x-cloak>
                   <span>Excluded</span>
                   <span :class="excludedFromNetWorthTotal() < 0 ? 'amount--outflow' : ''"
                         x-text="(excludedFromNetWorthTotal() / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span>
                 </p>
-                <p class="acct-totals__sum"><span>Net worth</span><span x-text="(($store.budget.netWorth() || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span></p>
                 <p x-show="excludedFromNetWorthTotal() !== 0" x-cloak class="acct-totals__sum">
                   <span>Net + excluded</span>
                   <span x-text="((($store.budget.netWorth() || 0) + excludedFromNetWorthTotal()) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })"></span>
@@ -230,15 +230,21 @@ function appNav(sections, currentUrl) {
       catch (_e) {}
     },
 
-    /* Net of every tracking account (assets - liabilities) excluding
-       those flagged exclude-from-net-worth. Drives the sidebar
-       "Tracking" line so users see the math:
-       on-budget + tracking = net worth. */
+    /* Net of every tracking account excluding those flagged
+       exclude-from-net-worth. Drives the sidebar "Tracking" line so
+       users see the math: on-budget + tracking = net worth.
+
+       Both subtotals are SIGNED sums of accountBalance() — tracking
+       liabilities (auto loan, mortgage, etc.) carry a negative
+       running balance because the user owes that money. So the net
+       is asset + liability (not asset - liability — subtracting a
+       negative inflates the result, the bug that made the prior
+       "$143,500" reading not square with Net worth). */
     trackingNetTotal() {
       var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
       if (!s || !s.profile) return 0;
       void s._listVersion;
-      return s.trackingAssetTotal() - s.trackingLiabilityTotal();
+      return s.trackingAssetTotal() + s.trackingLiabilityTotal();
     },
 
     /* Sum every account flagged excludeFromNetWorth across the whole
