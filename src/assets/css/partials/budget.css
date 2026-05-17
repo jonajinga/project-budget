@@ -601,11 +601,26 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
-/* Outflow button inside the total row keeps the pill chrome but
-   scales the type up to match the other big total values. */
-.budget__total-row .budget__activity-btn.budget__total-value {
+/* Outflow button inside the total row — strip the per-cat pill
+   chrome so the big summary numeral reads as a total, not a
+   row entry. Selector doubles the class to win the cascade against
+   the later .budget__activity-btn pill rule. */
+.budget__total-row .budget__activity-btn.budget__total-value,
+.budget__total-row .budget__activity-btn.budget__total-value.budget__activity-btn {
+  display: inline;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   font-weight: 700;
   font-size: var(--fs-xl);
+}
+.budget__total-row .budget__activity-btn.budget__total-value:not(:disabled):hover {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Right-edge alignment across every row type. Every number cell sits
