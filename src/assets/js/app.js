@@ -101,11 +101,33 @@ document.addEventListener("alpine:initialized", function () {
      childList-only observation misses many bindings (the attribute is
      empty when we look). Also watch for data-tip attribute mutations
      so deferred binds + reactive updates pick up. */
+  /* Walk a removed subtree and destroy any tippy instances we'd
+     otherwise leak. Without this, when a chart canvas re-mounts
+     (or any Alpine x-for swaps its rendered nodes), the previously
+     attached buttons disappear but their tippy popups stay in the
+     DOM — looks like "tooltips frozen on screen" until you click
+     away or navigate. */
+  function detachSubtree(root) {
+    if (!root || root.nodeType !== 1) return;
+    var nodes = root.matches && root.matches("[data-tippy-bound]") ? [root] : [];
+    if (root.querySelectorAll) {
+      Array.prototype.push.apply(nodes, Array.prototype.slice.call(root.querySelectorAll("[data-tippy-bound]")));
+    }
+    nodes.forEach(function (el) {
+      if (el._tippy) {
+        try { el._tippy.hide(); el._tippy.destroy(); } catch (_e) {}
+      }
+      el.removeAttribute("data-tippy-bound");
+    });
+  }
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
       if (m.type === "childList") {
         m.addedNodes && m.addedNodes.forEach(function (n) {
           if (n.nodeType === 1) attach(n);
+        });
+        m.removedNodes && m.removedNodes.forEach(function (n) {
+          if (n.nodeType === 1) detachSubtree(n);
         });
       } else if (m.type === "attributes" && m.attributeName === "data-tip") {
         attachOne(m.target);

@@ -8,6 +8,17 @@
 
 import { onThemeChange } from "./theme-colors.js";
 
+/* Mark this module as resolved + dispatch a one-shot event so any
+   poll loop waiting for window.pbMountChart can resolve immediately
+   instead of timing out. Older report pages still rely on the poll
+   so leave that intact; new ones can listen for "pb:chart-bootstrap"
+   and skip the poll entirely. */
+if (typeof window !== "undefined") {
+  window.__pbChartBootstrapReady = true;
+  try { document.dispatchEvent(new CustomEvent("pb:chart-bootstrap")); }
+  catch (_e) {}
+}
+
 /* Track every mounted chart so the print listeners can bump
    devicePixelRatio across all of them at once. WeakSet is fine since
    we want garbage collection when the chart is disposed. */

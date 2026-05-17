@@ -257,7 +257,7 @@ function projectionView() {
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderProj;
-        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        if (!ready) { if (++tries < 600) setTimeout(poll, 50); return; }
         var store = Alpine.store("budget");
         chart = window.pbMountChart("#chart-proj", window.pbRenderProj, function () {
           return store.reportProjection(self.horizon);

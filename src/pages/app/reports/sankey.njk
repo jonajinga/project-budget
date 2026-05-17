@@ -242,7 +242,7 @@ function sankeyView() {
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderSankey && window.d3 && window.d3.sankey;
-        if (!ready) { if (++tries < 200) setTimeout(poll, 50); return; }
+        if (!ready) { if (++tries < 600) setTimeout(poll, 50); return; }
         var store = Alpine.store("budget");
         self.chart = window.pbMountChart("#chart-sankey", window.pbRenderSankey, function () {
           return store.reportSankey(self.from, self.to);

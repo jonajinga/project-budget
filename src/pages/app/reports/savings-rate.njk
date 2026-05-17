@@ -308,7 +308,7 @@ function savingsRateView() {
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbRenderSR;
-        if (!ready) { if (++tries < 100) setTimeout(poll, 50); return; }
+        if (!ready) { if (++tries < 600) setTimeout(poll, 50); return; }
         var store = Alpine.store("budget");
         self.chart = window.pbMountChart("#chart-sr", window.pbRenderSR, function () {
           return store.reportSavingsRate(null, self.rangeMonths);
