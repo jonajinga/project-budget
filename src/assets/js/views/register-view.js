@@ -15,16 +15,23 @@ function registerView() {
     showTransfer: false,
     showReconcile: false,
     editingId: null,
-    payeeSuggestions: [],
+    /* Single-cell inline editor — drives a per-cell click-to-edit
+       UX on the register table. `cellEdit.txnId === t.id &&
+       cellEdit.field === 'date'` means the Date cell on that row
+       renders an input instead of static text. `cellEdit.draft`
+       holds the in-progress value so blur/Enter commit it and
+       Escape reverts. `cellEdit.sign` only applies to the amount
+       cell ("outflow" | "inflow") so mobile keypads (no minus key)
+       can still flip a positive number to negative. Only one cell
+       is editable at a time. */
+    cellEdit: { txnId: null, field: null, draft: "", sign: "outflow" },
     splitTxnId: null,
     splitForm: [],
     isMobile: false,
     expandedTxnId: null,
-    showAdd: false,
-    /* Multi-select state for bulk operations. selectMode gates the
-       checkbox column; selectedTxnIds is the working set across page
-       interactions. Exiting select mode clears the set. */
-    selectMode: false,
+    /* Bulk-select state — checkboxes are now always visible, so
+       selectMode is gone. The bulk action bar appears whenever
+       selectedTxnIds has anything in it. */
     selectedTxnIds: [],
     /* Searchable account-filter combobox state. acctQuery is the
        typed search; acctComboOpen toggles the dropdown panel. */
@@ -45,11 +52,9 @@ function registerView() {
     pageSize: 50,
     visiblePage: 0,
 
-    form: { date: "", payeeName: "", amount: "", accountId: "", categoryId: "", memo: "", cleared: false, type: "outflow" },
-    /* `amount` is always positive; `type` ("outflow" | "inflow") drives
-       the sign on save. Same pattern in the desktop inline row + the
-       mobile card edit so the user sees the toggle wherever they
-       edit a transaction. */
+    /* edit — full-form state used by the kebab → Edit modal. The
+       inline cell editor uses cellEdit instead. `amount` stays
+       positive; `type` drives the sign on save. */
     edit: { date: "", accountId: "", payeeName: "", categoryId: "", memo: "", amount: "", cleared: false, type: "outflow" },
     transferForm: { fromAccountId: "", toAccountId: "", amount: "", date: "", memo: "" },
     reconcileForm: { statementBalance: "", checked: false, diff: 0 },
@@ -408,46 +413,6 @@ function registerView() {
       this.$dispatch("pb:save-view", { kind: "register", name: "" });
     },
 
-    submitAdd() {
-      if (!this.form.accountId) return;
-      /* The Outflow/Inflow toggle is the source of truth for sign.
-         Users type a positive number (matching the mobile keypad) and
-         we negate it for outflow on the way to the store. If a user
-         still types a literal "-12.34" it's normalised to absolute
-         first so the toggle wins consistently. */
-      var raw = this.parseDollars(this.form.amount);
-      var signed = Math.abs(raw) * (this.form.type === "inflow" ? 1 : -1);
-      this.$store.budget.addTransaction({
-        accountId: this.form.accountId,
-        date: this.form.date,
-        payeeName: this.form.payeeName,
-        categoryId: this.form.categoryId || null,
-        amount: signed,
-        memo: this.form.memo,
-        cleared: this.form.cleared,
-      });
-      var keepAccount = this.form.accountId;
-      var keepType = this.form.type;
-      var today = new Date().toISOString().slice(0, 10);
-      this.form = { date: today, payeeName: "", amount: "", accountId: keepAccount, categoryId: "", memo: "", cleared: false, type: keepType };
-      this.payeeSuggestions = [];
-    },
-
-    updatePayeeSuggestions() {
-      this.payeeSuggestions = this.$store.budget.suggestPayees(this.form.payeeName, 6);
-      /* If a known payee, pre-fill category from its last assignment. */
-      var match = this.payeeSuggestions.find(p => p.name.toLowerCase() === (this.form.payeeName || "").toLowerCase());
-      if (match && match.lastCategoryId && !this.form.categoryId) {
-        this.form.categoryId = match.lastCategoryId;
-      }
-    },
-
-    pickPayee(p) {
-      this.form.payeeName = p.name;
-      if (p.lastCategoryId && !this.form.categoryId) this.form.categoryId = p.lastCategoryId;
-      this.payeeSuggestions = [];
-    },
-
     startEdit(t) {
       this.editingId = t.id;
       /* Derive the toggle from the existing amount sign; amount field
@@ -484,6 +449,88 @@ function registerView() {
     },
 
     cancelEdit() { this.editingId = null; },
+
+    /* ---- Single-cell inline edit ---- */
+    /* Click a cell → that cell becomes an editable input/select; the
+       rest of the row stays read-only. Blur or Enter commits via
+       updateTransaction; Escape reverts. Skips reconciled rows and
+       transfer pairs (those route through the full-row editor in the
+       kebab → Edit menu). */
+    isEditingCell(t, field) {
+      return this.cellEdit.txnId === t.id && this.cellEdit.field === field;
+    },
+    startCellEdit(t, field, initialValue) {
+      if (t.reconciled || t.transferTxnId) return;
+      var sign = (t.amount < 0) ? "outflow" : "inflow";
+      this.cellEdit = {
+        txnId: t.id,
+        field: field,
+        draft: initialValue == null ? "" : String(initialValue),
+        sign: sign,
+      };
+      var self = this;
+      this.$nextTick(function () {
+        var input = document.querySelector('[data-cell-input="' + t.id + ':' + field + '"]');
+        if (input) {
+          input.focus();
+          if (input.select) input.select();
+        }
+      });
+    },
+    /* Flip the sign while editing the amount cell — keeps the input
+       focused so the user can keep typing. Used by the inline
+       Outflow/Inflow toggle. */
+    setCellSign(sign) {
+      if (this.cellEdit.field !== "amount") return;
+      this.cellEdit.sign = sign;
+      var txnId = this.cellEdit.txnId;
+      this.$nextTick(function () {
+        var input = document.querySelector('[data-cell-input="' + txnId + ':amount"]');
+        if (input) input.focus();
+      });
+    },
+    commitCell(t) {
+      if (this.cellEdit.txnId !== t.id || !this.cellEdit.field) return;
+      var field = this.cellEdit.field;
+      var raw = this.cellEdit.draft;
+      var patch = {};
+      switch (field) {
+        case "date":
+          if (!raw) { this.cancelCellEdit(); return; }
+          patch.date = raw;
+          break;
+        case "accountId":
+          patch.accountId = raw || t.accountId;
+          break;
+        case "payeeName":
+          patch.payeeName = (raw || "").trim();
+          break;
+        case "categoryId":
+          patch.categoryId = raw || null;
+          break;
+        case "memo":
+          patch.memo = raw || "";
+          break;
+        case "amount":
+          /* Sign comes from the inline Outflow/Inflow toggle so
+             mobile keypads (no minus key) can still flip the sign.
+             Default seeded from the row's existing sign in
+             startCellEdit. */
+          var n = Number(String(raw).replace(/[$,\s]/g, ""));
+          if (!isFinite(n)) { this.cancelCellEdit(); return; }
+          var cents = Math.round(Math.abs(n) * 100);
+          patch.amount = this.cellEdit.sign === "outflow" ? -cents : cents;
+          break;
+        default:
+          this.cancelCellEdit();
+          return;
+      }
+      this.$store.budget.updateTransaction(t.id, patch);
+      this.cancelCellEdit();
+    },
+    cancelCellEdit() {
+      this.cellEdit = { txnId: null, field: null, draft: "", sign: "outflow" };
+    },
 
     toggleCleared(t) {
       if (t.reconciled) return;
@@ -638,6 +685,79 @@ function registerView() {
       });
     },
 
+    /**
+     * 30-day end-of-day balance trail for the filtered account, projected
+     * into a 100x30 viewBox SVG polyline path. Returns null when no account
+     * is selected so the template can hide the sparkline cleanly. Memoized
+     * per (account, today) so re-renders during the same day are free.
+     * @returns {{ path: string, min: number, max: number, last: number, trend: 'up'|'down'|'flat' }|null}
+     */
+    acctSparkline() {
+      var s = this.$store.budget;
+      var id = this.filterAccountId;
+      if (!id) return null;
+      var p = s.profile;
+      if (!p || !p.accounts || !p.transactions) return null;
+      var today = new Date().toISOString().slice(0, 10);
+      return s._memo("acctSparkline:" + id + ":" + today, function () {
+        var acct = p.accounts.find(function (a) { return a.id === id; });
+        if (!acct) return null;
+        var DAYS = 30;
+        /* Build the 30-day window of ISO dates ending today. */
+        var dates = [];
+        var d = new Date(today);
+        for (var i = 0; i < DAYS; i++) {
+          dates.unshift(d.toISOString().slice(0, 10));
+          d.setDate(d.getDate() - 1);
+        }
+        var startISO = dates[0];
+        /* Opening balance carried into the window: sum every txn strictly
+           before startISO. We walk transactions ONCE: anything before the
+           window contributes to baseline; anything inside increments the
+           per-day delta. */
+        var baseline = acct.openingBalance || 0;
+        var dayIdx = Object.create(null);
+        dates.forEach(function (iso, n) { dayIdx[iso] = n; });
+        var deltas = new Array(DAYS).fill(0);
+        p.transactions.forEach(function (t) {
+          if (t.accountId !== id) return;
+          if (!t.date) return;
+          if (t.date < startISO) { baseline += (t.amount || 0); return; }
+          if (t.date > today) return;
+          var n = dayIdx[t.date];
+          if (n != null) deltas[n] += (t.amount || 0);
+        });
+        /* Roll deltas into end-of-day balances. */
+        var balances = new Array(DAYS);
+        var running = baseline;
+        for (var j = 0; j < DAYS; j++) { running += deltas[j]; balances[j] = running; }
+        var min = balances[0], max = balances[0];
+        for (var k = 1; k < DAYS; k++) {
+          if (balances[k] < min) min = balances[k];
+          if (balances[k] > max) max = balances[k];
+        }
+        /* Project into 100×30 viewBox. Flat series → flat midline. */
+        var span = max - min;
+        var points = balances.map(function (b, ii) {
+          var x = (ii / (DAYS - 1)) * 100;
+          var y = span === 0 ? 15 : 28 - ((b - min) / span) * 26;
+          return x.toFixed(2) + "," + y.toFixed(2);
+        });
+        var last = balances[DAYS - 1];
+        var first = balances[0];
+        var trend = "flat";
+        if (last > first) trend = "up";
+        else if (last < first) trend = "down";
+        return {
+          path: "M" + points.join(" L"),
+          min: min,
+          max: max,
+          last: last,
+          trend: trend,
+        };
+      });
+    },
+
     /* ---- Account-filter combobox ---- */
     /* Label shown in the input — the currently-selected account's
        name, or empty so the placeholder ("All accounts") shows. */
@@ -656,20 +776,11 @@ function registerView() {
     },
 
     /* ---- Bulk select + bulk operations ---- */
-    toggleSelectMode() {
-      this.selectMode = !this.selectMode;
-      if (!this.selectMode) this.selectedTxnIds = [];
-    },
     isTxnSelected(id) { return this.selectedTxnIds.indexOf(id) !== -1; },
     toggleTxnSelected(id) {
       var i = this.selectedTxnIds.indexOf(id);
       if (i === -1) this.selectedTxnIds.push(id);
       else this.selectedTxnIds.splice(i, 1);
-      /* Auto-arm select mode the moment a row is selected. The Select
-         button still works as an explicit toggle, but users who click
-         a row first don't need a separate step to reveal the bulk
-         actions bar / checkbox column. */
-      if (this.selectedTxnIds.length) this.selectMode = true;
     },
     /* Whole-row click → toggle selection. Skips clicks that came from
        a real action (buttons, links, inputs, the inline edit form,
@@ -684,7 +795,6 @@ function registerView() {
     },
     clearTxnSelection() {
       this.selectedTxnIds = [];
-      this.selectMode = false;
     },
     /* Header checkbox helpers — operate only on the currently visible
        (filtered + searched) rows, skipping reconciled rows since they

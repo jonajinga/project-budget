@@ -6,7 +6,7 @@ description: "Glossary of envelope budgeting terms used in Project Budget — Re
 permalink: /glossary/
 ---
 <p>
-  Each term has its own dedicated page with the full definition and related cross-links. Use this A–Z index to scan; click any term to read its detail page.
+  Single-page reference. Jump to any letter, or use your browser's Find (Ctrl+F / Cmd+F) to locate a term. Anywhere in the app, tooltips and inline help link straight to the matching anchor here.
 </p>
 
 {# Sort alphabetically by term, regardless of source-file clustering. #}
@@ -39,7 +39,7 @@ permalink: /glossary/
       <dt class="glossary__letter" id="letter-{{ first | lower }}"><span aria-hidden="true">{{ first }}</span><span class="visually-hidden">Terms starting with {{ first }}</span></dt>
     {% endif %}
     <dt id="{{ entry.key }}">
-      <a href="/glossary/{{ entry.key }}/">{{ entry.term }}</a>
+      <a href="#{{ entry.key }}" class="glossary__anchor">{{ entry.term }}</a>
     </dt>
     <dd>{{ entry.body | safe }}</dd>
   {% endfor %}

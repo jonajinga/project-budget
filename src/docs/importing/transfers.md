@@ -7,7 +7,7 @@ order: 4
 
 A transfer between two of your accounts is one transaction logically and two transactions to the bank — one outflow on the source side, one inflow on the destination side. Bank exports send them as independent rows in independent files. After importing both accounts, you end up with two single-sided entries that look like spending and income.
 
-If you leave them that way, [Ready to Assign](/glossary/ready-to-assign/) overstates your income, [Spending by category](/docs/reports/spending/) shows phantom outflows, and the [Net worth](/docs/reports/net-worth/) line is unaffected (because the two sides cancel) but every other report lies.
+If you leave them that way, [Ready to Assign](/glossary/#ready-to-assign) overstates your income, [Spending by category](/docs/reports/spending/) shows phantom outflows, and the [Net worth](/docs/reports/net-worth/) line is unaffected (because the two sides cancel) but every other report lies.
 
 The cleanup is straightforward.
 

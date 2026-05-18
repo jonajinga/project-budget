@@ -5,6 +5,7 @@ description: "Soft-deleted transactions and profiles live here before they're pe
 permalink: /app/trash/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="trashView()" x-init="refresh()">
   <header class="app-page__header">
     <div>
@@ -75,8 +76,13 @@ eleventyExcludeFromCollections: true
           <td class="num" :class="item.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(item.amount)"></td>
           <td class="num">
             <div class="cluster" style="justify-content: flex-end;">
-              <button class="btn btn--ghost btn--sm" type="button" @click="restore(item.id)">Restore</button>
-              <button class="btn btn--danger btn--sm" type="button" @click="purge(item.id)">Purge</button>
+              <button class="btn btn--primary btn--sm" type="button" @click="restore(item.id)">Restore</button>
+              {% call overflow(label="Trash item actions") %}
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                          @click="open = false; purge(item.id)">Purge permanently</button>
+                </li>
+              {% endcall %}
             </div>
           </td>
         </tr>
@@ -111,12 +117,15 @@ eleventyExcludeFromCollections: true
           <td class="num" x-text="t.daysLeft"></td>
           <td class="num">
             <div class="cluster" style="justify-content: flex-end;">
-              <button class="btn btn--secondary btn--sm" type="button"
+              <button class="btn btn--primary btn--sm" type="button"
                       @click="$store.budget.restoreTrashedProfile(t.id)"
                       data-tip="Restore this profile to the active list.">Restore</button>
-              <button class="btn btn--danger btn--sm" type="button"
-                      @click="purgeId = t.id; purgeName = t.name; purgeValue = ''"
-                      data-tip="Permanently delete. Cannot be undone.">Delete forever</button>
+              {% call overflow(label="Trashed profile actions") %}
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                          @click="open = false; purgeId = t.id; purgeName = t.name; purgeValue = ''">Delete forever…</button>
+                </li>
+              {% endcall %}
             </div>
           </td>
         </tr>

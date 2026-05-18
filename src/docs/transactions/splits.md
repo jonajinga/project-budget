@@ -5,7 +5,7 @@ category: "transactions"
 order: 1
 ---
 
-A [split transaction](/glossary/split/) divides one row's amount across multiple categories. Use it whenever a single charge covers things that belong in different envelopes.
+A [split transaction](/glossary/#split) divides one row's amount across multiple categories. Use it whenever a single charge covers things that belong in different envelopes.
 
 ## A typical case
 
@@ -49,7 +49,7 @@ A split with a transfer line creates the paired entry on the other account when 
 
 ## Splits and credit cards
 
-Splits behave exactly the same on credit-card accounts as on debit accounts. The [Credit Card Payment](/glossary/credit-card-payment-category/) category Activity rises by the full parent amount; each split's category Activity moves by its own portion. The math always balances.
+Splits behave exactly the same on credit-card accounts as on debit accounts. The [Credit Card Payment](/glossary/#credit-card-payment-category) category Activity rises by the full parent amount; each split's category Activity moves by its own portion. The math always balances.
 
 ## Splits and import
 

@@ -212,8 +212,8 @@ function budgetView() {
     },
 
     /* Inline-edit modal state — covers create / rename / delete and
-       goal-edit for both groups and categories so users don't have
-       to bounce to /app/categories/ for routine edits. */
+       goal-edit for both groups and categories. The budget page is
+       the canonical surface for all category management. */
     newGroupOpen: false,
     newGroupName: "",
     newCatOpen: false,
@@ -228,8 +228,8 @@ function budgetView() {
     renameKind: "",      /* 'group' | 'category' */
     renameTargetId: null,
     renameName: "",
-    /* Goal modal state — mirrors /app/categories/'s goalCatId/goalForm
-       so the same form template renders here. */
+    /* Goal modal state — goalCatId + goalForm drive the goal-edit
+       form rendered inside the budget page. */
     goalCatId: null,
     goalForm: { type: "monthlyFixed", target: "", byDate: "" },
     /* Activity drill-down modal — opens when the user clicks any
@@ -676,7 +676,7 @@ function budgetView() {
       this.deleteCatId = null;
     },
 
-    /* ---- Goal modal — same form/fields as /app/categories/ ----- */
+    /* ---- Goal modal — handlers for the budget page's goal-edit form ----- */
     goalTypeHint() {
       switch (this.goalForm.type) {
         case "monthlyFixed": return "Assign at least this amount every month.";
@@ -948,6 +948,20 @@ function budgetView() {
       var y = this.currentYear() + 1;
       var m = String(this.currentMonthNumber()).padStart(2, "0");
       return y + "-" + m;
+    },
+    /* Single-step month nav for the mobile month strip — wraps year
+       boundaries cleanly so December → next January and vice versa. */
+    prevMonthValue() {
+      var y = this.currentYear();
+      var m = this.currentMonthNumber() - 1;
+      if (m < 1) { y -= 1; m = 12; }
+      return y + "-" + String(m).padStart(2, "0");
+    },
+    nextMonthValue() {
+      var y = this.currentYear();
+      var m = this.currentMonthNumber() + 1;
+      if (m > 12) { y += 1; m = 1; }
+      return y + "-" + String(m).padStart(2, "0");
     },
     prevYearLabel() { return String(this.currentYear() - 1); },
     nextYearLabel() { return String(this.currentYear() + 1); },

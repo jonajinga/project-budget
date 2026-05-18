@@ -1,15 +1,18 @@
-/* Buttons — every variant meets WCAG 2.2 AAA target size (44×44 CSS px)
-   for the default size, and AA (24×24) for the small variant used inside
-   dense table rows. */
+/* Buttons — visual chrome lands ~32px tall but tap area always meets
+   WCAG 2.2 AA 44×44 via the ::before hit-area extension below.
+   Density is driven by --btn-pad-* tokens in tokens.css so the whole
+   UI tightens by tweaking one place. */
 .btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2xs);
-  padding: 0.7rem 1.25rem;
-  min-height: 44px;
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  min-height: var(--btn-visual-min);
+  min-width: 0;
   font-weight: 600;
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   line-height: 1.2;
   text-decoration: none;
   border: 1px solid transparent;
@@ -17,6 +20,14 @@
   cursor: pointer;
   transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
   white-space: nowrap;
+}
+/* Hit-area extension — guarantees 44×44 touch target without inflating
+   visual chrome. Stays transparent so the button looks the size it is. */
+.btn::before {
+  content: "";
+  position: absolute;
+  inset: calc(((var(--btn-touch-min) - var(--btn-visual-min)) / -2)) 0;
+  pointer-events: auto;
 }
 .btn:hover { color: #fff; text-decoration: none; }
 .btn:focus-visible {
@@ -31,7 +42,12 @@
   pointer-events: none;
 }
 
-.btn--primary { background: var(--accent); color: #fff; }
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  min-height: var(--btn-primary-min);
+  font-size: var(--fs-base);
+}
 .btn--primary:hover { background: var(--accent-hover); color: #fff; }
 
 .btn--secondary { background: var(--bg-elevated); color: var(--fg); border-color: var(--border-strong); }
@@ -56,23 +72,21 @@
 .btn--danger:hover { background: var(--danger); color: #fff; opacity: 0.9; }
 
 .btn--sm {
-  padding: 0.45rem 0.85rem;
-  font-size: var(--fs-sm);
-  min-height: 36px;
+  padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
+  font-size: var(--fs-xs);
+  min-height: 28px;
 }
 
-/* Icon-only square button — for tight action clusters (up/down
-   arrows, repeat / mute toggles). Default 44x44 to meet WCAG 2.5.5
-   target size; dense in-row clusters opt out with data-touch="compact"
-   for a 32x32 visual size with a transparent ::before hit-area
-   extension that still hits 44x44 (see .data-touch--compact below). */
+/* Icon-only square button — compact-by-default. Visual 32×32; the
+   ::before from .btn extends the hit area to 44×44 so WCAG 2.5.5
+   still passes. Header icons and other surfaces that want the
+   larger visual size opt into .btn--icon--lg. */
 .btn--icon {
   padding: 0;
-  position: relative;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: var(--btn-visual-min);
+  min-width: var(--btn-visual-min);
+  height: var(--btn-visual-min);
+  min-height: var(--btn-visual-min);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -81,10 +95,11 @@
   color: var(--fg-muted);
   border-radius: var(--radius-input);
 }
+.btn--icon::before {
+  inset: -6px;
+}
 .btn--icon:hover { background: var(--bg-alt); color: var(--accent); }
 .btn--icon:focus-visible {
-  /* WCAG 2.4.11: visible focus indicator. The bg-alt swap alone is
-     ~1.05:1 against bg-elevated and easily missed. */
   outline: 2px solid var(--accent);
   outline-offset: -2px;
   color: var(--accent);
@@ -97,18 +112,183 @@
 }
 .btn--icon svg { display: block; }
 
-/* Compact opt-out for dense row clusters. Visual size shrinks to
-   32x32 (group actions) or 28x28 (per-row actions), but a
-   transparent ::before bleeds the hit area back to 44x44 so touch
-   users never lose the target. */
-.btn--icon[data-touch="compact"] {
-  width: 32px; min-width: 32px;
-  height: 32px; min-height: 32px;
+/* Larger icon-button opt-in for surfaces that want the full 44×44
+   visual (page-header help icons, FAB, etc.). */
+.btn--icon--lg {
+  width: 44px; min-width: 44px;
+  height: 44px; min-height: 44px;
 }
-.btn--icon[data-touch="compact"]::before {
-  content: "";
+.btn--icon--lg::before { inset: 0; }
+
+/* Legacy compatibility: any template still passing data-touch="compact"
+   keeps working — the ::before inset already matches the compact spec. */
+.btn--icon[data-touch="compact"] {
+  width: var(--btn-visual-min); min-width: var(--btn-visual-min);
+  height: var(--btn-visual-min); min-height: var(--btn-visual-min);
+}
+
+/* Generic data-card pattern for mobile fallback of any data table.
+   Visible at <600px when the parent toggles via the @media rule
+   below. Each card is a single tall-line row with primary text on
+   the left, optional right-aligned number, and an overflow ⋮ for
+   secondary actions. Tap the card body to expand details when the
+   caller wires it up. Pattern mirrors .register__cards. */
+.data-cards { display: none; flex-direction: column; gap: var(--space-2xs); }
+.data-card {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-xs);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  min-height: 56px;
+}
+.data-card__primary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.data-card__title {
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.data-card__sub {
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+}
+.data-card__amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.data-card__details {
+  grid-column: 1 / -1;
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--border-soft);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+.data-card.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}
+
+/* Tables that opt in to the card fallback hide at <600px and the
+   sibling .data-cards (or specialized class) shows in their place. */
+@media (max-width: 599px) {
+  .data-cards { display: flex; }
+  .app-page .table.has-card-fallback,
+  .app-page .table--card-fallback {
+    display: none;
+  }
+}
+
+/* Inline disclosure — collapsed help / info section that used to be
+   a "Got it" modal. <details>/<summary> for free keyboard + a11y. */
+.inline-disclosure {
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+.inline-disclosure > summary {
+  position: relative;
+  display: list-item;
+  padding: var(--space-2xs) var(--space-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  list-style: none;
+  user-select: none;
+}
+.inline-disclosure > summary::-webkit-details-marker { display: none; }
+.inline-disclosure > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1em;
+  margin-right: var(--space-3xs);
+  color: var(--fg-muted);
+  transition: transform var(--t-fast);
+}
+.inline-disclosure[open] > summary::before { transform: rotate(90deg); }
+.inline-disclosure > summary:hover { color: var(--accent); }
+.inline-disclosure > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.inline-disclosure > *:not(summary) {
+  margin: 0 var(--space-sm) var(--space-sm);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+.inline-disclosure > *:not(summary):first-of-type { margin-top: 0; }
+
+/* Overflow / kebab menu — pure Alpine + CSS popover used by
+   partials/overflow-menu.njk. The trigger reuses .btn--icon for
+   sizing/touch; the list anchors to the trigger. PurgeCSS safelist
+   in .eleventy.js covers .is-open + dynamically-shown classes. */
+.overflow-menu { position: relative; display: inline-flex; }
+.overflow-menu__trigger { color: var(--fg-muted); }
+.overflow-menu__trigger.is-open { background: var(--bg-alt); color: var(--accent); }
+.overflow-menu__list {
   position: absolute;
-  inset: -6px;
+  top: calc(100% + 4px);
+  z-index: 50;
+  min-width: 11rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-input);
+}
+.overflow-menu__list--right { right: 0; }
+.overflow-menu__list--left  { left: 0; }
+.overflow-menu__item,
+.overflow-menu__item:link,
+.overflow-menu__item:visited {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  width: 100%;
+  padding: 0.45rem 0.85rem;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 36px;
+}
+.overflow-menu__item:hover,
+.overflow-menu__item:focus-visible {
+  background: var(--bg-alt);
+  color: var(--accent);
+  outline: 0;
+}
+.overflow-menu__item--danger { color: var(--danger); }
+.overflow-menu__item--danger:hover { background: var(--bg-alt); color: var(--danger); }
+.overflow-menu__item[disabled],
+.overflow-menu__item[aria-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.overflow-menu__sep {
+  height: 1px;
+  margin: 0.25rem 0;
+  background: var(--border-soft);
 }
 
 /* Inline-edit trigger — looks like text in a table cell but clickable to
@@ -139,6 +319,18 @@
   outline-offset: 1px;
 }
 .inline-edit-trigger--placeholder { color: var(--fg-muted); font-style: italic; }
+
+/* Payee rename input — flush with surrounding text so opening edit
+   mode doesn't grow the row height. Overrides .input's 44px min-height
+   + heavy padding for this in-row use. */
+.payee-rename-input {
+  min-height: 0;
+  padding: 0.25rem 0.4rem;
+  margin: -0.25rem -0.4rem;
+  width: calc(100% + 0.8rem);
+  font-size: inherit;
+  background: var(--bg);
+}
 
 /* Card */
 .card {
@@ -193,6 +385,9 @@
 }
 .table th { font-weight: 600; color: var(--fg-muted); background: var(--bg-alt); }
 .table tbody tr:hover { background: var(--bg-alt); }
+.table tbody tr.is-selected {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
 .table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Mobile fallback for any .table not already inside a scrolling
@@ -284,32 +479,26 @@
 [data-theme="dark"] .theme-toggle__sun { display: block; }
 [data-theme="dark"] .theme-toggle__moon { display: none; }
 
-/* Theme picker — split button: quick-toggle on the left (sun/moon),
-   chevron on the right to open the full dropdown. */
+/* Theme picker — single icon button that opens the theme dropdown.
+   Sun (in dark themes) / moon (in light themes) icon serves as both
+   the indicator of the current scheme AND the dropdown trigger. */
 .theme-picker { position: relative; }
-.theme-picker__btn-group {
-  display: inline-flex;
-  align-items: stretch;
-  border-radius: var(--radius-input);
-  overflow: hidden;
-}
-.theme-picker__quick,
-.theme-picker__open {
+.theme-picker__trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 44px;
+  height: 44px;
   background: none;
   border: 0;
   color: var(--fg);
   cursor: pointer;
+  border-radius: var(--radius-input);
   transition: background var(--t-fast), color var(--t-fast);
 }
-.theme-picker__quick { width: 44px; height: 44px; }
-.theme-picker__open { width: 24px; height: 44px; border-left: 1px solid var(--border-soft); color: var(--fg-muted); }
-.theme-picker__quick:hover,
-.theme-picker__open:hover { background: var(--bg-alt); color: var(--accent); }
-.theme-picker__quick:focus-visible,
-.theme-picker__open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.theme-picker__trigger:hover { background: var(--bg-alt); color: var(--accent); }
+.theme-picker__trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.theme-picker__trigger[aria-expanded="true"] { background: var(--bg-alt); color: var(--accent); }
 
 /* Dropdown menu — anchored to the picker on the right side of the
    header. Width sized for the longest label ("Solarized Light",
@@ -317,10 +506,11 @@
    is hidden visually but wheel / touch scrolling still works on
    smaller viewports. */
 .theme-picker__menu {
-  /* Default-hidden in CSS so the menu never flashes visible while
-     Alpine boots / re-binds during a navigation. Alpine's x-show
-     and x-cloak still apply; this is the floor. */
-  display: none;
+  /* Visible by default in CSS; Alpine's [x-cloak] hides it during
+     boot, then x-show writes inline `display: none` when closed.
+     Removing the prior `display: none` base broke the prior bug
+     where Alpine's open state cleared the inline style and the base
+     rule kept the menu hidden. */
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -337,12 +527,6 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-/* Alpine x-show writes display:none/empty; once it flips display
-   away from none we want a flex column. The combinator below catches
-   the moment Alpine sets display via inline style. */
-.theme-picker__menu[style*="display:"] { display: block; }
-.theme-picker__menu[style*="display: none"],
-.theme-picker__menu[style*="display:none"] { display: none; }
 .theme-picker__menu::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .theme-picker__group-label {
   font-size: 0.65rem;

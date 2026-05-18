@@ -59,7 +59,7 @@ The whole session takes under a minute once it's habit.
 ## What Auto-assign won't do
 
 - Touch credit-card payment categories (those are derived from card spending, not assigned directly).
-- Overspend [Ready to Assign](/glossary/ready-to-assign/) — if a strategy would push RTA negative, the apply button warns and asks for confirmation.
+- Overspend [Ready to Assign](/glossary/#ready-to-assign) — if a strategy would push RTA negative, the apply button warns and asks for confirmation.
 - Modify months other than the active one.
 
 If you want different behavior in a specific category, exclude it by scoping Auto-assign to its group and using a different strategy for that category afterward.

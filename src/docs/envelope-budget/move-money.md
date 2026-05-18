@@ -14,7 +14,7 @@ Moving $50 from *Dining out* to *Groceries* this month means:
 - *Dining out*'s **Assigned** drops by $50.
 - *Groceries*'s **Assigned** rises by $50.
 
-No transaction is created. The bank doesn't see anything. [Ready to Assign](/glossary/ready-to-assign/) is unchanged. The reports for *Dining out* and *Groceries* reflect the new assignment.
+No transaction is created. The bank doesn't see anything. [Ready to Assign](/glossary/#ready-to-assign) is unchanged. The reports for *Dining out* and *Groceries* reflect the new assignment.
 
 You can only move dollars between categories that exist in the same profile and the same month. To shift money across months, edit the future month's Assigned directly.
 
@@ -43,7 +43,7 @@ When Ready to Assign is zero and a category is [overspent](/docs/envelope-budget
 ## What not to do
 
 - **Don't pull money out of next month's Assigned to cover this month.** If you've already pre-budgeted ahead, leave it alone. Cover overspends from current-month categories or accept the next-month penalty.
-- **Don't move money out of the [Credit Card Payment](/glossary/credit-card-payment-category/) category to cover overspending.** That money was earmarked for the bill. Pulling it out leaves you short when the statement arrives.
+- **Don't move money out of the [Credit Card Payment](/glossary/#credit-card-payment-category) category to cover overspending.** That money was earmarked for the bill. Pulling it out leaves you short when the statement arrives.
 
 ## History
 

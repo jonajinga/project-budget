@@ -5,6 +5,7 @@ description: "Append-only journal of recent mutations in this profile — useful
 permalink: /app/audit-log/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="auditLogView()" x-init="refresh()">
   <header class="app-page__header">
     <div>
@@ -14,10 +15,16 @@ eleventyExcludeFromCollections: true
         Recent activity in this profile, newest-first. Built from transaction history, scheduled-template runs, and snapshot events — read-only and useful when a household shares a profile.
       </p>
     </div>
-    <div class="cluster">
-      <button class="btn btn--ghost btn--sm" type="button" @click="refresh()">Refresh</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV()">Export CSV</button>
-    </div>
+    {% call overflow(label="Audit-log actions") %}
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                @click="open = false; refresh()">Refresh</button>
+      </li>
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                @click="open = false; exportCSV()">Export CSV</button>
+      </li>
+    {% endcall %}
   </header>
 
   <section class="card">

@@ -5,6 +5,7 @@ description: "Per-category assigned vs spent over a configurable window — spot
 permalink: /app/reports/assignment-history/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="assignmentHistoryView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -108,12 +109,7 @@ eleventyExcludeFromCollections: true
         <span x-text="rows.length"></span> categories ·
         <span x-text="flatRows().length"></span> rows in table
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
-              data-tip="Download the per-category, per-month assigned vs spent grid as a CSV file.">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
-              data-tip="Open the browser print dialog.">Print</button>
+      {{ reportExports("", "exportRowsCSV()") }}
     </div>
   </section>
 </div>

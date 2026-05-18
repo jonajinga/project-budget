@@ -8,29 +8,28 @@
    window.ProjectBudget.themes + .currentTheme + .applyTheme are
    exported by main.js — this picker reads from them so the source of
    truth stays in one place. #}
-<div class="theme-picker" x-data="themePicker()" x-init="init()" @keydown.escape.window="open = false">
-  <div class="theme-picker__btn-group">
-    <button type="button"
-            class="theme-picker__quick"
-            aria-label="Toggle color theme"
-            data-tip="Switch the light/dark pair within the current theme family."
-            @click="quickToggle()">
-      {# Sun for dark themes, moon for light themes — same icon set as
-         the prior toggle so visual recognition carries over. #}
-      <svg x-show="scheme === 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      <svg x-show="scheme !== 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-    </button>
-    <button type="button"
-            class="theme-picker__open"
-            :aria-expanded="open.toString()"
-            aria-label="Choose a theme"
-            data-tip="Pick from every theme without leaving the page."
-            @click="open = !open">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-    </button>
-  </div>
+<div class="theme-picker"
+     x-data="themePicker()" x-init="init()"
+     @keydown.escape.window="open = false"
+     @click.outside="open = false">
+  {# Single trigger — sun/moon icon for the current scheme; click
+     opens the dropdown to pick any theme. The old split-button
+     (icon + chevron) merged into one since the chevron's only job
+     was to open the same menu. @click.outside lives on the wrapper
+     (not the menu) so clicking the trigger button doesn't fire an
+     immediate close after open. #}
+  <button type="button"
+          class="theme-picker__trigger"
+          :aria-expanded="open.toString()"
+          aria-haspopup="menu"
+          aria-label="Choose a theme"
+          data-tip="Switch theme."
+          @click="open = !open">
+    <svg x-show="scheme === 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    <svg x-show="scheme !== 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+  </button>
 
-  <div class="theme-picker__menu" x-show="open" x-cloak @click.outside="open = false" role="menu">
+  <div class="theme-picker__menu" x-show="open" x-cloak role="menu">
     <p class="theme-picker__group-label">Light</p>
     <ul class="theme-picker__list">
       <template x-for="t in lightThemes()" :key="t.id">

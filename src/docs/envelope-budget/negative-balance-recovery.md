@@ -5,7 +5,7 @@ category: "envelope-budget"
 order: 8
 ---
 
-Negative [Ready to Assign](/glossary/ready-to-assign/) means you've committed more dollars than you have in your on-budget accounts. The hero at the top of [Budget](/app/budget/) turns red. The fix is mechanical and short.
+Negative [Ready to Assign](/glossary/#ready-to-assign) means you've committed more dollars than you have in your on-budget accounts. The hero at the top of [Budget](/app/budget/) turns red. The fix is mechanical and short.
 
 ## How you got here
 
@@ -59,7 +59,7 @@ If a prior-month overspend pushed RTA so far negative that this month's income c
 ## What not to do
 
 - **Don't delete the offending transactions** to make the math work. The bank still cleared them; the budget needs to reflect reality.
-- **Don't move money out of [Credit Card Payment](/glossary/credit-card-payment-category/)** to fix RTA. Those dollars are earmarked for the bill.
+- **Don't move money out of [Credit Card Payment](/glossary/#credit-card-payment-category)** to fix RTA. Those dollars are earmarked for the bill.
 - **Don't lower a goal's target** to silence an *Underfunded* indicator — that's not the same problem and not the same fix. See [Underfunded vs overspent](/docs/envelope-budget/underfunded-vs-overspent/).
 
 ## Prevention

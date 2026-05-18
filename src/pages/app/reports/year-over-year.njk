@@ -5,6 +5,7 @@ description: "Compare any two date ranges — income, expense, savings rate, and
 permalink: /app/reports/year-over-year/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="yoyView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -113,12 +114,7 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="tableRows().length"></span> rows
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
-              data-tip="Download the current view as a CSV file.">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
-              data-tip="Open the browser print dialog.">Print</button>
+      {{ reportExports("", "exportRowsCSV()") }}
     </div>
   </section>
 </div>

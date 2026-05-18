@@ -36,7 +36,7 @@ The *Visa payment* category doesn't care. It earmarks the full $48 anyway — th
 
 Open the red *Groceries* row. Click Available, pick *Move money from…*, and pull $75 out of *Just for Fun*. *Groceries* returns to zero. *Visa payment* is untouched (it was already correct).
 
-If you don't fix it, next month's [Ready to Assign](/glossary/ready-to-assign/) starts $75 lower. The card still gets paid.
+If you don't fix it, next month's [Ready to Assign](/glossary/#ready-to-assign) starts $75 lower. The card still gets paid.
 
 ## Day 28: statement arrives
 

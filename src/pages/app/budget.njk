@@ -6,6 +6,7 @@ permalink: /app/budget/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="budgetView()" x-init="init()">
 
   {# Visually-hidden page heading — SR users land on a clear page
@@ -15,51 +16,58 @@ eleventyExcludeFromCollections: true
     Budget — <span x-text="monthHeaderLabel()">this month</span>
   </h1>
 
-  {# Year strip with prev/next year + the 12-month tab row #}
-  <div class="month-strip" role="tablist" aria-label="Budget month">
-    <button type="button" class="month-strip__year"
-            @click="$store.budget.setMonth(prevYearMonth())"
-            aria-label="Previous year">
-      <span aria-hidden="true">&larr;</span>
-      <span x-text="prevYearLabel()"></span>
-    </button>
-    <div class="month-strip__tabs" role="presentation">
-      <template x-for="m in monthsOfYear()" :key="m.value">
-        <button type="button"
-                role="tab"
-                class="month-strip__tab"
-                :class="{ 'is-active': m.value === $store.budget.currentMonth, 'is-current': m.value === thisMonthValue() }"
-                :aria-selected="(m.value === $store.budget.currentMonth).toString()"
-                @click="$store.budget.setMonth(m.value)"
-                x-text="m.label"></button>
-      </template>
+  {# Budget HUD — the month picker + RTA + toolbar render as a single
+     visually unified surface (one outer border, internal hairline
+     dividers) so the eye reads them as one HUD instead of three
+     floating bars. #}
+  <div class="budget__hud" x-show="hasCategories" x-cloak>
+    <div class="month-strip" role="tablist" aria-label="Budget month">
+      <button type="button" class="month-strip__year"
+              @click="$store.budget.setMonth(prevYearMonth())"
+              aria-label="Previous year">
+        <span aria-hidden="true">&larr;</span>
+        <span x-text="prevYearLabel()"></span>
+      </button>
+      <div class="month-strip__tabs" role="presentation">
+        <template x-for="m in monthsOfYear()" :key="m.value">
+          <button type="button"
+                  role="tab"
+                  class="month-strip__tab"
+                  :class="{ 'is-active': m.value === $store.budget.currentMonth, 'is-current': m.value === thisMonthValue() }"
+                  :aria-selected="(m.value === $store.budget.currentMonth).toString()"
+                  @click="$store.budget.setMonth(m.value)"
+                  x-text="m.label"></button>
+        </template>
+      </div>
+      <button type="button" class="month-strip__year"
+              @click="$store.budget.setMonth(nextYearMonth())"
+              aria-label="Next year">
+        <span x-text="nextYearLabel()"></span>
+        <span aria-hidden="true">&rarr;</span>
+      </button>
     </div>
-    <button type="button" class="month-strip__year"
-            @click="$store.budget.setMonth(nextYearMonth())"
-            aria-label="Next year">
-      <span x-text="nextYearLabel()"></span>
-      <span aria-hidden="true">&rarr;</span>
-    </button>
-  </div>
 
-  <div class="rta" :class="rtaCents() < 0 ? 'rta--negative' : ''">
-    <p class="rta__label" data-tip="Money received but not yet given a job. See the glossary for the full definition.">Ready to assign</p>
-    <p class="rta__value" x-text="formatCents(rtaCents())"></p>
-    <p class="rta__hint" x-show="rtaCents() === 0">Every dollar is assigned.</p>
-    <p class="rta__hint" x-show="rtaCents() > 0">Inflow not yet given a job.</p>
-    <p class="rta__hint" x-show="rtaCents() < 0">You assigned more than you have. Remove some assignments or wait for inflow.</p>
-  </div>
-
-  <p class="app-page__lead" x-show="!hasCategories" x-cloak style="margin-top: var(--space-md);">
-    Create category groups and categories on the <a href="/app/categories/">categories page</a> to start assigning dollars.
-  </p>
-
-  <section class="budget" x-show="hasCategories" x-cloak>
     <div class="budget__toolbar">
       <div class="cluster" style="gap: var(--space-2xs);">
-        <button type="button" class="btn btn--ghost btn--sm"
-                @click="$store.budget.jumpToThisMonth()"
-                data-tip="Jump to the current calendar month.">This month</button>
+        {# Paired month-level stats — Ready to Assign (the headline,
+           accent-filled) and Assigned (the supporting context, neutral
+           outline). Same component, same shape, different emphasis,
+           so the eye reads them as one block. #}
+        <span class="budget-stat budget-stat--accent"
+              :class="rtaCents() < 0 ? 'budget-stat--danger' : (rtaCents() === 0 ? 'budget-stat--muted' : '')"
+              :data-tip="rtaCents() < 0 ? 'You assigned more than you have. Remove some assignments or wait for inflow.' : (rtaCents() === 0 ? 'Every dollar is assigned.' : 'Inflow not yet given a job.')"
+              role="status"
+              :aria-label="'Ready to assign: ' + formatCents(rtaCents())">
+          <span class="budget-stat__label">Ready to assign</span>
+          <strong class="budget-stat__value" x-text="formatCents(rtaCents())"></strong>
+        </span>
+        <span class="budget-stat"
+              data-tip="Dollars committed to categories this month so far."
+              :aria-label="'Assigned this month: ' + formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))">
+          <span class="budget-stat__label">Assigned</span>
+          <strong class="budget-stat__value" x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></strong>
+        </span>
+        <span class="budget__toolbar-sep" aria-hidden="true"></span>
         <button type="button" class="btn btn--primary btn--sm"
                 @click="openAutoAssign({ kind: 'all', name: 'All categories', ids: null })"
                 data-tip="Fill in this month's Assigned column for every category — from goal needs, last month's plan, or recent averages.">
@@ -68,31 +76,39 @@ eleventyExcludeFromCollections: true
           </svg>
           Auto-assign
         </button>
-        <button type="button" class="btn btn--ghost btn--sm"
-                @click="bulkClearAssigned('all')"
-                data-tip="Reset Assigned to $0 for every category in this month. Cmd/Ctrl+Z undoes.">Clear all assigned</button>
-        <button type="button" class="btn btn--secondary btn--sm"
-                @click="openTemplates()"
-                data-tip="Save the current month's assigned values as a template, or apply a saved template to this month.">Templates</button>
-        <button type="button" class="btn btn--secondary btn--sm"
-                @click="newGroupOpen = true; newGroupName = ''"
-                data-tip="Create a new category group (e.g. Subscriptions, Reserves).">+ Group</button>
-        <button type="button" class="btn btn--ghost btn--sm"
-                @click="$store.budget.setAllCatGroupsCollapsed(!$store.budget.allCatGroupsCollapsed())"
-                :data-tip="$store.budget.allCatGroupsCollapsed() ? 'Expand every category group at once.' : 'Collapse every category group at once.'"
-                x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all' : 'Collapse all'">Collapse all</button>
-        <a class="btn btn--ghost btn--sm" href="/app/categories/"
-           data-tip="Full categories admin (reorder, goals, payment categories).">Manage categories</a>
-        <button type="button" class="btn btn--ghost btn--sm"
-                @click="saveCurrentView()"
-                data-tip="Save this month as a recall-able view in /app/templates/.">Save view</button>
-      </div>
-      <div class="cluster" style="gap: var(--space-2xs);">
-        <p class="budget__total-readout" style="margin: 0;">
-          Total assigned this month:
-          <strong x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></strong>
-        </p>
-        <button type="button" class="btn btn--icon"
+        {# Auto-assign is the only inline headline action; every other
+           toolbar action lives in this kebab so the row stays compact
+           at every viewport. #}
+        {% call overflow(label="Budget actions") %}
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; $store.budget.jumpToThisMonth()">Jump to this month</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; bulkClearAssigned('all')">Clear assigned (all)</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; openTemplates()">Templates…</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; newGroupOpen = true; newGroupName = ''">+ New group…</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; $store.budget.setAllCatGroupsCollapsed(!$store.budget.allCatGroupsCollapsed())"
+                    x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all groups' : 'Collapse all groups'">Collapse all groups</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; saveCurrentView()">Save current view</button>
+          </li>
+        {% endcall %}
+        <button type="button" class="btn btn--icon budget__collapse-toggle"
                 @click="budgetCollapsed = !budgetCollapsed"
                 :aria-label="budgetCollapsed ? 'Expand budget grid' : 'Collapse budget grid'"
                 :data-tip="budgetCollapsed ? 'Show every category row again.' : 'Hide every category row and show only the Total Budget summary.'">
@@ -103,7 +119,9 @@ eleventyExcludeFromCollections: true
         </button>
       </div>
     </div>
+  </div>
 
+  <section class="budget" x-show="hasCategories" x-cloak>
     <div x-show="!budgetCollapsed" x-cloak>
       {# Desktop-only column header — at mobile each cat row carries
          its own micro-labels above the pills, so the header strip is
@@ -113,11 +131,12 @@ eleventyExcludeFromCollections: true
         <span class="num" data-tip="Dollars you committed to this category this month.">Assigned</span>
         <span class="num" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
         <span class="num" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
+        <span aria-hidden="true"></span>
       </div>
 
-    <div data-sortable-list data-sortable-kind="cat-group">
+    <div>
       <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
-        <div class="budget__group cat-group" :data-sortable-id="group.group?.id">
+        <div class="budget__group cat-group">
           <div class="budget__group-header budget__group-header--row" style="background: var(--bg-elevated);">
             <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
               <input type="checkbox" class="budget__bulk-check"
@@ -127,13 +146,6 @@ eleventyExcludeFromCollections: true
                      @change="toggleGroupSelected(group)"
                      :aria-label="'Select all categories in ' + (group.group?.name || 'Other')"
                      :data-tip="'Select / deselect every category in ' + (group.group?.name || 'Other categories') + ' for bulk actions.'">
-              <span class="dnd-handle dnd-handle--sm"
-                    :aria-label="'Reorder group ' + (group.group?.name || '') + '. Drag, or use arrow keys.'"
-                    role="button"
-                    tabindex="0"
-                    x-show="group.group"
-                    @keydown.up.prevent="keyboardMoveGroup(group.group, -1)"
-                    @keydown.down.prevent="keyboardMoveGroup(group.group, 1)">&#9776;</span>
               <button type="button" class="group-toggle"
                       @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
                       :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
@@ -141,59 +153,6 @@ eleventyExcludeFromCollections: true
                 <span class="group-toggle__chevron" :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
                 <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
               </button>
-              {# Inline group-edit actions. Always visible on touch, fade
-                 in on hover on desktop (via .budget__group-actions CSS). #}
-              <div class="cluster budget__group-actions" x-show="group.group" x-cloak>
-                <button type="button" class="btn btn--icon"
-                        @click="openAutoAssign({ kind: 'group', name: group.group.name, ids: group.categories.map(c => c.id) })"
-                        aria-label="Auto-assign this group"
-                        data-tip="Auto-assign just the categories in this group.">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
-                  </svg>
-                </button>
-                <button type="button" class="btn btn--icon" @click="addCategoryTo(group.group)"
-                        aria-label="Add category to group"
-                        data-tip="Add a new category to this group.">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                </button>
-                <button type="button" class="btn btn--icon" @click="openRenameGroup(group.group)"
-                        aria-label="Rename group"
-                        data-tip="Rename this group.">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path>
-                    <line x1="15" y1="5" x2="19" y2="9"></line>
-                  </svg>
-                </button>
-                <button type="button" class="btn btn--icon"
-                        @click="groupClearAssigned(group)"
-                        aria-label="Clear assigned for this group"
-                        data-tip="Set Assigned to $0 for every category in this group.">
-                  {# Lucide "minus-circle" — clear/reset metaphor. #}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9"/><line x1="8" y1="12" x2="16" y2="12"/>
-                  </svg>
-                </button>
-                <button type="button" class="btn btn--icon"
-                        @click="groupClearAvailable(group)"
-                        aria-label="Clear available for this group"
-                        data-tip="Push Available to $0 for every category in this group — pulls money back to Ready to Assign.">
-                  {# Lucide "rotate-ccw" — undo-like, distinct from refresh. #}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polyline points="1 4 1 10 7 10"/>
-                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-                  </svg>
-                </button>
-                <button type="button" class="btn btn--icon" @click="deleteGroup(group.group)"
-                        aria-label="Delete group"
-                        data-tip="Delete this group. Categories inside become ungrouped."
-                        style="color: var(--danger);">
-                  {{ iconTrash(16) }}
-                </button>
-              </div>
             </div>
             {# Group totals stay as plain bold tabular numerals — no
                pill chrome — so they read as summary lines rather
@@ -211,12 +170,54 @@ eleventyExcludeFromCollections: true
             <span class="num budget__group-total"
                   :class="groupTotalAvailable(group.categories) < 0 ? 'budget__group-total--neg' : ''"
                   x-text="formatCents(groupTotalAvailable(group.categories))"></span>
+            {# Group kebab anchored to the far right edge so it lines up
+               with the per-category kebab below. All six group-level
+               actions live here. #}
+            <div class="budget__row-actions" x-show="group.group" x-cloak>
+              {% call overflow(label="Group actions") %}
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; openAutoAssign({ kind: 'group', name: group.group.name, ids: group.categories.map(c => c.id) })">Auto-assign group</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; addCategoryTo(group.group)">Add category</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; openRenameGroup(group.group)">Rename group</button>
+                </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; keyboardMoveGroup(group.group, -1)">Move group up</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; keyboardMoveGroup(group.group, 1)">Move group down</button>
+                </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; groupClearAssigned(group)">Clear assigned</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; groupClearAvailable(group)">Clear available</button>
+                </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                          @click="open = false; deleteGroup(group.group)">Delete group</button>
+                </li>
+              {% endcall %}
+            </div>
           </div>
 
           <div x-show="!(group.group && $store.budget.isCatGroupCollapsed(group.group.id))" x-cloak>
-            <div data-sortable-list data-sortable-kind="budget" :data-sortable-group-id="group.group?.id || ''">
+            <div>
               <template x-for="c in group.categories" :key="c.id">
-                <div class="budget__row cat-row" :data-sortable-id="c.id"
+                <div class="budget__row cat-row"
                      :class="isCatSelected(c.id) ? 'budget__row--selected' : ''">
                   <div class="budget__category">
                     <div class="budget__category-row">
@@ -225,12 +226,6 @@ eleventyExcludeFromCollections: true
                              @change="toggleCatSelected(c.id)"
                              :aria-label="'Select ' + c.name + ' for bulk actions'"
                              :data-tip="'Select this category for bulk Clear assigned / Clear available.'">
-                      <span class="dnd-handle dnd-handle--sm"
-                            :aria-label="'Reorder ' + c.name + '. Drag, or use arrow keys.'"
-                            role="button"
-                            tabindex="0"
-                            @keydown.up.prevent="keyboardMoveCat(c, group, -1)"
-                            @keydown.down.prevent="keyboardMoveCat(c, group, 1)">&#9776;</span>
                       <span class="budget__cat-name" x-text="c.name"></span>
                       <span class="goal-badge"
                             x-show="$store.budget.findGoal(c.id)"
@@ -238,80 +233,6 @@ eleventyExcludeFromCollections: true
                             :class="'goal-badge--' + ($store.budget.goalStatus(c.id) || 'needed')"
                             :title="'Goal needs ' + formatCents($store.budget.goalNeeded(c.id)) + ' this month'"
                             x-text="goalLabel(c.id)"></span>
-                      {# Per-row inline edit/delete — fades in on hover on
-                         desktop, always visible on touch. Skips payment
-                         categories (they're managed implicitly). #}
-                      {# Per-cat row actions. Order mirrors the per-group
-                         actions cluster — Auto-assign, Rename, Clear
-                         assigned, Clear available, Delete — with the
-                         cat-only Move money + Goal slotted at the
-                         front so users find the shared icons in the
-                         same positions across both rows. #}
-                      <span class="budget__row-actions" x-cloak>
-                        <button type="button" class="btn btn--icon"
-                                @click="openMoveMoney(c)"
-                                aria-label="Move money to or from this category"
-                                data-tip="Move money to or from this category (reallocate this month's Assigned dollars between categories or pools).">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="17 1 21 5 17 9"/>
-                            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                            <polyline points="7 23 3 19 7 15"/>
-                            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                          </svg>
-                        </button>
-                        <template x-if="!$store.budget.isPaymentCategory(c.id)">
-                          <span style="display: contents;">
-                            <button type="button" class="btn btn--icon"
-                                    @click="openAutoAssign({ kind: 'category', name: c.name, id: c.id })"
-                                    aria-label="Auto-assign this category"
-                                    data-tip="Auto-assign just this category from a goal, last month, or recent average.">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
-                              </svg>
-                            </button>
-                            <button type="button" class="btn btn--icon" @click="openGoal(c)"
-                                    aria-label="Set goal for category"
-                                    data-tip="Set, change, or remove this category's funding goal.">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="9"></circle>
-                                <circle cx="12" cy="12" r="5"></circle>
-                                <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
-                              </svg>
-                            </button>
-                            <button type="button" class="btn btn--icon" @click="openRename(c)"
-                                    aria-label="Rename category"
-                                    data-tip="Rename this category.">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path>
-                                <line x1="15" y1="5" x2="19" y2="9"></line>
-                              </svg>
-                            </button>
-                            <button type="button" class="btn btn--icon"
-                                    @click="catClearAssigned(c)"
-                                    aria-label="Clear assigned for this category"
-                                    data-tip="Set Assigned to $0 for this category in this month.">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="9"/><line x1="8" y1="12" x2="16" y2="12"/>
-                              </svg>
-                            </button>
-                            <button type="button" class="btn btn--icon"
-                                    @click="catClearAvailable(c)"
-                                    aria-label="Clear available for this category"
-                                    data-tip="Push Available to $0 for this category — pulls money back to Ready to Assign.">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <polyline points="1 4 1 10 7 10"/>
-                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-                              </svg>
-                            </button>
-                            <button type="button" class="btn btn--icon" @click="deleteCategoryRow(c)"
-                                    aria-label="Delete category"
-                                    data-tip="Delete this category. Activity becomes uncategorized."
-                                    style="color: var(--danger);">
-                              {{ iconTrash(14) }}
-                            </button>
-                          </span>
-                        </template>
-                      </span>
                     </div>
                     <div class="goal-bar"
                          x-show="$store.budget.findGoal(c.id)"
@@ -352,12 +273,60 @@ eleventyExcludeFromCollections: true
                             data-tip="Click to move money to or from this category."
                             x-text="formatCents(categoryAvailable(c.id))"></button>
                   </div>
+                  {# Row kebab anchored to the far right edge (its own
+                     grid column) so it lines up across every row and
+                     never crowds the category name. #}
+                  <div class="budget__row-actions">
+                    <template x-if="!$store.budget.isPaymentCategory(c.id)">
+                      {% call overflow(label="Category actions") %}
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; openMoveMoney(c)">Move money…</button>
+                        </li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; openAutoAssign({ kind: 'category', name: c.name, id: c.id })">Auto-assign</button>
+                        </li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; openGoal(c)">Set goal…</button>
+                        </li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; openRename(c)">Rename…</button>
+                        </li>
+                        <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; keyboardMoveCat(c, group, -1)">Move up</button>
+                        </li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; keyboardMoveCat(c, group, 1)">Move down</button>
+                        </li>
+                        <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; catClearAssigned(c)">Clear assigned</button>
+                        </li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item"
+                                  @click="open = false; catClearAvailable(c)">Clear available</button>
+                        </li>
+                        <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                        <li role="none">
+                          <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                                  @click="open = false; deleteCategoryRow(c)">Delete category</button>
+                        </li>
+                      {% endcall %}
+                    </template>
+                  </div>
                 </div>
               </template>
             </div>
 
             <p x-show="!group.categories.length" x-cloak style="padding: var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm);">
-              No categories in this group yet. Drag one here from another group, or visit the <a href="/app/categories/">categories page</a>.
+              No categories in this group yet. Use the group menu (⋮) to add one, or drag one here from another group.
             </p>
           </div>
         </div>
@@ -871,10 +840,26 @@ eleventyExcludeFromCollections: true
         </svg>
         Auto-assign
       </button>
-      <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAssigned('selection')"
-              data-tip="Reset Assigned to $0 for every selected category in this month.">Clear assigned</button>
-      <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAvailable('selection')"
-              data-tip="Push Available to $0 for every selected category — pulls money back to Ready to Assign.">Clear available</button>
+      {# Secondary bulk actions inline on desktop, kebab on mobile so
+         the count + primary action always fit one line at 360px. #}
+      <span class="bulk-actions-bar__more bulk-actions-bar__more--desktop">
+        <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAssigned('selection')"
+                data-tip="Reset Assigned to $0 for every selected category in this month.">Clear assigned</button>
+        <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAvailable('selection')"
+                data-tip="Push Available to $0 for every selected category — pulls money back to Ready to Assign.">Clear available</button>
+      </span>
+      <span class="bulk-actions-bar__more bulk-actions-bar__more--mobile">
+        {% call overflow(label="More bulk actions") %}
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; bulkClearAssigned('selection')">Clear assigned</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; bulkClearAvailable('selection')">Clear available</button>
+          </li>
+        {% endcall %}
+      </span>
       <button type="button" class="btn btn--ghost btn--sm" @click="clearSelection()"
               data-tip="Deselect everything.">Cancel</button>
     </div>

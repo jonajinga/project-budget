@@ -6,22 +6,32 @@ permalink: /app/reports/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="reportsHubView()" x-init="init()">
   <header class="app-page__header">
     <div>
       <h1 class="app-page__title">Reports</h1>
       <p class="app-page__lead">Every report reads directly from the active profile. Most include KPI tiles, range controls, sortable tables, and CSV / PDF / print export.</p>
     </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button type="button" class="btn btn--ghost btn--sm" @click="runAllCSV()" :disabled="bundling"
-              data-tip="Download every report's data as one ZIP-like multi-section CSV.">
-        <span x-text="bundling === 'csv' ? 'Bundling…' : 'Bundle all CSV'"></span>
-      </button>
-      <button type="button" class="btn btn--primary btn--sm" @click="runAllPDF()" :disabled="bundling"
-              data-tip="Renders every report sequentially and emits one combined PDF.">
-        <span x-text="bundling === 'pdf' ? 'Building PDF…' : 'Bundle all PDF'"></span>
-      </button>
-    </div>
+    {# Bundle exports live in a kebab so the header keeps one line at
+       every viewport. Both actions are infrequent (one-time export
+       runs) and benefit from being out of the way. #}
+    {% call overflow(label="Bundle exports") %}
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                :disabled="bundling"
+                @click="open = false; runAllCSV()">
+          <span x-text="bundling === 'csv' ? 'Bundling CSV…' : 'Bundle all reports as CSV'"></span>
+        </button>
+      </li>
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                :disabled="bundling"
+                @click="open = false; runAllPDF()">
+          <span x-text="bundling === 'pdf' ? 'Building PDF…' : 'Bundle all reports as PDF'"></span>
+        </button>
+      </li>
+    {% endcall %}
   </header>
 
   {# ---- Recents strip ---- #}

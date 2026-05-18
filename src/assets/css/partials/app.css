@@ -76,40 +76,9 @@
 }
 .kpi__hint { color: var(--fg-muted); font-size: var(--fs-xs); margin-top: var(--space-2xs); }
 
-.rta {
-  background: var(--accent);
-  color: #fff;
-  /* Tighter padding on mobile so the value doesn't wrap into a
-     286px content area on a 360px viewport. */
-  padding: var(--space-md);
-}
-@media (min-width: 600px) {
-  .rta { padding: var(--space-lg); }
-}
-.rta__label {
-  font-size: var(--fs-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-  /* Bumped from #f3eee0 (~4.4:1 on --accent) to pure white to clear
-     WCAG 1.4.3 AA 4.5:1 for normal text. */
-  color: #fff;
-}
-.rta__value {
-  font-family: var(--font-display);
-  font-size: clamp(1.75rem, 1.1rem + 3vw, 2.625rem);
-  font-variant-numeric: tabular-nums;
-  margin-top: var(--space-2xs);
-  color: #fff;
-  overflow-wrap: break-word;
-}
-.rta__hint {
-  margin-top: var(--space-2xs);
-  /* Also bumped from #f3eee0 to #fff for AA. */
-  color: #fff;
-  font-size: var(--fs-sm);
-}
-.rta--negative { background: var(--danger); }
+/* .rta block removed — Ready to Assign now renders as an inline
+   .rta-chip on the budget toolbar row (see budget.css). The old
+   full-width card ate ~140px of vertical space for one number. */
 
 .sample-banner {
   background: var(--accent-soft);

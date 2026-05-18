@@ -29,7 +29,6 @@
       { id: "go-register",   label: "Go to Register",    hint: "/app/register/",   run: function () { go("/app/register/"); } },
       { id: "go-calendar",   label: "Go to Calendar",    hint: "/app/calendar/",   run: function () { go("/app/calendar/"); } },
       { id: "go-accounts",   label: "Go to Accounts",    hint: "/app/accounts/",   run: function () { go("/app/accounts/"); } },
-      { id: "go-categories", label: "Go to Categories",  hint: "/app/categories/", run: function () { go("/app/categories/"); } },
       { id: "go-payees",     label: "Go to Payees",      hint: "/app/payees/",     run: function () { go("/app/payees/"); } },
       { id: "go-scheduled",  label: "Go to Recurring",   hint: "/app/scheduled/",  run: function () { go("/app/scheduled/"); } },
       { id: "go-reports",    label: "Go to Reports",     hint: "/app/reports/",    run: function () { go("/app/reports/"); } },

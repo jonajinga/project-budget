@@ -1,0 +1,35 @@
+{# Shared export-kebab for the 14 individual report pages. Every
+   report has the same trio of actions (Export CSV, Export PDF,
+   Print); collapsing them into one kebab keeps the report-toolbar
+   row compact.
+
+   Most reports use `exportCSV('<slug>')` as their CSV handler; a
+   few use custom names like `exportRowsCSV()`. The macro accepts
+   the full call expression so either pattern works.
+
+   Usage (standard slug):
+     {% from "partials/report-exports.njk" import reportExports %}
+     {{ reportExports("net-worth") }}
+
+   Usage (custom handler):
+     {{ reportExports("", "exportRowsCSV()") }}
+#}
+{% macro reportExports(slug, csvCall) %}
+{% from "partials/overflow-menu.njk" import overflow %}
+{% set csv = csvCall if csvCall else "exportCSV('" + slug + "')" %}
+{% call overflow(label="Export this report") %}
+  <li role="none">
+    <button type="button" role="menuitem" class="overflow-menu__item"
+            @click="open = false; {{ csv | safe }}">Export CSV</button>
+  </li>
+  <li role="none">
+    <button type="button" role="menuitem" class="overflow-menu__item"
+            @click="open = false; exportPDF()">Export PDF</button>
+  </li>
+  <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+  <li role="none">
+    <button type="button" role="menuitem" class="overflow-menu__item"
+            @click="open = false; print()">Print</button>
+  </li>
+{% endcall %}
+{% endmacro %}

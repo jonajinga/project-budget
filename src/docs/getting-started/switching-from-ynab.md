@@ -13,10 +13,10 @@ The model is intentionally similar.
 
 | YNAB term            | Project Budget term                    |
 |----------------------|-----------------------------------------|
-| Ready to Assign      | [Ready to Assign](/glossary/ready-to-assign/) — same idea, same name |
-| Category Assigned    | [Assigned](/glossary/assigned/)         |
-| Category Activity    | [Activity](/glossary/activity/)         |
-| Category Available   | [Available](/glossary/available/)       |
+| Ready to Assign      | [Ready to Assign](/glossary/#ready-to-assign) — same idea, same name |
+| Category Assigned    | [Assigned](/glossary/#assigned)         |
+| Category Activity    | [Activity](/glossary/#activity)         |
+| Category Available   | [Available](/glossary/#available)       |
 | Master category      | Category group                          |
 | Scheduled transaction| Recurring template — see [Recurring](/docs/recurring/overview/) |
 | Reconcile            | [Reconcile](/docs/accounts/reconciliation/) — same flow |

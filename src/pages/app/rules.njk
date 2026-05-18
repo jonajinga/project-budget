@@ -6,6 +6,7 @@ permalink: /app/rules/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="rulesView()" x-init="init()">
 
   <header class="app-page__header">
@@ -35,7 +36,7 @@ eleventyExcludeFromCollections: true
     </header>
 
     <p x-show="!hasCategories" x-cloak class="callout callout--warn" style="margin: var(--space-sm) 0 0;">
-      Add a category first on <a href="/app/categories/">/app/categories/</a> before creating categorize rules.
+      Add a category first on the <a href="/app/budget/">budget page</a> before creating categorize rules.
     </p>
 
     <ul class="rules-list" x-show="$store.budget.listCategorizeRules().length" x-cloak>
@@ -67,21 +68,23 @@ eleventyExcludeFromCollections: true
                        @change="$store.budget.updateRule('categorize', r.id, { enabled: $event.target.checked })">
                 <span>Enabled</span>
               </label>
-              <button class="btn btn--icon" type="button"
-                      @click="$store.budget.moveRule('categorize', r.id, -1)"
-                      :disabled="idx === 0" aria-label="Move up" data-tip="Higher priority">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
-              </button>
-              <button class="btn btn--icon" type="button"
-                      @click="$store.budget.moveRule('categorize', r.id, 1)"
-                      :disabled="idx >= $store.budget.listCategorizeRules().length - 1" aria-label="Move down" data-tip="Lower priority">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-              <button class="btn btn--icon" type="button"
-                      @click="deleteCatRule(r)"
-                      aria-label="Delete rule" data-tip="Delete this rule" style="color: var(--danger);">
-                {{ iconTrash(14) }}
-              </button>
+              {% call overflow(label="Rule actions") %}
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          :disabled="idx === 0"
+                          @click="open = false; $store.budget.moveRule('categorize', r.id, -1)">Move up (higher priority)</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          :disabled="idx >= $store.budget.listCategorizeRules().length - 1"
+                          @click="open = false; $store.budget.moveRule('categorize', r.id, 1)">Move down (lower priority)</button>
+                </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                          @click="open = false; deleteCatRule(r)">Delete rule</button>
+                </li>
+              {% endcall %}
             </div>
           </div>
         </li>
@@ -134,21 +137,23 @@ eleventyExcludeFromCollections: true
                        @change="$store.budget.updateRule('normalizePayee', r.id, { enabled: $event.target.checked })">
                 <span>Enabled</span>
               </label>
-              <button class="btn btn--icon" type="button"
-                      @click="$store.budget.moveRule('normalizePayee', r.id, -1)"
-                      :disabled="idx === 0" aria-label="Move up" data-tip="Higher priority">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
-              </button>
-              <button class="btn btn--icon" type="button"
-                      @click="$store.budget.moveRule('normalizePayee', r.id, 1)"
-                      :disabled="idx >= $store.budget.listNormalizeRules().length - 1" aria-label="Move down" data-tip="Lower priority">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-              <button class="btn btn--icon" type="button"
-                      @click="deleteNormRule(r)"
-                      aria-label="Delete rule" data-tip="Delete this rule" style="color: var(--danger);">
-                {{ iconTrash(14) }}
-              </button>
+              {% call overflow(label="Rule actions") %}
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          :disabled="idx === 0"
+                          @click="open = false; $store.budget.moveRule('normalizePayee', r.id, -1)">Move up (higher priority)</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          :disabled="idx >= $store.budget.listNormalizeRules().length - 1"
+                          @click="open = false; $store.budget.moveRule('normalizePayee', r.id, 1)">Move down (lower priority)</button>
+                </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                          @click="open = false; deleteNormRule(r)">Delete rule</button>
+                </li>
+              {% endcall %}
             </div>
           </div>
         </li>

@@ -13,8 +13,26 @@
 .form-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: var(--form-actions-gap);
   margin-top: var(--space-sm);
+}
+@media (max-width: 767px) {
+  .form-actions { gap: var(--form-actions-gap-mobile); }
+  /* Inside a modal on mobile or tablet-portrait, the primary CTA
+     goes full-width and stays pinned at the bottom (sticky) so it
+     never scrolls below the on-screen keyboard. Secondary buttons
+     stack inline below. */
+  .modal .form-actions {
+    position: sticky;
+    bottom: 0;
+    margin-left: calc(var(--space-xs) * -1);
+    margin-right: calc(var(--space-xs) * -1);
+    padding: var(--space-2xs) var(--space-xs);
+    background: linear-gradient(to top, var(--bg-elevated) 60%, color-mix(in srgb, var(--bg-elevated) 0%, transparent));
+    border-top: 1px solid var(--border-soft);
+    z-index: 2;
+  }
+  .modal .form-actions .btn--primary { flex: 1 1 100%; }
 }
 
 .form-help {
@@ -40,7 +58,7 @@
   overflow-y: auto;
   backdrop-filter: blur(4px);
 }
-@media (min-width: 600px) {
+@media (min-width: 768px) {
   .modal-backdrop { padding: var(--space-md); }
 }
 .modal {
@@ -65,14 +83,15 @@
      screens. Respect safe-area for iOS notch. */
   margin-top: max(2vh, env(safe-area-inset-top));
 }
-/* Full-screen modals on phones. The capped-width-with-margins look
-   leaves a strip of dimmed page behind on every side which (a) wastes
-   precious vertical room on tall thin forms, (b) lets accidental
-   thumb-taps on that strip dismiss the modal mid-input. Below the
-   tablet breakpoint, modals fill the viewport edge-to-edge with no
-   border-radius and no margin, respecting iOS safe-area insets at
-   the top + bottom. */
-@media (max-width: 599px) {
+/* Full-screen modals on phones + tablet-portrait. The capped-width-
+   with-margins look leaves a strip of dimmed page behind that (a)
+   wastes precious vertical room on tall thin forms, (b) lets
+   accidental thumb-taps on that strip dismiss the modal mid-input.
+   Breakpoint 767px covers every phone (including big phablets up
+   to ~430px wide) AND iPad portrait, all of which benefit from
+   edge-to-edge modals with no chrome. iOS safe-area insets are
+   respected for the notch + home indicator. */
+@media (max-width: 767px) {
   .modal-backdrop {
     padding: 0;
     align-items: stretch;
@@ -87,12 +106,10 @@
     margin: 0;
     border: 0;
     border-radius: 0;
-    /* Safe-area insets: notch at top, home indicator at bottom. */
-    padding-top: max(var(--space-md), env(safe-area-inset-top));
-    padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+    padding: var(--space-xs);
+    padding-top: max(var(--space-xs), env(safe-area-inset-top));
+    padding-bottom: max(var(--space-xs), env(safe-area-inset-bottom));
   }
-  /* Stack any 2-column form grids inside modals to a single column on
-     phones — every form field gets full width, no truncation. */
   .modal .form-row,
   .modal .form-grid,
   .modal [style*="grid-template-columns"] {
@@ -100,13 +117,28 @@
     display: grid !important;
   }
   /* Inline max-width overrides (modals that set style="max-width: …"
-     for desktop) shouldn't beat the full-screen rule on mobile. */
+     for desktop) shouldn't beat the full-screen rule on mobile or
+     tablet-portrait. */
   .modal[style*="max-width"] {
     max-width: 100vw !important;
     max-width: 100dvw !important;
   }
+  /* Native <dialog> elements get the same treatment so any new
+     dialog-based modal inherits fullscreen behavior without needing
+     to know about the .modal class system. */
+  dialog[open] {
+    max-width: 100vw !important;
+    max-width: 100dvw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
 }
-@media (min-width: 600px) {
+@media (min-width: 768px) {
   .modal {
     padding: var(--space-lg);
     margin-top: 10vh;
@@ -139,23 +171,31 @@
     to   { transform: translateY(0);   opacity: 1; }
   }
 }
-.modal__title { font-size: var(--fs-xl); margin-bottom: var(--space-sm); }
+.modal__title { font-size: var(--fs-lg); margin-bottom: var(--space-2xs); }
 .modal__close {
   float: right;
-  font-size: 1.5rem;
+  position: relative;
+  font-size: 1.25rem;
   line-height: 1;
   color: var(--fg-muted);
-  padding: 0.25rem 0.5rem;
-  min-width: 44px;
-  min-height: 44px;
+  padding: 0;
+  width: var(--btn-visual-min);
+  min-width: var(--btn-visual-min);
+  height: var(--btn-visual-min);
+  min-height: var(--btn-visual-min);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: 0;
   cursor: pointer;
   border-radius: var(--radius-input);
   transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.modal__close::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 .modal__close:hover {
   background: var(--bg-alt);

@@ -33,7 +33,7 @@ The top-10 view is the most readable on a phone-sized screen.
 
 - **Transfers between your own accounts.** Moving $1,000 from checking to savings is not spending; it doesn't appear here.
 - **Inflows.** Spending is outflow-only by definition.
-- **Credit-card payment activity.** The [Credit Card Payment](/glossary/credit-card-payment-category/) category accumulates earmarks, not spending — its activity comes from other categories' spending and doesn't appear as its own line.
+- **Credit-card payment activity.** The [Credit Card Payment](/glossary/#credit-card-payment-category) category accumulates earmarks, not spending — its activity comes from other categories' spending and doesn't appear as its own line.
 - **Off-budget transactions** in tracking accounts. Spending here is restricted to on-budget activity.
 
 ## Filters

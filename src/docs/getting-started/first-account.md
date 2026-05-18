@@ -13,9 +13,9 @@ Open [Accounts](/app/accounts/) and add accounts in this order — it makes the 
 
 1. **Primary checking** — the account your paycheck lands in.
 2. **Savings** — even if it's just an emergency fund.
-3. **Every credit card you actively use** — the [Credit Card Payment](/glossary/credit-card-payment-category/) category is created for each one.
+3. **Every credit card you actively use** — the [Credit Card Payment](/glossary/#credit-card-payment-category) category is created for each one.
 4. **Cash on hand** — optional; only worth tracking if you handle cash regularly.
-5. **Tracking accounts** — investments, your home, vehicle loans, the mortgage. These don't affect [Ready to Assign](/glossary/ready-to-assign/) but they show up in net worth.
+5. **Tracking accounts** — investments, your home, vehicle loans, the mortgage. These don't affect [Ready to Assign](/glossary/#ready-to-assign) but they show up in net worth.
 
 ## The opening balance
 

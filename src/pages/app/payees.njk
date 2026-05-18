@@ -5,6 +5,7 @@ description: "Rename, set default categories, merge, or delete payees. Default c
 permalink: /app/payees/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="payeesView()">
   <header class="app-page__header">
     <h1 class="app-page__title">Payees</h1>
@@ -18,6 +19,23 @@ eleventyExcludeFromCollections: true
       <a class="btn btn--ghost btn--sm" href="/app/register/">Open register</a>
     </div>
   </header>
+
+  {# Info / help modal — opened by the (i) icon in the header. #}
+  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-help-title" @click.outside="showHelp = false">
+      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="pay-help-title">About payees</h3>
+      <div class="prose">
+        <p>Every payee remembers a default category — when you start typing the payee on a new transaction, the category auto-fills.</p>
+        <p><strong>Rename:</strong> click a payee's name to edit it inline. Press Enter or click outside to save, Escape to cancel.</p>
+        <p><strong>Merge:</strong> joins two payees into one and re-points every transaction that used the source to the target.</p>
+        <p><strong>Delete:</strong> leaves the payee's transactions in the register but unlinks them from the payee record.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
+      </div>
+    </div>
+  </div>
 
   {# Stat cards. Live snapshot of the payee list — total payees, how
      many have a default category set, top-used payee, and the sum of
@@ -57,9 +75,32 @@ eleventyExcludeFromCollections: true
       No payees yet. They're created automatically when you add a transaction.
     </p>
 
-    <table class="table" x-show="rows.length" x-cloak>
+    {# Bulk action bar — shown when any payee is selected. Lets you merge
+       many payees into one target in a single sweep. #}
+    <div class="cluster" x-show="selectedIds.length > 0" x-cloak
+         style="margin-bottom: var(--space-sm); padding: var(--space-2xs) var(--space-sm); background: var(--bg-alt); border-left: 3px solid var(--accent); justify-content: space-between;">
+      <span>
+        <strong x-text="selectedIds.length"></strong> selected
+      </span>
+      <div class="cluster">
+        <button class="btn btn--ghost btn--sm" type="button" @click="clearSelection()">Clear</button>
+        <button class="btn btn--secondary btn--sm" type="button"
+                :disabled="selectedIds.length < 2"
+                @click="openBulkMerge()"
+                data-tip="Pick one selected payee as the target; the rest collapse into it.">Bulk merge…</button>
+      </div>
+    </div>
+
+    <table class="table has-card-fallback" x-show="rows.length" x-cloak>
       <thead>
         <tr>
+          <th style="width: 1.5rem;">
+            <input type="checkbox"
+                   :checked="allVisibleSelected()"
+                   :indeterminate.prop="someButNotAllVisibleSelected()"
+                   @change="toggleSelectAllVisible($event.target.checked)"
+                   aria-label="Select all visible payees">
+          </th>
           <th class="is-sortable"><button type="button" @click="sortBy('name')">Name <span class="sort-ind" x-text="sortIndicator('name')"></span></button></th>
           <th>Default category</th>
           <th class="is-sortable num"><button type="button" @click="sortBy('count')">Uses <span class="sort-ind" x-text="sortIndicator('count')"></span></button></th>
@@ -68,7 +109,14 @@ eleventyExcludeFromCollections: true
       </thead>
       <tbody data-no-tippy>
         <template x-for="p in rows" :key="p.id">
-          <tr>
+          <tr :class="selectedIds.includes(p.id) ? 'is-selected' : ''">
+            <td>
+              <input type="checkbox"
+                     :value="p.id"
+                     :checked="selectedIds.includes(p.id)"
+                     @change="toggleOne(p.id, $event.target.checked)"
+                     :aria-label="'Select payee ' + p.name">
+            </td>
             <td>
               <template x-if="editingId !== p.id">
                 <button type="button" class="inline-edit-trigger"
@@ -78,19 +126,14 @@ eleventyExcludeFromCollections: true
                 </button>
               </template>
               <template x-if="editingId === p.id">
-                {# @click.outside is the reliable exit path — clicking on
-                   non-focusable areas of the page doesn't always blur an
-                   input on every browser, so we hook the document-level
-                   outside-click event too.
-
-                   @focus + setTimeout(select, 0) auto-selects the whole
-                   name so a user can start typing immediately. Wrapping
-                   in setTimeout outlasts the mouseup that would
-                   otherwise clear the selection. #}
+                {# Flush inline rename input — sized to match the
+                   surrounding text so opening edit mode doesn't grow
+                   the row height. @click.outside catches blur paths
+                   the input itself misses on some browsers. #}
                 <form @submit.prevent="commitRename(p.id)"
                       @click.outside="commitRename(p.id)"
-                      class="cluster" style="gap: var(--space-2xs);">
-                  <input class="input" type="text"
+                      style="margin: 0;">
+                  <input class="input payee-rename-input" type="text"
                          :ref="'name_' + p.id"
                          x-model="editingName"
                          @focus="setTimeout(() => $event.target.select(), 0)"
@@ -123,24 +166,78 @@ eleventyExcludeFromCollections: true
         </template>
       </tbody>
     </table>
+
+    {# Mobile card fallback — table hides at <600px via .has-card-fallback,
+       this UL shows in its place. Each card: checkbox · name + default-cat
+       summary · uses count · kebab. #}
+    <ul class="data-cards payee-cards" x-show="rows.length" x-cloak data-no-tippy>
+      <template x-for="p in rows" :key="p.id">
+        <li class="data-card payee-card"
+            :class="selectedIds.includes(p.id) ? 'is-selected' : ''">
+          <div class="data-card__primary">
+            <div class="cluster" style="gap: var(--space-2xs);">
+              <input type="checkbox"
+                     :value="p.id"
+                     :checked="selectedIds.includes(p.id)"
+                     @change="toggleOne(p.id, $event.target.checked)"
+                     :aria-label="'Select payee ' + p.name">
+              <button type="button" class="data-card__title inline-edit-trigger"
+                      style="margin: 0; padding: 0; min-height: 0;"
+                      @click="startRename(p)"
+                      x-text="p.name"></button>
+            </div>
+            <span class="data-card__sub">
+              <span x-text="payeeCategoryName(p) || '(no default category)'"></span>
+            </span>
+          </div>
+          <span class="data-card__amount"
+                x-text="p.count + (p.count === 1 ? ' use' : ' uses')"></span>
+          {% call overflow(label="Payee actions") %}
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item"
+                      @click="open = false; startRename(p)">Rename…</button>
+            </li>
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item"
+                      @click="open = false; openMerge(p)">Merge into…</button>
+            </li>
+            <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                      @click="open = false; deletePayee(p)">Delete payee</button>
+            </li>
+          {% endcall %}
+        </li>
+      </template>
+    </ul>
   </section>
 
-  {# Info / help modal — explains payees, default category auto-fill,
-     and what merge / delete do. Previously sat above the table as a
-     long lead paragraph. #}
-  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-help-title" @click.outside="showHelp = false">
-      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="pay-help-title">About payees</h3>
-      <div class="prose">
-        <p>Every payee remembers a default category — when you start typing the payee on a new transaction, the category auto-fills.</p>
-        <p><strong>Rename:</strong> click a payee's name to edit it inline. Press Enter or click outside to save, Escape to cancel.</p>
-        <p><strong>Merge:</strong> joins two payees into one and re-points every transaction that used the source to the target.</p>
-        <p><strong>Delete:</strong> leaves the payee's transactions in the register but unlinks them from the payee record.</p>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
-      </div>
+  {# Inline disclosure replaces the old "About payees" modal. #}
+
+  {# Bulk merge modal — pick one selected payee as the target. #}
+  <div class="modal-backdrop" x-show="bulkMergeOpen" x-cloak @keydown.escape.window="bulkMergeOpen = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bulk-merge-title"
+         @click.outside="bulkMergeOpen = false">
+      <button class="modal__close" type="button" @click="bulkMergeOpen = false" aria-label="Close">&times;</button>
+      <h3 class="modal__title" id="bulk-merge-title">Merge <span x-text="selectedIds.length"></span> payees</h3>
+      <p style="color: var(--fg-muted); margin-bottom: var(--space-sm);">
+        Every transaction across the selected payees will re-point to whichever payee you choose below as the target. The non-target selections are deleted. This cannot be undone.
+      </p>
+      <form @submit.prevent="doBulkMerge()">
+        <div class="field">
+          <label class="field__label" for="bulk-merge-target">Target payee</label>
+          <select class="select" id="bulk-merge-target" x-model="bulkTargetId" required>
+            <option value="">Select target payee</option>
+            <template x-for="p in selectedRows()" :key="p.id">
+              <option :value="p.id" x-text="p.name + ' (' + p.count + ' uses)'"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="submit" :disabled="!bulkTargetId">Merge all into target</button>
+          <button class="btn btn--ghost" type="button" @click="bulkMergeOpen = false">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -185,6 +282,9 @@ function payeesView() {
     editingName: "",
     mergeSrc: null,
     mergeTargetId: "",
+    selectedIds: [],
+    bulkMergeOpen: false,
+    bulkTargetId: "",
 
     get rows() {
       void this.$store.budget._listVersion;
@@ -249,6 +349,12 @@ function payeesView() {
       if (!s.profile) return [];
       return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
     },
+    payeeCategoryName(p) {
+      if (!p || !p.lastCategoryId) return "";
+      var s = this.$store.budget;
+      var c = s.findCategory ? s.findCategory(p.lastCategoryId) : null;
+      return c ? c.name : "";
+    },
 
     /* Rename: click name → input, Enter/blur commits. */
     startRename(p) {
@@ -299,6 +405,70 @@ function payeesView() {
       this.$store.budget.pushToast("Payees merged.");
       this.mergeSrc = null;
       this.mergeTargetId = "";
+    },
+
+    /* ---- Bulk select ---- */
+    toggleOne(id, checked) {
+      if (checked) {
+        if (this.selectedIds.indexOf(id) === -1) this.selectedIds.push(id);
+      } else {
+        this.selectedIds = this.selectedIds.filter(function (x) { return x !== id; });
+      }
+    },
+    clearSelection() {
+      this.selectedIds = [];
+    },
+    visibleIds() {
+      return this.rows.map(function (r) { return r.id; });
+    },
+    allVisibleSelected() {
+      var ids = this.visibleIds();
+      if (!ids.length) return false;
+      var self = this;
+      return ids.every(function (id) { return self.selectedIds.indexOf(id) !== -1; });
+    },
+    someButNotAllVisibleSelected() {
+      var ids = this.visibleIds();
+      if (!ids.length) return false;
+      var self = this;
+      var n = ids.filter(function (id) { return self.selectedIds.indexOf(id) !== -1; }).length;
+      return n > 0 && n < ids.length;
+    },
+    toggleSelectAllVisible(checked) {
+      var ids = this.visibleIds();
+      if (checked) {
+        var set = new Set(this.selectedIds);
+        ids.forEach(function (id) { set.add(id); });
+        this.selectedIds = Array.from(set);
+      } else {
+        var idSet = new Set(ids);
+        this.selectedIds = this.selectedIds.filter(function (id) { return !idSet.has(id); });
+      }
+    },
+
+    /* ---- Bulk merge ---- */
+    selectedRows() {
+      var selSet = new Set(this.selectedIds);
+      return this.rows.filter(function (r) { return selSet.has(r.id); });
+    },
+    openBulkMerge() {
+      if (this.selectedIds.length < 2) return;
+      this.bulkTargetId = "";
+      this.bulkMergeOpen = true;
+    },
+    doBulkMerge() {
+      if (!this.bulkTargetId || this.selectedIds.length < 2) return;
+      var s = this.$store.budget;
+      var target = this.bulkTargetId;
+      var sources = this.selectedIds.filter(function (id) { return id !== target; });
+      /* Wrap in batchMutate so all merges share one undo entry + save. */
+      s.batchMutate(function () {
+        sources.forEach(function (id) { s.mergePayees(id, target); });
+      }, "Merge " + sources.length + " payees");
+      s.pushToast("Merged " + sources.length + " payee" + (sources.length === 1 ? "" : "s") + " into target.");
+      this.bulkMergeOpen = false;
+      this.bulkTargetId = "";
+      this.selectedIds = [];
     },
   };
 }

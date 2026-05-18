@@ -26,7 +26,10 @@
 }
 
 .flow > * + * { margin-top: var(--space-md); }
-.cluster { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+.cluster { display: flex; flex-wrap: wrap; gap: var(--form-actions-gap); align-items: center; }
+@media (max-width: 599px) {
+  .cluster { gap: var(--form-actions-gap-mobile); }
+}
 
 /* App shell — sidebar + handle + main.
    The sidebar width is driven by --app-sidebar-width so the resize JS

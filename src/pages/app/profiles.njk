@@ -5,6 +5,7 @@ description: "Create, switch, rename, duplicate, and delete budget profiles."
 permalink: /app/profiles/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="{
   showHelp: false,
   newName: '',
@@ -97,17 +98,26 @@ eleventyExcludeFromCollections: true
               <span x-show="p.id === $store.budget.active" class="badge" style="margin-left: var(--space-2xs);">active</span>
             </td>
             <td x-text="p.lastOpenedAt ? new Date(p.lastOpenedAt).toLocaleString() : '—'"></td>
-            <td class="num">
+            <td class="num" @click.stop>
               <div class="cluster" style="justify-content: flex-end;">
-                <button class="btn btn--secondary btn--sm" type="button"
+                <button class="btn btn--primary btn--sm" type="button"
                         @click="$store.budget.switchTo(p.id)"
                         x-show="p.id !== $store.budget.active">Switch</button>
-                <button class="btn btn--ghost btn--sm" type="button"
-                        @click="startRename(p)">Rename</button>
-                <button class="btn btn--ghost btn--sm" type="button"
-                        @click="$store.budget.duplicateProfile(p.id)">Duplicate</button>
-                <button class="btn btn--danger btn--sm" type="button"
-                        @click="startDelete(p)">Delete</button>
+                {% call overflow(label="Profile actions") %}
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            @click="open = false; startRename(p)">Rename…</button>
+                  </li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            @click="open = false; $store.budget.duplicateProfile(p.id)">Duplicate profile</button>
+                  </li>
+                  <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                            @click="open = false; startDelete(p)">Delete profile</button>
+                  </li>
+                {% endcall %}
               </div>
             </td>
           </tr>

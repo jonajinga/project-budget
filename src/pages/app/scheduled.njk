@@ -6,6 +6,7 @@ permalink: /app/scheduled/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="scheduledView()" x-init="init()">
   <header class="app-page__header">
     <h1 class="app-page__title">Recurring transactions</h1>
@@ -20,8 +21,7 @@ eleventyExcludeFromCollections: true
     </div>
   </header>
 
-  {# Info / help modal — replaces the inline "Templates sit in a queue"
-     lead with a richer explanation users only see when they want it. #}
+  {# Info / help modal — opened by the (i) icon in the header. #}
   <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rec-help-title" @click.outside="showHelp = false">
       <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
@@ -154,25 +154,33 @@ eleventyExcludeFromCollections: true
             </div>
             <div x-show="s.template.memo" x-cloak><dt>Memo</dt><dd x-text="s.template.memo"></dd></div>
           </dl>
+          {# Post now stays inline as the primary action; the rest
+             (Edit / Skip / Pause / Remove) collapse into a kebab. #}
           <div class="rec-card__actions">
-            <button class="btn btn--ghost btn--sm" type="button"
-                    @click="openEdit(s)"
-                    data-tip="Edit this template.">Edit</button>
-            <button class="btn btn--secondary btn--sm" type="button"
+            <button class="btn btn--primary btn--sm rec-post" type="button"
                     @click="postNow(s.id)"
                     x-show="!s.paused" x-cloak
                     data-tip="Post now and advance the next date.">Post now</button>
-            <button class="btn btn--ghost btn--sm" type="button"
-                    @click="$store.budget.skipScheduled(s.id)"
-                    x-show="!s.paused" x-cloak
-                    data-tip="Skip this occurrence; advance to the next.">Skip</button>
-            <button class="btn btn--ghost btn--sm" type="button"
-                    @click="$store.budget.setSchedulePaused(s.id, !s.paused)"
-                    :data-tip="s.paused ? 'Resume this template so it queues again.' : 'Pause indefinitely. The template stays in the list but stops queuing until resumed.'"
-                    x-text="s.paused ? 'Resume' : 'Pause'"></button>
-            <button class="btn btn--danger btn--sm" type="button"
-                    @click="PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })"
-                    data-tip="Permanently remove this template.">Remove</button>
+            {% call overflow(label="Recurring template actions") %}
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item"
+                        @click="open = false; openEdit(s)">Edit…</button>
+              </li>
+              <li role="none" x-show="!s.paused">
+                <button type="button" role="menuitem" class="overflow-menu__item"
+                        @click="open = false; $store.budget.skipScheduled(s.id)">Skip next occurrence</button>
+              </li>
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item"
+                        @click="open = false; $store.budget.setSchedulePaused(s.id, !s.paused)"
+                        x-text="s.paused ? 'Resume' : 'Pause indefinitely'"></button>
+              </li>
+              <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                        @click="open = false; PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })">Remove template</button>
+              </li>
+            {% endcall %}
           </div>
         </li>
       </template>
@@ -193,73 +201,178 @@ eleventyExcludeFromCollections: true
       <tbody>
         <template x-for="s in filtered()" :key="s.id">
           <tr :id="'edit-' + s.id" :class="s.paused ? 'rec-row--paused' : ''">
-            <td style="white-space: nowrap;">
-              <span x-text="formatNextDate(s.nextDate)"></span>
-              <span x-show="s.paused" x-cloak class="badge badge--paused"
-                    data-tip="Paused — won't queue until resumed.">Paused</span>
+            {# Each cell is click-to-edit (except paused rows). Same
+               pattern as the register inline editor: single sign-flip
+               chip on amount; @click.stop on cells with kebab/action
+               buttons so the row-click handler doesn't fire. #}
+            <td class="cell--edit" style="white-space: nowrap;"
+                :class="{ 'is-locked': s.paused }"
+                @click.stop="startCellEdit(s, 'nextDate', s.nextDate)">
+              <template x-if="!isEditingCell(s, 'nextDate')">
+                <span>
+                  <span x-text="formatNextDate(s.nextDate)"></span>
+                  <span x-show="s.paused" x-cloak class="badge badge--paused"
+                        data-tip="Paused — won't queue until resumed.">Paused</span>
+                </span>
+              </template>
+              <template x-if="isEditingCell(s, 'nextDate')">
+                <input type="date" class="input cell-input"
+                       :data-cell-input="s.id + ':nextDate'"
+                       x-model="cellEdit.draft"
+                       @blur="commitCell(s)"
+                       @keydown.enter.prevent="commitCell(s)"
+                       @keydown.escape.prevent="cancelCellEdit()">
+              </template>
             </td>
-            <td x-text="$store.budget.frequencyLabel(s)"></td>
-            <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
-            <td>
-              <strong x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></strong>
-              <p x-show="s.template.memo" x-cloak
-                 style="margin: var(--space-3xs) 0 0; color: var(--fg-muted); font-size: var(--fs-xs);"
-                 x-text="s.template.memo"></p>
+            <td class="cell--edit"
+                :class="{ 'is-locked': s.paused }"
+                @click.stop="startCellEdit(s, 'frequency', s.frequency || 'monthly')">
+              <template x-if="!isEditingCell(s, 'frequency')">
+                <span x-text="$store.budget.frequencyLabel(s)"></span>
+              </template>
+              <template x-if="isEditingCell(s, 'frequency')">
+                <select class="select cell-input"
+                        :data-cell-input="s.id + ':frequency'"
+                        x-model="cellEdit.draft"
+                        @blur="commitCell(s)"
+                        @change="commitCell(s)"
+                        @keydown.escape.prevent="cancelCellEdit()">
+                  <template x-for="opt in frequencyOptions()" :key="opt.value">
+                    <option :value="opt.value" x-text="opt.label"></option>
+                  </template>
+                </select>
+              </template>
             </td>
-            <td x-text="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"
-                :style="$store.budget.categoryName(s.template.categoryId) ? '' : 'color: var(--fg-muted); font-style: italic;'"></td>
-            <td class="num"
-                :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                x-text="formatCents(s.template.amount)"></td>
-            <td class="num">
+            <td class="cell--edit"
+                :class="{ 'is-locked': s.paused }"
+                @click.stop="startCellEdit(s, 'accountId', s.template.accountId)">
+              <template x-if="!isEditingCell(s, 'accountId')">
+                <span x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></span>
+              </template>
+              <template x-if="isEditingCell(s, 'accountId')">
+                <select class="select cell-input"
+                        :data-cell-input="s.id + ':accountId'"
+                        x-model="cellEdit.draft"
+                        @blur="commitCell(s)"
+                        @change="commitCell(s)"
+                        @keydown.escape.prevent="cancelCellEdit()">
+                  <template x-for="a in ($store.budget.profile?.accounts || []).filter(a => !a.closedAt)" :key="a.id">
+                    <option :value="a.id" x-text="a.name"></option>
+                  </template>
+                </select>
+              </template>
+            </td>
+            {# Payee cell is a two-target click: the payee strong text
+               edits the payee; the memo line below it edits the
+               memo. Each has its own click handler so clicking memo
+               doesn't accidentally focus the payee input. #}
+            <td class="cell--edit rec-payee-cell"
+                :class="{ 'is-locked': s.paused }">
+              <template x-if="!isEditingCell(s, 'payeeName') && !isEditingCell(s, 'memo')">
+                <span class="rec-payee-stack">
+                  <button type="button" class="rec-payee-stack__name cell--edit"
+                          @click.stop="startCellEdit(s, 'payeeName', s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '')">
+                    <strong x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></strong>
+                  </button>
+                  <button type="button" class="rec-payee-stack__memo cell--edit"
+                          :class="!s.template.memo ? 'is-placeholder' : ''"
+                          @click.stop="startCellEdit(s, 'memo', s.template.memo || '')"
+                          x-text="s.template.memo || '+ Add memo'"></button>
+                </span>
+              </template>
+              <template x-if="isEditingCell(s, 'payeeName')">
+                <input type="text" class="input cell-input"
+                       :data-cell-input="s.id + ':payeeName'"
+                       x-model="cellEdit.draft"
+                       autocomplete="off"
+                       @blur="commitCell(s)"
+                       @keydown.enter.prevent="commitCell(s)"
+                       @keydown.escape.prevent="cancelCellEdit()">
+              </template>
+              <template x-if="isEditingCell(s, 'memo')">
+                <input type="text" class="input cell-input"
+                       :data-cell-input="s.id + ':memo'"
+                       x-model="cellEdit.draft"
+                       autocomplete="off"
+                       placeholder="Memo (optional)"
+                       @blur="commitCell(s)"
+                       @keydown.enter.prevent="commitCell(s)"
+                       @keydown.escape.prevent="cancelCellEdit()">
+              </template>
+            </td>
+            <td class="cell--edit"
+                :class="{ 'is-locked': s.paused }"
+                :style="$store.budget.categoryName(s.template.categoryId) ? '' : 'color: var(--fg-muted); font-style: italic;'"
+                @click.stop="startCellEdit(s, 'categoryId', s.template.categoryId || '')">
+              <template x-if="!isEditingCell(s, 'categoryId')">
+                <span x-text="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"></span>
+              </template>
+              <template x-if="isEditingCell(s, 'categoryId')">
+                <select class="select cell-input"
+                        :data-cell-input="s.id + ':categoryId'"
+                        x-model="cellEdit.draft"
+                        @blur="commitCell(s)"
+                        @change="commitCell(s)"
+                        @keydown.escape.prevent="cancelCellEdit()">
+                  <option value="">(uncategorized)</option>
+                  <template x-for="c in inlineCategories(s.template.amount < 0 ? 'outflow' : 'inflow')" :key="c.id">
+                    <option :value="c.id" x-text="c.name"></option>
+                  </template>
+                </select>
+              </template>
+            </td>
+            <td class="num cell--edit cell--amount"
+                :class="[s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow', s.paused ? 'is-locked' : '']"
+                @click.stop="startCellEdit(s, 'amount', (Math.abs(s.template.amount || 0) / 100).toFixed(2))">
+              <template x-if="!isEditingCell(s, 'amount')">
+                <span x-text="formatCents(s.template.amount)"></span>
+              </template>
+              <template x-if="isEditingCell(s, 'amount')">
+                <span class="cell-amount-edit"
+                      @keydown.escape.prevent="cancelCellEdit()">
+                  <button type="button"
+                          class="cell-sign-flip"
+                          :class="cellEdit.sign === 'inflow' ? 'is-in' : 'is-out'"
+                          :title="cellEdit.sign === 'outflow' ? 'Outflow. Tap to flip.' : 'Inflow. Tap to flip.'"
+                          @mousedown.prevent
+                          @click.stop="setCellSign(cellEdit.sign === 'outflow' ? 'inflow' : 'outflow')">
+                    <span aria-hidden="true" x-text="cellEdit.sign === 'outflow' ? '−' : '+'"></span>
+                  </button>
+                  <input type="text" inputmode="decimal" class="input cell-input num"
+                         :data-cell-input="s.id + ':amount'"
+                         x-model="cellEdit.draft"
+                         @blur="commitCell(s)"
+                         @keydown.enter.prevent="commitCell(s)"
+                         @keydown.escape.prevent="cancelCellEdit()">
+                </span>
+              </template>
+            </td>
+            <td class="num" @click.stop>
               <div class="cluster" style="justify-content: flex-end; flex-wrap: nowrap; gap: var(--space-3xs);">
-                <button class="btn btn--icon" type="button"
-                        @click="openEdit(s)"
-                        aria-label="Edit recurring template"
-                        data-tip="Edit this recurring template.">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M11.5 2.5l2 2L5 13l-3 1 1-3z"></path>
-                  </svg>
-                </button>
-                <button class="btn btn--icon" type="button"
+                <button class="btn btn--primary btn--sm rec-post" type="button"
                         @click="postNow(s.id)"
                         x-show="!s.paused" x-cloak
-                        aria-label="Post now"
-                        data-tip="Post this occurrence as a real transaction now and advance the next date.">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polyline points="3 8 7 12 13 4"></polyline>
-                  </svg>
-                </button>
-                <button class="btn btn--icon" type="button"
-                        @click="$store.budget.skipScheduled(s.id)"
-                        x-show="!s.paused" x-cloak
-                        aria-label="Skip next occurrence"
-                        data-tip="Advance the next date without posting.">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polygon points="3 3 10 8 3 13 3 3"></polygon>
-                    <line x1="12" y1="3" x2="12" y2="13"></line>
-                  </svg>
-                </button>
-                <button class="btn btn--icon" type="button"
-                        @click="$store.budget.setSchedulePaused(s.id, !s.paused)"
-                        :aria-label="s.paused ? 'Resume template' : 'Pause template'"
-                        :data-tip="s.paused ? 'Resume this template so it queues again.' : 'Pause indefinitely. Stops queuing until resumed; nothing is deleted.'">
-                  {# Two-bars pause / right-triangle play, swapped by x-show. #}
-                  <svg x-show="!s.paused" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="5" y1="3" x2="5" y2="13"></line>
-                    <line x1="11" y1="3" x2="11" y2="13"></line>
-                  </svg>
-                  <svg x-show="s.paused" x-cloak width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polygon points="4 3 13 8 4 13 4 3"></polygon>
-                  </svg>
-                </button>
-                <button class="btn btn--icon" type="button"
-                        @click="PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })"
-                        aria-label="Delete recurring template"
-                        data-tip="Permanently remove this recurring template."
-                        style="color: var(--danger);">
-                  {{ iconTrash(16) }}
-                </button>
+                        data-tip="Post this occurrence as a real transaction now and advance the next date.">Post</button>
+                {% call overflow(label="Recurring template actions") %}
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            @click="open = false; openEdit(s)">Edit…</button>
+                  </li>
+                  <li role="none" x-show="!s.paused">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            @click="open = false; $store.budget.skipScheduled(s.id)">Skip next occurrence</button>
+                  </li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            @click="open = false; $store.budget.setSchedulePaused(s.id, !s.paused)"
+                            x-text="s.paused ? 'Resume' : 'Pause indefinitely'"></button>
+                  </li>
+                  <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                            @click="open = false; PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })">Remove template</button>
+                  </li>
+                {% endcall %}
               </div>
             </td>
           </tr>
@@ -370,6 +483,11 @@ function scheduledView() {
     show: false,
     mode: "create", // 'create' | 'edit'
     editId: null,
+    /* Inline cell editor — same per-cell click-to-edit UX as the
+       register. `cellEdit.txnId === s.id && cellEdit.field === 'date'`
+       means the Next-date cell renders an input instead of static
+       text. `cellEdit.sign` only applies to the amount cell. */
+    cellEdit: { txnId: null, field: null, draft: "", sign: "outflow" },
     /* Toolbar state — drives filtered() + the summary. */
     searchQuery: "",
     filterAccountId: "",
@@ -598,6 +716,110 @@ function scheduledView() {
     postNow(id) {
       this.$store.budget.postScheduled(id);
       this.$store.budget.pushToast("Posted. Next date advanced.");
+    },
+
+    /* ---- Inline cell editing — desktop table ---- */
+    isEditingCell(s, field) {
+      return this.cellEdit.txnId === s.id && this.cellEdit.field === field;
+    },
+    startCellEdit(s, field, initialValue) {
+      if (!s || s.paused) return;
+      var amt = (s.template && s.template.amount) || 0;
+      this.cellEdit = {
+        txnId: s.id,
+        field: field,
+        draft: initialValue == null ? "" : String(initialValue),
+        sign: amt < 0 ? "outflow" : "inflow",
+      };
+      var self = this;
+      this.$nextTick(function () {
+        var input = document.querySelector('[data-cell-input="' + s.id + ':' + field + '"]');
+        if (input) {
+          input.focus();
+          if (input.select) input.select();
+        }
+      });
+    },
+    setCellSign(sign) {
+      if (this.cellEdit.field !== "amount") return;
+      this.cellEdit.sign = sign;
+      var id = this.cellEdit.txnId;
+      this.$nextTick(function () {
+        var input = document.querySelector('[data-cell-input="' + id + ':amount"]');
+        if (input) input.focus();
+      });
+    },
+    cancelCellEdit() {
+      this.cellEdit = { txnId: null, field: null, draft: "", sign: "outflow" };
+    },
+    /* Build a patch that touches only the cellEdit field. Template
+       changes need a full template replacement since the domain
+       helper assigns `template` whole-object. Frequency / nextDate
+       are top-level patch fields. */
+    commitCell(s) {
+      if (this.cellEdit.txnId !== s.id || !this.cellEdit.field) return;
+      var field = this.cellEdit.field;
+      var raw = this.cellEdit.draft;
+      var patch = {};
+      var tmpl = Object.assign({}, s.template || {});
+      switch (field) {
+        case "nextDate":
+          if (!raw) { this.cancelCellEdit(); return; }
+          patch.nextDate = raw;
+          break;
+        case "frequency":
+          patch.frequency = raw || "monthly";
+          break;
+        case "accountId":
+          tmpl.accountId = raw || tmpl.accountId;
+          patch.template = tmpl;
+          break;
+        case "categoryId":
+          tmpl.categoryId = raw || null;
+          patch.template = tmpl;
+          break;
+        case "payeeName":
+          tmpl.payeeName = (raw || "").trim();
+          /* Clear stale payeeId so the post-now flow re-upserts the
+             payee under its new name. */
+          tmpl.payeeId = null;
+          patch.template = tmpl;
+          break;
+        case "memo":
+          tmpl.memo = raw || "";
+          patch.template = tmpl;
+          break;
+        case "amount":
+          var n = Number(String(raw).replace(/[$,\s]/g, ""));
+          if (!isFinite(n)) { this.cancelCellEdit(); return; }
+          var cents = Math.round(Math.abs(n) * 100);
+          tmpl.amount = this.cellEdit.sign === "outflow" ? -cents : cents;
+          patch.template = tmpl;
+          break;
+        default:
+          this.cancelCellEdit();
+          return;
+      }
+      this.$store.budget.updateSchedule(s.id, patch);
+      this.cancelCellEdit();
+    },
+    /* Selectable category lists for inline edit, filtered by sign. */
+    inlineCategories(sign) {
+      var st = this.$store.budget;
+      if (!st.profile) return [];
+      var flat = st.categoriesFlat ? st.categoriesFlat() : [];
+      return flat.filter(function (c) { return !st.isPaymentCategory || !st.isPaymentCategory(c.id); });
+    },
+    /* Frequency options for the inline select. */
+    frequencyOptions() {
+      return [
+        { value: "weekly",       label: "Weekly" },
+        { value: "biweekly",     label: "Every two weeks" },
+        { value: "monthly",      label: "Monthly" },
+        { value: "semi-monthly", label: "Semi-monthly" },
+        { value: "quarterly",    label: "Quarterly" },
+        { value: "annual",       label: "Annual" },
+      ];
     },
   };
 }

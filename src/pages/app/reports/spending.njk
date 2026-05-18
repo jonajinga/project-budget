@@ -5,6 +5,7 @@ description: "Treemap of category activity over a chosen window."
 permalink: /app/reports/spending/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="spendingView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -79,12 +80,7 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('spending-by-category')"
-              data-tip="Download the visible rows as a CSV file.">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
-              data-tip="Open the browser print dialog.">Print</button>
+      {{ reportExports("spending-by-category") }}
     </div>
 
     <table class="table" id="data-table-spending">

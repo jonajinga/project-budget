@@ -5,6 +5,7 @@ description: "Net worth trajectory with growth rate, MoM change, and CSV export.
 permalink: /app/reports/net-worth/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="netWorthView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -91,12 +92,7 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('net-worth')"
-              data-tip="Download the visible rows as a CSV file.">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
-              data-tip="Open the browser print dialog.">Print</button>
+      {{ reportExports("net-worth") }}
     </div>
 
     <table class="table" id="data-table-nw">

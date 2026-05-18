@@ -5,6 +5,7 @@ description: "Spending intensity by category and month at a glance — spot seas
 permalink: /app/reports/heatmap/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="heatmapView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -69,12 +70,7 @@ eleventyExcludeFromCollections: true
         <span x-text="data.categories.length"></span> categories ·
         <span x-text="data.months.length"></span> months
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
-              data-tip="Download a flat category × month CSV.">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
-              data-tip="Open the browser print dialog.">Print</button>
+      {{ reportExports("", "exportRowsCSV()") }}
     </div>
   </section>
 </div>

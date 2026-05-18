@@ -300,8 +300,13 @@ function calendarView() {
 
     /* ---------- navigation ---------- */
     jumpToday() {
+      /* Move the visible range so it includes today. We deliberately
+         do NOT set selectedISO — selecting a day opens the day-detail
+         modal, which isn't what the user wants from a navigation
+         action. Matches the step() behavior of clearing selection on
+         non-month views; in month view, prior selection is preserved. */
       this.anchorISO = this._isoDay(new Date());
-      this.selectedISO = this.anchorISO;
+      if (this.view !== "month") this.selectedISO = null;
     },
     step(delta) {
       var d = this._parseISO(this.anchorISO);

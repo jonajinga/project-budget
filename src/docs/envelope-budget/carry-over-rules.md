@@ -5,11 +5,11 @@ category: "envelope-budget"
 order: 7
 ---
 
-[Carry-over](/glossary/carry-over/) is what happens at midnight on the last day of a month. Project Budget runs one short rule for every category. The rule is asymmetric: surplus rolls; deficit doesn't.
+[Carry-over](/glossary/#carry-over) is what happens at midnight on the last day of a month. Project Budget runs one short rule for every category. The rule is asymmetric: surplus rolls; deficit doesn't.
 
 ## The rule, in one paragraph
 
-If a category's [Available](/glossary/available/) at month-end is **positive**, that amount becomes the carry-in for the same category next month. If Available is **negative**, the carry-in resets to zero and the deficit is subtracted from next month's [Ready to Assign](/glossary/ready-to-assign/). If Available is **exactly zero**, nothing happens.
+If a category's [Available](/glossary/#available) at month-end is **positive**, that amount becomes the carry-in for the same category next month. If Available is **negative**, the carry-in resets to zero and the deficit is subtracted from next month's [Ready to Assign](/glossary/#ready-to-assign). If Available is **exactly zero**, nothing happens.
 
 ## Why surplus rolls
 
@@ -38,7 +38,7 @@ By June 1, *Groceries* shows $0 carry-in. You assign fresh from a Ready to Assig
 
 ## Credit-card categories carry too
 
-The [Credit Card Payment](/glossary/credit-card-payment-category/) category follows the same surplus-rolls / deficit-resets rule. In practice it rarely ends a month negative — that would mean you paid more than the card owed, which is unusual.
+The [Credit Card Payment](/glossary/#credit-card-payment-category) category follows the same surplus-rolls / deficit-resets rule. In practice it rarely ends a month negative — that would mean you paid more than the card owed, which is unusual.
 
 ## Tracking-account "categories"
 

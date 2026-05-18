@@ -220,7 +220,7 @@ function welcomeWizard() {
           self.$store.budget.addCategory({ groupId: grp.id, name: catName });
         });
       });
-      this.$store.budget.pushToast("Categories created — edit them anytime on /app/categories/.");
+      this.$store.budget.pushToast("Categories created — edit them anytime on /app/budget/.");
       this.step = 4;
     },
     skipTemplate() { this.step = 4; },

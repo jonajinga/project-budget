@@ -6,6 +6,7 @@ permalink: /app/register/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="registerView()" x-init="init()">
 
   <header class="app-page__header">
@@ -13,25 +14,27 @@ eleventyExcludeFromCollections: true
       <h1 class="app-page__title">
         <span x-text="filterAccountId ? ($store.budget.findAccount(filterAccountId)?.name || 'Register') : 'All accounts'"></span>
       </h1>
-      <p class="app-page__lead" x-show="filterAccountId" x-cloak>
-        Balance:
-        <strong x-text="formatCents($store.budget.accountBalance(filterAccountId))"></strong>
-        &middot; cleared
-        <span x-text="formatCents($store.budget.accountClearedBalance(filterAccountId))"></span>
-      </p>
     </div>
-    <div class="cluster">
-      <button class="btn btn--primary" type="button"
-              x-show="hasAccounts" x-cloak
-              @click="showAdd = true; $nextTick(() => document.getElementById('t-date')?.focus())"
-              data-tip="Add a new transaction to the register.">+ Add transaction</button>
-      <button class="btn btn--secondary" type="button" @click="showTransfer = true" :disabled="!hasAccounts"
-              data-tip="Move money between two of your own accounts. Creates a paired entry on each side.">Transfer</button>
-      <button class="btn btn--secondary" type="button" @click="showReconcile = true" x-show="filterAccountId" x-cloak
-              data-tip="Match the cleared balance to your statement. Closes any gap with an adjustment, then locks cleared transactions.">Reconcile</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save the current account + search as a recall-able view in /app/templates/.">Save view</button>
-    </div>
+    {# Primary "Add transaction" is covered by the persistent FAB on every
+       app page (src/_includes/layouts/app.njk:62). Header keeps only the
+       account-scoped actions; Transfer / Reconcile / Save view collapse
+       into a single kebab so the row stays one line at 360px. #}
+    {% call overflow(label="Register actions") %}
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                :disabled="!hasAccounts"
+                @click="open = false; showTransfer = true">Transfer between accounts</button>
+      </li>
+      <li role="none" x-show="filterAccountId" x-cloak>
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                @click="open = false; showReconcile = true">Reconcile this account</button>
+      </li>
+      <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                @click="open = false; saveCurrentView()">Save current view</button>
+      </li>
+    {% endcall %}
   </header>
 
   <p class="app-page__lead" x-show="!hasAccounts" x-cloak>
@@ -39,11 +42,10 @@ eleventyExcludeFromCollections: true
     <a href="/app/accounts/">Go to accounts</a>.
   </p>
 
-  {# Account stats — only when viewing a single account. Six tiles
-     summarize the account at a glance: working balance, cleared
-     balance, uncleared, transaction count, this month's inflow,
-     this month's outflow. Computed live from the store so they
-     update on every mutation. #}
+  {# Account stats — six tiles laid out as a single row at desktop.
+     Uncleared is omitted because it equals (Working − Cleared), and
+     "this month" suffixes are dropped because the register view's
+     header already names the month context. Labels stay nowrap. #}
   <section class="acct-stats" x-show="filterAccountId && hasAccounts" x-cloak
            role="group" aria-label="Account summary">
     <article class="acct-stat">
@@ -52,27 +54,35 @@ eleventyExcludeFromCollections: true
          :class="$store.budget.accountBalance(filterAccountId) < 0 ? 'is-negative' : ''"
          x-text="formatCents($store.budget.accountBalance(filterAccountId))"></p>
     </article>
-    <article class="acct-stat">
+    <article class="acct-stat"
+             :data-tip="'Uncleared: ' + formatCents($store.budget.accountBalance(filterAccountId) - $store.budget.accountClearedBalance(filterAccountId))">
       <p class="acct-stat__label">Cleared</p>
       <p class="acct-stat__value"
          x-text="formatCents($store.budget.accountClearedBalance(filterAccountId))"></p>
-    </article>
-    <article class="acct-stat">
-      <p class="acct-stat__label">Uncleared</p>
-      <p class="acct-stat__value"
-         x-text="formatCents($store.budget.accountBalance(filterAccountId) - $store.budget.accountClearedBalance(filterAccountId))"></p>
     </article>
     <article class="acct-stat">
       <p class="acct-stat__label">Transactions</p>
       <p class="acct-stat__value" x-text="acctTxnCount()"></p>
     </article>
     <article class="acct-stat acct-stat--income">
-      <p class="acct-stat__label">Inflow this month</p>
+      <p class="acct-stat__label">Inflow</p>
       <p class="acct-stat__value" x-text="formatCents(acctMonthInflow())"></p>
     </article>
     <article class="acct-stat acct-stat--expense">
-      <p class="acct-stat__label">Outflow this month</p>
+      <p class="acct-stat__label">Outflow</p>
       <p class="acct-stat__value" x-text="formatCents(acctMonthOutflow())"></p>
+    </article>
+    <article class="acct-stat acct-stat--spark" x-show="acctSparkline()" x-cloak>
+      <p class="acct-stat__label">30-day trend</p>
+      <template x-if="acctSparkline()">
+        <svg class="acct-spark"
+             :class="'acct-spark--' + acctSparkline().trend"
+             viewBox="0 0 100 30" preserveAspectRatio="none"
+             role="img"
+             :aria-label="'Balance trend: ' + acctSparkline().trend + ', current ' + formatCents(acctSparkline().last)">
+          <path :d="acctSparkline().path" fill="none" stroke="currentColor" stroke-width="1.4" vector-effect="non-scaling-stroke"></path>
+        </svg>
+      </template>
     </article>
   </section>
 
@@ -103,103 +113,11 @@ eleventyExcludeFromCollections: true
     </table>
   </section>
 
-  {# Add transaction — hidden until the header "+ Add transaction"
-     button opens it. No redundant CTA card. #}
-  <section class="card register__add" x-show="hasAccounts && showAdd" x-cloak>
-    <div x-transition.opacity>
-      <div class="cluster" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--space-sm);">
-        <h2 class="card__title" style="margin: 0;">Add transaction</h2>
-        <button class="btn btn--ghost btn--sm" type="button" @click="showAdd = false">Cancel</button>
-      </div>
-      <form @submit.prevent="submitAdd(); showAdd = false">
-        {# Outflow / Inflow toggle — drives the sign of the amount on
-           submit so mobile users never need a minus sign. Also filters
-           the category dropdown to match (expense categories on
-           Outflow; income-group categories on Inflow). #}
-        <div class="txn-type-toggle" role="radiogroup" aria-label="Transaction type">
-          <button type="button" class="txn-type-toggle__opt"
-                  :class="form.type === 'outflow' ? 'is-active' : ''"
-                  :aria-pressed="form.type === 'outflow'"
-                  @click="form.type = 'outflow'; form.categoryId = ''">
-            <span aria-hidden="true">−</span> Outflow
-          </button>
-          <button type="button" class="txn-type-toggle__opt"
-                  :class="form.type === 'inflow' ? 'is-active' : ''"
-                  :aria-pressed="form.type === 'inflow'"
-                  @click="form.type = 'inflow'; form.categoryId = ''">
-            <span aria-hidden="true">+</span> Inflow
-          </button>
-        </div>
-        <div class="form-row register__add-grid">
-          <div class="field">
-            <label class="field__label" for="t-date">Date</label>
-            <input class="input" id="t-date" type="date" x-model="form.date" required>
-          </div>
-          <div class="field">
-            <label class="field__label" for="t-payee">Payee</label>
-            <input class="input" id="t-payee" type="text" x-model="form.payeeName"
-                   @input="updatePayeeSuggestions()" @focus="updatePayeeSuggestions()" @blur="setTimeout(() => payeeSuggestions = [], 150)"
-                   autocomplete="off">
-            <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
-              <template x-for="p in payeeSuggestions" :key="p.id">
-                <li>
-                  <button type="button" @mousedown.prevent="pickPayee(p)" x-text="p.name + ' (' + p.useCount + ')'"></button>
-                </li>
-              </template>
-            </ul>
-          </div>
-          <div class="field">
-            <label class="field__label" for="t-cat">Category</label>
-            <select class="select" id="t-cat" x-model="form.categoryId">
-              <option value="">(uncategorized)</option>
-              <template x-for="c in selectableCategoriesForType(form.type)" :key="c.id">
-                <option :value="c.id" x-text="c.name"></option>
-              </template>
-            </select>
-            <p class="field__hint"
-               x-show="form.type === 'inflow' && !selectableCategoriesForType('inflow').length" x-cloak>
-              No income categories yet — create one in a group marked as "Income".
-            </p>
-          </div>
-          <div class="field">
-            <label class="field__label" for="t-amount">Amount</label>
-            <input class="input" id="t-amount" type="text" x-model="form.amount"
-                   :placeholder="form.type === 'inflow' ? '12.34 · or 12+8.99' : '12.34 · or 12+8.99'"
-                   inputmode="decimal" required
-                   data-tip="Enter a positive number — the Outflow / Inflow toggle sets the sign. Calculator: type expressions like 12.50 + 8.99.">
-            <p class="field__hint calc-preview" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
-          </div>
-          <div class="field">
-            <label class="field__label" for="t-account">Account</label>
-            <select class="select" id="t-account" x-model="form.accountId" required>
-              <template x-for="a in openAccounts" :key="a.id">
-                <option :value="a.id" x-text="a.name"></option>
-              </template>
-            </select>
-          </div>
-        </div>
-        <div class="field" style="margin-top: var(--space-sm);">
-          <label class="field__label" for="t-memo">Memo (optional)</label>
-          <input class="input" id="t-memo" type="text" x-model="form.memo">
-        </div>
-        <div class="form-actions">
-          <button class="btn btn--primary" type="submit">Add transaction</button>
-          <button class="btn btn--ghost" type="button" @click="showAdd = false">Cancel</button>
-          <span class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted); align-items: center;">
-            <button type="button"
-                    class="cleared-toggle"
-                    :aria-pressed="form.cleared.toString()"
-                    :aria-label="form.cleared ? 'Cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'"
-                    @click="form.cleared = !form.cleared"
-                    :data-tip="form.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
-              <span x-show="form.cleared" aria-hidden="true">&#10003;</span>
-            </button>
-            <span>Cleared</span>
-          </span>
-        </div>
-      </form>
-    </div>
-  </section>
+  {# Add transaction is handled by the persistent FAB
+     (src/_includes/partials/fab-quick-add.njk, mounted in
+     src/_includes/layouts/app.njk:62 on every app page). The
+     inline add form that used to live here was a duplicate of
+     the FAB modal with worse mobile ergonomics. #}
 
   {# Register table #}
   <section class="register" x-show="hasAccounts" x-cloak>
@@ -251,21 +169,13 @@ eleventyExcludeFromCollections: true
         <p class="register__count">
           <span x-text="visibleTransactions().length"></span> shown
         </p>
-        <button class="btn btn--ghost btn--sm" type="button"
-                @click="toggleSelectMode()"
-                :aria-pressed="selectMode.toString()"
-                :class="selectMode ? 'is-active' : ''"
-                data-tip="Pick multiple rows to recategorize, rename, or delete in one step.">
-          <span x-show="!selectMode">Select</span>
-          <span x-show="selectMode" x-cloak>Done selecting</span>
-        </button>
       </div>
     </div>
 
     <table class="register__table" x-show="!isMobile" x-cloak data-no-tippy>
       <thead>
         <tr>
-          <th scope="col" class="col-select" x-show="selectMode" x-cloak>
+          <th scope="col" class="col-select">
             <input type="checkbox" class="register__bulk-check"
                    :checked="allVisibleSelected()"
                    :aria-checked="someVisibleSelected() && !allVisibleSelected() ? 'mixed' : (allVisibleSelected() ? 'true' : 'false')"
@@ -290,44 +200,158 @@ eleventyExcludeFromCollections: true
           <tr :data-txn-id="t.id"
               :class="{ 'register__row--reconciled': t.reconciled, 'register__row--editing': editingId === t.id, 'register__row--selected': isTxnSelected(t.id) }"
               @click="onRowClick(t, $event)">
-            {# Per-row select checkbox — only present in select mode. #}
-            <td class="col-select" x-show="selectMode" x-cloak>
+            {# Per-row select checkbox — always visible. Bulk actions
+               (recategorize, rename, delete) light up the floating bar
+               whenever ≥1 row is selected. #}
+            <td class="col-select" @click.stop>
               <input type="checkbox" class="register__bulk-check"
                      :checked="isTxnSelected(t.id)"
                      @change="toggleTxnSelected(t.id)"
                      :disabled="t.reconciled"
                      :aria-label="'Select ' + ($store.budget.payeeName(t.payeeId) || 'transaction')">
             </td>
-            {# Display mode #}
+            {# Display mode — each cell is click-to-edit. Reconciled
+               rows + transfer pairs skip the click (use kebab → Edit
+               instead). The single-cell editor swaps a focused input
+               for the static text and commits on blur/Enter. #}
             <template x-if="editingId !== t.id">
-              <td class="col-date"
-                  :data-tip="t.date">
-                <span x-html="fmtDateCell(t.date)"></span>
+              <td class="col-date cell--edit"
+                  :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
+                  :data-tip="t.date"
+                  @click.stop="startCellEdit(t, 'date', t.date)">
+                <template x-if="!isEditingCell(t, 'date')">
+                  <span x-html="fmtDateCell(t.date)"></span>
+                </template>
+                <template x-if="isEditingCell(t, 'date')">
+                  <input type="date" class="input cell-input"
+                         :data-cell-input="t.id + ':date'"
+                         x-model="cellEdit.draft"
+                         @blur="commitCell(t)"
+                         @keydown.enter.prevent="commitCell(t)"
+                         @keydown.escape.prevent="cancelCellEdit()">
+                </template>
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td x-text="$store.budget.findAccount(t.accountId)?.name || '—'"
-                  :data-tip="$store.budget.findAccount(t.accountId)?.name || ''"></td>
-            </template>
-            <template x-if="editingId !== t.id">
-              <td class="col-payee"
-                  x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '—')"
-                  :data-tip="t.transferTxnId ? 'Paired transfer entry.' : ($store.budget.payeeName(t.payeeId) || '')"></td>
-            </template>
-            <template x-if="editingId !== t.id">
-              <td>
-                <span x-show="!t.splits" x-cloak x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? '' : '—')"
-                      :data-tip="$store.budget.categoryName(t.categoryId) || ''"></span>
-                <span x-show="t.splits" x-cloak class="badge"
-                      :data-tip="'This transaction is split across ' + (t.splits?.length || 0) + ' categories.'">split (<span x-text="t.splits?.length"></span>)</span>
+              <td class="cell--edit"
+                  :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
+                  :data-tip="$store.budget.findAccount(t.accountId)?.name || ''"
+                  @click.stop="startCellEdit(t, 'accountId', t.accountId)">
+                <template x-if="!isEditingCell(t, 'accountId')">
+                  <span x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></span>
+                </template>
+                <template x-if="isEditingCell(t, 'accountId')">
+                  <select class="select cell-input"
+                          :data-cell-input="t.id + ':accountId'"
+                          x-model="cellEdit.draft"
+                          @blur="commitCell(t)"
+                          @change="commitCell(t)"
+                          @keydown.escape.prevent="cancelCellEdit()">
+                    <template x-for="a in openAccounts" :key="a.id">
+                      <option :value="a.id" x-text="a.name"></option>
+                    </template>
+                  </select>
+                </template>
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td x-text="t.memo" :data-tip="t.memo || ''" style="color: var(--fg-muted);"></td>
+              <td class="col-payee cell--edit"
+                  :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
+                  :data-tip="t.transferTxnId ? 'Paired transfer entry.' : ($store.budget.payeeName(t.payeeId) || '')"
+                  @click.stop="!t.transferTxnId && startCellEdit(t, 'payeeName', $store.budget.payeeName(t.payeeId) || '')">
+                <template x-if="!isEditingCell(t, 'payeeName')">
+                  <span x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '—')"></span>
+                </template>
+                <template x-if="isEditingCell(t, 'payeeName')">
+                  <input type="text" class="input cell-input"
+                         :data-cell-input="t.id + ':payeeName'"
+                         x-model="cellEdit.draft"
+                         autocomplete="off"
+                         @blur="commitCell(t)"
+                         @keydown.enter.prevent="commitCell(t)"
+                         @keydown.escape.prevent="cancelCellEdit()">
+                </template>
+              </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(t.amount)"
-                  :data-tip="(t.amount < 0 ? 'Outflow ' : 'Inflow ') + formatCents(Math.abs(t.amount))"></td>
+              <td class="cell--edit"
+                  :class="{ 'is-locked': t.reconciled || t.transferTxnId || t.splits }"
+                  :data-tip="$store.budget.categoryName(t.categoryId) || ''"
+                  @click.stop="!t.splits && startCellEdit(t, 'categoryId', t.categoryId || '')">
+                <template x-if="!isEditingCell(t, 'categoryId')">
+                  <span>
+                    <span x-show="!t.splits" x-cloak x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? '' : '—')"></span>
+                    <span x-show="t.splits" x-cloak class="badge"
+                          :data-tip="'This transaction is split across ' + (t.splits?.length || 0) + ' categories.'">split (<span x-text="t.splits?.length"></span>)</span>
+                  </span>
+                </template>
+                <template x-if="isEditingCell(t, 'categoryId')">
+                  <select class="select cell-input"
+                          :data-cell-input="t.id + ':categoryId'"
+                          x-model="cellEdit.draft"
+                          @blur="commitCell(t)"
+                          @change="commitCell(t)"
+                          @keydown.escape.prevent="cancelCellEdit()">
+                    <option value="">(uncategorized)</option>
+                    <template x-for="c in selectableCategoriesForType(t.amount < 0 ? 'outflow' : 'inflow')" :key="c.id">
+                      <option :value="c.id" x-text="c.name"></option>
+                    </template>
+                  </select>
+                </template>
+              </td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td class="cell--edit"
+                  :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
+                  :data-tip="t.memo || ''"
+                  style="color: var(--fg-muted);"
+                  @click.stop="startCellEdit(t, 'memo', t.memo || '')">
+                <template x-if="!isEditingCell(t, 'memo')">
+                  <span x-text="t.memo || ''"></span>
+                </template>
+                <template x-if="isEditingCell(t, 'memo')">
+                  <input type="text" class="input cell-input"
+                         :data-cell-input="t.id + ':memo'"
+                         x-model="cellEdit.draft"
+                         @blur="commitCell(t)"
+                         @keydown.enter.prevent="commitCell(t)"
+                         @keydown.escape.prevent="cancelCellEdit()">
+                </template>
+              </td>
+            </template>
+            <template x-if="editingId !== t.id">
+              <td class="num cell--edit cell--amount"
+                  :class="[t.amount < 0 ? 'amount--outflow' : 'amount--inflow', (t.reconciled || t.transferTxnId) ? 'is-locked' : '']"
+                  :data-tip="(t.amount < 0 ? 'Outflow ' : 'Inflow ') + formatCents(Math.abs(t.amount))"
+                  @click.stop="startCellEdit(t, 'amount', (Math.abs(t.amount) / 100).toFixed(2))">
+                <template x-if="!isEditingCell(t, 'amount')">
+                  <span x-text="formatCents(t.amount)"></span>
+                </template>
+                <template x-if="isEditingCell(t, 'amount')">
+                  {# Single sign-flip chip — tap to flip outflow ↔
+                     inflow. Compact (~20px), clear state (red − /
+                     green +), and never blurs the input because
+                     @mousedown.prevent keeps focus. #}
+                  <span class="cell-amount-edit"
+                        @keydown.escape.prevent="cancelCellEdit()">
+                    <button type="button"
+                            class="cell-sign-flip"
+                            :class="cellEdit.sign === 'inflow' ? 'is-in' : 'is-out'"
+                            :title="cellEdit.sign === 'outflow' ? 'Outflow (negative). Tap to flip.' : 'Inflow (positive). Tap to flip.'"
+                            :aria-label="cellEdit.sign === 'outflow' ? 'Outflow. Tap to switch to inflow.' : 'Inflow. Tap to switch to outflow.'"
+                            @mousedown.prevent
+                            @click.stop="setCellSign(cellEdit.sign === 'outflow' ? 'inflow' : 'outflow')">
+                      <span aria-hidden="true" x-text="cellEdit.sign === 'outflow' ? '−' : '+'"></span>
+                    </button>
+                    <input type="text" inputmode="decimal" class="input cell-input num"
+                           :data-cell-input="t.id + ':amount'"
+                           x-model="cellEdit.draft"
+                           @blur="commitCell(t)"
+                           @keydown.enter.prevent="commitCell(t)"
+                           @keydown.escape.prevent="cancelCellEdit()">
+                  </span>
+                </template>
+              </td>
             </template>
             <template x-if="editingId !== t.id">
               <td class="col-cleared">
@@ -343,57 +367,36 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="num">
+              <td class="num" @click.stop>
                 <div class="cluster" style="justify-content: flex-end; flex-wrap: nowrap; gap: var(--space-3xs);">
-                  <button class="btn btn--icon" type="button" @click="startEdit(t)" x-show="!t.reconciled && !t.transferTxnId"
-                          aria-label="Edit transaction"
-                          data-tip="Edit this transaction inline.">
-                    {# Lucide "pencil" — pencil with eraser end + clear
-                       angled body. Matches the trash/split weight. #}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path>
-                      <line x1="15" y1="5" x2="19" y2="9"></line>
-                    </svg>
-                  </button>
-                  <button class="btn btn--icon" type="button" @click="openSplits(t)" x-show="!t.reconciled && !t.transferTxnId"
-                          aria-label="Split transaction"
-                          data-tip="Divide this transaction across multiple categories (groceries + household, for example).">
-                    {# Lucide "git-fork" — one stem branching into two: the
-                       canonical split metaphor. #}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="6" cy="5" r="2"></circle>
-                      <circle cx="18" cy="5" r="2"></circle>
-                      <circle cx="12" cy="19" r="2"></circle>
-                      <path d="M6 7v3a2 2 0 002 2h8a2 2 0 002-2V7"></path>
-                      <line x1="12" y1="12" x2="12" y2="17"></line>
-                    </svg>
-                  </button>
-                  <button class="btn btn--icon" type="button" @click="unlock(t)" x-show="t.reconciled"
-                          aria-label="Unlock reconciled transaction"
-                          data-tip="Unlock this reconciled entry so you can edit it.">
-                    {# Lucide "unlock" — shackle hinged open on one side. #}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                      <path d="M7 11V7a5 5 0 019.9-1"></path>
-                    </svg>
-                  </button>
-                  <button class="btn btn--icon" type="button" @click="openMakeRecurring(t)"
-                          x-show="!t.reconciled && !t.transferTxnId && !t.splits"
-                          aria-label="Make this a recurring transaction"
-                          data-tip="Use this entry as a template for a recurring transaction (rent, subscription, paycheck).">
-                    {# Lucide "refresh-cw" — circular arrows = recurring. #}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="23 4 23 10 17 10"></polyline>
-                      <polyline points="1 20 1 14 7 14"></polyline>
-                      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
-                    </svg>
-                  </button>
-                  <button class="btn btn--icon" type="button" @click="del(t)" x-show="!t.reconciled"
-                          aria-label="Delete transaction"
-                          data-tip="Permanently delete this transaction."
-                          style="color: var(--danger);">
-                    {{ iconTrash() }}
-                  </button>
+                  {# Edit / Split / Unlock / Recurring / Delete collapse
+                     into a kebab so the row stops carrying 4-5 icons
+                     across its right edge. @click.stop on the cell stops
+                     the row-click handler from interpreting kebab clicks
+                     as row selection. #}
+                  {% call overflow(label="Transaction actions") %}
+                    <li role="none" x-show="!t.reconciled && !t.transferTxnId">
+                      <button type="button" role="menuitem" class="overflow-menu__item"
+                              @click="open = false; startEdit(t)">Edit…</button>
+                    </li>
+                    <li role="none" x-show="!t.reconciled && !t.transferTxnId">
+                      <button type="button" role="menuitem" class="overflow-menu__item"
+                              @click="open = false; openSplits(t)">Split into categories…</button>
+                    </li>
+                    <li role="none" x-show="!t.reconciled && !t.transferTxnId && !t.splits">
+                      <button type="button" role="menuitem" class="overflow-menu__item"
+                              @click="open = false; openMakeRecurring(t)">Make recurring…</button>
+                    </li>
+                    <li role="none" x-show="t.reconciled">
+                      <button type="button" role="menuitem" class="overflow-menu__item"
+                              @click="open = false; unlock(t)">Unlock to edit</button>
+                    </li>
+                    <li role="none" class="overflow-menu__sep" aria-hidden="true" x-show="!t.reconciled"></li>
+                    <li role="none" x-show="!t.reconciled">
+                      <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                              @click="open = false; del(t)">Delete transaction</button>
+                    </li>
+                  {% endcall %}
                 </div>
               </td>
             </template>
@@ -479,7 +482,7 @@ eleventyExcludeFromCollections: true
         </template>
 
         <tr x-show="!visibleTransactions().length" x-cloak>
-          <td :colspan="selectMode ? 9 : 8" style="text-align: center; padding: var(--space-lg); color: var(--fg-muted);">
+          <td colspan="9" style="text-align: center; padding: var(--space-lg); color: var(--fg-muted);">
             No transactions match the current filter.
           </td>
         </tr>
@@ -488,7 +491,7 @@ eleventyExcludeFromCollections: true
            without having to click. The button is the keyboard / no-JS
            fallback path. #}
         <tr x-show="hasMoreToShow()" x-cloak class="register__load-more-row">
-          <td :colspan="selectMode ? 9 : 8" style="text-align: center; padding: var(--space-md);">
+          <td colspan="9" style="text-align: center; padding: var(--space-md);">
             <button type="button" class="btn btn--ghost btn--sm"
                     @click="showMore()"
                     data-load-more-sentinel>
@@ -507,9 +510,11 @@ eleventyExcludeFromCollections: true
       <template x-for="t in pagedTransactions()" :key="t.id">
         <li class="register__card"
             :class="{ 'is-expanded': expandedTxnId === t.id, 'is-reconciled': t.reconciled, 'is-editing': editingId === t.id, 'is-selected': isTxnSelected(t.id) }">
-          {# Select-mode checkbox on mobile cards. Sits inline before
-             the tap-to-expand summary so it doesn't fight for the tap. #}
-          <label class="register__card-select" x-show="selectMode" x-cloak>
+          {# Persistent select checkbox on mobile cards — sits inline
+             before the tap-to-expand summary so it doesn't fight for
+             the tap. The Select-mode toggle was dropped; the checkbox
+             is always visible and tapping it opens the bulk bar. #}
+          <label class="register__card-select">
             <input type="checkbox" class="register__bulk-check"
                    :checked="isTxnSelected(t.id)"
                    @change="toggleTxnSelected(t.id)"
@@ -858,12 +863,31 @@ eleventyExcludeFromCollections: true
     <div class="cluster" style="gap: var(--space-2xs); flex-wrap: wrap;">
       <button type="button" class="btn btn--primary btn--sm" @click="openBulkRecategorize()"
               data-tip="Reassign every selected transaction to one category.">Recategorize</button>
-      <button type="button" class="btn btn--secondary btn--sm" @click="openBulkRename()"
-              data-tip="Set the payee on every selected transaction.">Rename payee</button>
-      <button type="button" class="btn btn--secondary btn--sm" @click="openBulkShift()"
-              data-tip="Shift every selected transaction's date by a number of days.">Shift dates</button>
-      <button type="button" class="btn btn--danger btn--sm" @click="bulkDelete()"
-              data-tip="Move every selected transaction to Trash. Recoverable for 30 days.">Delete</button>
+      <span class="bulk-actions-bar__more bulk-actions-bar__more--desktop">
+        <button type="button" class="btn btn--secondary btn--sm" @click="openBulkRename()"
+                data-tip="Set the payee on every selected transaction.">Rename payee</button>
+        <button type="button" class="btn btn--secondary btn--sm" @click="openBulkShift()"
+                data-tip="Shift every selected transaction's date by a number of days.">Shift dates</button>
+        <button type="button" class="btn btn--danger btn--sm" @click="bulkDelete()"
+                data-tip="Move every selected transaction to Trash. Recoverable for 30 days.">Delete</button>
+      </span>
+      <span class="bulk-actions-bar__more bulk-actions-bar__more--mobile">
+        {% call overflow(label="More bulk actions") %}
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; openBulkRename()">Rename payee</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; openBulkShift()">Shift dates</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                    @click="open = false; bulkDelete()">Delete selected</button>
+          </li>
+        {% endcall %}
+      </span>
       <button type="button" class="btn btn--ghost btn--sm" @click="clearTxnSelection()"
               data-tip="Deselect every row and exit selection mode.">Cancel</button>
     </div>

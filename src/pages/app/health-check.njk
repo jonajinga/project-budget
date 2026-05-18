@@ -146,9 +146,9 @@ function healthCheckView() {
         severity: orphanCats.length ? "warn" : "ok",
         count: orphanCats.length,
         findings: orphanCats.map(function (c) {
-          return { label: c.name, href: "/app/categories/" };
+          return { label: c.name, href: "/app/budget/" };
         }),
-        fix: orphanCats.length ? { label: "Manage categories", href: "/app/categories/" } : null,
+        fix: orphanCats.length ? { label: "Open budget", href: "/app/budget/" } : null,
       });
 
       /* Recurring templates pointing at deleted account / category. */
@@ -212,9 +212,9 @@ function healthCheckView() {
         severity: orphanGoals.length ? "warn" : "ok",
         count: orphanGoals.length,
         findings: orphanGoals.map(function (g) {
-          return { label: "Goal target: " + ((g.target||0)/100).toFixed(0), href: "/app/categories/" };
+          return { label: "Goal target: " + ((g.target||0)/100).toFixed(0), href: "/app/budget/" };
         }),
-        fix: orphanGoals.length ? { label: "Manage categories", href: "/app/categories/" } : null,
+        fix: orphanGoals.length ? { label: "Open budget", href: "/app/budget/" } : null,
       });
 
       /* Future-dated transactions — usually a typo. */

@@ -5,6 +5,7 @@ description: "Forward 3, 6, and 12 month projection from on-budget balance + rec
 permalink: /app/reports/projection/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="projectionView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -105,12 +106,7 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportRowsCSV()"
-              data-tip="Download the projected balances per month as a CSV file.">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()"
-              data-tip="Open the browser print dialog.">Print</button>
+      {{ reportExports("", "exportRowsCSV()") }}
     </div>
 
     <table class="table" id="data-table-proj">

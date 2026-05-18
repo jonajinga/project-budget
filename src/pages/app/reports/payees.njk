@@ -5,6 +5,7 @@ description: "Top merchants and payees ranked by total spend. Surfaces subscript
 permalink: /app/reports/payees/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="payeeLeaderboardView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -66,10 +67,7 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('payee-leaderboard')">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
+      {{ reportExports("payee-leaderboard") }}
     </div>
 
     <table class="table">

@@ -9,7 +9,7 @@ import {
   restoreFromTrash, permanentlyDeleteFromTrash, listTrash, pruneTrash, switchTo,
   freshStart, trimHistory,
 } from "./profile.js";
-import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES } from "./persist.js";
+import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES, readRaw, saveProfileNow } from "./persist.js";
 /* loadSampleIfFirstVisit() needs to fetch the sample bundle, parse
    it, register a fresh profile, and persist the index — pulling in
    the JSON-import helpers + the persistence raw-key helpers below.
@@ -643,6 +643,49 @@ export function createStore() {
         quota: QUOTA_BYTES,
         pct: Math.min(100, Math.round((used / QUOTA_BYTES) * 100)),
       };
+    },
+
+    /**
+     * Per-profile on-disk size in localStorage. Reads the raw stored
+     * value (post-compression where applicable) and reports its UTF-16
+     * char length × 2 as a byte estimate. Returns [] when no profiles.
+     * @returns {Array<{id, name, bytes}>} sorted by size desc
+     */
+    profileSizes() {
+      void this._listVersion;
+      var list = this.profiles || [];
+      return list.map(function (entry) {
+        var raw = readRaw(_profileKey(entry.id)) || "";
+        /* Each UTF-16 char ≈ 2 bytes in localStorage on every major engine. */
+        return { id: entry.id, name: entry.name, bytes: raw.length * 2 };
+      }).sort(function (a, b) { return b.bytes - a.bytes; });
+    },
+
+    /**
+     * Re-serialize every profile, forcing a fresh compressed write.
+     * Useful after a schema upgrade or when older raw-JSON profiles
+     * should pick up the LZ-string pass. No-op for profiles that fail
+     * to load. Returns counts so the UI can toast.
+     * @returns {{rewritten: number, skipped: number, savedBytes: number}}
+     */
+    resaveAllProfiles() {
+      var list = this.profiles || [];
+      var rewritten = 0;
+      var skipped = 0;
+      var before = estimateUsedBytes();
+      list.forEach(function (entry) {
+        var p = _readJSON(_profileKey(entry.id));
+        if (!p || !p.id) { skipped += 1; return; }
+        var res = saveProfileNow(p);
+        if (res && res.ok !== false) rewritten += 1;
+        else skipped += 1;
+      });
+      var after = estimateUsedBytes();
+      this._bumpLists();
+      var saved = Math.max(0, before - after);
+      this.pushToast("Re-saved " + rewritten + " profile" + (rewritten === 1 ? "" : "s") +
+        (saved > 1024 ? " — freed " + Math.round(saved / 1024) + " KB." : "."));
+      return { rewritten: rewritten, skipped: skipped, savedBytes: saved };
     },
 
 

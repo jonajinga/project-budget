@@ -5,7 +5,7 @@ category: "transactions"
 order: 2
 ---
 
-A [transfer](/glossary/transfer/) is money moving between two accounts you own. Checking to savings. Checking to the credit card to pay the bill. Cash withdrawal from a checking account. None of these are spending or income — they're just dollars relocating within your own balance sheet.
+A [transfer](/glossary/#transfer) is money moving between two accounts you own. Checking to savings. Checking to the credit card to pay the bill. Cash withdrawal from a checking account. None of these are spending or income — they're just dollars relocating within your own balance sheet.
 
 ## How to enter one
 
@@ -26,9 +26,9 @@ The two are linked. Editing one updates the other. Deleting one deletes both. Th
 
 ## What transfers do to the budget
 
-For two on-budget accounts (checking → savings), nothing changes in [Ready to Assign](/glossary/ready-to-assign/), category Available, or net worth. You moved cash from one envelope-eligible bucket to another. No category is touched.
+For two on-budget accounts (checking → savings), nothing changes in [Ready to Assign](/glossary/#ready-to-assign), category Available, or net worth. You moved cash from one envelope-eligible bucket to another. No category is touched.
 
-For on-budget → credit card (paying a card), the source account drops, the card account rises (less debt), and the [Credit Card Payment](/glossary/credit-card-payment-category/) category's Available drops by the payment amount — cash that was earmarked is now spent. See [Credit-card workflow](/docs/accounts/credit-card-workflow/).
+For on-budget → credit card (paying a card), the source account drops, the card account rises (less debt), and the [Credit Card Payment](/glossary/#credit-card-payment-category) category's Available drops by the payment amount — cash that was earmarked is now spent. See [Credit-card workflow](/docs/accounts/credit-card-workflow/).
 
 For on-budget → tracking (moving cash to a 401k contribution that's a tracking-asset account), the source account drops and the tracking account rises. Ready to Assign drops too, because the cash left an on-budget account. This is the right behavior — you no longer have those dollars to spend.
 

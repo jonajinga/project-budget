@@ -29,7 +29,7 @@ From [Accounts](/app/accounts/), click the account, then choose **Close account*
 - It stops contributing to Net worth from the close date onward.
 - The account name gets struck through in the sidebar so it reads as archived.
 
-For a closed credit-card account, the auto-created [Credit Card Payment](/glossary/credit-card-payment-category/) category is also hidden but kept for history. You can't assign to it anymore.
+For a closed credit-card account, the auto-created [Credit Card Payment](/glossary/#credit-card-payment-category) category is also hidden but kept for history. You can't assign to it anymore.
 
 ## Reopening
 

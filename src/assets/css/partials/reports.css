@@ -9,6 +9,11 @@
 }
 @media (max-width: 599px) {
   .report { padding: var(--space-sm); }
+  /* Report-internal table headers get tighter padding on mobile so
+     the sticky banner doesn't eat 40px of vertical space. */
+  .report .table th { padding: var(--space-3xs) var(--space-2xs); font-size: var(--fs-xs); }
+  .report .table td { padding: var(--space-3xs) var(--space-2xs); }
+  .report__title { font-size: var(--fs-lg); }
 }
 .report__title { font-size: var(--fs-xl); margin-bottom: var(--space-2xs); }
 .report__lead { color: var(--fg-muted); margin-bottom: var(--space-md); font-size: var(--fs-sm); }

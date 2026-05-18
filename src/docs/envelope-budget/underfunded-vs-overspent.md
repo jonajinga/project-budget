@@ -9,7 +9,7 @@ Both states show up as a warning on the [Budget](/app/budget/) page. They mean d
 
 ## Underfunded
 
-A category is **underfunded** when its goal needs more assigned this month than you've given it, but [Available](/glossary/available/) is still zero or positive. You haven't overspent — you just haven't promised the goal as much as it asked for.
+A category is **underfunded** when its goal needs more assigned this month than you've given it, but [Available](/glossary/#available) is still zero or positive. You haven't overspent — you just haven't promised the goal as much as it asked for.
 
 Example: *Car insurance* has a goal of $120/month and you've assigned $80. Available is $80. The category shows an amber *Underfunded by $40* indicator. Nothing has gone wrong yet; the goal will fall short if you don't catch up.
 
@@ -17,17 +17,17 @@ Example: *Car insurance* has a goal of $120/month and you've assigned $80. Avail
 
 ## Overspent (cash)
 
-A cash category (one that doesn't sit behind a credit card) is **overspent** when [Activity](/glossary/activity/) plus carry-in plus assigned goes negative. You spent money that wasn't there.
+A cash category (one that doesn't sit behind a credit card) is **overspent** when [Activity](/glossary/#activity) plus carry-in plus assigned goes negative. You spent money that wasn't there.
 
 Example: *Dining out* had $50 available. You spent $73 on debit. Available is now -$23 and the row turns red.
 
 **The fix:** move $23 in from another category. Click the available cell, pick *Move money from…*, choose a category with surplus, confirm. The red disappears.
 
-If you don't move money, the deficit silently reduces next month's [Ready to Assign](/glossary/ready-to-assign/) by $23 when the month rolls over. The category's [Carry-over](/glossary/carry-over/) resets to zero — you don't keep digging a deeper hole. See [Carry-over rules](/docs/envelope-budget/carry-over-rules/).
+If you don't move money, the deficit silently reduces next month's [Ready to Assign](/glossary/#ready-to-assign) by $23 when the month rolls over. The category's [Carry-over](/glossary/#carry-over) resets to zero — you don't keep digging a deeper hole. See [Carry-over rules](/docs/envelope-budget/carry-over-rules/).
 
 ## Overspent (credit card)
 
-Credit-card overspending is a different animal. When you spend $73 on a card but only $50 was assigned, the *Dining out* category goes red the same way — but the [Credit Card Payment](/glossary/credit-card-payment-category/) category for the card still earmarks the full $73 owed. The bill is funded; the budget is just telling you you spent more on dining than planned.
+Credit-card overspending is a different animal. When you spend $73 on a card but only $50 was assigned, the *Dining out* category goes red the same way — but the [Credit Card Payment](/glossary/#credit-card-payment-category) category for the card still earmarks the full $73 owed. The bill is funded; the budget is just telling you you spent more on dining than planned.
 
 **The fix:** same as cash — move $23 from another category into *Dining out*. The Available there returns to zero. The payment category doesn't change.
 

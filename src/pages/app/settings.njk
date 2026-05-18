@@ -5,6 +5,7 @@ description: "Storage usage, backups, manual snapshots, theme preference, toolti
 permalink: /app/settings/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="settingsView()">
   <header class="app-page__header">
     <h1 class="app-page__title">Settings</h1>
@@ -42,7 +43,7 @@ eleventyExcludeFromCollections: true
         <dt>Categories</dt>
         <dd>
           <strong x-text="$store.budget.profile?.categories?.length ?? 0"></strong>
-          <a class="data-summary__link" href="/app/categories/">Manage categories &rarr;</a>
+          <a class="data-summary__link" href="/app/budget/">Manage on budget &rarr;</a>
         </dd>
       </div>
       <div class="data-summary__row">
@@ -96,6 +97,30 @@ eleventyExcludeFromCollections: true
       </p>
       <div style="background: var(--bg-alt); height: 10px; border: 1px solid var(--border-soft);">
         <div :style="'background: var(--accent); height: 100%; width: ' + $store.budget.storageStats().pct + '%;'"></div>
+      </div>
+
+      <h3 style="margin: var(--space-md) 0 var(--space-2xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: 0.04em;">Per-profile size</h3>
+      <table class="table" style="font-variant-numeric: tabular-nums;" x-show="$store.budget.profileSizes().length" x-cloak>
+        <thead>
+          <tr><th scope="col">Profile</th><th scope="col" class="num">Stored</th></tr>
+        </thead>
+        <tbody>
+          <template x-for="row in $store.budget.profileSizes()" :key="row.id">
+            <tr>
+              <td x-text="row.name"></td>
+              <td class="num" x-text="fmtBytes(row.bytes)"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <p class="card__body" style="margin: var(--space-sm) 0 var(--space-2xs); font-size: var(--fs-sm); color: var(--text-soft);">
+        Re-save runs every profile through the current compression and short-id pipeline. Use it after upgrades, or any time a profile was last written before compression shipped.
+      </p>
+      <div class="form-actions">
+        <button class="btn btn--secondary btn--sm" type="button"
+                :disabled="!$store.budget.profiles?.length"
+                @click="$store.budget.resaveAllProfiles()"
+                data-tip="Re-serialize every profile to pick up the current storage format (compression, short IDs). Frees space if older raw-JSON profiles are still around.">Re-save all profiles now</button>
       </div>
     </section>
 
@@ -194,13 +219,17 @@ eleventyExcludeFromCollections: true
               </td>
               <td x-text="new Date(s.createdAt).toLocaleString()"></td>
               <td class="num" x-text="fmtBytes(s.size)"></td>
-              <td class="num">
+              <td class="num" @click.stop>
                 <div class="cluster" style="justify-content: flex-end;">
-                  <button class="btn btn--secondary btn--sm" type="button"
+                  <button class="btn btn--primary btn--sm" type="button"
                           @click="restoreSnapId = s.id; restoreSnapValue = ''"
                           data-tip="Replace the active profile with this snapshot. Typed-name confirm required.">Restore</button>
-                  <button class="btn btn--danger btn--sm" type="button"
-                          @click="PBDialog.confirm({ title: 'Remove this snapshot?', message: 'The snapshot will be permanently deleted. The active profile is not affected.', confirmLabel: 'Remove snapshot', danger: true }).then(ok => ok && $store.budget.deleteSnapshot(s.id))">Remove</button>
+                  {% call overflow(label="Snapshot actions") %}
+                    <li role="none">
+                      <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                              @click="open = false; PBDialog.confirm({ title: 'Remove this snapshot?', message: 'The snapshot will be permanently deleted. The active profile is not affected.', confirmLabel: 'Remove snapshot', danger: true }).then(ok => ok && $store.budget.deleteSnapshot(s.id))">Remove snapshot</button>
+                    </li>
+                  {% endcall %}
                 </div>
               </td>
             </tr>

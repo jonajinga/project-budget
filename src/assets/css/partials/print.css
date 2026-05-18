@@ -103,16 +103,16 @@
     border: 0; background: transparent; padding: 0;
     color: #000;
   }
-  /* Show RTA at the top of the budget printout */
-  .rta {
+  /* Budget stat blocks (RTA + Assigned) in the toolbar — flatten
+     for print so accent fills don't waste ink. */
+  .budget-stat {
     background: #fff !important;
     color: #000 !important;
     border: 1px solid #000;
-    padding: 8pt;
-    margin-bottom: 12pt;
+    padding: 4pt 8pt;
   }
-  .rta__label { font-size: 9pt; }
-  .rta__value { font-size: 18pt; }
+  .budget-stat__label { font-size: 9pt; color: #000 !important; }
+  .budget-stat__value { font-size: 14pt; color: #000 !important; }
 
   /* ---- /app/register/ ---- */
   .register { border: 1px solid #999; }

@@ -16,15 +16,14 @@
    the left has room to breathe. */
 @media (max-width: 599px) {
   .budget__toolbar { gap: var(--space-2xs); padding: var(--space-2xs); }
+  /* Wrap freely on mobile — horizontal scroll hid the back half of
+     the toolbar (Clear assigned, kebab) behind an invisible
+     scrollbar. Buttons that can fit stay on one row; the rest wrap
+     to the next line. */
   .budget__toolbar > .cluster {
     flex-basis: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    flex-wrap: nowrap;
-    scrollbar-width: none;
+    flex-wrap: wrap;
   }
-  .budget__toolbar > .cluster::-webkit-scrollbar { display: none; }
-  .budget__toolbar > .cluster .btn { flex-shrink: 0; }
 }
 .budget__month {
   display: flex;
@@ -49,32 +48,32 @@
 .budget__group-header,
 .budget__row {
   display: grid;
-  /* Mobile-first: 360px is the smallest target. Use a 2-row grid
-     with the category cell spanning the top row and Assigned /
-     Outflow / Available pills sharing the bottom row equally.
-     This keeps every number visible on phones — hiding Assigned
-     or Outflow makes the budget unusable. The grid promotes to
-     horizontal columns at 600px+ via the @media rule. */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  /* Mobile-first: cat name spans the full top row, then 3 number
+     cells + a kebab column share the bottom row. The kebab column
+     sizes to content so the numbers keep the bulk of the width. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   grid-template-areas:
-    "cat cat cat"
-    "assigned outflow available";
+    "cat cat cat actions"
+    "assigned outflow available actions";
   row-gap: var(--space-2xs);
   column-gap: var(--space-2xs);
   align-items: center;
   padding: 0.55rem var(--space-sm);
   font-size: var(--fs-sm);
 }
-.budget__category { grid-area: cat; }
-.budget__assigned { grid-area: assigned; }
-.budget__activity { grid-area: outflow; }
-.budget__available { grid-area: available; }
-/* The 3 totals spans inside the group header pick up the same
-   areas via nth-child since they don't have semantic classes. */
+.budget__category   { grid-area: cat; }
+.budget__assigned   { grid-area: assigned; }
+.budget__activity   { grid-area: outflow; }
+.budget__available  { grid-area: available; }
+.budget__row-actions { grid-area: actions; }
+/* The group-header's totals spans get areas via nth-child since
+   they don't carry semantic class names. The 5th child is the
+   kebab block (added in the markup above the row). */
 .budget__group-header > :nth-child(1) { grid-area: cat; }
 .budget__group-header > :nth-child(2) { grid-area: assigned; }
 .budget__group-header > :nth-child(3) { grid-area: outflow; }
 .budget__group-header > :nth-child(4) { grid-area: available; }
+.budget__group-header > :nth-child(5) { grid-area: actions; }
 /* Tiny mobile-only labels above each pill so users know which
    number is which without the column header above. Hidden on
    desktop (the column header bar does the job there). */
@@ -92,16 +91,19 @@
   text-align: right;
   padding-right: 0.65rem;
 }
-@media (min-width: 600px) {
+/* Micro-labels above the pills hide only when the horizontal-row
+   layout kicks in (>=900px). Below that, the mobile 2-row grid
+   keeps them so users know which number is Assigned vs Outflow
+   vs Available without a column header above. */
+@media (min-width: 900px) {
   .budget__assigned::before,
   .budget__activity::before,
   .budget__available::before { display: none; }
 }
-/* Column header strip — only useful on desktop where rows lay out
-   horizontally. On mobile each cat row carries its own micro-labels
-   above each pill so the column strip is redundant. */
+/* Column header strip — only useful when rows lay out horizontally
+   (>=900px). Below that, the mobile micro-labels do the job. */
 .budget__column-header { display: none; }
-@media (min-width: 600px) {
+@media (min-width: 900px) {
   .budget__column-header { display: grid; }
 }
 .budget__row { border-top: 1px solid var(--border-soft); }
@@ -235,23 +237,53 @@
   color: var(--accent);
   margin-right: 4px;
 }
-@media (max-width: 599px) {
+@media (max-width: 767px) {
   .bulk-actions-bar {
     left: 8px; right: 8px;
     bottom: calc(8px + env(safe-area-inset-bottom, 0));
     transform: none;
     max-width: none;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    /* Single tight row: [count] [Primary] [⋮] [Cancel].
+       flex-wrap: nowrap so the bar never balloons into a multi-row
+       panel; inner buttons shrink via min-width: 0 to fit. */
+    flex-wrap: nowrap;
     gap: var(--space-2xs);
     padding: var(--space-2xs) var(--space-sm);
+    align-items: center;
+  }
+  .bulk-actions-bar > .cluster {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    min-width: 0;
   }
   .bulk-actions-bar .btn {
-    flex: 1 1 auto;
     min-width: 0;
     padding-left: var(--space-2xs);
     padding-right: var(--space-2xs);
   }
+  .bulk-actions-bar__count {
+    flex: 0 0 auto;
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+  /* Hide the verbose "transaction selected" / "transactions selected"
+     suffix on phones — the bold count alone is enough. */
+  .bulk-actions-bar__count > :not(strong) { display: none; }
+  .bulk-actions-bar__count::after {
+    content: "sel.";
+    color: var(--fg-muted);
+    margin-left: 0.25rem;
+    font-size: var(--fs-xs);
+  }
+}
+/* Bulk-bar overflow: secondary actions inline on desktop, collapsed
+   into a kebab on mobile/tablet-portrait so the count + primary CTA
+   + Cancel fit one line at 360px. */
+.bulk-actions-bar__more--mobile { display: none; }
+@media (max-width: 767px) {
+  .bulk-actions-bar__more--desktop { display: none; }
+  .bulk-actions-bar__more--mobile  { display: inline-flex; }
 }
 /* Hide the floating bar while any modal is open so it doesn't
    overlap the modal's bottom Confirm/Cancel row. Alpine's x-show
@@ -266,13 +298,18 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    display: none has been replaced by the grid layout. */
 .budget__activity { display: block; }
 
-@media (min-width: 600px) {
+/* Horizontal row layout only kicks in at >=900px where the cat
+   column has real room. Below 900px (tablet portrait, large
+   phones) the mobile 2-row grid keeps the cat name on its own
+   line so labels like "Maintenance" never truncate to "Mai…". */
+@media (min-width: 900px) {
   .budget__group-header,
   .budget__row {
     /* Number columns sized so a five-figure signed pill ("-$25,662.50")
-       plus the pill chrome fits without overflowing the grid cell. */
-    grid-template-columns: minmax(0, 1fr) 9rem 9rem 9rem;
-    grid-template-areas: "cat assigned outflow available";
+       plus the pill chrome fits without overflowing the grid cell.
+       Final `auto` column holds the kebab anchored to the right edge. */
+    grid-template-columns: minmax(0, 1fr) 9rem 9rem 9rem auto;
+    grid-template-areas: "cat assigned outflow available actions";
     column-gap: var(--space-sm);
     row-gap: 0;
   }
@@ -281,8 +318,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 @media (min-width: 1180px) {
   .budget__group-header,
   .budget__row {
-    /* Roomier columns on wide desktops where there's plenty of space. */
-    grid-template-columns: minmax(0, 1fr) 10rem 10rem 10rem;
+    grid-template-columns: minmax(0, 1fr) 10rem 10rem 10rem auto;
   }
 }
 .budget__category {
@@ -324,23 +360,16 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     word-break: break-word;
   }
 }
-/* Per-row inline edit actions (rename / delete) — hidden by default,
-   fade in when the row is hovered or any child is focused so the
-   default budget grid stays clean. Always visible on touch since
-   hover doesn't exist there.
-
-   Sits flush-left next to the category name (no margin-left: auto
-   pushing it to the row's right edge). */
+/* Per-row + group-header kebab live in their own grid column on
+   the far right edge of the row, after Available. Both rows use
+   the same `actions` grid area so the kebabs line up perfectly
+   across the whole budget grid. */
 .budget__row-actions {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  margin-left: var(--space-2xs);
-  opacity: 0;
-  transition: opacity var(--t-fast);
+  justify-content: center;
+  flex: 0 0 auto;
 }
-.budget__row:hover .budget__row-actions,
-.budget__row:focus-within .budget__row-actions { opacity: 1; }
 /* Dense per-row icon buttons: shrink visual to 28x28 to keep the
    row compact, but extend the hit area to 44x44 via ::before so
    touch targets meet WCAG 2.5.5. Override min-width too — the
@@ -590,33 +619,147 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 .month-strip__tab.is-active.is-current::after { background: #fff; }
 
-/* Mobile: stack the year arrows above the strip, make the tabs an
-   evenly-distributed grid that fits the viewport (no horizontal
-   scrolling). Below 360px we shrink padding further. */
-@media (max-width: 599px) {
+/* Mobile + tablet — keep the picker on a single row at every
+   viewport. Year arrows shrink to compact chevrons; month tabs use
+   the smallest typographic weight and let the grid auto-fit them
+   to whatever horizontal room is available. The whole picker
+   stays one logical row tall (~36px) instead of stacking 3 rows. */
+@media (max-width: 767px) {
   .month-strip {
-    flex-direction: column;
-    gap: var(--space-2xs);
-    padding: var(--space-2xs);
+    align-items: center;
+    gap: var(--space-3xs);
+    padding: var(--space-3xs);
   }
-  .month-strip__year { justify-content: center; }
-  .month-strip__tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .month-strip__tab { font-size: var(--fs-xs); padding: 0.5rem 0.2rem; }
+  .month-strip__year {
+    min-height: 32px;
+    padding: var(--space-3xs) var(--space-2xs);
+    font-size: var(--fs-xs);
+    /* Hide the year number on small viewports — the arrow + the
+       active month label already make the year shift unambiguous,
+       and tucking the label keeps the row compact. */
+    gap: 0;
+  }
+  .month-strip__year > span:not([aria-hidden]) {
+    display: none;
+  }
+  .month-strip__tab {
+    font-size: var(--fs-xs);
+    padding: 0.3rem 0.1rem;
+    min-height: 32px;
+  }
 }
+/* Smallest phones (<420px) — tighten the tab font once more so the
+   12-month row stays a single line without overflowing the viewport. */
+@media (max-width: 419px) {
+  .month-strip__tab { font-size: 10.5px; padding: 0.25rem 0; }
+  .month-strip__year { padding: var(--space-3xs); }
+}
+
+/* Budget HUD — single surface that holds the month strip + toolbar.
+   One outer border, hairline divider between the two rows, no
+   floating sub-blocks. Replaces three disconnected bars (month
+   strip, RTA card, toolbar) with one unified header. */
+.budget__hud {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  /* No overflow: hidden — would clip the toolbar kebab's popover
+     menu (which is absolutely positioned outside the toolbar row).
+     The HUD's --radius is 0 anyway so there's nothing to clip. */
+}
+.budget__hud > .month-strip {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.budget__hud > .budget__toolbar {
+  background: transparent;
+  padding: var(--space-2xs) var(--space-sm);
+  margin: 0;
+}
+
+/* Slim vertical separator between paired stats (RTA + Assigned) and
+   the action buttons that follow. Reads as visual grouping without
+   adding a hard divider. */
+.budget__toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border-soft);
+  margin: 0 var(--space-2xs);
+}
+
+/* Collapse toggle anchored to the right edge of the toolbar so it
+   doesn't crowd the RTA + Assigned + action cluster on the left. */
+.budget__collapse-toggle { margin-left: auto; }
+
+/* Paired budget stat — single component used for both Ready to Assign
+   (accent-filled, headline) and Assigned (neutral outline, supporting
+   context). Same dimensions, same label-above-value structure, so the
+   two stats read as one block. Mirrors the stat-tile patterns used
+   on Linear / Stripe / Vercel-tier dashboards. */
+.budget-stat {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 0.3rem 0.7rem;
+  background: var(--bg-alt);
+  color: var(--fg);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  line-height: 1.1;
+  white-space: nowrap;
+  min-height: 38px;
+  justify-content: center;
+}
+.budget-stat__label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--fg-muted);
+}
+.budget-stat__value {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--fg);
+}
+.budget-stat--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.budget-stat--accent .budget-stat__label { color: rgba(255, 255, 255, 0.85); }
+.budget-stat--accent .budget-stat__value { color: #fff; }
+.budget-stat--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+.budget-stat--danger .budget-stat__label { color: rgba(255, 255, 255, 0.85); }
+.budget-stat--danger .budget-stat__value { color: #fff; }
+.budget-stat--muted {
+  background: var(--bg-alt);
+  border-color: var(--border);
+}
+.budget-stat--muted .budget-stat__label { color: var(--fg-muted); }
+.budget-stat--muted .budget-stat__value { color: var(--fg); }
 
 /* Toolbar row above the budget grid. */
 .budget__toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-2xs);
   flex-wrap: wrap;
 }
 .budget__total-readout {
   margin: 0;
   color: var(--fg-muted);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ---- Available pill -----------------------------------------------
@@ -1431,15 +1574,82 @@ body.pb-dragging { overflow: visible !important; }
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-2xs) var(--space-xs);
 }
 .cal-toolbar__row--filters { gap: var(--space-2xs) var(--space-sm); }
 
-/* Mobile compaction — at <600px the toolbar was eating 360-440px
-   of vertical chrome (multiple rows of buttons + selects) before
-   the actual calendar grid showed. Tighten padding, gaps, and font
-   sizes so the grid lands above the fold on a 360x800 phone. */
-@media (max-width: 599px) {
+/* Icon-only filter triggers — a native <select> sits transparent
+   over a small icon button. The <select> handles all keyboard +
+   open-on-click semantics for free; the icon provides the visual.
+   `appearance: none` strips the OS-native chrome so the <select>
+   reads as just a clickable area. */
+.cal-toolbar__filter-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  background: var(--bg);
+  cursor: pointer;
+  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+}
+.cal-toolbar__filter-icon:hover { color: var(--accent); border-color: var(--fg-muted); }
+.cal-toolbar__filter-icon.is-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.cal-toolbar__filter-icon > .select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  opacity: 0;
+  z-index: 1;
+}
+.cal-toolbar__filter-icon > svg { pointer-events: none; }
+.cal-toolbar__filter-icon:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Search input compresses to fit the single-row toolbar. */
+.cal-toolbar__search { flex: 1 1 12rem; min-width: 0; max-width: 22rem; }
+.cal-toolbar__search .input {
+  min-height: 36px;
+  padding: 0.35rem 0.6rem;
+}
+
+/* Match count chip — tiny pill showing how many rows match active
+   filters. Sits between the filter icons and the kebab. */
+.cal-toolbar__count {
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  background: var(--bg-alt);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+}
+
+/* Mobile + tablet-portrait compaction — at <768px the toolbar was
+   eating multiple rows of vertical chrome before the calendar grid
+   showed. Tighten padding, gaps, and font sizes so the grid lands
+   above the fold on a 360x800 phone AND a 768x1024 tablet. */
+@media (max-width: 767px) {
   .cal-toolbar {
     padding: var(--space-2xs);
     gap: var(--space-2xs);
@@ -1451,19 +1661,23 @@ body.pb-dragging { overflow: visible !important; }
     flex: 1 1 100%;
     order: 99;
   }
-  /* Filters collapse behind a "Filters" disclosure button on mobile.
-     The button is provided by .cal-toolbar__filters-toggle in the
-     template; the .cal-toolbar__row--filters row carries the
+  /* Filters collapse behind a "Filters" disclosure button at this
+     breakpoint. The button is provided by .cal-toolbar__filters-toggle
+     in the template; the .cal-toolbar__row--filters row carries the
      `[data-collapsed="true"]` attribute when hidden. */
   .cal-toolbar__row--filters[data-collapsed="true"] { display: none; }
-  /* Span row's spacing scrunches — "Show grid totals" / "Show net $"
-     toggles wrap to their own row anyway. */
-  .cal-toolbar__row--span { gap: var(--space-3xs); }
+  /* Kebab tucks tight against the views+nav row instead of wrapping
+     to a row of its own. flex: 0 0 auto + no margin-left:auto. */
+  .cal-toolbar__actions {
+    margin-left: auto;
+    flex: 0 0 auto;
+    width: auto;
+  }
 }
-/* The disclosure toggle is mobile-only — on tablet+ filters are
-   always visible inline. */
+/* The disclosure toggle is hidden on tablet-landscape+ where the
+   row is always visible inline. */
 .cal-toolbar__filters-toggle { display: none; }
-@media (max-width: 599px) {
+@media (max-width: 767px) {
   .cal-toolbar__filters-toggle {
     display: inline-flex;
     align-self: flex-start;
@@ -1478,17 +1692,22 @@ body.pb-dragging { overflow: visible !important; }
   gap: 2px;
 }
 .cal-toolbar__view {
-  padding: 0.65rem 0.95rem;
+  /* 1-letter labels (D/W/M/Y) — compact icon-tab footprint, full
+     word in title= for hover + assistive tech. */
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 0;
   color: var(--fg-muted);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
   cursor: pointer;
   border-radius: calc(var(--radius) + 2px);
-  /* 44x44 — Day/Week/Month/Year tabs are the primary navigation
-     for the calendar; thumb-friendly targets matter most here. */
-  min-height: 44px;
 }
 .cal-toolbar__view:hover { color: var(--fg); }
 .cal-toolbar__view:focus-visible {
@@ -1501,36 +1720,42 @@ body.pb-dragging { overflow: visible !important; }
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
-  flex-wrap: wrap;
+  /* Don't wrap — the title can compress (ellipsis) to keep the
+     prev/next arrows + title on one line alongside the rest of
+     the toolbar. */
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
 }
-/* Right-aligned actions cluster on the top toolbar row — Save view
-   button + per-view display toggles. margin-left: auto pushes it
-   away from the title; gap keeps its own items breathing. */
+/* Kebab anchors to the far right of the toolbar row via margin-left:
+   auto. flex-shrink: 0 prevents it from wrapping to a new line when
+   the title grows (e.g. "December 2026" vs "May 2026"). */
 .cal-toolbar__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
   margin-left: auto;
-  flex-wrap: wrap;
-}
-@media (max-width: 599px) {
-  .cal-toolbar__actions {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-end;
-  }
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
 }
 .cal-toolbar__title {
   font-size: var(--fs-xl);
   margin: 0 0 0 var(--space-2xs);
   font-family: var(--font-display);
   font-weight: 700;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.cal-toolbar__search { flex: 1 1 220px; min-width: 0; }
-/* Filter dropdowns need to fit the longest option ("Posted +
-   Scheduled"). 240px basis + 200px min keeps the label readable on
-   desktop and prevents truncation in the closed select. */
-.cal-toolbar__filter { flex: 0 1 240px; min-width: 200px; }
+/* Single-row toolbar — never wrap on tablet+/desktop. Search and
+   title shrink to make room; kebab anchors to the right edge. On
+   phones the row wraps freely because no amount of shrinking can
+   fit views + nav + chips + search + 2 filters + kebab on 360px. */
+@media (min-width: 480px) {
+  .cal-toolbar__row { flex-wrap: nowrap; }
+}
+.cal-toolbar__search { flex: 1 1 8rem; min-width: 0; max-width: 22rem; }
+.cal-toolbar__filter { flex: 0 0 auto; }
 
 /* Display toggle — pill-style switch shares the span-selector row.
    Each toggle is a real label-wrapped checkbox so it's keyboard-
@@ -1707,23 +1932,37 @@ body.pb-dragging { overflow: visible !important; }
 .cal-extra-period__stat {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   text-align: right;
-  padding: var(--space-2xs) var(--space-sm);
-  /* flex: 1 1 5.5rem so every tile grows equally to fill the row.
-     Earlier `flex: 0 0 auto` made each tile size to its content,
-     which left the Entries tile (value "21") narrower than the
-     currency-value tiles. Equal-width reads as a deliberate 4-up
-     stat strip. */
-  flex: 1 1 5.5rem;
-  min-width: 5.5rem;
+  padding: var(--space-3xs) var(--space-2xs);
+  /* Tighter min-width so all 4 tiles fit on a single row even at
+     tablet-portrait widths where the right side of the month header
+     is narrow. Each tile is content-sized but never narrower than
+     4.5rem so currency values still have room. */
+  flex: 0 1 auto;
+  min-width: 4.5rem;
   border: 1px solid var(--border-strong);
   border-left: 3px solid var(--border-strong);
   border-radius: var(--radius-input);
   background: var(--bg-elevated);
   color: inherit;
   font: inherit;
+  font-size: var(--fs-xs);
   transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.cal-extra-period__stat dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cal-extra-period__stat dt {
+  margin: 0;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+  font-weight: 600;
 }
 /* Semantic left-rail + tinted background per position in the
    4-up row (In / Out / Net / Entries). nth-of-type targets the
@@ -2150,6 +2389,14 @@ body.pb-dragging { overflow: visible !important; }
   background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+.cal-day-block--drop-target {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+.cal-day-block--drop-target .cal-day__row {
+  pointer-events: none;
 }
 /* Draggable entries get a grab cursor so users know they're picking
    them up rather than triggering the click handler. */
@@ -3396,6 +3643,84 @@ body.pb-dragging { overflow: visible !important; }
 @media (min-width: 600px) {
   .rec-table { display: table; }
   .rec-cards { display: none !important; }
+}
+/* Tighten the table density to match the register: ~32px rows,
+   small uppercase column headers, no per-cell over-padding. The
+   inline cell-edit treatment carries the click affordance now. */
+.rec-table th,
+.rec-table td {
+  padding: 0.4rem 0.65rem;
+  vertical-align: middle;
+}
+.rec-table th {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+}
+.rec-table tbody tr:hover td { background: var(--bg-alt); }
+
+/* Payee cell hosts two click-targets: payee name (top) + memo
+   (bottom). Each is its own click-to-edit area inside the same
+   cell, styled to look like inline text — not buttons. */
+.rec-payee-cell { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+.rec-payee-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: flex-start;
+}
+.rec-payee-stack__name,
+.rec-payee-stack__memo {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: text;
+}
+.rec-payee-stack__name strong { font-weight: 700; }
+.rec-payee-stack__memo {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.rec-payee-stack__memo.is-placeholder {
+  color: var(--fg-subtle);
+  font-style: italic;
+  opacity: 0.7;
+}
+.rec-payee-stack__name:hover,
+.rec-payee-stack__memo:hover {
+  border-bottom: 1px dashed var(--border-strong);
+  margin-bottom: -1px;
+}
+.rec-payee-cell.is-locked .rec-payee-stack__name,
+.rec-payee-cell.is-locked .rec-payee-stack__memo {
+  cursor: default;
+}
+.rec-payee-cell.is-locked .rec-payee-stack__name:hover,
+.rec-payee-cell.is-locked .rec-payee-stack__memo:hover { border-bottom: 0; }
+
+/* Post button on scheduled rows — green semantic chip instead of
+   the heavy accent-blue primary. The .rec-post class is applied
+   in the template so we don't depend on tooltip text matching. */
+.rec-post {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+  padding: 0.2rem 0.55rem;
+  min-height: 26px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.rec-post:hover {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+  filter: brightness(1.06);
 }
 .rec-summary__label {
   font-size: var(--fs-xs);

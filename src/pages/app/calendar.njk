@@ -5,9 +5,14 @@ description: "Day, Week, Month, and Year views of posted transactions and upcomi
 permalink: /app/calendar/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="calendarView()" x-init="init()">
 
-  {# ---- Toolbar ---------------------------------------------------- #}
+  {# ---- Toolbar — single row at every viewport.
+       Layout: [D|W|M|Y]  [← May 2026 →]  [1|2|3|6]  [🔍 …]  [📅] [⛛]  [count]  [⋮]
+       View tabs use 1-letter labels (title= for hover/SR). Filters
+       become icon-only triggers wrapping a native <select> so the
+       row stays compact even when "Posted + Scheduled" is selected. #}
   <header class="cal-toolbar">
     <div class="cal-toolbar__row">
       <div class="cal-toolbar__views" role="tablist" aria-label="Calendar view">
@@ -17,61 +22,31 @@ eleventyExcludeFromCollections: true
                   role="tab"
                   :class="{ 'is-active': v.value === view }"
                   :aria-selected="(v.value === view).toString()"
+                  :aria-label="v.label"
+                  :title="v.label"
+                  :data-tip="v.label"
                   @click="view = v.value"
-                  x-text="v.label"></button>
+                  x-text="v.label.charAt(0)"></button>
         </template>
       </div>
 
       <div class="cal-toolbar__nav">
-        <button type="button" class="btn btn--ghost btn--sm"
-                @click="step(-1)" :aria-label="'Previous ' + view">&larr;</button>
-        <button type="button" class="btn btn--secondary btn--sm"
-                @click="jumpToday()">Today</button>
-        <button type="button" class="btn btn--ghost btn--sm"
-                @click="step(1)" :aria-label="'Next ' + view">&rarr;</button>
-        {# Server-side h1 fallback so screen readers + pre-hydration
-           crawlers always see a page heading. Alpine swaps in the
-           dynamic label (e.g. "May 2026") once hydrated. #}
+        <button type="button" class="btn btn--icon cal-toolbar__step"
+                @click="step(-1)" :aria-label="'Previous ' + view"
+                data-tip="Previous">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         <h1 class="cal-toolbar__title" x-text="anchorLabel() || 'Calendar'">Calendar</h1>
+        <button type="button" class="btn btn--icon cal-toolbar__step"
+                @click="step(1)" :aria-label="'Next ' + view"
+                data-tip="Next">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
 
-      {# Right-aligned actions cluster — display toggles + Save view.
-         Per-view toggles swap in/out via x-show; Save view is always
-         visible. Lives in its own slot so it doesn't crowd the title. #}
-      <div class="cal-toolbar__actions">
-        <label class="cal-toolbar__toggle"
-               :class="showDayTotals ? 'is-on' : ''"
-               x-show="view === 'month' || view === 'week' || view === 'day'" x-cloak
-               data-tip="Show inline In / Out / Net rollups inside each day cell and each week-number column.">
-          <input type="checkbox" x-model="showDayTotals" class="visually-hidden">
-          <span class="cal-toolbar__toggle-switch" aria-hidden="true">
-            <span class="cal-toolbar__toggle-knob"></span>
-          </span>
-          <span class="cal-toolbar__toggle-label">Grid totals</span>
-        </label>
-        <label class="cal-toolbar__toggle"
-               :class="yearShowNet ? 'is-on' : ''"
-               x-show="view === 'year'" x-cloak
-               data-tip="Replace each day's date number with its net $ for the day. Week-number column hides so the cell has room for the amount. Toggle off to return to date numbers.">
-          <input type="checkbox" x-model="yearShowNet" class="visually-hidden">
-          <span class="cal-toolbar__toggle-switch" aria-hidden="true">
-            <span class="cal-toolbar__toggle-knob"></span>
-          </span>
-          <span class="cal-toolbar__toggle-label">Net $ instead of dates</span>
-        </label>
-        <button type="button" class="btn btn--ghost btn--sm" @click="saveCurrentView()"
-                data-tip="Save this month + view as a recall-able view in /app/templates/.">Save view</button>
-      </div>
-    </div>
-
-    {# ---- View controls — span selector + display toggles on the
-       same row. Visible on day / week / month views. Defaults to 1
-       span; the number input accepts any custom value. #}
-    <div class="cal-toolbar__row cal-toolbar__row--span"
-         x-show="view === 'month' || view === 'week' || view === 'day'" x-cloak>
-      <span class="cal-toolbar__span-label"
-            x-text="view === 'month' ? 'Months to show:' : (view === 'week' ? 'Weeks to show:' : 'Days to show:')"></span>
-      <div class="cal-toolbar__span-buttons" role="group"
+      <div class="cal-toolbar__span-buttons"
+           x-show="view === 'month' || view === 'week' || view === 'day'" x-cloak
+           role="group"
            :aria-label="view === 'month' ? 'Number of months' : (view === 'week' ? 'Number of weeks' : 'Number of days')">
         <template x-for="opt in (view === 'month' ? monthSpanPresets : (view === 'week' ? weekSpanPresets : daySpanPresets))" :key="opt.value">
           <button type="button"
@@ -80,56 +55,89 @@ eleventyExcludeFromCollections: true
                   @click="setSpan(opt.value)"
                   x-text="opt.label"></button>
         </template>
-        <label class="cal-toolbar__span-custom">
-          <span class="visually-hidden">Custom number</span>
-          <input type="number" min="1" max="60" step="1"
-                 :value="view === 'month' ? monthSpan : (view === 'week' ? weekSpan : daySpan)"
-                 @change="setSpan(parseInt($event.target.value, 10) || 1)"
-                 data-tip="Type any number from 1 to 60.">
-        </label>
       </div>
-    </div>
 
-    {# Mobile disclosure — hides the search + filter row behind a
-       "Filters" button on phones so the calendar grid lands above
-       the fold. Hidden on tablet+ (filters always visible). #}
-    <button type="button"
-            class="btn btn--ghost btn--sm cal-toolbar__filters-toggle"
-            @click="filtersOpen = !filtersOpen"
-            :aria-expanded="filtersOpen.toString()"
-            data-tip="Show or hide search + account/kind filters."
-            x-text="filtersOpen ? 'Hide filters' : 'Filters' + ((searchQuery || filterAccountId || filterKind !== 'all') ? ' · active' : '')"></button>
-
-    <div class="cal-toolbar__row cal-toolbar__row--filters"
-         :data-collapsed="(!filtersOpen).toString()">
       <div class="field cal-toolbar__search">
         <label class="visually-hidden" for="cal-search">Search payee, memo, category</label>
         <input class="input" id="cal-search" type="search"
                x-model="searchQuery"
-               placeholder="Search payee, memo, category…">
+               placeholder="Search…"
+               aria-label="Search payee, memo, category">
       </div>
-      <div class="field cal-toolbar__filter">
-        <label class="visually-hidden" for="cal-account">Account filter</label>
-        <select class="select" id="cal-account" x-model="filterAccountId">
+
+      {# Account filter — native <select> sits transparent over a
+         calendar-style account icon. is-active highlights the icon
+         when a filter is applied. #}
+      <label class="cal-toolbar__filter-icon"
+             :class="filterAccountId ? 'is-active' : ''"
+             :data-tip="filterAccountId ? ($store.budget.findAccount(filterAccountId)?.name || 'Account') : 'Filter by account'">
+        <span class="visually-hidden">Account filter</span>
+        <select class="select" x-model="filterAccountId"
+                :aria-label="filterAccountId ? ($store.budget.findAccount(filterAccountId)?.name || 'Account') : 'Filter by account'">
           <option value="">All accounts</option>
           <template x-for="a in openAccounts()" :key="a.id">
             <option :value="a.id" x-text="a.name"></option>
           </template>
         </select>
-      </div>
-      <div class="field cal-toolbar__filter">
-        <label class="visually-hidden" for="cal-kind">Kind filter</label>
-        <select class="select" id="cal-kind" x-model="filterKind">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      </label>
+
+      {# Kind filter — funnel icon. #}
+      <label class="cal-toolbar__filter-icon"
+             :class="filterKind !== 'all' ? 'is-active' : ''"
+             :data-tip="filterKind === 'all' ? 'Filter by kind' : ('Kind: ' + filterKind)">
+        <span class="visually-hidden">Kind filter</span>
+        <select class="select" x-model="filterKind"
+                :aria-label="filterKind === 'all' ? 'Filter by kind' : ('Kind: ' + filterKind)">
           <option value="all">Posted + Scheduled</option>
           <option value="posted">Posted only</option>
           <option value="scheduled">Scheduled only</option>
           <option value="inflow">Inflows only</option>
           <option value="outflow">Outflows only</option>
         </select>
-      </div>
-      <p class="cal-toolbar__count" x-show="searchQuery || filterAccountId || filterKind !== 'all'" x-cloak>
-        <span x-text="visibleCount()"></span> matching entries in view
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+        </svg>
+      </label>
+
+      <p class="cal-toolbar__count" x-show="searchQuery || filterAccountId || filterKind !== 'all'" x-cloak
+         :data-tip="visibleCount() + ' matching entries in view'">
+        <span x-text="visibleCount()"></span>
       </p>
+
+      <div class="cal-toolbar__actions">
+        {% call overflow(label="Calendar options") %}
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; jumpToday()">Jump to today</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none" x-show="view === 'month' || view === 'week' || view === 'day'">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="showDayTotals = !showDayTotals">
+              <span x-text="(showDayTotals ? '✓ ' : '   ') + 'Grid totals'"></span>
+            </button>
+          </li>
+          <li role="none" x-show="view === 'year'">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="yearShowNet = !yearShowNet">
+              <span x-text="(yearShowNet ? '✓ ' : '   ') + 'Net $ instead of dates'"></span>
+            </button>
+          </li>
+          <li role="none" x-show="view === 'month' || view === 'week' || view === 'day'">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; window.PBDialog && window.PBDialog.prompt({ title: 'Custom span', label: (view === 'month' ? 'Months to show (1-60)' : (view === 'week' ? 'Weeks to show (1-60)' : 'Days to show (1-60)')), defaultValue: String(view === 'month' ? monthSpan : (view === 'week' ? weekSpan : daySpan)), okLabel: 'Apply' }).then(n => { var v = parseInt(n, 10); if (v >= 1 && v <= 60) setSpan(v); })">Custom span…</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; saveCurrentView()">Save current view…</button>
+          </li>
+        {% endcall %}
+      </div>
     </div>
   </header>
 
@@ -502,8 +510,13 @@ eleventyExcludeFromCollections: true
                        'cal__cell--today':    cell.isToday,
                        'cal__cell--selected': cell.iso && cell.iso === selectedISO,
                        'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
-                       'cal__cell--other-month': cell.otherMonth
-                     }">
+                       'cal__cell--other-month': cell.otherMonth,
+                       'cal__cell--drop-target': cell.iso && dragOverISO === cell.iso
+                     }"
+                     @dragenter="cell.iso && dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
+                     @dragover.prevent
+                     @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
+                     @drop.prevent="cell.iso && dropOnDate(cell.iso, $event)">
                   <template x-if="!cell.blank">
                     <div class="cal__cell-inner">
                       <button type="button" class="cal__day-btn"
@@ -517,6 +530,8 @@ eleventyExcludeFromCollections: true
                           <li>
                             <button type="button" class="cal__entry cal__entry--clickable"
                                     :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
+                                    :draggable="!t.reconciled && !t.transferTxnId"
+                                    @dragstart="onDragStart(t, $event)"
                                     @click.stop="openTxn(t.id)">
                               <span class="cal__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                               <span class="cal__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -753,7 +768,11 @@ eleventyExcludeFromCollections: true
   <section x-show="$store.budget.profile && view === 'day'" x-cloak>
     <template x-for="(db, dIdx) in daysToRender()" :key="db.iso">
       <article class="cal-day-block"
-               :class="dIdx === 0 ? 'cal-day-block--primary' : ''">
+               :class="{ 'cal-day-block--primary': dIdx === 0, 'cal-day-block--drop-target': dragOverISO === db.iso }"
+               @dragenter="dragOverISO !== db.iso && (dragOverISO = db.iso)"
+               @dragover.prevent
+               @dragleave="dragOverISO === db.iso && (dragOverISO = null)"
+               @drop.prevent="dropOnDate(db.iso, $event)">
         <header class="cal-extra-week__head"
                 :class="dIdx === 0 ? 'cal-extra-week__head--primary' : ''">
           <h3 class="cal-extra-week__title" x-text="db.label"></h3>
@@ -797,6 +816,8 @@ eleventyExcludeFromCollections: true
                   <button type="button"
                           class="cal-day__row cal-day__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                          :draggable="!t.reconciled && !t.transferTxnId"
+                          @dragstart="onDragStart(t, $event)"
                           @click="openTxn(t.id)">
                     <div>
                       <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>

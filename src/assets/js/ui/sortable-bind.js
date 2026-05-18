@@ -75,10 +75,8 @@
     if (el.closest(".sortable-fallback, .sortable-drag, .sortable-ghost, .sortable-chosen, [data-pb-clone]")) return;
     if (document.body.classList.contains("pb-dragging")) return;
 
-    /* Categories on /app/categories/ vs /app/budget/ are the same kind
-       conceptually (both move the same entities) but live in different
-       page contexts. Allow cross-group drops only within a single page
-       by scoping the Sortable group name to the page kind. */
+    /* Sortable group name is scoped to the row kind so cross-page
+       drops can't happen accidentally. */
     var groupName = "pb-" + kind;
 
     el[DATA_KEY] = window.Sortable.create(el, {

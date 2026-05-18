@@ -5,6 +5,7 @@ description: "Save a register filter or report configuration once, recall it wit
 permalink: /app/templates/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
 <div class="app-page" x-data="savedViewsView()" x-init="load()">
   <header class="app-page__header">
     <div>
@@ -32,8 +33,17 @@ eleventyExcludeFromCollections: true
         </div>
         <div class="saved-view__actions cluster">
           <a class="btn btn--primary btn--sm" :href="buildHref(v)">Open</a>
-          <button class="btn btn--ghost btn--sm" type="button" @click="edit(v)">Edit</button>
-          <button class="btn btn--danger btn--sm" type="button" @click="remove(v.id)">Delete</button>
+          {% call overflow(label="Saved view actions") %}
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item"
+                      @click="open = false; edit(v)">Edit…</button>
+            </li>
+            <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                      @click="open = false; remove(v.id)">Delete saved view</button>
+            </li>
+          {% endcall %}
         </div>
       </li>
     </template>

@@ -5,11 +5,11 @@ category: "getting-started"
 order: 5
 ---
 
-The first time you open [Budget](/app/budget/) after creating a profile, it's empty. No groups, no categories, [Ready to Assign](/glossary/ready-to-assign/) equal to the sum of your on-budget account balances. This page walks through one complete assigning session.
+The first time you open [Budget](/app/budget/) after creating a profile, it's empty. No groups, no categories, [Ready to Assign](/glossary/#ready-to-assign) equal to the sum of your on-budget account balances. This page walks through one complete assigning session.
 
 ## 1. Create category groups
 
-Open [Categories](/app/categories/) and add three to five groups. A common starting set:
+Open [Budget](/app/budget/) and use the toolbar's overflow menu (⋮) to add three to five groups. A common starting set:
 
 - **Immediate Obligations** — rent, electric, internet, minimum loan payments
 - **True Expenses** — annual or quarterly bills paid monthly: car insurance, holidays, vehicle maintenance

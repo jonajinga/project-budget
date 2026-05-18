@@ -42,6 +42,20 @@
   --space-xl:  3rem;
   --space-2xl: 4.5rem;
   --space-3xl: 6rem;
+
+  /* Density tokens — drive button + form padding so the whole
+     UI tightens by tweaking these. Visual chrome shrinks below
+     the WCAG 44×44 touch zone; .btn extends its hit area with a
+     ::before pseudo so taps still meet AA. */
+  --btn-pad-y:        0.35rem;
+  --btn-pad-x:        0.85rem;
+  --btn-pad-y-sm:     0.25rem;
+  --btn-pad-x-sm:     0.6rem;
+  --btn-visual-min:   32px;
+  --btn-primary-min:  36px;
+  --btn-touch-min:    44px;
+  --form-actions-gap:        var(--space-2xs);
+  --form-actions-gap-mobile: var(--space-3xs);
   /* Apple/Linear-style page rhythm: more air between large sections on
      wider viewports, tighter on phones. Use for page headers + the
      gap between major sections of an app page. */

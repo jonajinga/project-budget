@@ -5,6 +5,7 @@ description: "Per-category envelope health: assigned vs spent vs remaining for a
 permalink: /app/reports/budget-vs-actual/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/report-exports.njk" import reportExports %}
 <div class="app-page" x-data="budgetVsActualView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -54,10 +55,7 @@ eleventyExcludeFromCollections: true
       <p class="report-toolbar__count">
         <span x-text="visibleCount"></span> rows
       </p>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportCSV('budget-vs-actual')">Export CSV</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="exportPDF()"
-              data-tip="Download a printable PDF of this report.">Export PDF</button>
-      <button class="btn btn--ghost btn--sm" type="button" @click="print()">Print</button>
+      {{ reportExports("budget-vs-actual") }}
     </div>
 
     <table class="table">

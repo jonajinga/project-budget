@@ -268,6 +268,7 @@ export default function (eleventyConfig) {
             /^example/, /^a11y/, /^lead/, /^eyebrow/, /^breadcrumb/,
             /^sidebar/, /^header/, /^month-/, /^year-/, /^acct-/,
             /^cat-/, /^month-strip/, /^sample-/, /^pool-/,
+            /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/,
           ],
           greedy: [
             /^data-theme/, /^data-touch/, /^data-tip/,
@@ -314,6 +315,7 @@ export default function (eleventyConfig) {
             /^year-/, /^cal-mini/, /^cal-period/, /^cal-day/,
             /^rec-/, /^cat-row/, /^cat-group/, /^acct-group/,
             /^budget__/, /^cal-/, /^register__/,
+            /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/, /^acct-cards/,
           ],
           greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^aria-/],
           deep: [/dialog/, /sortable/, /tippy/, /popper/],
