@@ -135,7 +135,8 @@
   --t-base: 200ms ease;
 }
 
-[data-theme="dark"] {
+[data-theme="dark"],
+[data-theme="github-dark"] {
   /* Default dark palette: GitHub Dark. Legacy raw aliases stay
      pointed at the active tokens for components that read them. */
   --bg:           #0d1117;
