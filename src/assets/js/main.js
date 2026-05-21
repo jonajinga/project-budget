@@ -23,8 +23,6 @@
     { id: "ink",              label: "Ink (Broadsheet)",      scheme: "dark"  },
     { id: "solarized-light",  label: "Solarized Light",       scheme: "light" },
     { id: "solarized-dark",   label: "Solarized Dark",        scheme: "dark"  },
-    { id: "github-light",     label: "GitHub Light (alias)",  scheme: "light" },
-    { id: "github-dark",      label: "GitHub Dark (alias)",   scheme: "dark"  },
     { id: "dracula",          label: "Dracula",               scheme: "dark"  },
     { id: "nord",             label: "Nord",                  scheme: "dark"  },
     { id: "gruvbox-dark",     label: "Gruvbox Dark",          scheme: "dark"  },
@@ -34,8 +32,14 @@
     { id: "rose-pine",        label: "Rosé Pine",             scheme: "dark"  },
   ];
   var THEME_IDS = THEMES.map(function (t) { return t.id; });
+  /* "light"/"dark" are the GitHub palette, so the old "github-light"/
+     "github-dark" IDs were exact duplicates. They're gone from the
+     picker, but anyone who saved one in localStorage gets remapped to
+     the surviving equivalent. */
+  var THEME_ALIASES = { "github-light": "light", "github-dark": "dark" };
 
   function applyTheme(t) {
+    if (THEME_ALIASES[t]) t = THEME_ALIASES[t];
     /* Accept any registered theme ID. Unknown values fall back to
        "light" so the page never ends up in an undefined state. */
     if (THEME_IDS.indexOf(t) === -1) t = "light";
@@ -47,6 +51,7 @@
   }
   function currentTheme() {
     var t = document.documentElement.getAttribute("data-theme");
+    if (THEME_ALIASES[t]) t = THEME_ALIASES[t];
     return THEME_IDS.indexOf(t) !== -1 ? t : "light";
   }
   /* Header button: light ↔ dark within the same theme family when
@@ -56,8 +61,6 @@
   var THEME_PAIRS = {
     "light": "dark",
     "dark": "light",
-    "github-light": "github-dark",
-    "github-dark": "github-light",
     "paper": "ink",
     "ink": "paper",
     "solarized-light": "solarized-dark",

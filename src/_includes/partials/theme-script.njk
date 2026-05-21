@@ -3,6 +3,10 @@
     try {
       var key = "{{ site.storage.themeKey }}";
       var stored = localStorage.getItem(key);
+      /* Legacy aliases: "github-light"/"github-dark" are now just
+         "light"/"dark" (same palette). Remap so saved prefs survive. */
+      if (stored === "github-light") stored = "light";
+      else if (stored === "github-dark") stored = "dark";
       var theme = stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       document.documentElement.setAttribute("data-theme", theme);
     } catch (e) { /* private browsing — theme stays default */ }

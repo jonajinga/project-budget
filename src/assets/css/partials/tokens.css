@@ -135,8 +135,7 @@
   --t-base: 200ms ease;
 }
 
-[data-theme="dark"],
-[data-theme="github-dark"] {
+[data-theme="dark"] {
   /* Default dark palette: GitHub Dark. Legacy raw aliases stay
      pointed at the active tokens for components that read them. */
   --bg:           #0d1117;
@@ -455,9 +454,3 @@ html[data-theme="dark"] { color-scheme: dark; }
   --chart-1: #e05a4b; --chart-2: #6fa9d9; --chart-3: #d4a45a;
   --chart-4: #6fbf95; --chart-5: #c2a878; --chart-6: #b3aba0;
 }
-
-/* Aliases for legacy localStorage values — anyone who saved
-   "github-light" or "github-dark" still gets the right palette
-   (which is now the default light/dark). */
-[data-theme="github-light"] { color-scheme: light; }
-[data-theme="github-dark"]  { color-scheme: dark; }

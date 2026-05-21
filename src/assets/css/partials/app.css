@@ -252,14 +252,6 @@
 [data-theme-preview="solarized-dark"] .theme-picker__swatch-fg      { background: #fdf6e3; }
 [data-theme-preview="solarized-dark"] .theme-picker__swatch-accent  { background: #cb4b16; }
 
-[data-theme-preview="github-light"] .theme-picker__swatch-bg        { background: #ffffff; }
-[data-theme-preview="github-light"] .theme-picker__swatch-fg        { background: #1f2328; }
-[data-theme-preview="github-light"] .theme-picker__swatch-accent    { background: #0969da; }
-
-[data-theme-preview="github-dark"] .theme-picker__swatch-bg         { background: #0d1117; }
-[data-theme-preview="github-dark"] .theme-picker__swatch-fg         { background: #c9d1d9; }
-[data-theme-preview="github-dark"] .theme-picker__swatch-accent     { background: #58a6ff; }
-
 [data-theme-preview="dracula"] .theme-picker__swatch-bg             { background: #282a36; }
 [data-theme-preview="dracula"] .theme-picker__swatch-fg             { background: #f8f8f2; }
 [data-theme-preview="dracula"] .theme-picker__swatch-accent         { background: #ff79c6; }

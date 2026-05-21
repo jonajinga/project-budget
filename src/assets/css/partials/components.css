@@ -576,8 +576,6 @@
 .theme-picker__swatch[data-theme-preview="ink"]              { background: linear-gradient(135deg, #14120f 0%, #14120f 50%, #e0a458 50%, #e0a458 100%); }
 .theme-picker__swatch[data-theme-preview="solarized-light"]  { background: linear-gradient(135deg, #fdf6e3 0%, #fdf6e3 50%, #268bd2 50%, #268bd2 100%); }
 .theme-picker__swatch[data-theme-preview="solarized-dark"]   { background: linear-gradient(135deg, #002b36 0%, #002b36 50%, #2aa198 50%, #2aa198 100%); }
-.theme-picker__swatch[data-theme-preview="github-light"]     { background: linear-gradient(135deg, #ffffff 0%, #ffffff 50%, #0969da 50%, #0969da 100%); }
-.theme-picker__swatch[data-theme-preview="github-dark"]      { background: linear-gradient(135deg, #0d1117 0%, #0d1117 50%, #58a6ff 50%, #58a6ff 100%); }
 .theme-picker__swatch[data-theme-preview="dracula"]          { background: linear-gradient(135deg, #282a36 0%, #282a36 50%, #bd93f9 50%, #bd93f9 100%); }
 .theme-picker__swatch[data-theme-preview="nord"]             { background: linear-gradient(135deg, #2e3440 0%, #2e3440 50%, #88c0d0 50%, #88c0d0 100%); }
 .theme-picker__swatch[data-theme-preview="gruvbox-dark"]     { background: linear-gradient(135deg, #282828 0%, #282828 50%, #fabd2f 50%, #fabd2f 100%); }
