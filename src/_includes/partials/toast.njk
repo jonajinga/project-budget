@@ -1,11 +1,13 @@
+{# Purely visual. The live-region attributes moved to the permanent
+   announcers in base.njk, driven by ui/announce.js -- see that file for why
+   an x-show-gated region announces nothing. The dismiss buttons keep their
+   labels and stay reachable. #}
 <div class="toast-stack"
-     aria-live="polite"
-     aria-atomic="true"
      x-data
      x-show="$store.budget && $store.budget.toasts && $store.budget.toasts.length"
      x-cloak>
   <template x-for="t in ($store.budget ? $store.budget.toasts : [])" :key="t.id">
-    <div class="toast" :class="'toast--' + t.kind" role="status">
+    <div class="toast" :class="'toast--' + t.kind">
       <span class="toast__icon" aria-hidden="true">
         <template x-if="t.kind === 'danger'">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>

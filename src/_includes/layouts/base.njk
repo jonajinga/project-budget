@@ -64,6 +64,13 @@
 
   <script src="/assets/js/main.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/util/dialog.js?v={{ build.hash }}" defer></script>
+  {# Permanent announcers. Deliberately NOT x-show / x-cloak / hidden: a live
+     region must be registered and rendered BEFORE its text arrives, or the
+     change is not announced. .visually-hidden clips rather than hiding, so
+     the region stays live while staying off-screen. #}
+  <div id="pb-live-polite" class="visually-hidden" aria-live="polite" aria-atomic="false"></div>
+  <div id="pb-live-assertive" class="visually-hidden" aria-live="assertive" aria-atomic="false"></div>
+  <script src="/assets/js/ui/announce.js?v={{ build.hash }}" defer></script>
   {% include "partials/first-run.njk" %}
   {% block scripts %}{% endblock %}
 </body>

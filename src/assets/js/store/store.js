@@ -733,6 +733,13 @@ export function createStore() {
       var id = Math.random().toString(36).slice(2);
       var t = { id: id, message: message, kind: kind || "info", sticky: !!sticky };
       this.toasts.push(t);
+      /* The visible stack is no longer a live region -- it could not reliably
+         announce while x-show toggled it into existence. Route the text
+         through the permanent announcers instead. danger/warn interrupt;
+         everything else waits for a pause. */
+      if (window.PBAnnounce) {
+        window.PBAnnounce.announce(message, { assertive: t.kind === "danger" || t.kind === "warn" });
+      }
       if (!sticky) {
         var self = this;
         setTimeout(function () { self.dismissToast(id); }, 4500);

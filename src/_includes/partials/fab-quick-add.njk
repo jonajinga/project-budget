@@ -24,7 +24,7 @@
            across every add-transaction surface. Mobile keypads can't
            type a minus sign; this toggle is how the user marks
            direction. Also filters the category dropdown to match. #}
-        <div class="txn-type-toggle" role="radiogroup" aria-label="Transaction type" style="margin-bottom: var(--space-sm);">
+        <div class="txn-type-toggle" role="group" aria-label="Transaction type" style="margin-bottom: var(--space-sm);">
           <button type="button" class="txn-type-toggle__opt"
                   :class="form.type === 'outflow' ? 'is-active' : ''"
                   :aria-pressed="(form.type === 'outflow').toString()"

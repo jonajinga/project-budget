@@ -1,8 +1,8 @@
 {
   "totals": {
-    "measured": 4781,
+    "measured": 2429,
     "failAA": 327,
-    "failAAA": 2798
+    "failAAA": 1134
   },
   "failing": {
     "a": {

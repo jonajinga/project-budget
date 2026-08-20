@@ -59,8 +59,7 @@
      data on first paint. Self-cleans the moment the store flips
      loading=false. x-cloak hides it until Alpine boots so static
      HTML doesn't flash the spinner. #}
-  <div class="app-loading" x-show="$store.budget && $store.budget.loading" x-cloak
-       role="status" aria-live="polite" aria-label="Loading your data">
+  <div class="app-loading" x-show="$store.budget && $store.budget.loading" x-cloak aria-hidden="true">
     <span class="app-loading__spinner" aria-hidden="true" data-motion="essential"></span>
     <span class="app-loading__label">Loading…</span>
   </div>

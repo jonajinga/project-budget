@@ -26,12 +26,20 @@ test.describe("main is not blank", () => {
     test(`${route} renders content with data`, async ({ seeded }) => {
       const page = await seeded.newPage();
       await gotoApp(page, route);
-      const text = await page.locator("#main").innerText();
-      /* The guard against x-show regressions: a page whose root section is
-         gated on data will render an empty shell rather than erroring, so
-         only a content-length assertion catches it. */
-      expect(text.replace(/\s+/g, " ").trim().length, `#main was blank on ${route}`)
-        .toBeGreaterThan(200);
+      /* Measure .app-main, not #main. #main CONTAINS the sidebar, so its text
+         length swings by ~1000 chars depending on whether the drawer is open
+         -- which made the threshold meaningless and produced a false failure
+         on /app/profiles/ the moment closed drawers correctly stopped
+         contributing text. .app-main is the page's own content and reads the
+         same at every viewport.
+
+         The guard against x-show regressions: a page whose root section is
+         gated on data renders an empty shell rather than erroring, so only a
+         content-length assertion catches it. The thinnest real page is
+         /app/profiles/ at 142 characters; a blank shell is under 20. */
+      const text = await page.locator(".app-main").innerText();
+      expect(text.replace(/\s+/g, " ").trim().length, `.app-main was blank on ${route}`)
+        .toBeGreaterThan(100);
       await page.close();
     });
   }

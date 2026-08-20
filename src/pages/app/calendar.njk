@@ -304,7 +304,7 @@ eleventyExcludeFromCollections: true
        button (clickable to open the period transactions modal
        scoped to that week's cells); the day cells live in a nested
        7-col grid so the parent flex layout can't break across rows. #}
-    <div class="cal__grid" role="grid" :aria-label="'Calendar for ' + monthLabel(anchorMonthISO())">
+    <div class="cal__grid" role="group" :aria-label="'Calendar for ' + monthLabel(anchorMonthISO())">
       <template x-for="wk in monthWeeks()" :key="wk.weekKey">
         <div class="cal__week-row">
           <button type="button"
@@ -494,7 +494,7 @@ eleventyExcludeFromCollections: true
           <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
         </div>
       </div>
-      <div class="cal__grid" role="grid" :aria-label="'Calendar for ' + mb.label">
+      <div class="cal__grid" role="group" :aria-label="'Calendar for ' + mb.label">
         <template x-for="wk in monthWeeks(mb.anchorISO)" :key="'mw-' + mb.monthISO + '-' + wk.weekKey">
           <div class="cal__week-row">
             <button type="button"

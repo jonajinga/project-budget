@@ -65,7 +65,7 @@ eleventyExcludeFromCollections: true
            readers. #}
         <div class="contact-form__field">
           <label>How's the app feeling? <span class="contact-page__req">*</span></label>
-          <div class="feedback-faces" role="radiogroup" aria-label="Overall sentiment">
+          <div class="feedback-faces" role="group" aria-label="Overall sentiment">
             <template x-for="opt in sentiments" :key="opt.value">
               <button type="button" class="feedback-face"
                       :class="sentiment === opt.value ? 'is-active' : ''"

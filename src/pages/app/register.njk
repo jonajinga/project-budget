@@ -437,7 +437,7 @@ eleventyExcludeFromCollections: true
                    indicator is always visible. The amount field is
                    always positive; the toggle drives the sign. #}
                 <div class="register__edit-amount-stack">
-                  <div class="txn-type-toggle txn-type-toggle--sm" role="radiogroup" aria-label="Type">
+                  <div class="txn-type-toggle txn-type-toggle--sm" role="group" aria-label="Type">
                     <button type="button" class="txn-type-toggle__opt"
                             :class="edit.type === 'outflow' ? 'is-active' : ''"
                             :aria-pressed="(edit.type === 'outflow').toString()"
@@ -585,7 +585,7 @@ eleventyExcludeFromCollections: true
             </div>
             <div class="field">
               <label class="field__label">Type</label>
-              <div class="txn-type-toggle" role="radiogroup" aria-label="Transaction type">
+              <div class="txn-type-toggle" role="group" aria-label="Transaction type">
                 <button type="button" class="txn-type-toggle__opt"
                         :class="edit.type === 'outflow' ? 'is-active' : ''"
                         :aria-pressed="edit.type === 'outflow'"

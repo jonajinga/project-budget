@@ -21,20 +21,26 @@ eleventyExcludeFromCollections: true
      dividers) so the eye reads them as one HUD instead of three
      floating bars. #}
   <div class="budget__hud" x-show="hasCategories" x-cloak>
-    <div class="month-strip" role="tablist" aria-label="Budget month">
+    {# Not a tablist. There is no tabpanel anywhere in the app, the two
+       year-nav buttons sat inside it as non-tab children, and the real tabs
+       were behind a role="presentation" wrapper -- so it failed
+       aria-required-children and promised keyboard behaviour it never had.
+       A labelled group of buttons with aria-current is what this actually
+       is. #}
+    <div class="month-strip" role="group" aria-label="Budget month">
       <button type="button" class="month-strip__year"
               @click="$store.budget.setMonth(prevYearMonth())"
               aria-label="Previous year">
         <span aria-hidden="true">&larr;</span>
         <span x-text="prevYearLabel()"></span>
       </button>
-      <div class="month-strip__tabs" role="presentation">
+      <div class="month-strip__tabs">
         <template x-for="m in monthsOfYear()" :key="m.value">
           <button type="button"
-                  role="tab"
                   class="month-strip__tab"
                   :class="{ 'is-active': m.value === $store.budget.currentMonth, 'is-current': m.value === thisMonthValue() }"
-                  :aria-selected="(m.value === $store.budget.currentMonth).toString()"
+                  :aria-current="m.value === $store.budget.currentMonth ? 'true' : 'false'"
+                  :aria-label="m.label + (m.value === $store.budget.currentMonth ? ', selected month' : '')"
                   @click="$store.budget.setMonth(m.value)"
                   x-text="m.label"></button>
         </template>

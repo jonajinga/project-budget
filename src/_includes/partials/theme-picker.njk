@@ -29,12 +29,22 @@
     <svg x-show="scheme !== 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
   </button>
 
-  <div class="theme-picker__menu" x-show="open" x-cloak role="menu">
-    <p class="theme-picker__group-label">Light</p>
-    <ul class="theme-picker__list">
+  {# role="menu" requires menuitem-family children. This owned a <p>, two
+     <ul>s, <li>s and plain buttons, so the whole menu was invalid. Structure
+     now mirrors overflow-menu.njk (the in-repo model that gets it right),
+     with role="group" wrappers -- which menu does permit -- carrying the
+     Light/Dark headings, and menuitemradio for what is a mutually exclusive
+     choice. The list scaffolding is role="none" so it drops out of the tree
+     without touching any CSS. #}
+  <div class="theme-picker__menu" x-show="open" x-cloak role="menu" aria-label="Color theme">
+    <div role="group" aria-labelledby="theme-picker-light-label">
+    <p class="theme-picker__group-label" id="theme-picker-light-label">Light</p>
+    <ul class="theme-picker__list" role="none">
       <template x-for="t in lightThemes()" :key="t.id">
-        <li>
+        <li role="none">
           <button type="button" class="theme-picker__item"
+                  role="menuitemradio"
+                  :aria-checked="(t.id === activeId).toString()"
                   :class="t.id === activeId ? 'is-active' : ''"
                   @click="pick(t.id)">
             <span class="theme-picker__swatch" :data-theme-preview="t.id" aria-hidden="true"></span>
@@ -44,11 +54,15 @@
         </li>
       </template>
     </ul>
-    <p class="theme-picker__group-label">Dark</p>
-    <ul class="theme-picker__list">
+    </div>
+    <div role="group" aria-labelledby="theme-picker-dark-label">
+    <p class="theme-picker__group-label" id="theme-picker-dark-label">Dark</p>
+    <ul class="theme-picker__list" role="none">
       <template x-for="t in darkThemes()" :key="t.id">
-        <li>
+        <li role="none">
           <button type="button" class="theme-picker__item"
+                  role="menuitemradio"
+                  :aria-checked="(t.id === activeId).toString()"
                   :class="t.id === activeId ? 'is-active' : ''"
                   @click="pick(t.id)">
             <span class="theme-picker__swatch" :data-theme-preview="t.id" aria-hidden="true"></span>
@@ -58,7 +72,8 @@
         </li>
       </template>
     </ul>
-    <p class="theme-picker__footer">
+    </div>
+    <p class="theme-picker__footer" role="none">
       <a href="/app/settings/">Full appearance options &rsaquo;</a>
     </p>
   </div>

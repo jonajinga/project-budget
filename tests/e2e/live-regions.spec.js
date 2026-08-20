@@ -9,14 +9,12 @@ import { gotoApp } from "./helpers.js";
  * registration and is revealed in the same tick its content arrives: the
  * classic pattern that announces nothing.
  *
- * Every test here is marked test.fail() because it describes the Phase 2
- * target state, not today's. Playwright fails the run if a test.fail() test
- * unexpectedly PASSES -- so when Phase 2 lands the announcers, these turn red
- * until the marker is removed. That is the forcing function.
+ * These were written as test.fail() in Phase 0 to describe the target state.
+ * Phase 2 landed the permanent announcers and ui/announce.js, so they are now
+ * real assertions -- they lock the structure that makes announcements work.
  */
 
-test.describe("live region structure (Phase 2 target)", () => {
-  test.fail();
+test.describe("live region structure", () => {
 
   test("a permanent polite announcer exists and is never display:none", async ({ seeded }) => {
     const page = await seeded.newPage();
