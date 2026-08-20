@@ -42,8 +42,14 @@
      button inside the sidebar is the keyboard-accessible affordance. #}
   <div class="app-sidebar-backdrop" x-show="sidebarOpen" x-cloak
        @click="$dispatch('close-sidebar')" aria-hidden="true"></div>
+  {# A focusable separator is a widget, so it needs its value attributes.
+     Without them this single element produced an aria-required-attr
+     violation on every one of the 43 app routes -- it lives in the layout.
+     Values mirror MIN/MAX/DEFAULT in app.js, which keeps aria-valuenow in
+     sync as the handle is dragged or arrowed. #}
   <div class="app-sidebar-handle" role="separator" aria-orientation="vertical"
        aria-label="Resize sidebar" tabindex="0"
+       aria-valuemin="180" aria-valuemax="480" aria-valuenow="260"
        data-tip="Drag to resize the sidebar. Double-click to reset to the default width."></div>
   <section class="app-main">
     {% include "partials/sample-banner.njk" %}

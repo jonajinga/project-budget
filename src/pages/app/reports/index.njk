@@ -64,6 +64,7 @@ eleventyExcludeFromCollections: true
       <template x-for="r in pinnedReports()" :key="r.slug">
         <div class="report report--link">
           <button class="report__pin is-pinned" type="button" @click="togglePin(r.slug)"
+                  :aria-label="'Unpin ' + r.title"
                   :data-tip="'Unpin ' + r.title">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
               <polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2"/>
@@ -104,6 +105,7 @@ eleventyExcludeFromCollections: true
           <div class="report report--link">
             <button class="report__pin" type="button" @click="togglePin(r.slug)"
                     :class="isPinned(r.slug) ? 'is-pinned' : ''"
+                    :aria-label="isPinned(r.slug) ? ('Unpin ' + r.title) : ('Pin ' + r.title + ' to the top')"
                     :data-tip="isPinned(r.slug) ? ('Unpin ' + r.title) : ('Pin ' + r.title + ' to the top')">
               <svg viewBox="0 0 24 24" width="16" height="16" :fill="isPinned(r.slug) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
                 <polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2"/>

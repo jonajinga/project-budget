@@ -114,7 +114,7 @@
 
       /* Build modal DOM. */
       var role = opts.kind === "confirm" ? "alertdialog" : "dialog";
-      var titleEl = el("h3", { class: "modal__title" }, [opts.title || ""]);
+      var titleEl = el("h2", { class: "modal__title" }, [opts.title || ""]);
       var bodyChildren = [];
       if (opts.message) {
         bodyChildren.push(el("p", {

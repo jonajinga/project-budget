@@ -1,23 +1,13 @@
 {
   "desktop": {
-    "aria-progressbar-name": 4,
-    "aria-required-attr": 43,
     "aria-required-children": 2,
-    "button-name": 14,
     "color-contrast": 179,
-    "definition-list": 1,
-    "dlitem": 6,
-    "label": 10,
-    "select-name": 100
+    "label": 10
   },
   "mobile": {
     "aria-required-children": 2,
     "color-contrast": 105,
-    "definition-list": 1,
-    "dlitem": 6,
     "label": 10,
-    "link-name": 24,
-    "select-name": 65,
     "target-size": 73
   }
 }

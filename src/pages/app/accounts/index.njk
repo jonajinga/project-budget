@@ -53,7 +53,7 @@ eleventyExcludeFromCollections: true
   <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="acct-help-title" @click.outside="showHelp = false">
       <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="acct-help-title">About accounts</h3>
+      <h2 class="modal__title" id="acct-help-title">About accounts</h2>
       <div class="prose">
         <p>Cash, checking, savings, and credit-card accounts are <strong>on-budget</strong>: every dollar in them needs to be assigned to a category. Investment and loan accounts are <strong>tracking</strong>: they count toward net worth but do not affect Ready to Assign.</p>
         <p><strong>Reorder:</strong> use the Move up / Move down items in each row's kebab menu (⋮).</p>
@@ -296,11 +296,11 @@ eleventyExcludeFromCollections: true
 
   {# Add-account modal #}
   <div class="modal-backdrop" x-show="showAccount" x-cloak @keydown.escape.window="showAccount = false">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="showAccount = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showAccount = false" aria-labelledby="index-dlg1-title">
       <button class="modal__close" type="button" @click="showAccount = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title">Add account</h3>
+      <h2 class="modal__title" id="index-dlg1-title">Add account</h2>
       <form @submit.prevent="submitAccount()">
         <div class="form-stack">
           <div class="field">
@@ -355,11 +355,11 @@ eleventyExcludeFromCollections: true
 
   {# Edit-account modal #}
   <div class="modal-backdrop" x-show="editId" x-cloak @keydown.escape.window="editId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="editId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="editId = null" aria-labelledby="index-dlg2-title">
       <button class="modal__close" type="button" @click="editId = null" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title">Edit account</h3>
+      <h2 class="modal__title" id="index-dlg2-title">Edit account</h2>
       <form @submit.prevent="saveEdit()">
         <div class="form-stack">
           <div class="field">
@@ -416,9 +416,9 @@ eleventyExcludeFromCollections: true
 
   {# Add-group modal #}
   <div class="modal-backdrop" x-show="showGroup" x-cloak @keydown.escape.window="showGroup = false">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="showGroup = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showGroup = false" aria-labelledby="index-dlg3-title">
       <button class="modal__close" type="button" @click="showGroup = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title">New account group</h3>
+      <h2 class="modal__title" id="index-dlg3-title">New account group</h2>
       <p style="color: var(--fg-muted);">
         Groups organize accounts in the sidebar — for example, Daily, Reserves, Debts, Investments.
       </p>
@@ -437,9 +437,9 @@ eleventyExcludeFromCollections: true
 
   {# Delete account confirm #}
   <div class="modal-backdrop" x-show="deleteAccountId" x-cloak @keydown.escape.window="deleteAccountId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="deleteAccountId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="deleteAccountId = null" aria-labelledby="index-dlg4-title">
       <button class="modal__close" type="button" @click="deleteAccountId = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Delete account</h3>
+      <h2 class="modal__title" id="index-dlg4-title">Delete account</h2>
       <p style="color: var(--fg-muted);">
         Deleting an account also removes every transaction in it. There is no undo for account deletion (profile-level backups still cover this, though).
       </p>
@@ -468,9 +468,9 @@ eleventyExcludeFromCollections: true
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rec-title"
          @click.outside="closeReconcile()" style="max-width: 720px;">
       <button class="modal__close" type="button" @click="closeReconcile()" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="rec-title">
+      <h2 class="modal__title" id="rec-title">
         Reconcile <span x-text="reconcileAccountName()"></span>
-      </h3>
+      </h2>
 
       {# Step 1 — type ending balance #}
       <div x-show="reconcile.step === 1" x-cloak>

@@ -49,7 +49,7 @@ eleventyExcludeFromCollections: true
   <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="prof-help-title" @click.outside="showHelp = false">
       <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="prof-help-title">About profiles</h3>
+      <h2 class="modal__title" id="prof-help-title">About profiles</h2>
       <div class="prose">
         <p>Each profile is a complete budget — its own accounts, categories, transactions, and goals. Profiles are isolated from each other and live in your browser's localStorage.</p>
         <p><strong>Privacy:</strong> nothing leaves your browser. Switching profiles, renaming, or deleting changes only the local copy.</p>
@@ -128,9 +128,9 @@ eleventyExcludeFromCollections: true
 
   {# Rename modal #}
   <div class="modal-backdrop" x-show="renameId" x-cloak @keydown.escape.window="renameId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="renameId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="renameId = null" aria-labelledby="profiles-dlg1-title">
       <button class="modal__close" type="button" @click="renameId = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Rename profile</h3>
+      <h2 class="modal__title" id="profiles-dlg1-title">Rename profile</h2>
       <form @submit.prevent="doRename()">
         <div class="field">
           <label class="field__label" for="rename-input">New name</label>
@@ -146,9 +146,9 @@ eleventyExcludeFromCollections: true
 
   {# Delete confirm modal — typed-name confirm #}
   <div class="modal-backdrop" x-show="deleteId" x-cloak @keydown.escape.window="deleteId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="deleteId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="deleteId = null" aria-labelledby="profiles-dlg2-title">
       <button class="modal__close" type="button" @click="deleteId = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Delete profile</h3>
+      <h2 class="modal__title" id="profiles-dlg2-title">Delete profile</h2>
       <p style="color: var(--fg-muted);">
         Deleting moves the profile to trash for 7 days. You can restore it from Settings during that window. After 7 days it is permanently removed.
       </p>

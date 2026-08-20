@@ -329,9 +329,9 @@ eleventyExcludeFromCollections: true
 
   {# Backup restore confirm modal #}
   <div class="modal-backdrop" x-show="restoreDay" x-cloak @keydown.escape.window="restoreDay = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="restoreDay = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="restoreDay = null" aria-labelledby="settings-dlg1-title">
       <button class="modal__close" type="button" @click="restoreDay = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Restore daily backup</h3>
+      <h2 class="modal__title" id="settings-dlg1-title">Restore daily backup</h2>
       <p style="color: var(--fg-muted);">
         Restoring overwrites the active profile with the snapshot from <strong x-text="restoreDay"></strong>. The current state will be replaced. Today's automatic backup remains intact.
       </p>
@@ -352,9 +352,9 @@ eleventyExcludeFromCollections: true
 
   {# Permanently delete trashed profile confirm modal #}
   <div class="modal-backdrop" x-show="purgeId" x-cloak @keydown.escape.window="purgeId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="purgeId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="purgeId = null" aria-labelledby="settings-dlg2-title">
       <button class="modal__close" type="button" @click="purgeId = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Delete forever</h3>
+      <h2 class="modal__title" id="settings-dlg2-title">Delete forever</h2>
       <p style="color: var(--fg-muted);">
         This permanently deletes <strong x-text="purgeName"></strong> and all of its history. It cannot be undone or restored. Export first if you might need it later.
       </p>
@@ -375,9 +375,9 @@ eleventyExcludeFromCollections: true
 
   {# Manual snapshot restore confirm modal #}
   <div class="modal-backdrop" x-show="restoreSnapId" x-cloak @keydown.escape.window="restoreSnapId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="restoreSnapId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="restoreSnapId = null" aria-labelledby="settings-dlg3-title">
       <button class="modal__close" type="button" @click="restoreSnapId = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Restore snapshot</h3>
+      <h2 class="modal__title" id="settings-dlg3-title">Restore snapshot</h2>
       <p style="color: var(--fg-muted);">
         Restoring overwrites the active profile with this snapshot. The current state will be replaced.
       </p>

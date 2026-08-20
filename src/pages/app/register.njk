@@ -654,9 +654,9 @@ eleventyExcludeFromCollections: true
 
   {# Transfer modal #}
   <div class="modal-backdrop" x-show="showTransfer" x-cloak @keydown.escape.window="showTransfer = false">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="showTransfer = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showTransfer = false" aria-labelledby="register-dlg1-title">
       <button class="modal__close" type="button" @click="showTransfer = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Transfer between accounts</h3>
+      <h2 class="modal__title" id="register-dlg1-title">Transfer between accounts</h2>
       <form @submit.prevent="submitTransfer()">
         <div class="form-stack">
           <div class="form-row">
@@ -700,9 +700,9 @@ eleventyExcludeFromCollections: true
 
   {# Reconcile modal #}
   <div class="modal-backdrop" x-show="showReconcile" x-cloak @keydown.escape.window="showReconcile = false">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="showReconcile = false">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="showReconcile = false" aria-labelledby="register-dlg2-title">
       <button class="modal__close" type="button" @click="showReconcile = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Reconcile account</h3>
+      <h2 class="modal__title" id="register-dlg2-title">Reconcile account</h2>
       <p style="color: var(--fg-muted);">
         Enter the ending balance from your latest statement. Project Budget will compare it with the cleared balance for the account.
       </p>
@@ -746,7 +746,7 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="showMakeRecurring = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="mr-title">Make recurring</h3>
+      <h2 class="modal__title" id="mr-title">Make recurring</h2>
       <p style="color: var(--fg-muted); margin-top: var(--space-2xs);">
         <strong x-text="recurringForm.payeeName || '(no payee)'"></strong>
         · <span x-text="formatCents(recurringForm.amount)"></span>
@@ -795,11 +795,11 @@ eleventyExcludeFromCollections: true
 
   {# Split editor modal #}
   <div class="modal-backdrop" x-show="splitTxnId" x-cloak @keydown.escape.window="splitTxnId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="splitTxnId = null" style="max-width: 720px;">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="splitTxnId = null" style="max-width: 720px;" aria-labelledby="register-dlg3-title">
       <button class="modal__close" type="button" @click="splitTxnId = null" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title">Split transaction</h3>
+      <h2 class="modal__title" id="register-dlg3-title">Split transaction</h2>
       <p style="color: var(--fg-muted);">
         Divide this transaction across multiple categories. The sum of the splits becomes the transaction's amount.
       </p>
@@ -900,7 +900,7 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="showBulkRecat = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="bulk-recat-title">Recategorize selected</h3>
+      <h2 class="modal__title" id="bulk-recat-title">Recategorize selected</h2>
       <p style="color: var(--fg-muted);">
         Reassign every selected transaction to the chosen category. Split rows and reconciled rows are skipped.
       </p>
@@ -927,7 +927,7 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="showBulkRename = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="bulk-rename-title">Set payee on selected</h3>
+      <h2 class="modal__title" id="bulk-rename-title">Set payee on selected</h2>
       <p style="color: var(--fg-muted);">
         Sets the same payee on every selected transaction. Transfer and reconciled rows are skipped.
       </p>
@@ -951,7 +951,7 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="showBulkShift = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="bulk-shift-title">Shift dates</h3>
+      <h2 class="modal__title" id="bulk-shift-title">Shift dates</h2>
       <p style="color: var(--fg-muted);">
         Move every selected transaction by a number of days. Positive
         shifts forward, negative shifts backward. Reconciled rows are

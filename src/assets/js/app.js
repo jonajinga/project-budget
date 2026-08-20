@@ -201,6 +201,13 @@ document.addEventListener("alpine:initialized", function () {
     document.querySelectorAll(".layout-app").forEach(function (root) {
       root.style.setProperty("--app-sidebar-width", clamped + "px");
     });
+    /* Keep the separator's reported value truthful. It is keyboard-operable
+       via the arrow handler below, so a screen reader announcing a stale
+       width is worse than announcing none. */
+    document.querySelectorAll(".app-sidebar-handle").forEach(function (h) {
+      h.setAttribute("aria-valuenow", String(clamped));
+      h.setAttribute("aria-valuetext", clamped + " pixels");
+    });
   }
 
   function loadSaved() {
