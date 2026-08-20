@@ -218,6 +218,11 @@ eleventyExcludeFromCollections: true
               <td class="col-date cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
                   :data-tip="t.date"
+                  :data-cell="t.id + ':date'"
+                  :tabindex="cellTabIndex(t, 'date')"
+                  @focus="setFocusCell(t, 'date')"
+                  @keydown="onCellKeydown(t, 'date', $event)"
+                  :aria-label="'Date: ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' on ' + t.date"
                   @click.stop="startCellEdit(t, 'date', t.date)">
                 <template x-if="!isEditingCell(t, 'date')">
                   <span x-html="fmtDateCell(t.date)"></span>
@@ -227,8 +232,8 @@ eleventyExcludeFromCollections: true
                          :data-cell-input="t.id + ':date'"
                          x-model="cellEdit.draft"
                          @blur="commitCell(t)"
-                         @keydown.enter.prevent="commitCell(t)"
-                         @keydown.escape.prevent="cancelCellEdit()">
+                         @keydown.enter.prevent="commitCell(t, { restoreFocus: true })"
+                         @keydown.escape.prevent="cancelCellEdit({ restoreFocus: true })">
                 </template>
               </td>
             </template>
@@ -236,6 +241,11 @@ eleventyExcludeFromCollections: true
               <td class="cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
                   :data-tip="$store.budget.findAccount(t.accountId)?.name || ''"
+                  :data-cell="t.id + ':accountId'"
+                  :tabindex="cellTabIndex(t, 'accountId')"
+                  @focus="setFocusCell(t, 'accountId')"
+                  @keydown="onCellKeydown(t, 'accountId', $event)"
+                  :aria-label="'Account: ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' on ' + t.date"
                   @click.stop="startCellEdit(t, 'accountId', t.accountId)">
                 <template x-if="!isEditingCell(t, 'accountId')">
                   <span x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></span>
@@ -246,7 +256,8 @@ eleventyExcludeFromCollections: true
                           x-model="cellEdit.draft"
                           @blur="commitCell(t)"
                           @change="commitCell(t)"
-                          @keydown.escape.prevent="cancelCellEdit()">
+                          @keydown.enter.prevent="commitCell(t, { restoreFocus: true })"
+                          @keydown.escape.prevent="cancelCellEdit({ restoreFocus: true })">
                     <template x-for="a in openAccounts" :key="a.id">
                       <option :value="a.id" x-text="a.name"></option>
                     </template>
@@ -258,6 +269,11 @@ eleventyExcludeFromCollections: true
               <td class="col-payee cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
                   :data-tip="t.transferTxnId ? 'Paired transfer entry.' : ($store.budget.payeeName(t.payeeId) || '')"
+                  :data-cell="t.id + ':payeeName'"
+                  :tabindex="cellTabIndex(t, 'payeeName')"
+                  @focus="setFocusCell(t, 'payeeName')"
+                  @keydown="onCellKeydown(t, 'payeeName', $event)"
+                  :aria-label="'Payee: ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' on ' + t.date"
                   @click.stop="!t.transferTxnId && startCellEdit(t, 'payeeName', $store.budget.payeeName(t.payeeId) || '')">
                 <template x-if="!isEditingCell(t, 'payeeName')">
                   <span x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '—')"></span>
@@ -268,8 +284,8 @@ eleventyExcludeFromCollections: true
                          x-model="cellEdit.draft"
                          autocomplete="off"
                          @blur="commitCell(t)"
-                         @keydown.enter.prevent="commitCell(t)"
-                         @keydown.escape.prevent="cancelCellEdit()">
+                         @keydown.enter.prevent="commitCell(t, { restoreFocus: true })"
+                         @keydown.escape.prevent="cancelCellEdit({ restoreFocus: true })">
                 </template>
               </td>
             </template>
@@ -277,6 +293,11 @@ eleventyExcludeFromCollections: true
               <td class="cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId || t.splits }"
                   :data-tip="$store.budget.categoryName(t.categoryId) || ''"
+                  :data-cell="t.id + ':categoryId'"
+                  :tabindex="cellTabIndex(t, 'categoryId')"
+                  @focus="setFocusCell(t, 'categoryId')"
+                  @keydown="onCellKeydown(t, 'categoryId', $event)"
+                  :aria-label="'Category: ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' on ' + t.date"
                   @click.stop="!t.splits && startCellEdit(t, 'categoryId', t.categoryId || '')">
                 <template x-if="!isEditingCell(t, 'categoryId')">
                   <span>
@@ -291,7 +312,8 @@ eleventyExcludeFromCollections: true
                           x-model="cellEdit.draft"
                           @blur="commitCell(t)"
                           @change="commitCell(t)"
-                          @keydown.escape.prevent="cancelCellEdit()">
+                          @keydown.enter.prevent="commitCell(t, { restoreFocus: true })"
+                          @keydown.escape.prevent="cancelCellEdit({ restoreFocus: true })">
                     <option value="">(uncategorized)</option>
                     <template x-for="c in selectableCategoriesForType(t.amount < 0 ? 'outflow' : 'inflow')" :key="c.id">
                       <option :value="c.id" x-text="c.name"></option>
@@ -304,6 +326,11 @@ eleventyExcludeFromCollections: true
               <td class="cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
                   :data-tip="t.memo || ''"
+                  :data-cell="t.id + ':memo'"
+                  :tabindex="cellTabIndex(t, 'memo')"
+                  @focus="setFocusCell(t, 'memo')"
+                  @keydown="onCellKeydown(t, 'memo', $event)"
+                  :aria-label="'Memo: ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' on ' + t.date"
                   style="color: var(--fg-muted);"
                   @click.stop="startCellEdit(t, 'memo', t.memo || '')">
                 <template x-if="!isEditingCell(t, 'memo')">
@@ -314,8 +341,8 @@ eleventyExcludeFromCollections: true
                          :data-cell-input="t.id + ':memo'"
                          x-model="cellEdit.draft"
                          @blur="commitCell(t)"
-                         @keydown.enter.prevent="commitCell(t)"
-                         @keydown.escape.prevent="cancelCellEdit()">
+                         @keydown.enter.prevent="commitCell(t, { restoreFocus: true })"
+                         @keydown.escape.prevent="cancelCellEdit({ restoreFocus: true })">
                 </template>
               </td>
             </template>
@@ -323,6 +350,11 @@ eleventyExcludeFromCollections: true
               <td class="num cell--edit cell--amount"
                   :class="[t.amount < 0 ? 'amount--outflow' : 'amount--inflow', (t.reconciled || t.transferTxnId) ? 'is-locked' : '']"
                   :data-tip="(t.amount < 0 ? 'Outflow ' : 'Inflow ') + formatCents(Math.abs(t.amount))"
+                  :data-cell="t.id + ':amount'"
+                  :tabindex="cellTabIndex(t, 'amount')"
+                  @focus="setFocusCell(t, 'amount')"
+                  @keydown="onCellKeydown(t, 'amount', $event)"
+                  :aria-label="'Amount: ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' on ' + t.date"
                   @click.stop="startCellEdit(t, 'amount', (Math.abs(t.amount) / 100).toFixed(2))">
                 <template x-if="!isEditingCell(t, 'amount')">
                   <span x-text="formatCents(t.amount)"></span>
@@ -333,7 +365,7 @@ eleventyExcludeFromCollections: true
                      green +), and never blurs the input because
                      @mousedown.prevent keeps focus. #}
                   <span class="cell-amount-edit"
-                        @keydown.escape.prevent="cancelCellEdit()">
+                        @keydown.escape.prevent="cancelCellEdit({ restoreFocus: true })">
                     <button type="button"
                             class="cell-sign-flip"
                             :class="cellEdit.sign === 'inflow' ? 'is-in' : 'is-out'"
@@ -347,8 +379,8 @@ eleventyExcludeFromCollections: true
                            :data-cell-input="t.id + ':amount'"
                            x-model="cellEdit.draft"
                            @blur="commitCell(t)"
-                           @keydown.enter.prevent="commitCell(t)"
-                           @keydown.escape.prevent="cancelCellEdit()">
+                           @keydown.enter.prevent="commitCell(t, { restoreFocus: true })"
+                           @keydown.escape.prevent="cancelCellEdit({ restoreFocus: true })">
                   </span>
                 </template>
               </td>

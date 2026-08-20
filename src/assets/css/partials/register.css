@@ -12,6 +12,15 @@
    in the cell so the row height never jumps. */
 .register__table td.cell--edit,
 .rec-table td.cell--edit { cursor: text; }
+
+/* The editable cells carry a roving tabindex, so they need a focus ring.
+   Inset rather than outset: an outset outline on a dense table cell is
+   clipped by the neighbouring cell's border and reads as a broken line. */
+.register__table td.cell--edit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
 .register__table td.cell--edit,
 .rec-table td.cell--edit:hover > span,
 .register__table td.cell--edit,

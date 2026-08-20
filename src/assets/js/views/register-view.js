@@ -25,6 +25,12 @@ function registerView() {
        can still flip a positive number to negative. Only one cell
        is editable at a time. */
     cellEdit: { txnId: null, field: null, draft: "", sign: "outflow" },
+    /* Roving tabindex for the register grid. Exactly ONE editable cell is
+       tabbable at a time; arrows move the roving point, Enter opens the
+       editor, Escape closes it. Giving every cell tabindex="0" instead would
+       add ~6 tab stops per row -- 300+ on a full page -- which is why the
+       cells were mouse-only and had no keyboard path at all. */
+    focusCell: { txnId: null, field: null },
     splitTxnId: null,
     splitForm: [],
     isMobile: false,
@@ -494,14 +500,14 @@ function registerView() {
         if (input) input.focus();
       });
     },
-    commitCell(t) {
+    commitCell(t, opts) {
       if (this.cellEdit.txnId !== t.id || !this.cellEdit.field) return;
       var field = this.cellEdit.field;
       var raw = this.cellEdit.draft;
       var patch = {};
       switch (field) {
         case "date":
-          if (!raw) { this.cancelCellEdit(); return; }
+          if (!raw) { this.cancelCellEdit(opts); return; }
           patch.date = raw;
           break;
         case "accountId":
@@ -522,19 +528,133 @@ function registerView() {
              Default seeded from the row's existing sign in
              startCellEdit. */
           var n = Number(String(raw).replace(/[$,\s]/g, ""));
-          if (!isFinite(n)) { this.cancelCellEdit(); return; }
+          if (!isFinite(n)) { this.cancelCellEdit(opts); return; }
           var cents = Math.round(Math.abs(n) * 100);
           patch.amount = this.cellEdit.sign === "outflow" ? -cents : cents;
           break;
         default:
-          this.cancelCellEdit();
+          this.cancelCellEdit(opts);
           return;
       }
       this.$store.budget.updateTransaction(t.id, patch);
-      this.cancelCellEdit();
+      this.cancelCellEdit(opts);
     },
-    cancelCellEdit() {
+    cancelCellEdit(opts) {
+      var t = { id: this.cellEdit.txnId };
+      var field = this.cellEdit.field;
       this.cellEdit = { txnId: null, field: null, draft: "", sign: "outflow" };
+      /* Only pull focus back to the cell when the editor was closed by a KEY.
+         On blur the user has already moved somewhere else, and stealing focus
+         back would trap them in the table. */
+      if (opts && opts.restoreFocus && t.id && field) {
+        this.focusCell = { txnId: t.id, field: field };
+        this._focusCellNode(t.id, field);
+      }
+    },
+
+    /* ---- Roving tabindex ------------------------------------------- */
+
+    CELL_FIELDS: ["date", "accountId", "payeeName", "categoryId", "memo", "amount"],
+
+    /* The roving point defaults to the first cell of the first row, so the
+       grid is reachable by Tab before the user has interacted with it. */
+    _rovingTarget() {
+      if (this.focusCell.txnId && this.focusCell.field) return this.focusCell;
+      var rows = this.pagedTransactions();
+      if (!rows.length) return { txnId: null, field: null };
+      return { txnId: rows[0].id, field: "date" };
+    },
+
+    isRovingCell(t, field) {
+      var r = this._rovingTarget();
+      return r.txnId === t.id && r.field === field;
+    },
+
+    cellTabIndex(t, field) {
+      return this.isRovingCell(t, field) ? 0 : -1;
+    },
+
+    _focusCellNode(txnId, field) {
+      /* Focus SYNCHRONOUSLY. Every cell is already in the DOM -- only the
+         tabindex attribute is reactive -- and an element with tabindex="-1"
+         is still programmatically focusable, so there is nothing to wait for.
+         Deferring to $nextTick left a gap in which a second arrow keypress
+         was handled by the cell the user had already left, so holding an
+         arrow key went nowhere. */
+      var sel = '[data-cell="' + txnId + ':' + field + '"]';
+      var el = document.querySelector(sel);
+      if (el && el.focus) { el.focus(); return; }
+      /* Only when the row is not rendered yet (e.g. just paged in). */
+      this.$nextTick(function () {
+        var late = document.querySelector(sel);
+        if (late && late.focus) late.focus();
+      });
+    },
+
+    setFocusCell(t, field) {
+      this.focusCell = { txnId: t.id, field: field };
+    },
+
+    /* Arrow keys move the roving point; Home/End jump within the row;
+       Enter opens the editor; Escape closes it. Returns early while an
+       editor is open so typing in an input is never hijacked. */
+    onCellKeydown(t, field, e) {
+      /* Only handle keys pressed ON the cell itself. keydown bubbles, so an
+         Enter inside the cell's own editor would otherwise arrive here right
+         after commitCell() cleared cellEdit -- the guard below would pass and
+         instantly reopen the editor the user just closed. */
+      if (e.target !== e.currentTarget) return;
+      if (this.cellEdit.txnId) return;
+      var fields = this.CELL_FIELDS;
+      var rows = this.pagedTransactions();
+      var col = fields.indexOf(field);
+      var row = rows.findIndex(function (r) { return r.id === t.id; });
+      if (col === -1 || row === -1) return;
+
+      var nextCol = col;
+      var nextRow = row;
+      switch (e.key) {
+        case "ArrowRight": nextCol = Math.min(fields.length - 1, col + 1); break;
+        case "ArrowLeft":  nextCol = Math.max(0, col - 1); break;
+        case "ArrowDown":  nextRow = Math.min(rows.length - 1, row + 1); break;
+        case "ArrowUp":    nextRow = Math.max(0, row - 1); break;
+        case "Home":       nextCol = 0; break;
+        case "End":        nextCol = fields.length - 1; break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          this.startCellEditFromKeyboard(t, field);
+          return;
+        default:
+          return;
+      }
+      e.preventDefault();
+      var target = rows[nextRow];
+      this.focusCell = { txnId: target.id, field: fields[nextCol] };
+      this._focusCellNode(target.id, fields[nextCol]);
+    },
+
+    /* Mirrors what each cell's @click handler passes, so the keyboard path
+       opens the editor with the same seed value as the mouse path. */
+    startCellEditFromKeyboard(t, field) {
+      if (t.reconciled || t.transferTxnId) return;
+      var store = this.$store.budget;
+      switch (field) {
+        case "date":       this.startCellEdit(t, "date", t.date); break;
+        case "accountId":  this.startCellEdit(t, "accountId", t.accountId); break;
+        case "payeeName":
+          if (t.transferTxnId) return;
+          this.startCellEdit(t, "payeeName", store.payeeName(t.payeeId) || "");
+          break;
+        case "categoryId":
+          if (t.splits) return;
+          this.startCellEdit(t, "categoryId", t.categoryId || "");
+          break;
+        case "memo":       this.startCellEdit(t, "memo", t.memo || ""); break;
+        case "amount":
+          this.startCellEdit(t, "amount", (Math.abs(t.amount) / 100).toFixed(2));
+          break;
+      }
     },
 
     toggleCleared(t) {
