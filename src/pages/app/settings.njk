@@ -124,7 +124,7 @@ eleventyExcludeFromCollections: true
       </div>
     </section>
 
-    <section class="card" x-data="themePicker()" x-init="init()">
+    <section class="card" x-data="settingsThemePicker()" x-init="init()">
       <h2 class="card__title">Appearance</h2>
       <p class="card__body" style="margin-bottom: var(--space-sm);">
         Pick a color theme. The header sun/moon button still toggles
@@ -401,7 +401,12 @@ eleventyExcludeFromCollections: true
 /* Theme picker — surfaces every registered theme from main.js's
    THEMES list. Listens for pb:theme-change so the active card stays
    in sync when the header toggle flips between light + dark. */
-function themePicker() {
+/* Named settingsThemePicker, NOT themePicker: partials/theme-picker.njk
+   declares a global themePicker() for the header picker. Two global function
+   declarations with the same name collide, and this page's script parses
+   later -- which used to clobber the header picker and throw
+   "lightThemes is not defined" on every load of this page. */
+function settingsThemePicker() {
   return {
     themes: [
       { id: "light",            label: "Light",                 scheme: "light" },

@@ -16,11 +16,16 @@
     "build": "npx @11ty/eleventy",
     "clean": "npx rimraf _site",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "check:breakpoints": "node scripts/check-breakpoints.mjs"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
     "@11ty/eleventy-img": "^5.0.0",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
     "@sardine/eleventy-plugin-tinyhtml": "^0.2.0",
     "luxon": "^3.5.0",
     "pagefind": "^1.4.0",

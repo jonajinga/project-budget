@@ -41,3 +41,23 @@ npm run dev
 - No emojis in code, headings, or commit messages
 - Plain ASCII in source files (no smart quotes, em-dashes, or ellipsis characters)
 - Run `npm run build` before opening a PR
+- Run `npm test` (unit) and `npm run test:e2e` (browser + accessibility) before opening a PR
+
+## The accessibility ratchet
+
+`tests/e2e/a11y-budget.json` caps the number of axe violations per rule, per
+viewport. CI fails if any count goes UP, or if a rule appears that is not
+already in the table.
+
+The only way a number goes down is a human editing that file in the same PR
+that earned the improvement. Do not add a script that rewrites the budget
+during a CI run, and do not convert it to a baseline of individual elements:
+Alpine-generated DOM has no stable selectors, so an element-level baseline
+churns constantly and ends up being regenerated on autopilot. At that point
+the gate stops being a gate.
+
+To regenerate locally after fixing things:
+
+```
+PB_A11Y_WRITE=1 npm run test:e2e -- --grep "accessibility ratchet"
+```

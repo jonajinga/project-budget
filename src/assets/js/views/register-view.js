@@ -75,9 +75,14 @@ function registerView() {
       var q = params.get("q");
       if (q) this.search = q;
       var today = new Date().toISOString().slice(0, 10);
-      this.form.date = today;
+      /* No `this.form` here: the register's inline add-transaction form was
+         removed in favour of the FAB quick-add, but these two assignments to
+         the deleted state survived. They threw on every load, which aborted
+         the rest of init() -- including the matchMedia call below that sets
+         isMobile. The result was a register that rendered NOTHING on a phone:
+         the table hidden by CSS under 599px, the cards hidden by
+         x-show="isMobile" that never became true. */
       this.transferForm.date = today;
-      this.form.accountId = this.filterAccountId || (this.openAccounts[0]?.id || "");
       this.refreshDue();
       /* Mobile/desktop split — below 600px the table is unusable
          (8 columns at 360px). Render compact cards instead. */
