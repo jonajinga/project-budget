@@ -347,13 +347,7 @@ eleventyExcludeFromCollections: true
               'cal__cell--today':    cell.isToday,
               'cal__cell--selected': cell.iso && cell.iso === selectedISO,
               'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
-              'cal__cell--other-month': cell.otherMonth,
-              'cal__cell--drop-target': cell.iso && dragOverISO === cell.iso
-            }"
-            @dragenter="cell.iso && dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-            @dragover.prevent
-            @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-            @drop.prevent="cell.iso && dropOnDate(cell.iso, $event)">
+              'cal__cell--other-month': cell.otherMonth}">
           <template x-if="!cell.blank">
             <div class="cal__cell-inner">
               <button type="button"
@@ -367,15 +361,14 @@ eleventyExcludeFromCollections: true
               {# Entry list — mirrors the week-view card style so a
                  month cell reads as a mini day-column. Cap at 3 to keep
                  cells from blowing past row height. #}
-              <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
+              <ul class="cal__entries" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
                 <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'p-' + t.id">
-                  <li>
+                  <li :data-sortable-id="t.id"
+                      :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                     <button type="button"
                             class="cal__entry cal__entry--clickable"
                             :aria-label="($store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : 'Transaction')) + ', ' + formatCents(t.amount)"
                             :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
-                            :draggable="!t.reconciled && !t.transferTxnId"
-                            @dragstart="onDragStart(t, $event)"
                             @click.stop="openTxn(t.id)">
                       <span class="cal__entry-payee"
                             x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
@@ -386,7 +379,7 @@ eleventyExcludeFromCollections: true
                   </li>
                 </template>
                 <template x-for="s in (cell.scheduled || []).slice(0, Math.max(0, 3 - (cell.posted || []).length))" :key="'s-' + s.id">
-                  <li>
+                  <li data-sortable-locked="1">
                     <a class="cal__entry cal__entry--clickable cal__entry--scheduled"
                        :aria-label="'Scheduled: ' + ($store.budget.payeeName(s.template.payeeId) || s.template.payeeName || 'item') + ', ' + formatCents(s.template.amount)"
                        :href="'/app/scheduled/#edit-' + s.id"
@@ -512,13 +505,7 @@ eleventyExcludeFromCollections: true
                        'cal__cell--today':    cell.isToday,
                        'cal__cell--selected': cell.iso && cell.iso === selectedISO,
                        'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
-                       'cal__cell--other-month': cell.otherMonth,
-                       'cal__cell--drop-target': cell.iso && dragOverISO === cell.iso
-                     }"
-                     @dragenter="cell.iso && dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-                     @dragover.prevent
-                     @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-                     @drop.prevent="cell.iso && dropOnDate(cell.iso, $event)">
+                       'cal__cell--other-month': cell.otherMonth}">
                   <template x-if="!cell.blank">
                     <div class="cal__cell-inner">
                       <button type="button" class="cal__day-btn"
@@ -527,14 +514,13 @@ eleventyExcludeFromCollections: true
                               :aria-label="'Open ' + cell.iso">
                         <span class="cal__day-num" x-text="cell.day"></span>
                       </button>
-                      <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
+                      <ul class="cal__entries" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
                         <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'mp-' + mb.monthISO + '-' + t.id">
-                          <li>
+                          <li :data-sortable-id="t.id"
+                              :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                             <button type="button" class="cal__entry cal__entry--clickable"
                                     :aria-label="($store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : 'Transaction')) + ', ' + formatCents(t.amount)"
                                     :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
-                                    :draggable="!t.reconciled && !t.transferTxnId"
-                                    @dragstart="onDragStart(t, $event)"
                                     @click.stop="openTxn(t.id)">
                               <span class="cal__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                               <span class="cal__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -543,7 +529,7 @@ eleventyExcludeFromCollections: true
                           </li>
                         </template>
                         <template x-for="s in (cell.scheduled || []).slice(0, Math.max(0, 3 - (cell.posted || []).length))" :key="'ms-' + mb.monthISO + '-' + s.id">
-                          <li>
+                          <li data-sortable-locked="1">
                             <a class="cal__entry cal__entry--clickable cal__entry--scheduled"
                                :aria-label="'Scheduled: ' + ($store.budget.payeeName(s.template.payeeId) || s.template.payeeName || 'item') + ', ' + formatCents(s.template.amount)"
                                :href="'/app/scheduled/#edit-' + s.id"
@@ -612,13 +598,7 @@ eleventyExcludeFromCollections: true
         <li class="cal-week__day"
             :class="{
               'is-today': cell.isToday,
-              'is-empty': !(cell.posted.length + cell.scheduled.length),
-              'cal-week__day--drop-target': dragOverISO === cell.iso
-            }"
-            @dragenter="dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-            @dragover.prevent
-            @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-            @drop.prevent="dropOnDate(cell.iso, $event)">
+              'is-empty': !(cell.posted.length + cell.scheduled.length)}">
           <header class="cal-week__head">
             <p class="cal-week__weekday" x-text="cell.weekday"></p>
             <p class="cal-week__date">
@@ -629,13 +609,12 @@ eleventyExcludeFromCollections: true
               </button>
             </p>
           </header>
-          <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
+          <ul class="cal-week__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
             <template x-for="t in cell.posted" :key="'p' + t.id">
-              <li>
+              <li :data-sortable-id="t.id"
+                  :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                 <button type="button"
                         class="cal-week__entry cal-week__entry--posted cal-week__entry--clickable"
-                        :draggable="!t.reconciled && !t.transferTxnId"
-                        @dragstart="onDragStart(t, $event)"
                         @click="openTxn(t.id)">
                   <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                   <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -644,7 +623,7 @@ eleventyExcludeFromCollections: true
               </li>
             </template>
             <template x-for="s in cell.scheduled" :key="'s' + s.id">
-              <li>
+              <li data-sortable-locked="1">
                 <a class="cal-week__entry cal-week__entry--scheduled cal-week__entry--clickable"
                    :href="'/app/scheduled/#edit-' + s.id"
                    title="Scheduled (not posted)">
@@ -719,12 +698,7 @@ eleventyExcludeFromCollections: true
         <template x-for="cell in weekCellsFor(wb.startISO)" :key="'w' + wb.startISO + cell.iso">
           <li class="cal-week__day"
               :class="{ 'is-today': cell.isToday,
-                        'is-empty': !(cell.posted.length + cell.scheduled.length),
-                        'cal-week__day--drop-target': dragOverISO === cell.iso }"
-              @dragenter="dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-              @dragover.prevent
-              @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-              @drop.prevent="dropOnDate(cell.iso, $event)">
+                        'is-empty': !(cell.posted.length + cell.scheduled.length)}">
             <header class="cal-week__head">
               <p class="cal-week__weekday" x-text="cell.weekday"></p>
               <p class="cal-week__date">
@@ -735,13 +709,12 @@ eleventyExcludeFromCollections: true
                 </button>
               </p>
             </header>
-            <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
+            <ul class="cal-week__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
               <template x-for="t in cell.posted" :key="'p' + wb.startISO + t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-week__entry cal-week__entry--posted cal-week__entry--clickable"
-                          :draggable="!t.reconciled && !t.transferTxnId"
-                          @dragstart="onDragStart(t, $event)"
                           @click="openTxn(t.id)">
                     <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                     <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -750,7 +723,7 @@ eleventyExcludeFromCollections: true
                 </li>
               </template>
               <template x-for="s in cell.scheduled" :key="'s' + wb.startISO + s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-week__entry cal-week__entry--scheduled cal-week__entry--clickable"
                      :href="'/app/scheduled/#edit-' + s.id">
                     <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
@@ -772,11 +745,7 @@ eleventyExcludeFromCollections: true
   <section x-show="$store.budget.profile && view === 'day'" x-cloak>
     <template x-for="(db, dIdx) in daysToRender()" :key="db.iso">
       <article class="cal-day-block"
-               :class="{ 'cal-day-block--primary': dIdx === 0, 'cal-day-block--drop-target': dragOverISO === db.iso }"
-               @dragenter="dragOverISO !== db.iso && (dragOverISO = db.iso)"
-               @dragover.prevent
-               @dragleave="dragOverISO === db.iso && (dragOverISO = null)"
-               @drop.prevent="dropOnDate(db.iso, $event)">
+               :class="{ 'cal-day-block--primary': dIdx === 0}">
         <header class="cal-extra-week__head"
                 :class="dIdx === 0 ? 'cal-extra-week__head--primary' : ''">
           <h3 class="cal-extra-week__title" x-text="db.label"></h3>
@@ -814,14 +783,13 @@ eleventyExcludeFromCollections: true
           </p>
           <section x-show="dayData(db.iso).posted.length" x-cloak>
             <h4 class="cal__detail-section">Posted (<span x-text="dayData(db.iso).posted.length"></span>)</h4>
-            <ul class="cal-day__list">
+            <ul class="cal-day__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="db.iso">
               <template x-for="t in dayData(db.iso).posted" :key="'p' + db.iso + t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-day__row cal-day__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
-                          :draggable="!t.reconciled && !t.transferTxnId"
-                          @dragstart="onDragStart(t, $event)"
                           @click="openTxn(t.id)">
                     <div>
                       <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
@@ -840,9 +808,9 @@ eleventyExcludeFromCollections: true
           </section>
           <section x-show="dayData(db.iso).scheduled.length" x-cloak>
             <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="dayData(db.iso).scheduled.length"></span>)</h4>
-            <ul class="cal-day__list">
+            <ul class="cal-day__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="db.iso">
               <template x-for="s in dayData(db.iso).scheduled" :key="'s' + db.iso + s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-day__row cal-day__row--clickable"
                      :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                      :href="'/app/scheduled/#edit-' + s.id">
@@ -941,7 +909,8 @@ eleventyExcludeFromCollections: true
         <h4 class="cal__detail-section">Posted (<span x-text="periodModalTxns().posted.length"></span>)</h4>
         <ul class="cal-day__list">
           <template x-for="t in periodModalTxns().posted" :key="t.id">
-            <li>
+            <li :data-sortable-id="t.id"
+                :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
               <button type="button"
                       class="cal-day__row cal-day__row--clickable"
                       :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -966,7 +935,7 @@ eleventyExcludeFromCollections: true
         <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="periodModalTxns().scheduled.length"></span>)</h4>
         <ul class="cal-day__list">
           <template x-for="s in periodModalTxns().scheduled" :key="s.id">
-            <li>
+            <li data-sortable-locked="1">
               <a class="cal-day__row cal-day__row--clickable"
                  :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                  :href="'/app/scheduled/#edit-' + s.id"
@@ -1040,7 +1009,8 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Posted (<span x-text="yearDayData().posted.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="t in yearDayData().posted" :key="t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-day__row cal-day__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -1065,7 +1035,7 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="yearDayData().scheduled.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="s in yearDayData().scheduled" :key="s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-day__row cal-day__row--clickable"
                      :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                      :href="'/app/scheduled/#edit-' + s.id"
@@ -1142,7 +1112,8 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Posted (<span x-text="selectedDay.posted.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="t in selectedDay.posted" :key="t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-day__row cal-day__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -1167,7 +1138,7 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="selectedDay.scheduled.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="s in selectedDay.scheduled" :key="s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-day__row cal-day__row--clickable"
                      :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                      :href="'/app/scheduled/#edit-' + s.id"

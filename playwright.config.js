@@ -25,6 +25,16 @@ export default defineConfig({
       use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } },
       testIgnore: /\.desktop\.spec\.js$/,
     },
+    {
+      /* WebKit, touch-enabled. Added for the calendar drag: HTML5
+         drag-and-drop silently does not fire on iOS Safari, which is exactly
+         the failure this suite exists to catch, and Chromium-based emulation
+         will happily report success where the real browser does nothing.
+         Scoped to the touch specs so the full suite does not triple in cost. */
+      name: "webkit-touch",
+      use: { ...devices["iPhone 13"] },
+      testMatch: /(calendar-drag|drawers)\.spec\.js$/,
+    },
   ],
   webServer: {
     command: "node scripts/serve-site.mjs",

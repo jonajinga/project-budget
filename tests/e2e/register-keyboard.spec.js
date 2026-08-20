@@ -95,17 +95,25 @@ test("Escape closes the editor without committing", async ({ seeded, viewport })
   await page.evaluate(() => document.querySelector('td.cell--edit[tabindex="0"]').focus());
   for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
   const cell = await page.evaluate(() => document.activeElement.dataset.cell);
-  const before = await page.evaluate((c) =>
-    document.querySelector(`[data-cell="${c}"]`).innerText.trim(), cell);
+  const txnId = cell.split(":")[0];
+  /* Assert against the STORE, not the cell's text. While the editor is open
+     the cell renders an input instead of its span, so its innerText is
+     legitimately empty -- reading the DOM here measures render timing rather
+     than whether anything was committed. */
+  const readMemo = () => page.evaluate((id) =>
+    window.Alpine.store("budget").profile.transactions.find((t) => t.id === id).memo, txnId);
+  const before = await readMemo();
 
   await page.keyboard.press("Enter");
+  await page.waitForFunction(
+    () => document.activeElement && document.activeElement.matches("input, select"),
+    { timeout: 3000 }
+  );
   await page.keyboard.type("discard me");
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
 
-  const after = await page.evaluate((c) =>
-    document.querySelector(`[data-cell="${c}"]`).innerText.trim(), cell);
-  expect(after, "Escape must not commit").toBe(before);
+  expect(await readMemo(), "Escape must not commit").toBe(before);
   expect(await page.evaluate(() => document.activeElement.dataset.cell)).toBe(cell);
   await page.close();
 });

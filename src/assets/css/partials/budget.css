@@ -2444,6 +2444,14 @@ body.pb-dragging { overflow: visible !important; }
 /* Entry list inside each month cell — mirrors the week-view card
    style so a month grid reads as 35 mini day-columns rather than a
    sparse dot grid. */
+/* Entry lists are the drop targets and are always rendered, but a day with
+   no transactions has a zero-height list. Deliberately NO min-height here:
+   giving every list a height during a drag reflows the entire month grid the
+   moment a chip is picked up, which both looks broken and moves the drop
+   target out from under the pointer. SortableJS handles the proximity case
+   instead, via emptyInsertThreshold in ui/sortable-bind.js -- a zero-height
+   list still has a position, just no area. */
+
 .cal__entries {
   list-style: none;
   margin: 0;
@@ -2452,6 +2460,19 @@ body.pb-dragging { overflow: visible !important; }
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+/* Fill the cell's remaining height so a day with no transactions still has a
+   real rect to drop onto. Scoped to 600px and up, where .cal__entries is a
+   COLUMN: below that it becomes a wrapping row of 6px dots, and a row's
+   children stretch to the container height -- growing the list turned each
+   dot's <li> into a 204px block. Dragging 6px dots is not a real interaction
+   on a phone anyway; the day cell is the right target there. */
+@media (min-width: 600px) {
+  .cal__entries {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 .cal__entry {
   display: flex;
