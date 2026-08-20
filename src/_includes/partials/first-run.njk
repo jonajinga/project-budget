@@ -1,0 +1,52 @@
+{# First-run gate.
+
+   The app used to fetch and activate a 723KB sample household for anyone
+   with no profiles, so a first-time visitor landed inside a stranger's fake
+   finances with a dismissible banner as the only exit. Now they choose.
+
+   Gated on pathname rather than layout: the marketing homepage renders
+   through layouts/app.njk, so a layout check would redirect people off the
+   front page. #}
+<script>
+(function () {
+  "use strict";
+  if (location.pathname.indexOf("/app/") !== 0) return;
+
+  /* Pages that must stay reachable with zero profiles. Someone restoring a
+     backup or debugging a broken profile index must never be bounced into a
+     setup wizard that cannot help them. */
+  var ALLOW = [
+    "/app/welcome/",
+    "/app/import/",
+    "/app/backup/",
+    "/app/profiles/",
+    "/app/diagnostics/",
+  ];
+  for (var i = 0; i < ALLOW.length; i++) {
+    if (location.pathname.indexOf(ALLOW[i]) === 0) return;
+  }
+
+  /* Loop-breaker. If anything ever goes wrong with the flag, one bounce per
+     tab is survivable; a redirect loop is not. */
+  var LOOP_KEY = "projectbudget:first-run-bounced";
+  try {
+    if (sessionStorage.getItem(LOOP_KEY)) return;
+  } catch (_e) { return; }
+
+  document.addEventListener("alpine:initialized", function () {
+    var store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+    if (!store) return;
+    window.Alpine.effect(function () {
+      /* Wait for boot to settle: needsFirstRun is only meaningful once the
+         profile index has actually been read. */
+      if (store.loading) return;
+      if (!store.needsFirstRun) return;
+      if (store.profiles && store.profiles.length) return;
+      try { sessionStorage.setItem(LOOP_KEY, "1"); } catch (_e) {}
+      /* replace(), not assign(): the empty app page should not sit in history
+         as a Back target from the wizard. */
+      location.replace("/app/welcome/");
+    });
+  });
+})();
+</script>

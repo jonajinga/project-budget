@@ -10,7 +10,7 @@ import {
   freshStart, trimHistory,
 } from "./profile.js";
 import { scheduleSave, isPrivateBrowsing, estimateUsedBytes, QUOTA_BYTES, readRaw, saveProfileNow } from "./persist.js";
-/* loadSampleIfFirstVisit() needs to fetch the sample bundle, parse
+/* loadSampleProfile() needs to fetch the sample bundle, parse
    it, register a fresh profile, and persist the index — pulling in
    the JSON-import helpers + the persistence raw-key helpers below.
    These used to live alongside the import/export slice but are
@@ -106,6 +106,13 @@ export function createStore() {
     /* Populated with the error message if init() throws — surfaces
        in the toast + lets the diagnostics page show context. */
     loadError: null,
+
+    /* True when this browser has no profiles at all. The app used to silently
+       fetch and activate a 723KB sample household here, so a first-time
+       visitor landed inside a stranger's fake finances with only a
+       dismissible banner as the way out. Now the layout redirects to
+       /app/welcome/ and the person chooses. */
+    needsFirstRun: false,
 
     /* Collapsed-state maps live directly on the Alpine store (not on the
        profile schema) so reactivity is rock-solid: x-for/x-show bindings
@@ -391,11 +398,10 @@ export function createStore() {
       if (id && this.profiles.find(function (p) { return p.id === id; })) {
         this._load(id);
       } else if (!this.profiles.length && !this.privateBrowsing) {
-        /* First-time visitor — auto-load the bundled sample so the app
-           isn't empty. Deferred a tick so it doesn't fight with the
-           current page's initial render. */
-        var self = this;
-        setTimeout(function () { self.loadSampleIfFirstVisit(); }, 0);
+        /* Ask, do not assume. The welcome wizard offers three ways in:
+           start empty, load the sample, or import a backup. Loading 723KB of
+           someone else's data unasked also kept it on the first-paint path. */
+        this.needsFirstRun = true;
       }
     },
 
@@ -403,17 +409,21 @@ export function createStore() {
        Marked as sample so the app shell can show a starter banner.
        Sets the seen flag BEFORE the async fetch so concurrent calls
        (some Alpine setups re-enter init) can't both create profiles. */
-    async loadSampleIfFirstVisit() {
+    async loadSampleProfile(opts) {
       /* Versioned flag key — bump the suffix whenever the bundled
          sample is meaningfully changed so previously-seeded users
          get the new dataset on next visit (they keep all their own
          profiles; we just add the new sample alongside). The v2
          bump in 2026-05 ships the 6-person 1,399-txn household. */
       var flagKey = "projectbudget:sample-loaded-v2";
+      /* The flag exists to stop the OLD automatic loader re-seeding on every
+         visit. An explicit request from the welcome wizard must ignore it --
+         otherwise "load the sample" silently does nothing the second time. */
+      var explicit = !!(opts && opts.explicit);
       try {
-        if (localStorage.getItem(flagKey)) return;
+        if (!explicit && localStorage.getItem(flagKey)) return;
         localStorage.setItem(flagKey, "1");
-      } catch (_e) { return; }
+      } catch (_e) { if (!explicit) return; }
       try {
         var res = await fetch("/assets/sample/sample.json", { cache: "no-store" });
         if (!res.ok) return;
@@ -430,6 +440,8 @@ export function createStore() {
         _writeJSON(_profilesIndexKey(), index);
         this.refreshProfiles();
         this._load(fresh.id);
+        this.needsFirstRun = false;
+        return fresh;
       } catch (_e) {
         /* Offline or sample not deployed — quietly skip. */
       }
@@ -438,6 +450,7 @@ export function createStore() {
     /* Convenience for the sample banner CTA. */
     startFreshProfile(name) {
       var p = this.createProfile(name || "My budget");
+      this.needsFirstRun = false;
       return p;
     },
 
@@ -541,6 +554,9 @@ export function createStore() {
     /* ---- Profile actions ---- */
     createProfile(name) {
       var p = createProfile((name || "").trim() || "My Budget");
+      /* Any route to a first profile clears the first-run gate, including
+         the welcome wizard calling straight through to here. */
+      this.needsFirstRun = false;
       this.refreshProfiles();
       this._load(p.id);
       this.pushToast("Profile '" + p.name + "' created.");

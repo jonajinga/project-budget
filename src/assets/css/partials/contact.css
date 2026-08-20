@@ -193,8 +193,12 @@
   padding-top: var(--space-sm);
   border-top: 1px solid var(--border-soft);
 }
+/* Always in the DOM so role="alert" is registered before any message lands.
+   A live region that is created (or un-hidden) in the same tick its text
+   arrives is the classic pattern that announces nothing. Emptiness, not a
+   display toggle, is what hides it. */
+.form-error:empty { display: none; }
 .form-error {
-  display: none;
   padding: var(--space-sm) var(--space-md);
   background: color-mix(in oklab, var(--danger) 12%, var(--bg));
   border-left: 3px solid var(--danger);

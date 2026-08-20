@@ -29,6 +29,13 @@
 (function () {
   "use strict";
 
+  /* Unique per invocation. The docblock above promises that "multiple calls
+     queue safely -- each invocation creates its own DOM", but the title and
+     input ids were hardcoded. Two dialogs open at once produced duplicate
+     ids, and the second panel's aria-labelledby resolved to the FIRST
+     dialog's title. */
+  var uid = 0;
+
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
@@ -116,14 +123,18 @@
         }, [opts.message]));
       }
 
+      var titleId = "pb-dialog-title-" + uid;
+      var inputId = "pb-dialog-input-" + uid;
+      uid += 1;
+
       var input = null;
       if (opts.kind === "prompt") {
         var field = el("div", { class: "field", style: "margin: 0 0 var(--space-md);" }, [
-          opts.label ? el("label", { class: "field__label", for: "pb-dialog-input" }, [opts.label]) : null,
+          opts.label ? el("label", { class: "field__label", for: inputId }, [opts.label]) : null,
         ]);
         input = el("input", {
           class: "input",
-          id: "pb-dialog-input",
+          id: inputId,
           type: opts.inputType || "text",
           value: opts.defaultValue || "",
         });
@@ -170,9 +181,9 @@
         class: "modal modal--sm",
         role: role,
         "aria-modal": "true",
-        "aria-labelledby": "pb-dialog-title",
+        "aria-labelledby": titleId,
       }, [closeBtn, titleEl].concat(bodyChildren, [actions]));
-      titleEl.id = "pb-dialog-title";
+      titleEl.id = titleId;
 
       var backdrop = el("div", {
         class: "modal-backdrop pb-dialog-backdrop",

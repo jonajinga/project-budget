@@ -67,3 +67,56 @@ test("the settings page does not clobber the header theme picker", async ({ seed
   expect(ok).toBe("ok");
   await page.close();
 });
+
+test("contact form failures are shown, not swallowed", async ({ seeded }) => {
+  /* main.js queried .form-error and wrote into it, but no template rendered
+     the element -- so every Web3Forms failure was silent for every user on
+     all four forms. */
+  const page = await seeded.newPage();
+  await page.route("https://api.web3forms.com/submit", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json",
+                    body: JSON.stringify({ success: false, message: "nope" }) })
+  );
+  await gotoApp(page, "/app/feedback/");
+
+  const present = await page.evaluate(
+    () => !!document.querySelector("form[data-web3forms] .form-error")
+  );
+  expect(present, ".form-error must exist in the template").toBe(true);
+
+  await page.evaluate(() => {
+    const f = document.querySelector("form[data-web3forms]");
+    f.querySelector('[name="name"]')?.setAttribute("value", "Test");
+    f.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  });
+  await page.waitForFunction(
+    () => (document.querySelector("form[data-web3forms] .form-error")?.textContent || "").length > 0,
+    { timeout: 8000 }
+  );
+  const msg = await page.evaluate(
+    () => document.querySelector("form[data-web3forms] .form-error").textContent
+  );
+  expect(msg).toMatch(/Sending failed|Network error/);
+  await page.close();
+});
+
+test("register tooltips are not silently dead on desktop", async ({ seeded, viewport }) => {
+  /* app.js skipped Tippy inside [data-no-tippy] and claimed the tips were
+     "migrated to native title" -- but that migration only ran on the touch
+     path, so on desktop they did nothing at all. */
+  test.skip(!viewport || viewport.width < 900, "desktop only");
+  const page = await seeded.newPage();
+  await gotoApp(page, "/app/register/");
+  await page.waitForTimeout(1000);
+  const missing = await page.evaluate(() => {
+    /* Only elements with actual tip TEXT. Alpine bindings like
+       :data-tip="t.memo" render as data-tip="" on rows with no memo, and
+       there is correctly nothing to mirror into a title. */
+    const els = [...document.querySelectorAll("[data-no-tippy] [data-tip]")]
+      .filter((e) => (e.getAttribute("data-tip") || "").trim().length > 0);
+    return { total: els.length, untitled: els.filter((e) => !e.getAttribute("title")).length };
+  });
+  expect(missing.total, "register should have tooltip hosts").toBeGreaterThan(0);
+  expect(missing.untitled, "every one should have a native title fallback").toBe(0);
+  await page.close();
+});

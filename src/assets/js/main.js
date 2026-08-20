@@ -327,10 +327,22 @@
       form.addEventListener("submit", function (e) {
         e.preventDefault();
         var btn = form.querySelector("[type=\"submit\"]");
+        /* Create the node if a template forgot it. This used to be a bare
+           querySelector, and no template rendered .form-error at all -- so
+           every submission failure was swallowed silently for every user,
+           on all four Web3Forms forms. */
         var errorBox = form.querySelector(".form-error");
+        if (!errorBox) {
+          errorBox = document.createElement("p");
+          errorBox.className = "form-error";
+          errorBox.setAttribute("role", "alert");
+          var actions = form.querySelector(".contact-form__actions");
+          if (actions) form.insertBefore(errorBox, actions);
+          else form.appendChild(errorBox);
+        }
         var origLabel = btn ? btn.textContent : "";
         if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
-        if (errorBox) errorBox.style.display = "none";
+        errorBox.textContent = "";
         var data = new FormData(form);
         /* Preserve the user's topic + severity selections through the
            redirect so the thank-you page can swap in copy tailored to
@@ -348,12 +360,12 @@
               window.location.href = base + (topic ? sep + qs : "");
             } else {
               if (btn) { btn.disabled = false; btn.textContent = origLabel; }
-              if (errorBox) { errorBox.style.display = "block"; errorBox.textContent = "Sending failed. Please try again or email directly."; }
+              errorBox.textContent = "Sending failed. Please try again or email directly.";
             }
           })
           .catch(function () {
             if (btn) { btn.disabled = false; btn.textContent = origLabel; }
-            if (errorBox) { errorBox.style.display = "block"; errorBox.textContent = "Network error. Please try again."; }
+            errorBox.textContent = "Network error. Please try again.";
           });
       });
     });

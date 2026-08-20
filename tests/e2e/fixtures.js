@@ -100,11 +100,12 @@ export const test = base.extend({
     await use(context);
   },
   virgin: async ({ context }, use) => {
-    /* Nothing seeded. Explicitly clear so a reused browser context from a
-       prior test cannot leak state into a "first visit" assertion. */
-    await context.addInitScript(() => {
-      try { localStorage.clear(); } catch (_e) {}
-    });
+    /* Nothing seeded, and deliberately NO localStorage.clear() init script.
+       addInitScript runs on EVERY navigation, so clearing here wiped any
+       profile the test had just created -- a first-run test that chose the
+       sample and then navigated would find an empty store on arrival.
+       Playwright gives each test a fresh context, so the origin's storage is
+       already empty; isolation does this job correctly. */
     await use(context);
   },
 });

@@ -17,6 +17,29 @@ eleventyExcludeFromCollections: true
     <a class="btn btn--ghost btn--sm" href="/app/" data-tip="Skip the wizard and go straight to the dashboard.">Skip for now</a>
   </header>
 
+  {# Shown only with no profile yet. This is the screen that replaces the
+     old silent auto-load of the sample household. #}
+  <section class="card" x-show="!$store.budget.profile" x-cloak
+           style="margin-bottom: var(--space-lg);">
+    <h2 class="card__title">How would you like to start?</h2>
+    <p class="card__body">
+      Nothing is sent anywhere either way -- everything below happens in this browser.
+    </p>
+    <div class="cluster" style="gap: var(--space-sm); flex-wrap: wrap;">
+      <button class="btn btn--primary" type="button" @click="startEmpty()"
+              data-tip="Create your own profile using the three steps below.">
+        Start with an empty budget
+      </button>
+      <button class="btn btn--ghost" type="button" @click="startSample()"
+              :disabled="loadingSample"
+              data-tip="Load a demo household with a year of transactions so you can look around.">
+        <span x-text="loadingSample ? 'Loading sample...' : 'Explore a sample budget'"></span>
+      </button>
+      <a class="btn btn--ghost" href="/app/import/"
+         data-tip="Restore a JSON backup you exported earlier.">Import a backup</a>
+    </div>
+  </section>
+
   <ol class="welcome-steps">
     <li class="welcome-step" :class="stepClass(1)">
       <header class="welcome-step__head">
@@ -113,6 +136,7 @@ function welcomeWizard() {
   return {
     step: 1,
     profileName: "",
+    loadingSample: false,
     accountDrafts: [
       { name: "", type: "checking", balance: "" },
       { name: "", type: "savings", balance: "" },
@@ -178,6 +202,29 @@ function welcomeWizard() {
       if (this.step > n) return "Done";
       if (this.step === n) return "In progress";
       return "Up next";
+    },
+    /* The three first-run paths. "Start empty" just moves focus into step 1
+       below -- the wizard itself IS the empty path, it simply had no entry
+       point because nothing linked to this page. */
+    startEmpty() {
+      this.step = Math.max(this.step, 1);
+      this.$nextTick(function () {
+        var input = document.querySelector(".welcome-step input[type='text']");
+        if (input) { input.focus(); input.scrollIntoView({ block: "center" }); }
+      });
+    },
+    async startSample() {
+      if (this.loadingSample) return;
+      this.loadingSample = true;
+      try {
+        var p = await this.$store.budget.loadSampleProfile({ explicit: true });
+        if (p) { location.href = "/app/"; return; }
+        this.$store.budget.pushToast("Could not load the sample. You can still start empty.", "warn");
+      } catch (_e) {
+        this.$store.budget.pushToast("Could not load the sample. You can still start empty.", "warn");
+      } finally {
+        this.loadingSample = false;
+      }
     },
     createProfile() {
       var name = this.profileName.trim();

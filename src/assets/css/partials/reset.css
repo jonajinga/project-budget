@@ -9,7 +9,13 @@ html {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  /* [data-motion="essential"] opts out. Some motion carries meaning -- a
+     loading spinner that is frozen still reads as "hung". Those elements are
+     expected to slow themselves down rather than stop, which they cannot do
+     while this rule wins with !important on the universal selector. */
+  *:not([data-motion="essential"]),
+  *:not([data-motion="essential"])::before,
+  *:not([data-motion="essential"])::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
