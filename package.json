@@ -1,7 +1,7 @@
 {
   "name": "project-budget",
   "version": "0.1.0",
-  "description": "Project Budget — a free, open-source budgeting web app. Data lives in your browser.",
+  "description": "Project Budget \u2014 a free, open-source budgeting web app. Data lives in your browser.",
   "type": "module",
   "private": false,
   "license": "MIT",
@@ -17,9 +17,10 @@
     "clean": "npx rimraf _site",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build && playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "check:breakpoints": "node scripts/check-breakpoints.mjs"
+    "check:breakpoints": "node scripts/check-breakpoints.mjs",
+    "test:e2e:only": "playwright test"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
