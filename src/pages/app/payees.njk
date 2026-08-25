@@ -24,7 +24,7 @@ eleventyExcludeFromCollections: true
   <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-help-title" @click.outside="showHelp = false">
       <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="pay-help-title">About payees</h3>
+      <h2 class="modal__title" id="pay-help-title">About payees</h2>
       <div class="prose">
         <p>Every payee remembers a default category — when you start typing the payee on a new transaction, the category auto-fills.</p>
         <p><strong>Rename:</strong> click a payee's name to edit it inline. Press Enter or click outside to save, Escape to cancel.</p>
@@ -219,7 +219,7 @@ eleventyExcludeFromCollections: true
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bulk-merge-title"
          @click.outside="bulkMergeOpen = false">
       <button class="modal__close" type="button" @click="bulkMergeOpen = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="bulk-merge-title">Merge <span x-text="selectedIds.length"></span> payees</h3>
+      <h2 class="modal__title" id="bulk-merge-title">Merge <span x-text="selectedIds.length"></span> payees</h2>
       <p style="color: var(--fg-muted); margin-bottom: var(--space-sm);">
         Every transaction across the selected payees will re-point to whichever payee you choose below as the target. The non-target selections are deleted. This cannot be undone.
       </p>
@@ -246,9 +246,9 @@ eleventyExcludeFromCollections: true
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="merge-title"
          @click.outside="mergeSrc = null">
       <button class="modal__close" type="button" @click="mergeSrc = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="merge-title">
+      <h2 class="modal__title" id="merge-title">
         Merge <span x-text="mergeSrc?.name"></span>
-      </h3>
+      </h2>
       <p style="color: var(--fg-muted); margin-bottom: var(--space-sm);">
         Every transaction that uses <strong x-text="mergeSrc?.name"></strong> will be re-pointed to the target payee below. This cannot be undone.
       </p>

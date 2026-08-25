@@ -1950,13 +1950,13 @@ body.pb-dragging { overflow: visible !important; }
   font-size: var(--fs-xs);
   transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.cal-extra-period__stat dd {
+.cal-extra-period__stat .stat__value {
   margin: 0;
   font-size: var(--fs-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.cal-extra-period__stat dt {
+.cal-extra-period__stat .stat__term {
   margin: 0;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -1999,7 +1999,7 @@ body.pb-dragging { overflow: visible !important; }
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent) inset;
 }
-.cal-extra-period__stat--clickable.is-active dt { color: var(--accent); }
+.cal-extra-period__stat--clickable.is-active .stat__term { color: var(--accent); }
 
 /* Period transactions modal — the In/Out/Net/Entries row gets the
    full day-modal chrome (4-up grid, accent-tinted background per
@@ -2053,10 +2053,10 @@ body.pb-dragging { overflow: visible !important; }
 .period-modal__filters .cal-extra-period__stat:nth-of-type(4) {
   border-left-color: var(--border-strong);
 }
-.period-modal__filters .cal-extra-period__stat dt {
+.period-modal__filters .cal-extra-period__stat .stat__term {
   font-size: 0.65rem;
 }
-.period-modal__filters .cal-extra-period__stat dd {
+.period-modal__filters .cal-extra-period__stat .stat__value {
   font-family: var(--font-ui);
   font-size: clamp(0.78rem, 9.5cqi, 1.25rem);
   font-weight: 700;
@@ -2094,7 +2094,7 @@ body.pb-dragging { overflow: visible !important; }
   outline-offset: 2px;
   border-radius: 4px;
 }
-.cal-extra-period__stat dt {
+.cal-extra-period__stat .stat__term {
   font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -2103,7 +2103,7 @@ body.pb-dragging { overflow: visible !important; }
   line-height: 1;
   margin: 0;
 }
-.cal-extra-period__stat dd {
+.cal-extra-period__stat .stat__value {
   margin: 0;
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -2116,8 +2116,8 @@ body.pb-dragging { overflow: visible !important; }
   border: 1px solid var(--border-strong);
   border-left: 3px solid var(--accent);
 }
-.cal-extra-period__stat--net dt { color: var(--fg); }
-.cal-extra-period__stat--net dd { font-weight: 700; font-size: var(--fs-md); }
+.cal-extra-period__stat--net .stat__term { color: var(--fg); }
+.cal-extra-period__stat--net .stat__value { font-weight: 700; font-size: var(--fs-md); }
 
 /* No --primary modifier — every header (primary + extras) uses the
    shared compact .cal-extra-*__head spacing so every block reads as
@@ -2444,6 +2444,14 @@ body.pb-dragging { overflow: visible !important; }
 /* Entry list inside each month cell — mirrors the week-view card
    style so a month grid reads as 35 mini day-columns rather than a
    sparse dot grid. */
+/* Entry lists are the drop targets and are always rendered, but a day with
+   no transactions has a zero-height list. Deliberately NO min-height here:
+   giving every list a height during a drag reflows the entire month grid the
+   moment a chip is picked up, which both looks broken and moves the drop
+   target out from under the pointer. SortableJS handles the proximity case
+   instead, via emptyInsertThreshold in ui/sortable-bind.js -- a zero-height
+   list still has a position, just no area. */
+
 .cal__entries {
   list-style: none;
   margin: 0;
@@ -2452,6 +2460,19 @@ body.pb-dragging { overflow: visible !important; }
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+/* Fill the cell's remaining height so a day with no transactions still has a
+   real rect to drop onto. Scoped to 600px and up, where .cal__entries is a
+   COLUMN: below that it becomes a wrapping row of 6px dots, and a row's
+   children stretch to the container height -- growing the list turned each
+   dot's <li> into a 204px block. Dragging 6px dots is not a real interaction
+   on a phone anyway; the day cell is the right target there. */
+@media (min-width: 600px) {
+  .cal__entries {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 .cal__entry {
   display: flex;
@@ -2818,7 +2839,7 @@ body.pb-dragging { overflow: visible !important; }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.cal-mini__stat dt {
+.cal-mini__stat .stat__term {
   font-size: 0.5625rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -2827,7 +2848,7 @@ body.pb-dragging { overflow: visible !important; }
   line-height: 1;
   margin: 0;
 }
-.cal-mini__stat dd {
+.cal-mini__stat .stat__value {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 700;
@@ -2840,7 +2861,7 @@ body.pb-dragging { overflow: visible !important; }
 .cal-mini__stat--net {
   border-left: 3px solid var(--accent);
 }
-.cal-mini__stat--net dt { color: var(--fg); }
+.cal-mini__stat--net .stat__term { color: var(--fg); }
 
 /* Mini month layout — flex row with the week-number column on the
    left + a nested 7-col grid of day cells on the right. Splitting

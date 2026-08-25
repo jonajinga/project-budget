@@ -71,7 +71,16 @@ document.addEventListener("alpine:initialized", function () {
        with [data-no-tippy], the per-row data-tip attrs are migrated to
        native title="" so users still get hover help on desktop with
        zero JS cost. */
-    if (el.closest && el.closest("[data-no-tippy]")) return;
+    if (el.closest && el.closest("[data-no-tippy]")) {
+      /* Actually do the migration this comment promises. It used to just
+         return: mirrorDataTipToTitle() was only ever called on the touch
+         path, so on desktop every tooltip inside a [data-no-tippy] region --
+         which includes the whole register table and its column-header
+         explanations -- silently did nothing. */
+      var tip = el.getAttribute("data-tip");
+      if (tip && !el.hasAttribute("title")) el.setAttribute("title", tip);
+      return;
+    }
     var content = el.getAttribute("data-tip");
     if (!content) return;
     el.setAttribute("data-tippy-bound", "1");
@@ -191,6 +200,13 @@ document.addEventListener("alpine:initialized", function () {
     widthCache = clamped;
     document.querySelectorAll(".layout-app").forEach(function (root) {
       root.style.setProperty("--app-sidebar-width", clamped + "px");
+    });
+    /* Keep the separator's reported value truthful. It is keyboard-operable
+       via the arrow handler below, so a screen reader announcing a stale
+       width is worse than announcing none. */
+    document.querySelectorAll(".app-sidebar-handle").forEach(function (h) {
+      h.setAttribute("aria-valuenow", String(clamped));
+      h.setAttribute("aria-valuetext", clamped + " pixels");
     });
   }
 

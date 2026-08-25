@@ -8,7 +8,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SAMPLE_PATH = resolve(__dirname, "..", "_sample", "sample.json");
+const SAMPLE_PATH = resolve(__dirname, "..", "src", "assets", "sample", "sample.json");
 const OUT_DIR = resolve(__dirname, "..", "src", "assets", "img", "screenshots");
 const BASE = "http://localhost:8080";
 

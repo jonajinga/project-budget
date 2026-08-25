@@ -21,20 +21,26 @@ eleventyExcludeFromCollections: true
      dividers) so the eye reads them as one HUD instead of three
      floating bars. #}
   <div class="budget__hud" x-show="hasCategories" x-cloak>
-    <div class="month-strip" role="tablist" aria-label="Budget month">
+    {# Not a tablist. There is no tabpanel anywhere in the app, the two
+       year-nav buttons sat inside it as non-tab children, and the real tabs
+       were behind a role="presentation" wrapper -- so it failed
+       aria-required-children and promised keyboard behaviour it never had.
+       A labelled group of buttons with aria-current is what this actually
+       is. #}
+    <div class="month-strip" role="group" aria-label="Budget month">
       <button type="button" class="month-strip__year"
               @click="$store.budget.setMonth(prevYearMonth())"
               aria-label="Previous year">
         <span aria-hidden="true">&larr;</span>
         <span x-text="prevYearLabel()"></span>
       </button>
-      <div class="month-strip__tabs" role="presentation">
+      <div class="month-strip__tabs">
         <template x-for="m in monthsOfYear()" :key="m.value">
           <button type="button"
-                  role="tab"
                   class="month-strip__tab"
                   :class="{ 'is-active': m.value === $store.budget.currentMonth, 'is-current': m.value === thisMonthValue() }"
-                  :aria-selected="(m.value === $store.budget.currentMonth).toString()"
+                  :aria-current="m.value === $store.budget.currentMonth ? 'true' : 'false'"
+                  :aria-label="m.label + (m.value === $store.budget.currentMonth ? ', selected month' : '')"
                   @click="$store.budget.setMonth(m.value)"
                   x-text="m.label"></button>
         </template>
@@ -241,7 +247,9 @@ eleventyExcludeFromCollections: true
                          :style="'--pct:' + goalPercent(c.id)"
                          :data-tip="goalBarTooltip(c.id)"
                          role="progressbar"
+                         :aria-label="'Goal progress for ' + c.name"
                          :aria-valuenow="goalPercent(c.id)"
+                         :aria-valuetext="goalPercent(c.id) + '% of goal for ' + c.name"
                          aria-valuemin="0" aria-valuemax="100">
                       <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
                       <span class="goal-bar__cap"
@@ -345,9 +353,9 @@ eleventyExcludeFromCollections: true
         </button>
         <header class="auto-assign__header">
           <p class="eyebrow">Move money</p>
-          <h3 class="modal__title" id="bd-mv-title" style="margin: 0;">
+          <h2 class="modal__title" id="bd-mv-title" style="margin: 0;">
             Reallocate Assigned in <span x-text="monthHeaderLabel()"></span>
-          </h3>
+          </h2>
           <p class="auto-assign__lead">
             Decrement one category's Assigned and increment another by the same amount. Total Assigned for the month stays the same. Works for payment pools too.
           </p>
@@ -410,9 +418,9 @@ eleventyExcludeFromCollections: true
         </button>
         <header class="auto-assign__header">
           <p class="eyebrow">Auto-assign · <span x-text="autoAssignScope.name"></span></p>
-          <h3 class="modal__title" id="bd-auto-title" style="margin: 0;">
+          <h2 class="modal__title" id="bd-auto-title" style="margin: 0;">
             Fill <span x-text="monthHeaderLabel()"></span> from a template
-          </h3>
+          </h2>
           <p class="auto-assign__lead">
             Pick a strategy.
             <span x-show="autoAssignScope.kind === 'all'">Categories that don't apply are left unchanged.</span>
@@ -474,7 +482,7 @@ eleventyExcludeFromCollections: true
     <div class="modal-backdrop" x-show="newGroupOpen" x-cloak @keydown.escape.window="newGroupOpen = false">
       <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-group-title"
            @click.outside="newGroupOpen = false">
-        <h3 class="modal__title" id="bd-group-title">New category group</h3>
+        <h2 class="modal__title" id="bd-group-title">New category group</h2>
         <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);">
           Groups organize the budget. Examples: Monthly bills, Subscriptions, Reserves.
         </p>
@@ -495,9 +503,9 @@ eleventyExcludeFromCollections: true
     <div class="modal-backdrop" x-show="newCatOpen" x-cloak @keydown.escape.window="newCatOpen = false">
       <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-cat-title"
            @click.outside="newCatOpen = false">
-        <h3 class="modal__title" id="bd-cat-title">
+        <h2 class="modal__title" id="bd-cat-title">
           New category in <span x-text="newCatGroupName || 'group'"></span>
-        </h3>
+        </h2>
         <form @submit.prevent="submitNewCategory()">
           <div class="field">
             <label class="field__label" for="bd-cat-name">Category name</label>
@@ -517,8 +525,8 @@ eleventyExcludeFromCollections: true
     <div class="modal-backdrop" x-show="deleteGroupId" x-cloak @keydown.escape.window="deleteGroupId = null">
       <div class="modal modal--sm" role="alertdialog" aria-modal="true"
            @click.outside="deleteGroupId = null"
-           @keydown.enter.window.prevent="confirmDeleteGroup()">
-        <h3 class="modal__title">Delete this group?</h3>
+           @keydown.enter.window.prevent="confirmDeleteGroup()" aria-labelledby="budget-dlg1-title">
+        <h2 class="modal__title" id="budget-dlg1-title">Delete this group?</h2>
         <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
           Categories inside <strong x-text="deleteGroupName"></strong> become ungrouped but are kept along with their activity and goals.
         </p>
@@ -533,8 +541,8 @@ eleventyExcludeFromCollections: true
     <div class="modal-backdrop" x-show="deleteCatId" x-cloak @keydown.escape.window="deleteCatId = null">
       <div class="modal modal--sm" role="alertdialog" aria-modal="true"
            @click.outside="deleteCatId = null"
-           @keydown.enter.window.prevent="confirmDeleteCategory()">
-        <h3 class="modal__title">Delete this category?</h3>
+           @keydown.enter.window.prevent="confirmDeleteCategory()" aria-labelledby="budget-dlg2-title">
+        <h2 class="modal__title" id="budget-dlg2-title">Delete this category?</h2>
         <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
           <strong x-text="deleteCatName"></strong>'s activity becomes uncategorized but stays in the register. Goals on this category are removed.
         </p>
@@ -549,9 +557,9 @@ eleventyExcludeFromCollections: true
     <div class="modal-backdrop" x-show="renameOpen" x-cloak @keydown.escape.window="renameOpen = false">
       <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-rename-title"
            @click.outside="renameOpen = false">
-        <h3 class="modal__title" id="bd-rename-title">
+        <h2 class="modal__title" id="bd-rename-title">
           Rename <span x-text="renameKind"></span>
-        </h3>
+        </h2>
         <form @submit.prevent="submitRename()">
           <div class="field">
             <label class="field__label" for="bd-rename-name">New name</label>
@@ -574,11 +582,11 @@ eleventyExcludeFromCollections: true
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bd-act-title"
            @click.outside="activityOpen = false" style="max-width: 760px;">
         <button class="modal__close" type="button" @click="activityOpen = false" aria-label="Close">&times;</button>
-        <h3 class="modal__title" id="bd-act-title">
+        <h2 class="modal__title" id="bd-act-title">
           <span x-text="activityScope.name"></span>
           <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);"
                 x-text="' · ' + monthHeaderLabel()"></span>
-        </h3>
+        </h2>
         <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);"
            x-text="activityTxns().length + ' transaction' + (activityTxns().length === 1 ? '' : 's')"></p>
 
@@ -650,18 +658,18 @@ eleventyExcludeFromCollections: true
        what's assigned this month, and what's still needed. #}
     <div class="modal-backdrop" x-show="goalCatId" x-cloak @keydown.escape.window="goalCatId = null">
       <div class="modal" role="dialog" aria-modal="true" @click.outside="goalCatId = null"
-           style="max-width: 620px;">
+           style="max-width: 620px;" aria-labelledby="bd-goal-title">
         <button class="modal__close" type="button" @click="goalCatId = null" aria-label="Close">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
         </button>
         <header class="auto-assign__header">
           <p class="eyebrow">Goal</p>
-          <h3 class="modal__title" id="bd-goal-title" style="margin: 0;">
+          <h2 class="modal__title" id="bd-goal-title" style="margin: 0;">
             <span x-text="$store.budget.categoryName(goalCatId)"></span>
             <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);">
               · <span x-text="monthHeaderLabel()"></span>
             </span>
-          </h3>
+          </h2>
         </header>
 
         {# Current-status snapshot — only when a goal already exists.
@@ -673,7 +681,9 @@ eleventyExcludeFromCollections: true
                   x-text="goalPctForModal() >= 100 ? '✓ 100% funded' : (goalPctForModal() + '% funded')"></span>
             <div class="goal-status__bar" :data-tip="goalStatusTooltip()"
                  role="progressbar"
+                 aria-label="Goal progress"
                  :aria-valuenow="goalPctForModal()"
+                 :aria-valuetext="goalPctForModal() + '% of goal'"
                  aria-valuemin="0" aria-valuemax="100">
               <span class="goal-status__fill"
                     :class="goalPctForModal() >= 100 ? 'goal-status__fill--funded' : (goalPctForModal() >= 50 ? 'goal-status__fill--partial' : 'goal-status__fill--low')"
@@ -875,7 +885,7 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="templatesOpen = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="tpl-title">Budget templates</h3>
+      <h2 class="modal__title" id="tpl-title">Budget templates</h2>
       <p style="color: var(--fg-muted);">
         Save the current month's assigned values as a named template,
         then apply it to any other month with one click. Categories that

@@ -42,8 +42,14 @@
      button inside the sidebar is the keyboard-accessible affordance. #}
   <div class="app-sidebar-backdrop" x-show="sidebarOpen" x-cloak
        @click="$dispatch('close-sidebar')" aria-hidden="true"></div>
+  {# A focusable separator is a widget, so it needs its value attributes.
+     Without them this single element produced an aria-required-attr
+     violation on every one of the 43 app routes -- it lives in the layout.
+     Values mirror MIN/MAX/DEFAULT in app.js, which keeps aria-valuenow in
+     sync as the handle is dragged or arrowed. #}
   <div class="app-sidebar-handle" role="separator" aria-orientation="vertical"
        aria-label="Resize sidebar" tabindex="0"
+       aria-valuemin="180" aria-valuemax="480" aria-valuenow="260"
        data-tip="Drag to resize the sidebar. Double-click to reset to the default width."></div>
   <section class="app-main">
     {% include "partials/sample-banner.njk" %}
@@ -53,9 +59,8 @@
      data on first paint. Self-cleans the moment the store flips
      loading=false. x-cloak hides it until Alpine boots so static
      HTML doesn't flash the spinner. #}
-  <div class="app-loading" x-show="$store.budget && $store.budget.loading" x-cloak
-       role="status" aria-live="polite" aria-label="Loading your data">
-    <span class="app-loading__spinner" aria-hidden="true"></span>
+  <div class="app-loading" x-show="$store.budget && $store.budget.loading" x-cloak aria-hidden="true">
+    <span class="app-loading__spinner" aria-hidden="true" data-motion="essential"></span>
     <span class="app-loading__label">Loading…</span>
   </div>
 </div>

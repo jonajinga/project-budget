@@ -61,9 +61,11 @@ eleventyExcludeFromCollections: true
       </template>
     </div>
 
+    {# No aria-describedby here: this is the one chart report with no data
+       table to point at, and the old reference resolved to nothing. Give it
+       a real table alongside the other reports rather than a dangling id. #}
     <div class="chart" id="chart-heatmap" style="min-height: 360px; overflow-x: auto;"
-         role="img" aria-label="Category heatmap"
-         aria-describedby="data-table-heatmap"></div>
+         role="img" aria-label="Category heatmap"></div>
 
     <div class="report-toolbar" style="margin-top: var(--space-md);">
       <p class="report-toolbar__count">

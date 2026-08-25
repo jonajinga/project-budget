@@ -181,25 +181,25 @@ eleventyExcludeFromCollections: true
           </button>
           {# Labeled stats — IN / OUT / NET for the month. In and Out
              are clickable to open the period transactions modal. #}
-          <dl class="cal-mini__totals" aria-label="Month totals">
+          <div class="cal-mini__totals" aria-label="Month totals">
             <button type="button" class="cal-mini__stat cal-mini__stat--clickable"
                     @click="openPeriodModal('Inflows — ' + mm.label, 'Money in for the month', 'in', miniCells(mm.iso))"
                     data-tip="See every inflow in this month.">
-              <dt>In</dt>
-              <dd class="amount--inflow" x-text="formatCents(miniMonthTotals(mm.iso).inflow)"></dd>
+              <span class="stat__term">In</span>
+              <span class="stat__value" class="amount--inflow" x-text="formatCents(miniMonthTotals(mm.iso).inflow)"></span>
             </button>
             <button type="button" class="cal-mini__stat cal-mini__stat--clickable"
                     @click="openPeriodModal('Outflows — ' + mm.label, 'Money out for the month', 'out', miniCells(mm.iso))"
                     data-tip="See every outflow in this month.">
-              <dt>Out</dt>
-              <dd class="amount--outflow" x-text="formatCents(miniMonthTotals(mm.iso).outflow)"></dd>
+              <span class="stat__term">Out</span>
+              <span class="stat__value" class="amount--outflow" x-text="formatCents(miniMonthTotals(mm.iso).outflow)"></span>
             </button>
             <div class="cal-mini__stat cal-mini__stat--net">
-              <dt>Net</dt>
-              <dd :class="miniMonthTotals(mm.iso).net < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="formatCents(miniMonthTotals(mm.iso).net)"></dd>
+              <span class="stat__term">Net</span>
+              <span class="stat__value" :class="miniMonthTotals(mm.iso).net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(miniMonthTotals(mm.iso).net)"></span>
             </div>
-          </dl>
+          </div>
         </header>
         {# Header row: WK label on the left, 7 weekday initials on
            the right. Mirrors .cal-mini__row's flex layout so the
@@ -263,31 +263,31 @@ eleventyExcludeFromCollections: true
     <article class="cal-extra-month">
     <header class="cal-extra-month__head">
       <h3 class="cal-extra-month__title" x-text="monthLabel(anchorMonthISO())"></h3>
-      <dl class="cal-extra-period__totals" aria-label="Month totals">
+      <div class="cal-extra-period__totals" aria-label="Month totals">
         <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                 @click="openPeriodModal('Inflows — ' + monthLabel(anchorMonthISO()), 'Money in for the month', 'in', monthCells())"
                 data-tip="See every inflow in this month.">
-          <dt>In</dt>
-          <dd class="amount--inflow" x-text="formatCents(monthTotals().inflow)"></dd>
+          <span class="stat__term">In</span>
+          <span class="stat__value" class="amount--inflow" x-text="formatCents(monthTotals().inflow)"></span>
         </button>
         <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                 @click="openPeriodModal('Outflows — ' + monthLabel(anchorMonthISO()), 'Money out for the month', 'out', monthCells())"
                 data-tip="See every outflow in this month.">
-          <dt>Out</dt>
-          <dd class="amount--outflow" x-text="formatCents(monthTotals().outflow)"></dd>
+          <span class="stat__term">Out</span>
+          <span class="stat__value" class="amount--outflow" x-text="formatCents(monthTotals().outflow)"></span>
         </button>
         <div class="cal-extra-period__stat cal-extra-period__stat--net">
-          <dt>Net</dt>
-          <dd :class="monthTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
-              x-text="formatCents(monthTotals().net)"></dd>
+          <span class="stat__term">Net</span>
+          <span class="stat__value" :class="monthTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(monthTotals().net)"></span>
         </div>
         <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                 @click="openPeriodModal('All entries — ' + monthLabel(anchorMonthISO()), 'Every transaction in the month', 'all', monthCells())"
                 data-tip="See every entry in this month.">
-          <dt>Entries</dt>
-          <dd x-text="monthTotals().count"></dd>
+          <span class="stat__term">Entries</span>
+          <span class="stat__value" x-text="monthTotals().count"></span>
         </button>
-      </dl>
+      </div>
     </header>
 
   <div class="cal" :class="{ 'cal--no-totals': !showDayTotals }" data-no-tippy>
@@ -304,7 +304,7 @@ eleventyExcludeFromCollections: true
        button (clickable to open the period transactions modal
        scoped to that week's cells); the day cells live in a nested
        7-col grid so the parent flex layout can't break across rows. #}
-    <div class="cal__grid" role="grid" :aria-label="'Calendar for ' + monthLabel(anchorMonthISO())">
+    <div class="cal__grid" role="group" :aria-label="'Calendar for ' + monthLabel(anchorMonthISO())">
       <template x-for="wk in monthWeeks()" :key="wk.weekKey">
         <div class="cal__week-row">
           <button type="button"
@@ -347,13 +347,7 @@ eleventyExcludeFromCollections: true
               'cal__cell--today':    cell.isToday,
               'cal__cell--selected': cell.iso && cell.iso === selectedISO,
               'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
-              'cal__cell--other-month': cell.otherMonth,
-              'cal__cell--drop-target': cell.iso && dragOverISO === cell.iso
-            }"
-            @dragenter="cell.iso && dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-            @dragover.prevent
-            @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-            @drop.prevent="cell.iso && dropOnDate(cell.iso, $event)">
+              'cal__cell--other-month': cell.otherMonth}">
           <template x-if="!cell.blank">
             <div class="cal__cell-inner">
               <button type="button"
@@ -367,14 +361,14 @@ eleventyExcludeFromCollections: true
               {# Entry list — mirrors the week-view card style so a
                  month cell reads as a mini day-column. Cap at 3 to keep
                  cells from blowing past row height. #}
-              <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
+              <ul class="cal__entries" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
                 <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'p-' + t.id">
-                  <li>
+                  <li :data-sortable-id="t.id"
+                      :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                     <button type="button"
                             class="cal__entry cal__entry--clickable"
+                            :aria-label="($store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : 'Transaction')) + ', ' + formatCents(t.amount)"
                             :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
-                            :draggable="!t.reconciled && !t.transferTxnId"
-                            @dragstart="onDragStart(t, $event)"
                             @click.stop="openTxn(t.id)">
                       <span class="cal__entry-payee"
                             x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
@@ -385,8 +379,9 @@ eleventyExcludeFromCollections: true
                   </li>
                 </template>
                 <template x-for="s in (cell.scheduled || []).slice(0, Math.max(0, 3 - (cell.posted || []).length))" :key="'s-' + s.id">
-                  <li>
+                  <li data-sortable-locked="1">
                     <a class="cal__entry cal__entry--clickable cal__entry--scheduled"
+                       :aria-label="'Scheduled: ' + ($store.budget.payeeName(s.template.payeeId) || s.template.payeeName || 'item') + ', ' + formatCents(s.template.amount)"
                        :href="'/app/scheduled/#edit-' + s.id"
                        @click.stop>
                       <span class="cal__entry-payee"
@@ -453,31 +448,31 @@ eleventyExcludeFromCollections: true
     <article class="cal-extra-month">
       <header class="cal-extra-month__head">
         <h3 class="cal-extra-month__title" x-text="mb.label"></h3>
-        <dl class="cal-extra-period__totals" aria-label="Month totals">
+        <div class="cal-extra-period__totals" aria-label="Month totals">
           <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                   @click="openPeriodModal('Inflows — ' + mb.label, 'Money in for the month', 'in', monthCellsFor(mb.anchorISO))"
                   data-tip="See every inflow in this month.">
-            <dt>In</dt>
-            <dd class="amount--inflow" x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).inflow)"></dd>
+            <span class="stat__term">In</span>
+            <span class="stat__value" class="amount--inflow" x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).inflow)"></span>
           </button>
           <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                   @click="openPeriodModal('Outflows — ' + mb.label, 'Money out for the month', 'out', monthCellsFor(mb.anchorISO))"
                   data-tip="See every outflow in this month.">
-            <dt>Out</dt>
-            <dd class="amount--outflow" x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).outflow)"></dd>
+            <span class="stat__term">Out</span>
+            <span class="stat__value" class="amount--outflow" x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).outflow)"></span>
           </button>
           <div class="cal-extra-period__stat cal-extra-period__stat--net">
-            <dt>Net</dt>
-            <dd :class="_periodTotalsFor(monthCellsFor(mb.anchorISO)).net < 0 ? 'amount--outflow' : 'amount--inflow'"
-                x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).net)"></dd>
+            <span class="stat__term">Net</span>
+            <span class="stat__value" :class="_periodTotalsFor(monthCellsFor(mb.anchorISO)).net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="formatCents(_periodTotalsFor(monthCellsFor(mb.anchorISO)).net)"></span>
           </div>
           <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                   @click="openPeriodModal('All entries — ' + mb.label, 'Every transaction in the month', 'all', monthCellsFor(mb.anchorISO))"
                   data-tip="See every entry in this month.">
-            <dt>Entries</dt>
-            <dd x-text="_periodTotalsFor(monthCellsFor(mb.anchorISO)).count"></dd>
+            <span class="stat__term">Entries</span>
+            <span class="stat__value" x-text="_periodTotalsFor(monthCellsFor(mb.anchorISO)).count"></span>
           </button>
-        </dl>
+        </div>
       </header>
       {# Mirror the primary month-view's row-based structure: header
          row with WK label + 7 day labels, then one .cal__week-row
@@ -492,7 +487,7 @@ eleventyExcludeFromCollections: true
           <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
         </div>
       </div>
-      <div class="cal__grid" role="grid" :aria-label="'Calendar for ' + mb.label">
+      <div class="cal__grid" role="group" :aria-label="'Calendar for ' + mb.label">
         <template x-for="wk in monthWeeks(mb.anchorISO)" :key="'mw-' + mb.monthISO + '-' + wk.weekKey">
           <div class="cal__week-row">
             <button type="button"
@@ -510,13 +505,7 @@ eleventyExcludeFromCollections: true
                        'cal__cell--today':    cell.isToday,
                        'cal__cell--selected': cell.iso && cell.iso === selectedISO,
                        'cal__cell--has':      !cell.blank && (cell.posted.length + cell.scheduled.length) > 0,
-                       'cal__cell--other-month': cell.otherMonth,
-                       'cal__cell--drop-target': cell.iso && dragOverISO === cell.iso
-                     }"
-                     @dragenter="cell.iso && dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-                     @dragover.prevent
-                     @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-                     @drop.prevent="cell.iso && dropOnDate(cell.iso, $event)">
+                       'cal__cell--other-month': cell.otherMonth}">
                   <template x-if="!cell.blank">
                     <div class="cal__cell-inner">
                       <button type="button" class="cal__day-btn"
@@ -525,13 +514,13 @@ eleventyExcludeFromCollections: true
                               :aria-label="'Open ' + cell.iso">
                         <span class="cal__day-num" x-text="cell.day"></span>
                       </button>
-                      <ul class="cal__entries" x-show="(cell.posted || []).length + (cell.scheduled || []).length > 0">
+                      <ul class="cal__entries" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
                         <template x-for="t in (cell.posted || []).slice(0, 3)" :key="'mp-' + mb.monthISO + '-' + t.id">
-                          <li>
+                          <li :data-sortable-id="t.id"
+                              :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                             <button type="button" class="cal__entry cal__entry--clickable"
+                                    :aria-label="($store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : 'Transaction')) + ', ' + formatCents(t.amount)"
                                     :class="t.amount < 0 ? 'cal__entry--out' : 'cal__entry--in'"
-                                    :draggable="!t.reconciled && !t.transferTxnId"
-                                    @dragstart="onDragStart(t, $event)"
                                     @click.stop="openTxn(t.id)">
                               <span class="cal__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                               <span class="cal__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -540,8 +529,9 @@ eleventyExcludeFromCollections: true
                           </li>
                         </template>
                         <template x-for="s in (cell.scheduled || []).slice(0, Math.max(0, 3 - (cell.posted || []).length))" :key="'ms-' + mb.monthISO + '-' + s.id">
-                          <li>
+                          <li data-sortable-locked="1">
                             <a class="cal__entry cal__entry--clickable cal__entry--scheduled"
+                               :aria-label="'Scheduled: ' + ($store.budget.payeeName(s.template.payeeId) || s.template.payeeName || 'item') + ', ' + formatCents(s.template.amount)"
                                :href="'/app/scheduled/#edit-' + s.id"
                                @click.stop>
                               <span class="cal__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
@@ -575,31 +565,31 @@ eleventyExcludeFromCollections: true
     <article class="cal-extra-week">
     <header class="cal-extra-week__head">
       <h3 class="cal-extra-week__title" x-text="anchorLabel()"></h3>
-      <dl class="cal-extra-period__totals" aria-label="Week totals">
+      <div class="cal-extra-period__totals" aria-label="Week totals">
         <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                 @click="openPeriodModal('Inflows — ' + anchorLabel(), 'Money in for the week', 'in', weekCells())"
                 data-tip="See every inflow in this week.">
-          <dt>In</dt>
-          <dd class="amount--inflow" x-text="formatCents(weekTotals().inflow)"></dd>
+          <span class="stat__term">In</span>
+          <span class="stat__value" class="amount--inflow" x-text="formatCents(weekTotals().inflow)"></span>
         </button>
         <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                 @click="openPeriodModal('Outflows — ' + anchorLabel(), 'Money out for the week', 'out', weekCells())"
                 data-tip="See every outflow in this week.">
-          <dt>Out</dt>
-          <dd class="amount--outflow" x-text="formatCents(weekTotals().outflow)"></dd>
+          <span class="stat__term">Out</span>
+          <span class="stat__value" class="amount--outflow" x-text="formatCents(weekTotals().outflow)"></span>
         </button>
         <div class="cal-extra-period__stat cal-extra-period__stat--net">
-          <dt>Net</dt>
-          <dd :class="weekTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
-              x-text="formatCents(weekTotals().net)"></dd>
+          <span class="stat__term">Net</span>
+          <span class="stat__value" :class="weekTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(weekTotals().net)"></span>
         </div>
         <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                 @click="openPeriodModal('All entries — ' + anchorLabel(), 'Every transaction in the week', 'all', weekCells())"
                 data-tip="See every entry in this week.">
-          <dt>Entries</dt>
-          <dd x-text="weekTotals().count"></dd>
+          <span class="stat__term">Entries</span>
+          <span class="stat__value" x-text="weekTotals().count"></span>
         </button>
-      </dl>
+      </div>
     </header>
 
   <div class="cal-week">
@@ -608,13 +598,7 @@ eleventyExcludeFromCollections: true
         <li class="cal-week__day"
             :class="{
               'is-today': cell.isToday,
-              'is-empty': !(cell.posted.length + cell.scheduled.length),
-              'cal-week__day--drop-target': dragOverISO === cell.iso
-            }"
-            @dragenter="dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-            @dragover.prevent
-            @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-            @drop.prevent="dropOnDate(cell.iso, $event)">
+              'is-empty': !(cell.posted.length + cell.scheduled.length)}">
           <header class="cal-week__head">
             <p class="cal-week__weekday" x-text="cell.weekday"></p>
             <p class="cal-week__date">
@@ -625,13 +609,12 @@ eleventyExcludeFromCollections: true
               </button>
             </p>
           </header>
-          <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
+          <ul class="cal-week__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
             <template x-for="t in cell.posted" :key="'p' + t.id">
-              <li>
+              <li :data-sortable-id="t.id"
+                  :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                 <button type="button"
                         class="cal-week__entry cal-week__entry--posted cal-week__entry--clickable"
-                        :draggable="!t.reconciled && !t.transferTxnId"
-                        @dragstart="onDragStart(t, $event)"
                         @click="openTxn(t.id)">
                   <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                   <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -640,7 +623,7 @@ eleventyExcludeFromCollections: true
               </li>
             </template>
             <template x-for="s in cell.scheduled" :key="'s' + s.id">
-              <li>
+              <li data-sortable-locked="1">
                 <a class="cal-week__entry cal-week__entry--scheduled cal-week__entry--clickable"
                    :href="'/app/scheduled/#edit-' + s.id"
                    title="Scheduled (not posted)">
@@ -685,42 +668,37 @@ eleventyExcludeFromCollections: true
     <article class="cal-extra-week">
       <header class="cal-extra-week__head">
         <h3 class="cal-extra-week__title" x-text="wb.label"></h3>
-        <dl class="cal-extra-period__totals" aria-label="Week totals">
+        <div class="cal-extra-period__totals" aria-label="Week totals">
           <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                   @click="openPeriodModal('Inflows — ' + wb.label, 'Money in for the week', 'in', weekCellsFor(wb.startISO))"
                   data-tip="See every inflow in this week.">
-            <dt>In</dt>
-            <dd class="amount--inflow" x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).inflow)"></dd>
+            <span class="stat__term">In</span>
+            <span class="stat__value" class="amount--inflow" x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).inflow)"></span>
           </button>
           <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                   @click="openPeriodModal('Outflows — ' + wb.label, 'Money out for the week', 'out', weekCellsFor(wb.startISO))"
                   data-tip="See every outflow in this week.">
-            <dt>Out</dt>
-            <dd class="amount--outflow" x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).outflow)"></dd>
+            <span class="stat__term">Out</span>
+            <span class="stat__value" class="amount--outflow" x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).outflow)"></span>
           </button>
           <div class="cal-extra-period__stat cal-extra-period__stat--net">
-            <dt>Net</dt>
-            <dd :class="_periodTotalsFor(weekCellsFor(wb.startISO)).net < 0 ? 'amount--outflow' : 'amount--inflow'"
-                x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).net)"></dd>
+            <span class="stat__term">Net</span>
+            <span class="stat__value" :class="_periodTotalsFor(weekCellsFor(wb.startISO)).net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="formatCents(_periodTotalsFor(weekCellsFor(wb.startISO)).net)"></span>
           </div>
           <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                   @click="openPeriodModal('All entries — ' + wb.label, 'Every transaction in the week', 'all', weekCellsFor(wb.startISO))"
                   data-tip="See every entry in this week.">
-            <dt>Entries</dt>
-            <dd x-text="_periodTotalsFor(weekCellsFor(wb.startISO)).count"></dd>
+            <span class="stat__term">Entries</span>
+            <span class="stat__value" x-text="_periodTotalsFor(weekCellsFor(wb.startISO)).count"></span>
           </button>
-        </dl>
+        </div>
       </header>
       <ol class="cal-week__strip" data-no-tippy>
         <template x-for="cell in weekCellsFor(wb.startISO)" :key="'w' + wb.startISO + cell.iso">
           <li class="cal-week__day"
               :class="{ 'is-today': cell.isToday,
-                        'is-empty': !(cell.posted.length + cell.scheduled.length),
-                        'cal-week__day--drop-target': dragOverISO === cell.iso }"
-              @dragenter="dragOverISO !== cell.iso && (dragOverISO = cell.iso)"
-              @dragover.prevent
-              @dragleave="dragOverISO === cell.iso && (dragOverISO = null)"
-              @drop.prevent="dropOnDate(cell.iso, $event)">
+                        'is-empty': !(cell.posted.length + cell.scheduled.length)}">
             <header class="cal-week__head">
               <p class="cal-week__weekday" x-text="cell.weekday"></p>
               <p class="cal-week__date">
@@ -731,13 +709,12 @@ eleventyExcludeFromCollections: true
                 </button>
               </p>
             </header>
-            <ul class="cal-week__list" x-show="cell.posted.length + cell.scheduled.length">
+            <ul class="cal-week__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="cell.iso">
               <template x-for="t in cell.posted" :key="'p' + wb.startISO + t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-week__entry cal-week__entry--posted cal-week__entry--clickable"
-                          :draggable="!t.reconciled && !t.transferTxnId"
-                          @dragstart="onDragStart(t, $event)"
                           @click="openTxn(t.id)">
                     <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></span>
                     <span class="cal-week__entry-amt" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
@@ -746,7 +723,7 @@ eleventyExcludeFromCollections: true
                 </li>
               </template>
               <template x-for="s in cell.scheduled" :key="'s' + wb.startISO + s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-week__entry cal-week__entry--scheduled cal-week__entry--clickable"
                      :href="'/app/scheduled/#edit-' + s.id">
                     <span class="cal-week__entry-payee" x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></span>
@@ -768,39 +745,35 @@ eleventyExcludeFromCollections: true
   <section x-show="$store.budget.profile && view === 'day'" x-cloak>
     <template x-for="(db, dIdx) in daysToRender()" :key="db.iso">
       <article class="cal-day-block"
-               :class="{ 'cal-day-block--primary': dIdx === 0, 'cal-day-block--drop-target': dragOverISO === db.iso }"
-               @dragenter="dragOverISO !== db.iso && (dragOverISO = db.iso)"
-               @dragover.prevent
-               @dragleave="dragOverISO === db.iso && (dragOverISO = null)"
-               @drop.prevent="dropOnDate(db.iso, $event)">
+               :class="{ 'cal-day-block--primary': dIdx === 0}">
         <header class="cal-extra-week__head"
                 :class="dIdx === 0 ? 'cal-extra-week__head--primary' : ''">
           <h3 class="cal-extra-week__title" x-text="db.label"></h3>
-          <dl class="cal-extra-period__totals" aria-label="Day totals">
+          <div class="cal-extra-period__totals" aria-label="Day totals">
             <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                     @click="openPeriodModal('Inflows — ' + db.label, 'Money in for the day', 'in', [dayData(db.iso)])"
                     data-tip="See every inflow on this day.">
-              <dt>In</dt>
-              <dd class="amount--inflow" x-text="formatCents(dayData(db.iso).totalInflow)"></dd>
+              <span class="stat__term">In</span>
+              <span class="stat__value" class="amount--inflow" x-text="formatCents(dayData(db.iso).totalInflow)"></span>
             </button>
             <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                     @click="openPeriodModal('Outflows — ' + db.label, 'Money out for the day', 'out', [dayData(db.iso)])"
                     data-tip="See every outflow on this day.">
-              <dt>Out</dt>
-              <dd class="amount--outflow" x-text="formatCents(dayData(db.iso).totalOutflow)"></dd>
+              <span class="stat__term">Out</span>
+              <span class="stat__value" class="amount--outflow" x-text="formatCents(dayData(db.iso).totalOutflow)"></span>
             </button>
             <div class="cal-extra-period__stat cal-extra-period__stat--net">
-              <dt>Net</dt>
-              <dd :class="(dayData(db.iso).totalInflow + dayData(db.iso).totalOutflow) < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="formatCents(dayData(db.iso).totalInflow + dayData(db.iso).totalOutflow)"></dd>
+              <span class="stat__term">Net</span>
+              <span class="stat__value" :class="(dayData(db.iso).totalInflow + dayData(db.iso).totalOutflow) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(dayData(db.iso).totalInflow + dayData(db.iso).totalOutflow)"></span>
             </div>
             <button type="button" class="cal-extra-period__stat cal-extra-period__stat--clickable"
                     @click="openPeriodModal('All entries — ' + db.label, 'Every transaction on the day', 'all', [dayData(db.iso)])"
                     data-tip="See every entry on this day.">
-              <dt>Entries</dt>
-              <dd x-text="dayData(db.iso).posted.length + dayData(db.iso).scheduled.length"></dd>
+              <span class="stat__term">Entries</span>
+              <span class="stat__value" x-text="dayData(db.iso).posted.length + dayData(db.iso).scheduled.length"></span>
             </button>
-          </dl>
+          </div>
         </header>
 
         <div>
@@ -810,14 +783,13 @@ eleventyExcludeFromCollections: true
           </p>
           <section x-show="dayData(db.iso).posted.length" x-cloak>
             <h4 class="cal__detail-section">Posted (<span x-text="dayData(db.iso).posted.length"></span>)</h4>
-            <ul class="cal-day__list">
+            <ul class="cal-day__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="db.iso">
               <template x-for="t in dayData(db.iso).posted" :key="'p' + db.iso + t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-day__row cal-day__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
-                          :draggable="!t.reconciled && !t.transferTxnId"
-                          @dragstart="onDragStart(t, $event)"
                           @click="openTxn(t.id)">
                     <div>
                       <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '—')"></p>
@@ -836,9 +808,9 @@ eleventyExcludeFromCollections: true
           </section>
           <section x-show="dayData(db.iso).scheduled.length" x-cloak>
             <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="dayData(db.iso).scheduled.length"></span>)</h4>
-            <ul class="cal-day__list">
+            <ul class="cal-day__list" data-sortable-list data-sortable-kind="calendar" :data-sortable-group-id="db.iso">
               <template x-for="s in dayData(db.iso).scheduled" :key="'s' + db.iso + s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-day__row cal-day__row--clickable"
                      :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                      :href="'/app/scheduled/#edit-' + s.id">
@@ -873,8 +845,8 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="closePeriodModal()" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="cal-period-title"
-          style="margin: 0 0 var(--space-2xs);" x-text="periodModalTitle"></h3>
+      <h2 class="modal__title" id="cal-period-title"
+          style="margin: 0 0 var(--space-2xs);" x-text="periodModalTitle"></h2>
       <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);"
          x-text="periodModalSubtitle"></p>
 
@@ -882,7 +854,7 @@ eleventyExcludeFromCollections: true
          narrow the list below. Net stays a static stat. Selected
          stat is highlighted; a "Clear filter" pill appears whenever
          the kind isn't 'all'. #}
-      <dl class="cal-extra-period__totals period-modal__filters"
+      <div class="cal-extra-period__totals period-modal__filters"
           aria-label="Period totals — click to filter"
           style="margin: 0 0 var(--space-md);">
         <button type="button"
@@ -891,8 +863,8 @@ eleventyExcludeFromCollections: true
                 @click="periodModalKind = 'in'"
                 :aria-pressed="(periodModalKind === 'in').toString()"
                 data-tip="Filter the list below to inflows only.">
-          <dt>In</dt>
-          <dd class="amount--inflow" x-text="formatCents(periodModalTotals().inflow)"></dd>
+          <span class="stat__term">In</span>
+          <span class="stat__value" class="amount--inflow" x-text="formatCents(periodModalTotals().inflow)"></span>
         </button>
         <button type="button"
                 class="cal-extra-period__stat cal-extra-period__stat--clickable"
@@ -900,13 +872,13 @@ eleventyExcludeFromCollections: true
                 @click="periodModalKind = 'out'"
                 :aria-pressed="(periodModalKind === 'out').toString()"
                 data-tip="Filter the list below to outflows only.">
-          <dt>Out</dt>
-          <dd class="amount--outflow" x-text="formatCents(periodModalTotals().outflow)"></dd>
+          <span class="stat__term">Out</span>
+          <span class="stat__value" class="amount--outflow" x-text="formatCents(periodModalTotals().outflow)"></span>
         </button>
         <div class="cal-extra-period__stat cal-extra-period__stat--net">
-          <dt>Net</dt>
-          <dd :class="periodModalTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
-              x-text="formatCents(periodModalTotals().net)"></dd>
+          <span class="stat__term">Net</span>
+          <span class="stat__value" :class="periodModalTotals().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="formatCents(periodModalTotals().net)"></span>
         </div>
         <button type="button"
                 class="cal-extra-period__stat cal-extra-period__stat--clickable"
@@ -914,10 +886,10 @@ eleventyExcludeFromCollections: true
                 @click="periodModalKind = 'all'"
                 :aria-pressed="(periodModalKind === 'all').toString()"
                 data-tip="Show every entry in this period.">
-          <dt>Entries</dt>
-          <dd x-text="periodModalTotals().count"></dd>
+          <span class="stat__term">Entries</span>
+          <span class="stat__value" x-text="periodModalTotals().count"></span>
         </button>
-      </dl>
+      </div>
 
       <p class="period-modal__active-filter" x-show="periodModalKind !== 'all'" x-cloak>
         <span x-text="'Showing ' + (periodModalKind === 'in' ? 'inflows' : 'outflows') + ' only · '"></span>
@@ -937,7 +909,8 @@ eleventyExcludeFromCollections: true
         <h4 class="cal__detail-section">Posted (<span x-text="periodModalTxns().posted.length"></span>)</h4>
         <ul class="cal-day__list">
           <template x-for="t in periodModalTxns().posted" :key="t.id">
-            <li>
+            <li :data-sortable-id="t.id"
+                :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
               <button type="button"
                       class="cal-day__row cal-day__row--clickable"
                       :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -962,7 +935,7 @@ eleventyExcludeFromCollections: true
         <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="periodModalTxns().scheduled.length"></span>)</h4>
         <ul class="cal-day__list">
           <template x-for="s in periodModalTxns().scheduled" :key="s.id">
-            <li>
+            <li data-sortable-locked="1">
               <a class="cal-day__row cal-day__row--clickable"
                  :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                  :href="'/app/scheduled/#edit-' + s.id"
@@ -1001,9 +974,9 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="closeYearDay()" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="cal-yearday-title"
+      <h2 class="modal__title" id="cal-yearday-title"
           style="margin: 0 0 var(--space-md);"
-          x-text="dayLabel(yearDayISO)"></h3>
+          x-text="dayLabel(yearDayISO)"></h2>
 
       <dl class="cal-period-totals" aria-label="Day totals" style="margin: 0 0 var(--space-lg);">
         <div class="cal-period-totals__tile">
@@ -1036,7 +1009,8 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Posted (<span x-text="yearDayData().posted.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="t in yearDayData().posted" :key="t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-day__row cal-day__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -1061,7 +1035,7 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="yearDayData().scheduled.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="s in yearDayData().scheduled" :key="s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-day__row cal-day__row--clickable"
                      :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                      :href="'/app/scheduled/#edit-' + s.id"
@@ -1103,9 +1077,9 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="selectedISO = null" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h3 class="modal__title" id="cal-monthday-title"
+      <h2 class="modal__title" id="cal-monthday-title"
           style="margin: 0 0 var(--space-md);"
-          x-text="dayLabel(selectedISO)"></h3>
+          x-text="dayLabel(selectedISO)"></h2>
 
       <dl class="cal-period-totals" aria-label="Day totals" style="margin: 0 0 var(--space-lg);">
         <div class="cal-period-totals__tile">
@@ -1138,7 +1112,8 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Posted (<span x-text="selectedDay.posted.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="t in selectedDay.posted" :key="t.id">
-                <li>
+                <li :data-sortable-id="t.id"
+                    :data-sortable-locked="(t.reconciled || t.transferTxnId) ? '1' : null">
                   <button type="button"
                           class="cal-day__row cal-day__row--clickable"
                           :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
@@ -1163,7 +1138,7 @@ eleventyExcludeFromCollections: true
             <h4 class="cal__detail-section">Upcoming (scheduled) (<span x-text="selectedDay.scheduled.length"></span>)</h4>
             <ul class="cal-day__list">
               <template x-for="s in selectedDay.scheduled" :key="s.id">
-                <li>
+                <li data-sortable-locked="1">
                   <a class="cal-day__row cal-day__row--clickable"
                      :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
                      :href="'/app/scheduled/#edit-' + s.id"
@@ -1202,7 +1177,7 @@ eleventyExcludeFromCollections: true
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cal-txn-title"
          @click.outside="closeTxn()">
       <button class="modal__close" type="button" @click="closeTxn()" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="cal-txn-title">Transaction</h3>
+      <h2 class="modal__title" id="cal-txn-title">Transaction</h2>
       <form @submit.prevent="saveTxn()">
         <div class="form-stack">
           <div class="field">
@@ -1271,7 +1246,7 @@ eleventyExcludeFromCollections: true
          aria-labelledby="confirm-del-title" aria-describedby="confirm-del-body"
          @click.outside="cancelDeleteTxn()"
          @keydown.enter.window.prevent="confirmDeleteTxn()">
-      <h3 class="modal__title" id="confirm-del-title">Delete this transaction?</h3>
+      <h2 class="modal__title" id="confirm-del-title">Delete this transaction?</h2>
       <p id="confirm-del-body" style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
         This permanently removes the entry from the register and adjusts the
         account balance. You can recover it from a profile backup if needed.

@@ -167,6 +167,30 @@ export function newGoal(opts) {
    Walks the chain until profile.schemaVersion === SCHEMA_VERSION. */
 export const MIGRATIONS = [];
 
+/* Collection fields that must be arrays. A profile can carry the wrong type
+   here without ever failing a version check -- the bundled sample shipped
+   `budgetTemplates: {}`, which is truthy, so the common `(x || []).slice()`
+   guard sailed straight past it and threw on every /app/budget/ load.
+   Note `rules` is deliberately absent: it is legitimately an object
+   ({ categorize, normalizePayee }). */
+var ARRAY_FIELDS = [
+  "accountGroups", "accounts", "categoryGroups", "categories", "payees",
+  "transactions", "trash", "scheduled", "goals", "savedViews", "snapshots",
+  "budgetTemplates",
+];
+
+/* Runs on every load, independent of schemaVersion, so a profile already
+   persisted with a bad shape is healed rather than crashing forever. */
+export function normalizeShape(profile) {
+  for (var i = 0; i < ARRAY_FIELDS.length; i++) {
+    var k = ARRAY_FIELDS[i];
+    if (!Array.isArray(profile[k])) profile[k] = [];
+  }
+  if (!profile.budgets || typeof profile.budgets !== "object" || Array.isArray(profile.budgets)) profile.budgets = {};
+  if (!profile.settings || typeof profile.settings !== "object" || Array.isArray(profile.settings)) profile.settings = {};
+  return profile;
+}
+
 export function migrate(profile) {
   var current = profile.schemaVersion || 1;
   while (current < SCHEMA_VERSION) {
@@ -176,5 +200,5 @@ export function migrate(profile) {
     current = step.to;
     profile.schemaVersion = current;
   }
-  return profile;
+  return normalizeShape(profile);
 }

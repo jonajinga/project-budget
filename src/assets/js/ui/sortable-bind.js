@@ -49,9 +49,22 @@
         store.moveAccountGroup(itemId, newIndex);
         break;
       case "budget":
-        /* Budget rows ARE categories — same mutator. */
+        /* Budget rows ARE categories - same mutator. */
         store.moveCategory(itemId, toGroupId || null, newIndex);
         break;
+      case "calendar": {
+        /* toGroupId is the destination day's ISO date. Order within a day is
+           meaningless, so newIndex is ignored. */
+        var res = store.moveTransactionToDate(itemId, toGroupId);
+        if (res && res.ok) {
+          store.pushToast("Moved to " + toGroupId + ".", "info");
+        } else if (res && res.reason === "reconciled") {
+          store.pushToast("Reconciled transactions cannot be moved.", "warn");
+        } else if (res && res.reason && res.reason !== "same-day") {
+          store.pushToast("Could not move that transaction.", "warn");
+        }
+        break;
+      }
     }
   }
 
@@ -79,9 +92,27 @@
        drops can't happen accidentally. */
     var groupName = "pb-" + kind;
 
+    /* Calendar entries are a different shape of drag from the reorderable
+       lists: the whole chip drags (there is no .dnd-handle), the only
+       meaningful move is BETWEEN days, and position within a day carries no
+       information. Everything else -- forceFallback, the touch delay, the
+       clone hardening -- is shared, because that is the part that took the
+       work to get right on iOS. */
+    var isCalendar = kind === "calendar";
+
     el[DATA_KEY] = window.Sortable.create(el, {
       animation: 150,
-      handle: ".dnd-handle",
+      handle: isCalendar ? undefined : ".dnd-handle",
+      sort: !isCalendar,
+      /* A day with no transactions has a zero-HEIGHT list, but it still has
+         a position and a width. emptyInsertThreshold is the distance from
+         that rect at which SortableJS will insert, so it is what makes an
+         empty day droppable. It has to be generous here because a month cell
+         is tall and the list sits at its top; the alternative -- giving the
+         lists a min-height during the drag -- reflows the whole grid the
+         instant a chip is lifted. */
+      emptyInsertThreshold: isCalendar ? 40 : 5,
+      filter: isCalendar ? "[data-sortable-locked]" : undefined,
       ghostClass: "is-ghost",
       chosenClass: "is-chosen",
       dragClass: "is-dragging",

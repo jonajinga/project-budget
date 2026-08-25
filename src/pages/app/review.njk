@@ -61,7 +61,7 @@ eleventyExcludeFromCollections: true
            for Web3Forms. Hover preview shows fill up to the cursor. #}
         <div class="contact-form__field">
           <label>Rating <span class="contact-page__req">*</span></label>
-          <div class="review-stars" role="radiogroup" aria-label="Overall rating">
+          <div class="review-stars" role="group" aria-label="Overall rating">
             <template x-for="n in [1, 2, 3, 4, 5]" :key="n">
               <button type="button"
                       class="review-star"
@@ -146,6 +146,8 @@ eleventyExcludeFromCollections: true
             <option value="Anonymous">Anonymous (e.g. "A Project Budget user")</option>
           </select>
         </div>
+
+        <p class="form-error" role="alert"></p>
 
         <div class="contact-form__actions">
           <button class="btn btn--primary" type="submit"

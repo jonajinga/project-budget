@@ -44,6 +44,7 @@ eleventyExcludeFromCollections: true
         <li class="rules-list__item" :class="r.enabled === false ? 'is-disabled' : ''">
           <div class="rules-list__row">
             <select class="select" x-model="r.matchType"
+                    :aria-label="'How to match text for ' + (r.pattern ? 'rule matching ' + r.pattern : 'new rule ' + (idx + 1))"
                     @change="$store.budget.updateRule('categorize', r.id, { matchType: r.matchType })">
               <option value="contains">contains</option>
               <option value="starts-with">starts with</option>
@@ -52,10 +53,12 @@ eleventyExcludeFromCollections: true
             </select>
             <input class="input" type="text"
                    x-model.debounce.400ms="r.pattern"
+                   :aria-label="'Text to match for categorize rule ' + (idx + 1)"
                    @input.debounce.400ms="$store.budget.updateRule('categorize', r.id, { pattern: r.pattern })"
                    placeholder="e.g. amazon">
             <span class="rules-list__arrow" aria-hidden="true">&rarr;</span>
             <select class="select" x-model="r.categoryId"
+                    :aria-label="'Category to assign for ' + (r.pattern ? 'rule matching ' + r.pattern : 'new rule ' + (idx + 1))"
                     @change="$store.budget.updateRule('categorize', r.id, { categoryId: r.categoryId })">
               <option value="">(uncategorized)</option>
               <template x-for="c in $store.budget.categoriesFlat()" :key="c.id">
@@ -116,6 +119,7 @@ eleventyExcludeFromCollections: true
         <li class="rules-list__item" :class="r.enabled === false ? 'is-disabled' : ''">
           <div class="rules-list__row">
             <select class="select" x-model="r.matchType"
+                    :aria-label="'How to match text for payee ' + (r.pattern ? 'rule matching ' + r.pattern : 'new rule ' + (idx + 1))"
                     @change="$store.budget.updateRule('normalizePayee', r.id, { matchType: r.matchType })">
               <option value="contains">contains</option>
               <option value="starts-with">starts with</option>
@@ -124,11 +128,13 @@ eleventyExcludeFromCollections: true
             </select>
             <input class="input" type="text"
                    x-model.debounce.400ms="r.pattern"
+                   :aria-label="'Raw payee text to match for rule ' + (idx + 1)"
                    @input.debounce.400ms="$store.budget.updateRule('normalizePayee', r.id, { pattern: r.pattern })"
                    placeholder="raw payee text">
             <span class="rules-list__arrow" aria-hidden="true">&rarr;</span>
             <input class="input" type="text"
                    x-model.debounce.400ms="r.replacement"
+                   :aria-label="'Cleaned payee name for ' + (r.pattern ? 'rule matching ' + r.pattern : 'new rule ' + (idx + 1))"
                    @input.debounce.400ms="$store.budget.updateRule('normalizePayee', r.id, { replacement: r.replacement })"
                    placeholder="cleaned name">
             <div class="cluster" style="gap: var(--space-3xs); flex-wrap: nowrap;">

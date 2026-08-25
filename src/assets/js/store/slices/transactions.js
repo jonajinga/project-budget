@@ -87,6 +87,28 @@ export const transactionsSlice = {
   },
 
   /**
+   * Reschedule a transaction to a different day.
+   *
+   * Lives in the store rather than the calendar view because both entry
+   * points need it: the pointer drag (SortableJS, which has no dataTransfer
+   * to read an id out of) and any future keyboard or menu path. Returns a
+   * result object so the caller can tell "moved" from "refused".
+   *
+   * @param {string} id
+   * @param {string} iso  YYYY-MM-DD
+   * @returns {{ok: boolean, reason?: string}}
+   */
+  moveTransactionToDate(id, iso) {
+    if (!this.profile || !id || !iso) return { ok: false, reason: "missing" };
+    var txn = (this.profile.transactions || []).find(function (x) { return x.id === id; });
+    if (!txn) return { ok: false, reason: "not-found" };
+    if (txn.date === iso) return { ok: false, reason: "same-day" };
+    if (txn.reconciled) return { ok: false, reason: "reconciled" };
+    var result = this.updateTransaction(id, { date: iso });
+    return result ? { ok: true } : { ok: false, reason: "refused" };
+  },
+
+  /**
    * Move a transaction to the trash (30-day recovery window).
    * Records an undo entry.
    * @param {id} id

@@ -25,7 +25,7 @@ eleventyExcludeFromCollections: true
   <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rec-help-title" @click.outside="showHelp = false">
       <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="rec-help-title">About recurring transactions</h3>
+      <h2 class="modal__title" id="rec-help-title">About recurring transactions</h2>
       <div class="prose">
         <p>Templates sit in a queue. When the due date arrives, the entry surfaces in the <a href="/app/register/">register</a> for you to approve or skip — it never posts automatically.</p>
         <p><strong>Frequency:</strong> pick from weekly, biweekly, monthly, semi-monthly, quarterly, annual, or build a custom interval (every <em>N</em> days / weeks / months).</p>
@@ -396,9 +396,9 @@ eleventyExcludeFromCollections: true
   <div class="modal-backdrop" x-show="show" x-cloak @keydown.escape.window="close()">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rc-modal-title" @click.outside="close()">
       <button class="modal__close" type="button" @click="close()" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="rc-modal-title">
+      <h2 class="modal__title" id="rc-modal-title">
         <span x-text="mode === 'edit' ? 'Edit recurring transaction' : 'Add recurring transaction'"></span>
-      </h3>
+      </h2>
       <form @submit.prevent="submit()">
         <div class="form-stack">
           <div class="field">

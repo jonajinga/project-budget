@@ -53,7 +53,7 @@ eleventyExcludeFromCollections: true
   <div class="modal-backdrop" x-show="showEditor" x-cloak @keydown.escape.window="showEditor = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sv-title" @click.outside="showEditor = false">
       <button class="modal__close" type="button" @click="showEditor = false" aria-label="Close">&times;</button>
-      <h3 class="modal__title" id="sv-title" x-text="editing.id ? 'Edit saved view' : 'New saved view'"></h3>
+      <h2 class="modal__title" id="sv-title" x-text="editing.id ? 'Edit saved view' : 'New saved view'"></h2>
       <form @submit.prevent="save()">
         <div class="form-stack">
           <div class="field">

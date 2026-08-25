@@ -154,9 +154,9 @@ eleventyExcludeFromCollections: true
   {# Permanently-delete profile confirm modal — moved here from
      /app/settings/ so all trash management lives on one page. #}
   <div class="modal-backdrop" x-show="purgeId" x-cloak @keydown.escape.window="purgeId = null">
-    <div class="modal" role="dialog" aria-modal="true" @click.outside="purgeId = null">
+    <div class="modal" role="dialog" aria-modal="true" @click.outside="purgeId = null" aria-labelledby="trash-dlg1-title">
       <button class="modal__close" type="button" @click="purgeId = null" aria-label="Close">&times;</button>
-      <h3 class="modal__title">Delete profile forever</h3>
+      <h2 class="modal__title" id="trash-dlg1-title">Delete profile forever</h2>
       <p style="color: var(--fg-muted);">
         This permanently deletes <strong x-text="purgeName"></strong> and all of its history. It cannot be undone or restored. Export first if you might need it later.
       </p>

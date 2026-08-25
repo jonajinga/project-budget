@@ -30,6 +30,11 @@
   border-top-color: var(--accent);
   animation: app-loading-spin 800ms linear infinite;
 }
+/* Slowed, not stopped: a frozen spinner reads as a hung app. Works because
+   the spinner carries data-motion="essential", which the global
+   reduced-motion reset in reset.css excludes. Without that attribute this
+   rule loses to `animation-duration: 0.01ms !important` on the universal
+   selector and the spinner effectively freezes. */
 @media (prefers-reduced-motion: reduce) {
   .app-loading__spinner { animation-duration: 2500ms; }
 }

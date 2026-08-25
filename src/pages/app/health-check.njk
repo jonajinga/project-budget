@@ -57,7 +57,7 @@ eleventyExcludeFromCollections: true
             </ul>
           </details>
           <div class="health-item__action" x-show="c.fix" x-cloak>
-            <a class="btn btn--ghost btn--sm" :href="c.fix.href" x-text="c.fix.label"></a>
+            <a class="btn btn--ghost btn--sm" :href="c.fix?.href" x-text="c.fix?.label"></a>
           </div>
         </li>
       </template>

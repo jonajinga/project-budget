@@ -39,10 +39,10 @@ eleventyExcludeFromCollections: true
     <section class="card" style="margin-top: var(--space-md);">
       <h2 class="card__title">Identity</h2>
       <dl class="about-profile">
-        <div><dt>Name</dt><dd x-text="$store.budget.profile.name"></dd></div>
-        <div><dt>Profile ID</dt><dd x-text="$store.budget.profile.id"></dd></div>
-        <div><dt>Created</dt><dd x-text="formatDate($store.budget.profile.createdAt)"></dd></div>
-        <div><dt>Sample data</dt><dd x-text="$store.budget.profile.settings?.isSample ? 'Yes — the seeded sample household' : 'No'"></dd></div>
+        <div><dt>Name</dt><dd x-text="$store.budget.profile?.name"></dd></div>
+        <div><dt>Profile ID</dt><dd x-text="$store.budget.profile?.id"></dd></div>
+        <div><dt>Created</dt><dd x-text="formatDate($store.budget.profile?.createdAt)"></dd></div>
+        <div><dt>Sample data</dt><dd x-text="$store.budget.profile?.settings?.isSample ? 'Yes — the seeded sample household' : 'No'"></dd></div>
       </dl>
     </section>
 

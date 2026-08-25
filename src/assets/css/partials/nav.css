@@ -16,26 +16,17 @@
   min-height: 4rem;
 }
 /* App-mode header lays out three regions: hamburger | profile | actions.
-   Grid keeps the profile centered even when actions are wider/narrower
-   than the hamburger column. */
+   Flexbox keeps them aligned with hamburger left, actions right, and
+   profile filling the space between. */
 .site-header__inner--app {
-  display: grid;
-  /* Mobile/tablet (under 1024px where the sidebar is a drawer):
-     three equal columns lock the profile to true viewport center —
-     hamburger flush left, profile dead center, actions flush right.
-     Desktop bumps to auto 1fr auto so the centered profile lives in
-     the natural fr middle column. */
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-height: 4rem;
 }
-.site-header__inner--app > .site-header__hamburger { justify-self: start; }
-.site-header__inner--app > .site-header__profile { justify-self: center; }
-.site-header__inner--app > .site-header__actions { justify-self: end; }
-@media (min-width: 1024px) {
-  .site-header__inner--app { grid-template-columns: auto 1fr auto; }
-  .site-header__inner--app > .site-header__profile { justify-self: start; }
-}
+.site-header__inner--app > .site-header__hamburger { flex-shrink: 0; order: -1; }
+.site-header__inner--app > .site-header__profile { flex: 0 1 auto; min-width: 0; }
+.site-header__inner--app > .site-header__actions { flex-shrink: 0; margin-left: auto; }
 
 /* App header drops the 1180-px container cap so the hamburger sits
    flush with the sidebar's left edge and the actions cluster sits
@@ -133,7 +124,7 @@
 }
 .site-nav__link--cta:hover { background: var(--accent-hover); color: #fff; }
 
-.site-header__actions { display: flex; align-items: center; gap: var(--space-2xs); flex-shrink: 0; }
+.site-header__actions { display: flex; align-items: center; gap: var(--space-2xs); flex-shrink: 0; margin-left: auto; }
 
 /* Mobile tightening — the app header crams hamburger + profile +
    undo + redo + search + theme picker into a single row. Below
@@ -186,13 +177,18 @@
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   transform: translateX(-100%);
-  transition: transform var(--t-base);
+  visibility: hidden;
+  transition: transform var(--t-base), visibility 0s linear var(--t-base);
   z-index: 100;
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
-.site-menu.is-open { transform: translateX(0); }
+.site-menu.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform var(--t-base), visibility 0s linear 0s;
+}
 .site-menu-backdrop {
   position: fixed;
   inset: 0;
@@ -629,7 +625,8 @@ button.search-result:focus-visible {
   max-width: 100%;
   z-index: 25;
   transform: translateX(-100%);
-  transition: transform var(--t-base);
+  visibility: hidden;
+  transition: transform var(--t-base), visibility 0s linear var(--t-base);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   /* Scroll stays inside the drawer — doesn't bubble to the page
@@ -642,7 +639,11 @@ button.search-result:focus-visible {
   -ms-overflow-style: none;       /* legacy Edge / IE */
 }
 .app-sidebar::-webkit-scrollbar { display: none; } /* Chrome/Safari */
-.app-sidebar.is-open { transform: translateX(0); }
+.app-sidebar.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform var(--t-base), visibility 0s linear 0s;
+}
 .app-sidebar__close {
   align-self: flex-end;
   font-size: 1.5rem;
@@ -676,6 +677,10 @@ button.search-result:focus-visible {
        writes to. Clear every mobile-drawer rule so position/width
        fall back to the grid layout. */
     position: sticky;
+    /* Restore visibility: the base rule hides the CLOSED mobile drawer so it
+       leaves the tab order, but on desktop the sidebar is a permanent column
+       and never carries .is-open. */
+    visibility: visible;
     /* Sidebar sticks slightly higher than the header bottom (4rem)
        so it gets +50px of extra vertical room — visible without
        scrolling on shorter laptops + tablet-landscape. The header's
