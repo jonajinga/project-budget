@@ -36,6 +36,9 @@
    can write to it without touching layout markup. Default 260px; clamps
    are enforced in JS (180px..480px). */
 .layout-app { background: var(--bg-alt); --app-sidebar-width: 260px; }
+/* Same ground as the app shell; see the note in base.css. The sidebar
+   width token is deliberately NOT carried over -- there is no sidebar. */
+.layout-marketing { background: var(--bg-alt); }
 .app-shell {
   display: grid;
   grid-template-columns: 1fr;
