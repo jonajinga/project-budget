@@ -43,7 +43,14 @@
                 <a :href="item.url"
                    class="app-nav__link"
                    :aria-current="item.url === currentUrl ? 'page' : null"
-                   @click="$dispatch('close-sidebar')">
+                   {# Below 1024px the sidebar is a full-screen drawer and has
+                      to get out of the way. At 1024px and up it is a permanent
+                      column, and closing it on every nav click made the whole
+                      navigation disappear after one use -- and _persistSidebar
+                      then remembered it closed. Only ever visible before now
+                      because the full page reload that followed hid the
+                      moment it happened. #}
+                   @click="if (!window.matchMedia('(min-width: 1024px)').matches) $dispatch('close-sidebar')">
                   <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                        aria-hidden="true" x-html="item.icon"></svg>
