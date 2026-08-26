@@ -1,12 +1,13 @@
 /* Daily local backups — one snapshot per profile per calendar day, rolling
    14-day window. Runs once on app boot for the active profile. */
 
-import { backupKey, backupNoteKey, snapshotKey, readJSON, writeJSON, removeKey, readRaw, writeRaw, profileKey } from "./persist.js";
+import { backupKey, backupNoteKey, snapshotKey, snapshotMetaKey, readJSON, writeJSON, removeKey, readRaw, writeRaw, profileKey } from "./persist.js";
 import { migrate, newId } from "./schema.js";
 
 const RETENTION_DAYS = 14;
 const BACKUP_PREFIX = "projectbudget:backup:";
 const SNAPSHOT_PREFIX = "projectbudget:snapshot:";
+const SNAPSHOT_META_PREFIX = "projectbudget:snapshot-meta:";
 const MAX_SNAPSHOTS = 20;
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -108,14 +109,31 @@ export function listSnapshots(profileId) {
     for (var i = 0; i < s.length; i++) {
       var k = s.key(i);
       if (!k || k.indexOf(prefix) !== 0) continue;
-      var raw = s.getItem(k) || "";
-      /* readJSON, not JSON.parse: a snapshot of any real profile is
-         stored compressed behind a "PB2:" prefix, and a raw parse of
-         that throws -- which silently hid every snapshot and stopped
-         the cap below from ever evicting. */
-      var rec = readJSON(k);
-      if (!rec) continue;
-      out.push({ id: rec.id, label: rec.label || "", createdAt: rec.createdAt, key: k, size: raw.length * 2 });
+      /* Skip the sidecars themselves -- they share the "snapshot" stem. */
+      if (k.indexOf(SNAPSHOT_META_PREFIX) === 0) continue;
+
+      var snapId = k.slice(prefix.length);
+      var raw = readRaw(k) || "";
+      var meta = readJSON(snapshotMetaKey(profileId, snapId));
+
+      if (!meta) {
+        /* No sidecar: either a snapshot taken before sidecars existed, or
+           one written by an older build. Pay the full read once and heal
+           it, so the next listing is cheap.
+
+           This read is why the sidecar exists. A snapshot record contains
+           the entire profile bundle, so reading one to recover three
+           metadata fields decompresses and parses ~512 KB. settings.njk
+           calls listSnapshots() four times per render pass, and each call
+           re-runs on every _listVersion bump. Measured at the 20-snapshot
+           cap that was 566 ms of blocked main thread per pass. */
+        var rec = readJSON(k);
+        if (!rec) continue;
+        meta = { id: rec.id || snapId, label: rec.label || "", createdAt: rec.createdAt };
+        writeJSON(snapshotMetaKey(profileId, meta.id), meta);
+      }
+
+      out.push({ id: meta.id, label: meta.label || "", createdAt: meta.createdAt, key: k, size: raw.length * 2 });
     }
   } catch (_e) {}
   out.sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; });
@@ -132,16 +150,22 @@ export function takeSnapshot(profile, label) {
     profile: profile,
   };
   writeJSON(snapshotKey(profile.id, snapId), rec);
-  /* Evict oldest if over cap. */
+  writeJSON(snapshotMetaKey(profile.id, snapId), { id: snapId, label: rec.label, createdAt: rec.createdAt });
+  /* Evict oldest if over cap. Both halves go, or the sidecar outlives
+     the snapshot it describes and the listing grows phantom rows. */
   var all = listSnapshots(profile.id);
   if (all.length > MAX_SNAPSHOTS) {
-    all.slice(MAX_SNAPSHOTS).forEach(function (s) { removeKey(s.key); });
+    all.slice(MAX_SNAPSHOTS).forEach(function (old) {
+      removeKey(old.key);
+      removeKey(snapshotMetaKey(profile.id, old.id));
+    });
   }
   return rec;
 }
 
 export function deleteSnapshot(profileId, snapshotId) {
   removeKey(snapshotKey(profileId, snapshotId));
+  removeKey(snapshotMetaKey(profileId, snapshotId));
 }
 
 export function renameSnapshot(profileId, snapshotId, newLabel) {
@@ -150,6 +174,8 @@ export function renameSnapshot(profileId, snapshotId, newLabel) {
   if (!rec) return null;
   rec.label = (newLabel || "").trim();
   writeJSON(key, rec);
+  /* Keep the sidecar in step, or the listing shows the old label. */
+  writeJSON(snapshotMetaKey(profileId, snapshotId), { id: rec.id || snapshotId, label: rec.label, createdAt: rec.createdAt });
   return rec;
 }
 

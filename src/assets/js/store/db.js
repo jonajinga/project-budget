@@ -192,8 +192,13 @@ export async function estimateUsage() {
    we find into Dexie. Idempotent: existing Dexie rows are overwritten
    only when localStorage has a newer updatedAt. Sets a meta flag so we
    don't repeat the scan on every boot. */
-export async function migrateLocalStorageIfNeeded(localStorage) {
-  if (!localStorage) return { migrated: false, reason: "no-localStorage" };
+export async function migrateLocalStorageIfNeeded(available) {
+  /* `available` is only an availability probe. Everything below reads the
+     real global, because readJSON() in persist.js resolves localStorage
+     from module scope and cannot be pointed at an injected object -- so
+     accepting one here and iterating it would mean half this function
+     read the parameter and half read the global. */
+  if (!available) return { migrated: false, reason: "no-localStorage" };
   try {
     var done = await getMeta("localStorage-migrated");
     if (done) return { migrated: false, reason: "already-done" };

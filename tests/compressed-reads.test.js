@@ -40,9 +40,24 @@ function makeFakeStorage() {
   };
 }
 
+/* Counts real decompressions so a test can assert on cost, not just on
+   output. listSnapshots() returning the right rows tells you nothing
+   about whether it read 3 fields or 512 KB to get them. */
+var decompressions = 0;
+function countingLZ() {
+  return {
+    compressToUTF16: LZString.compressToUTF16.bind(LZString),
+    decompressFromUTF16: function (v) {
+      decompressions += 1;
+      return LZString.decompressFromUTF16(v);
+    },
+  };
+}
+
 beforeEach(function () {
+  decompressions = 0;
   globalThis.window = globalThis.window || {};
-  globalThis.window.LZString = LZString;
+  globalThis.window.LZString = countingLZ();
   globalThis.localStorage = makeFakeStorage();
 });
 
@@ -225,6 +240,103 @@ describe("snapshots survive compression", () => {
     var back = backup.restoreSnapshot(big.id, rec.id);
 
     expect(back).not.toBeNull();
+    expect(back.transactions).toHaveLength(40);
+  });
+});
+
+describe("listing snapshots does not read the profile bundles", () => {
+  it("lists 20 snapshots without decompressing a single one", async () => {
+    var { backup } = await mods();
+    var big = await store(realProfile("Cheap", 40));
+    for (var i = 0; i < 20; i++) backup.takeSnapshot(big, "snap " + i);
+
+    decompressions = 0;
+    var snaps = backup.listSnapshots(big.id);
+
+    expect(snaps).toHaveLength(20);
+    /* The whole point of the sidecar. Before it, this was 20 full
+       decompress+parse cycles over ~512 KB each, four times per settings
+       render. */
+    expect(decompressions).toBe(0);
+  });
+
+  it("labels and ordering still come out right", async () => {
+    var { backup } = await mods();
+    var big = await store(realProfile("Ordered", 40));
+    backup.takeSnapshot(big, "first");
+    backup.takeSnapshot(big, "second");
+
+    var labels = backup.listSnapshots(big.id).map((s) => s.label).sort();
+    expect(labels).toEqual(["first", "second"]);
+  });
+
+  it("a snapshot written without a sidecar still lists, and heals itself", async () => {
+    var { backup, persist } = await mods();
+    var big = await store(realProfile("Legacy", 40));
+
+    /* Exactly what an existing user's storage looks like today. */
+    persist.writeJSON(persist.snapshotKey(big.id, "legacy-1"), {
+      id: "legacy-1", label: "from an older build",
+      createdAt: "2026-08-01T00:00:00.000Z", profile: big,
+    });
+
+    decompressions = 0;
+    var first = backup.listSnapshots(big.id);
+    expect(first).toHaveLength(1);
+    expect(first[0].label).toBe("from an older build");
+    expect(decompressions).toBe(1);
+
+    /* Healed on that first read, so it never costs again. */
+    decompressions = 0;
+    expect(backup.listSnapshots(big.id)).toHaveLength(1);
+    expect(decompressions).toBe(0);
+  });
+
+  it("eviction removes the sidecar too, so no phantom rows appear", async () => {
+    var { backup, persist } = await mods();
+    var big = await store(realProfile("Evicting", 40));
+    for (var i = 0; i < 25; i++) backup.takeSnapshot(big, "snap " + i);
+
+    /* Equality, not "<= 20". A "<=" assertion here passes when there are
+       no sidecars at all, which is exactly the state this test exists to
+       rule out -- it would have gone green against the old code. */
+    expect(countKeys("projectbudget:snapshot:" + big.id + ":")).toBe(20);
+    expect(countKeys("projectbudget:snapshot-meta:" + big.id + ":")).toBe(20);
+    expect(backup.listSnapshots(big.id)).toHaveLength(20);
+  });
+
+  it("deleting a snapshot removes both halves", async () => {
+    var { backup, persist } = await mods();
+    var big = await store(realProfile("Deletable", 40));
+    var rec = backup.takeSnapshot(big, "goodbye");
+
+    /* Assert the sidecar existed first. Without this the "it is gone"
+       assertions below pass against a build that never wrote one. */
+    expect(persist.readRaw(persist.snapshotMetaKey(big.id, rec.id))).not.toBeNull();
+
+    backup.deleteSnapshot(big.id, rec.id);
+
+    expect(persist.readRaw(persist.snapshotKey(big.id, rec.id))).toBeNull();
+    expect(persist.readRaw(persist.snapshotMetaKey(big.id, rec.id))).toBeNull();
+    expect(backup.listSnapshots(big.id)).toHaveLength(0);
+  });
+
+  it("renaming updates what the listing shows", async () => {
+    var { backup } = await mods();
+    var big = await store(realProfile("Renamable", 40));
+    var rec = backup.takeSnapshot(big, "old name");
+
+    backup.renameSnapshot(big.id, rec.id, "new name");
+
+    expect(backup.listSnapshots(big.id)[0].label).toBe("new name");
+  });
+
+  it("restoring still returns the whole profile", async () => {
+    var { backup } = await mods();
+    var big = await store(realProfile("Whole", 40));
+    var rec = backup.takeSnapshot(big, "full");
+
+    var back = backup.restoreSnapshot(big.id, rec.id);
     expect(back.transactions).toHaveLength(40);
   });
 });

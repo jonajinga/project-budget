@@ -9,8 +9,12 @@
  * what to delete.
  *
  * So this test writes a genuinely LZString-compressed trash record,
- * boots the app for real, and checks the record is still there. It is the
- * only place the load ORDER is actually exercised.
+ * boots the app for real, and checks the record is still there.
+ *
+ * The ordering guarantee comes from the FIRST test: the record survives
+ * only if LZString was ready when pruneTrash() ran. The third test
+ * evaluates after boot has finished, so it catches only the cruder
+ * failure of the library never loading at all -- a 404 or a rename.
  */
 
 import { readFileSync } from "node:fs";

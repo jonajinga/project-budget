@@ -150,6 +150,9 @@ export function pruneTrash() {
       var k = s.key(i);
       if (!k || k.indexOf("projectbudget:trash:") !== 0) continue;
       /* Only purge what we can positively read AND that has expired.
+         Caveat, pre-existing: a readable record with no deletedAt scores
+         against epoch 0 and is treated as long expired, so it still goes
+         on the first boot. Everything writeJSON stores here has one.
          This previously used a raw JSON.parse and treated any failure as
          "this is garbage, delete it" -- so a compressed trash record was
          destroyed on the next boot, against a UI promising 7 days to
