@@ -108,11 +108,14 @@ export function listSnapshots(profileId) {
     for (var i = 0; i < s.length; i++) {
       var k = s.key(i);
       if (!k || k.indexOf(prefix) !== 0) continue;
-      var raw = s.getItem(k) || "{}";
-      try {
-        var rec = JSON.parse(raw);
-        out.push({ id: rec.id, label: rec.label || "", createdAt: rec.createdAt, key: k, size: raw.length * 2 });
-      } catch (_e) {}
+      var raw = s.getItem(k) || "";
+      /* readJSON, not JSON.parse: a snapshot of any real profile is
+         stored compressed behind a "PB2:" prefix, and a raw parse of
+         that throws -- which silently hid every snapshot and stopped
+         the cap below from ever evicting. */
+      var rec = readJSON(k);
+      if (!rec) continue;
+      out.push({ id: rec.id, label: rec.label || "", createdAt: rec.createdAt, key: k, size: raw.length * 2 });
     }
   } catch (_e) {}
   out.sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; });
