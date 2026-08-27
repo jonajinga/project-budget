@@ -53,7 +53,14 @@
        data-tip="Drag to resize the sidebar. Double-click to reset to the default width."></div>
   <section class="app-main">
     {% include "partials/sample-banner.njk" %}
-    {{ content | safe }}
+    {# The router swaps THIS subtree and nothing else. The sidebar, header,
+       FAB, toasts and -- the whole point -- the Alpine store behind them all
+       survive the navigation, so moving between screens no longer rebuilds
+       the profile from localStorage.
+
+       First paint is still server-rendered into this div, so the first screen
+       never waits on a fetch and the app still works with JS disabled. #}
+    <div id="app-view">{{ content | safe }}</div>
   </section>
   {# Loading overlay — visible only while the store is restoring
      data on first paint. Self-cleans the moment the store flips
@@ -154,5 +161,14 @@
     </script>
   {% endif %}
   <script src="/assets/js/util/calc.js?v={{ build.hash }}" defer></script>
+  {# Client-side routing for /app/*. Loads last so Alpine and the view
+     factories are already in flight; it only attaches listeners on start and
+     resolves Alpine lazily at navigation time. A route whose fragment cannot
+     be fetched falls back to a full page load, so this is additive: with the
+     module missing or broken, the app behaves exactly as it did before. #}
+  <script type="module">
+    import { startRouter } from "/assets/js/ui/router.js?v={{ build.hash }}";
+    startRouter();
+  </script>
   {# dialog.js is loaded once in base.njk (covers app + marketing pages). #}
 {% endblock %}

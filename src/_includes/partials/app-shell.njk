@@ -23,6 +23,11 @@
   <nav class="app-nav"
        aria-label="App sections"
        x-data="appNav(window.__pbAppNav, window.__pbAppNavUrl)"
+       {# currentUrl is baked at build time and this nav is never re-rendered,
+          so under the router aria-current and the active highlight stayed on
+          whichever route was loaded first, for the whole session. axe cannot
+          catch that: it only ever sees one route at a time. #}
+       @pb:navigated.window="onRouteChange($event.detail.path)"
        x-init="init()">
     <template x-for="(sec, i) in sections" :key="sec.key">
       <div class="app-nav__group-wrap">
@@ -43,7 +48,14 @@
                 <a :href="item.url"
                    class="app-nav__link"
                    :aria-current="item.url === currentUrl ? 'page' : null"
-                   @click="$dispatch('close-sidebar')">
+                   {# Below 1024px the sidebar is a full-screen drawer and has
+                      to get out of the way. At 1024px and up it is a permanent
+                      column, and closing it on every nav click made the whole
+                      navigation disappear after one use -- and _persistSidebar
+                      then remembered it closed. Only ever visible before now
+                      because the full page reload that followed hid the
+                      moment it happened. #}
+                   @click="if (!window.matchMedia('(min-width: 1024px)').matches) $dispatch('close-sidebar')">
                   <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                        aria-hidden="true" x-html="item.icon"></svg>
@@ -238,6 +250,20 @@ function appNav(sections, currentUrl) {
       try { acctStored = localStorage.getItem("projectbudget:nav:collapsed:accounts"); }
       catch (_e) {}
       this.collapsed.accounts = acctStored === "1";
+    },
+
+    /* Router navigations do not reload the document, so the active state has
+       to be moved by hand. Expanding the section that now contains the active
+       page mirrors what init() does on a cold load. */
+    onRouteChange(path) {
+      if (!path) return;
+      this.currentUrl = path;
+      var self = this;
+      this.sections.forEach(function (sec) {
+        if (sec.items.some(function (i) { return i.url === path; })) {
+          self.collapsed[sec.key] = false;
+        }
+      });
     },
 
     toggle(key) {

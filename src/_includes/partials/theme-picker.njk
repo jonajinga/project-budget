@@ -99,10 +99,23 @@ function themePicker() {
     init() {
       var self = this;
       this._sync();
-      window.addEventListener("pb:theme-change", function () {
+      /* Held so destroy() can detach it. This partial is included twice: once
+         in the header, which is outside #app-view and lives for the session,
+         and once inside settings.njk, which the router re-creates on every
+         visit. The second one accumulated a listener per visit -- small, but
+         real, and measured climbing 2 -> 7 over 25 navigations. */
+      this._onThemeChange = function () {
         self._tick += 1;
         self._sync();
-      });
+      };
+      window.addEventListener("pb:theme-change", this._onThemeChange);
+    },
+
+    destroy() {
+      if (this._onThemeChange) {
+        window.removeEventListener("pb:theme-change", this._onThemeChange);
+        this._onThemeChange = null;
+      }
     },
     _sync() {
       var PB = window.ProjectBudget;

@@ -1,8 +1,21 @@
+{# The public site: homepage, marketing pages, docs and blog.
+
+   These used to render inside the app shell, which meant every visitor to
+   the front page downloaded the whole budgeting app -- the store, its 13
+   slices, and the per-route view scripts -- to read a paragraph. They also
+   got a sidebar of Balances for a profile they may not have.
+
+   Alpine IS still loaded, because partials/header.njk and
+   partials/theme-picker.njk are Alpine components and render on every page.
+   The store is not: every $store reference in header.njk sits inside its
+   `isApp` branch. #}
+
 {% extends "layouts/base.njk" %}
 
 {% block bodyClass %}layout-marketing{% endblock %}
 
 {% block scripts %}
+  <script src="/assets/js/vendor/alpine.min.js" defer></script>
   {# instant.page prefetches links on hover/touch. Marketing only. #}
   <script src="/assets/js/vendor/instantpage.min.js" type="module" defer></script>
 {% endblock %}

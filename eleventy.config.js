@@ -182,6 +182,101 @@ export default function (eleventyConfig) {
     api.getFilteredByGlob("src/blog/posts/*.md").sort((a, b) => b.date - a.date)
   );
 
+  // ---- View fragments for the single-shell router ------------------------
+  //
+  // Every /app/* route keeps rendering as its own full page -- that is the
+  // first paint, and the fallback when the router cannot fetch a fragment.
+  // This additionally writes the inner HTML of each page's #app-view mount to
+  // /app/_views/<slug>.html, which is what the router swaps in.
+  //
+  // Extracted from the BUILT page rather than re-rendered from the template.
+  // A separately-rendered fragment can drift from the page it is meant to
+  // mirror; a slice of the real output cannot. It also means app pages need no
+  // front-matter changes -- they all carry eleventyExcludeFromCollections,
+  // so a collection could never have seen them anyway.
+  eleventyConfig.on("eleventy.after", async ({ dir }) => {
+    const { readdirSync, readFileSync, writeFileSync, mkdirSync } = await import("node:fs");
+    const { join, relative, sep } = await import("node:path");
+
+    const out = dir && dir.output ? dir.output : "_site";
+    const appDir = join(out, "app");
+    const viewsDir = join(appDir, "_views");
+
+    /* Must stay in step with slugFor() in src/assets/js/ui/router.js. A
+       mismatch does not error -- the fetch 404s and the router quietly falls
+       back to a full page load, which looks like "the router did nothing". */
+    const slugFor = (routePath) => {
+      const rest = routePath.replace(/^\/app\//, "").replace(/\/$/, "");
+      /* "_root", never "index": a fragment named index.html inside _views
+         makes /app/_views/ look like a route to anything that walks the build
+         for index.html -- which is how the e2e route list is built. */
+      return rest === "" ? "_root" : rest.replace(/\//g, "--");
+    };
+
+    /* innerHTML of the first <div id=app-view>, by depth-counting rather than
+       regex: the mount contains hundreds of nested divs and a lazy match would
+       stop at the first </div>. tinyHTML has already stripped attribute quotes
+       by this point, so match both spellings. */
+    const extractMount = (html) => {
+      const openIdx = html.search(/<div[^>]*\sid=["']?app-view["']?[^>]*>/i);
+      if (openIdx === -1) return null;
+      const tagEnd = html.indexOf(">", openIdx);
+      if (tagEnd === -1) return null;
+
+      let depth = 1;
+      let i = tagEnd + 1;
+      const start = i;
+      const re = /<\/?div\b/gi;
+      re.lastIndex = i;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        depth += m[0][1] === "/" ? -1 : 1;
+        if (depth === 0) return html.slice(start, m.index);
+        i = re.lastIndex;
+      }
+      return null;
+    };
+
+    const pages = [];
+    const walk = (d) => {
+      for (const entry of readdirSync(d, { withFileTypes: true })) {
+        const full = join(d, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === "_views") continue;
+          walk(full);
+        } else if (entry.name === "index.html") {
+          pages.push(full);
+        }
+      }
+    };
+
+    try {
+      walk(appDir);
+    } catch (_e) {
+      return; /* no app directory in this build */
+    }
+
+    mkdirSync(viewsDir, { recursive: true });
+    let written = 0;
+    const skipped = [];
+
+    for (const file of pages) {
+      const routePath = "/app/" + relative(appDir, join(file, "..")).split(sep).join("/").replace(/^$/, "") + "/";
+      const html = readFileSync(file, "utf8");
+      const inner = extractMount(html);
+      if (inner === null) { skipped.push(routePath); continue; }
+      writeFileSync(join(viewsDir, slugFor(routePath.replace("//", "/")) + ".html"), inner, "utf8");
+      written += 1;
+    }
+
+    console.log(`[views] ${written} route fragment(s) written to /app/_views/`);
+    if (skipped.length) {
+      /* Loud on purpose. A skipped route silently degrades to a full page
+         load, which is the exact symptom this whole change exists to remove. */
+      console.warn(`[views] NO #app-view mount found in ${skipped.length}: ${skipped.join(", ")}`);
+    }
+  });
+
   // ---- Pagefind index ----------------------------------------------------
   // Build the search index after the site is written. Indexes only the
   // marketing surface (docs, blog, glossary, accessibility, changelog,

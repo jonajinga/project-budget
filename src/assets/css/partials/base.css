@@ -8,7 +8,12 @@ body {
 
 /* Inside the app shell, prefer DM Sans — serif body fonts feel
    literary for prose but slow down scanning of tables and inputs. */
-body.layout-app {
+body.layout-app,
+/* The public site carries the same body treatment. Until the split in
+   layouts/marketing.njk, every page WAS an app page, so these rules applied
+   everywhere -- listing .layout-marketing here is what keeps the split
+   structural instead of a silent restyle of the marketing pages. */
+body.layout-marketing {
   font-family: var(--font-ui);
   font-size: 1rem;
 }

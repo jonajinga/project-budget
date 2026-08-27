@@ -22,31 +22,45 @@
     "/app/profiles/",
     "/app/diagnostics/",
   ];
-  for (var i = 0; i < ALLOW.length; i++) {
-    if (location.pathname.indexOf(ALLOW[i]) === 0) return;
-  }
-
   /* Loop-breaker. If anything ever goes wrong with the flag, one bounce per
      tab is survivable; a redirect loop is not. */
   var LOOP_KEY = "projectbudget:first-run-bounced";
-  try {
-    if (sessionStorage.getItem(LOOP_KEY)) return;
-  } catch (_e) { return; }
 
-  document.addEventListener("alpine:initialized", function () {
+  /* Evaluated per CHECK, not once at load.
+     These used to be early returns from the outer function, which meant a
+     visitor who landed on an allowed page never registered the gate at all.
+     With the router that page no longer reloads, so navigating from
+     /app/import/ to /app/budget/ with zero profiles dropped them on an empty
+     Budget instead of the setup wizard. */
+  function allowedHere() {
+    if (location.pathname.indexOf("/app/") !== 0) return true;
+    for (var i = 0; i < ALLOW.length; i++) {
+      if (location.pathname.indexOf(ALLOW[i]) === 0) return true;
+    }
+    return false;
+  }
+
+  function check() {
+    if (allowedHere()) return;
+    try {
+      if (sessionStorage.getItem(LOOP_KEY)) return;
+    } catch (_e) { return; }
     var store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
     if (!store) return;
-    window.Alpine.effect(function () {
-      /* Wait for boot to settle: needsFirstRun is only meaningful once the
-         profile index has actually been read. */
-      if (store.loading) return;
-      if (!store.needsFirstRun) return;
-      if (store.profiles && store.profiles.length) return;
-      try { sessionStorage.setItem(LOOP_KEY, "1"); } catch (_e) {}
-      /* replace(), not assign(): the empty app page should not sit in history
-         as a Back target from the wizard. */
-      location.replace("/app/welcome/");
-    });
+    /* Wait for boot to settle: needsFirstRun is only meaningful once the
+       profile index has actually been read. */
+    if (store.loading) return;
+    if (!store.needsFirstRun) return;
+    if (store.profiles && store.profiles.length) return;
+    try { sessionStorage.setItem(LOOP_KEY, "1"); } catch (_e) {}
+    /* replace(), not assign(): the empty app page should not sit in history
+       as a Back target from the wizard. */
+    location.replace("/app/welcome/");
+  }
+
+  document.addEventListener("alpine:initialized", function () {
+    if (window.Alpine && window.Alpine.effect) window.Alpine.effect(check);
   });
+  window.addEventListener("pb:navigated", check);
 })();
 </script>
