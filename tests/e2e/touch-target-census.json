@@ -1,13 +1,13 @@
 {
   "totals": {
-    "measured": 2429,
-    "failAA": 327,
-    "failAAA": 1134
+    "measured": 2601,
+    "failAA": 331,
+    "failAAA": 1958
   },
   "failing": {
     "a": {
-      "smallest": "153x18",
-      "count": 88,
+      "smallest": "156x16",
+      "count": 93,
       "routes": [
         "/app/",
         "/app/about-this-profile/",
@@ -38,7 +38,7 @@
       "compact": false
     },
     "a.report-month-link": {
-      "smallest": "69x21",
+      "smallest": "68x18",
       "count": 49,
       "routes": [
         "/app/reports/income-expense/",
@@ -58,9 +58,17 @@
     },
     "a.cal__entry.cal__entry--clickable": {
       "smallest": "6x6",
-      "count": 15,
+      "count": 13,
       "routes": [
         "/app/calendar/"
+      ],
+      "compact": false
+    },
+    "button.acct-combo__chevron": {
+      "smallest": "21x21",
+      "count": 1,
+      "routes": [
+        "/app/register/"
       ],
       "compact": false
     }
