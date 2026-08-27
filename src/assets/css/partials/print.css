@@ -1,6 +1,11 @@
 @media print {
-  /* Force a light, high-contrast palette for paper. */
-  :root, [data-theme="dark"] {
+  /* Force a light, high-contrast palette for paper.
+     Was `:root, [data-theme="dark"]`, which covered exactly two of the
+     thirteen themes -- printing from solarized, dracula, nord, gruvbox,
+     one-dark, tokyo-night, catppuccin, rose-pine or ink kept that theme's
+     colours and put dark ink on dark paper. print.css is last in
+     CSS_PARTIAL_ORDER, so equal specificity wins over every named preset. */
+  :root, [data-theme] {
     --bg: #ffffff;
     --bg-elevated: #ffffff;
     --bg-alt: #ffffff;

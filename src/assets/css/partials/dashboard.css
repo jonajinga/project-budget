@@ -109,7 +109,7 @@
 .dashboard__period button:hover { background: var(--bg-alt); }
 .dashboard__period button.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--fg-on-accent);
 }
 
 /* ---- Top-categories pure-CSS bar list ----------------------------- */

@@ -1,4 +1,9 @@
-<div class="fab-quick-add" x-data="quickAddFab()" x-init="init()">
+{# The tab bar's centre button opens THIS modal rather than duplicating the
+   form: one add path, one keyboard shortcut, nothing to keep in sync. Below
+   768px the trigger below is hidden (tab-bar.css) and the tab bar is the
+   only entry point; above it, the FAB is unchanged. #}
+<div class="fab-quick-add" x-data="quickAddFab()" x-init="init()"
+     @open-quick-add.window="open = true">
   <button type="button" class="fab-quick-add__btn"
           @click="open = true"
           x-show="$store.budget.profile"

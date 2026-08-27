@@ -42,7 +42,7 @@
 .app-shell {
   display: grid;
   grid-template-columns: 1fr;
-  min-height: calc(100vh - 5rem);
+  min-height: calc(100dvh - 5rem);
 }
 @media (min-width: 1024px) {
   .app-shell { grid-template-columns: var(--app-sidebar-width) 6px 1fr; }

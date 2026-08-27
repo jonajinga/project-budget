@@ -1,0 +1,36 @@
+{# Empty state for a route whose content is x-show-gated.
+
+   Six routes rendered literally blank with no data -- /app/budget/,
+   /app/calendar/, /app/payees/, /app/scheduled/, /app/rules/ and the
+   reports -- because their root section is hidden until there is something
+   to show, and nothing was rendered in its place. A new user's first sight
+   of the budget screen was an empty page with no explanation and no way
+   forward.
+
+   Usage -- import the macro, then call it with:
+     when    an Alpine expression; the state shows while it is true
+     title   one short line
+     body    one or two sentences saying what to do next
+     cta     optional button label
+     action  optional Alpine expression run on click
+
+   Nunjucks comments do not nest, so this block deliberately contains no
+   template syntax: a sample with its own comment marker closes THIS
+   comment early and the remainder is parsed as markup ("unexpected end of
+   comment", which points at the calling page rather than at this file).
+
+   `cta` and `action` are optional -- some routes have nothing useful to
+   offer beyond an explanation, and a button that goes nowhere is worse
+   than no button. #}
+
+{% macro emptyState(when, title, body, cta, action) %}
+<div class="empty-state" x-show="{{ when }}" x-cloak>
+  <p class="empty-state__title">{{ title }}</p>
+  <p class="empty-state__body">{{ body }}</p>
+  {% if cta %}
+  <div class="empty-state__actions">
+    <button type="button" class="btn btn--primary" @click="{{ action }}">{{ cta }}</button>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

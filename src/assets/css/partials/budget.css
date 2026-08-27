@@ -100,6 +100,65 @@
   .budget__activity::before,
   .budget__available::before { display: none; }
 }
+/* ── Phone layout (below 768px) ───────────────────────────────────────
+   The stacked layout above put each of Assigned / Outflow / Available in
+   its own block with a micro-label over it, which cost roughly 270px per
+   category -- about three categories per screen on a phone, for a view
+   whose entire job is comparing many categories at once.
+
+   Same markup, different shape: the name and the number that actually
+   matters (Available) share the first line, and the two supporting
+   numbers sit under it. The micro-labels go: with only two numbers left
+   and Available carried on the headline row, the labels were repeating
+   the same three words for every category on the page.
+
+   Not touched: the assign input is still the assign input, so the
+   interaction is unchanged. Above 768px this block does not apply and
+   the existing 900px horizontal layout is untouched. */
+@media (max-width: 767px) {
+  .budget__group-header,
+  .budget__row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "cat       available actions"
+      "assigned  outflow   actions";
+    row-gap: 4px;
+    column-gap: var(--space-2xs);
+    padding: 10px var(--space-sm) 11px;
+  }
+
+  /* The headline pair. */
+  .budget__category  { align-self: center; min-width: 0; }
+  .budget__available { align-self: center; text-align: right; font-weight: 640; }
+
+  /* The supporting pair, quieter and smaller. */
+  .budget__assigned,
+  .budget__activity { font-size: var(--fs-xs); }
+  .budget__activity { text-align: right; color: var(--fg-muted); align-self: center; }
+
+  /* Three words repeated down the whole page, once per category. The
+     headline row makes Available unambiguous by position, and the two
+     supporting numbers are read as a pair. */
+  .budget__assigned::before,
+  .budget__activity::before,
+  .budget__available::before { display: none; }
+
+  /* The assign field is the only control in the row, so it sets the row's
+     height. Cap its width so it reads as a field rather than a banner, and
+     keep it on the 44px touch floor -- it is a number entry people tap
+     repeatedly, and this is not the place to shave pixels. */
+  .budget__assigned input,
+  .budget__assigned .budget__assign-input {
+    max-width: 8.5rem;
+    text-align: right;
+  }
+
+  .budget__group-header {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
 /* Column header strip — only useful when rows lay out horizontally
    (>=900px). Below that, the mobile micro-labels do the job. */
 .budget__column-header { display: none; }
@@ -615,7 +674,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 .month-strip__tab.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--fg-on-accent);
 }
 .month-strip__tab.is-active.is-current::after { background: #fff; }
 
@@ -732,13 +791,13 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   border-color: var(--accent);
 }
 .budget-stat--accent .budget-stat__label { color: rgba(255, 255, 255, 0.85); }
-.budget-stat--accent .budget-stat__value { color: #fff; }
+.budget-stat--accent .budget-stat__value { color: var(--fg-on-accent); }
 .budget-stat--danger {
   background: var(--danger);
   border-color: var(--danger);
 }
 .budget-stat--danger .budget-stat__label { color: rgba(255, 255, 255, 0.85); }
-.budget-stat--danger .budget-stat__value { color: #fff; }
+.budget-stat--danger .budget-stat__value { color: var(--fg-on-accent); }
 .budget-stat--muted {
   background: var(--bg-alt);
   border-color: var(--border);
@@ -1714,7 +1773,7 @@ body.pb-dragging { overflow: visible !important; }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.cal-toolbar__view.is-active { background: var(--accent); color: #fff; }
+.cal-toolbar__view.is-active { background: var(--accent); color: var(--fg-on-accent); }
 
 .cal-toolbar__nav {
   display: flex;
@@ -1846,7 +1905,7 @@ body.pb-dragging { overflow: visible !important; }
   min-width: 32px;
 }
 .cal-toolbar__span-btn:hover { color: var(--fg); }
-.cal-toolbar__span-btn.is-active { background: var(--accent); color: #fff; }
+.cal-toolbar__span-btn.is-active { background: var(--accent); color: var(--fg-on-accent); }
 .cal-toolbar__span-custom { display: inline-flex; align-items: center; }
 .cal-toolbar__span-custom input {
   width: 56px;
@@ -2437,7 +2496,7 @@ body.pb-dragging { overflow: visible !important; }
 .cal__cell--today { background: color-mix(in oklab, var(--accent) 8%, var(--bg-elevated)); }
 .cal__cell--today .cal__day-num {
   background: var(--accent);
-  color: #fff;
+  color: var(--fg-on-accent);
   box-shadow: 0 0 0 2px var(--bg-elevated);
 }
 
@@ -2946,7 +3005,7 @@ body.pb-dragging { overflow: visible !important; }
 }
 .cal-mini__wknum--btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--fg-on-accent);
   transform: scale(1.06);
 }
 .cal-mini__wknum--btn:focus-visible {
@@ -2984,7 +3043,7 @@ body.pb-dragging { overflow: visible !important; }
   background: var(--accent) !important;
   box-shadow: 0 0 0 1px var(--accent);
 }
-.cal-mini__cell--today .cal-mini__day { color: #fff; font-weight: 700; }
+.cal-mini__cell--today .cal-mini__day { color: var(--fg-on-accent); font-weight: 700; }
 /* Any cell tinted with the accent — even at lower intensity (≥25%)
    — needs white text + white amount colors. The default --fg sits
    too close to the accent on light themes (GitHub Light, Solarized
@@ -2995,7 +3054,7 @@ body.pb-dragging { overflow: visible !important; }
 .cal-mini__cell--hot .cal-mini__day,
 .cal-mini__cell--hot .cal-mini__day .amount--inflow,
 .cal-mini__cell--hot .cal-mini__day .amount--outflow,
-.cal-mini__cell--hot .cal-mini__day .cal-mini__day-zero { color: #fff !important; }
+.cal-mini__cell--hot .cal-mini__day .cal-mini__day-zero { color: var(--fg-on-accent) !important; }
 .cal-mini__day {
   flex: 1;
   background: transparent;
@@ -3010,7 +3069,7 @@ body.pb-dragging { overflow: visible !important; }
   align-items: center;
   justify-content: center;
 }
-.cal-mini__day:hover { background: var(--accent); color: #fff; }
+.cal-mini__day:hover { background: var(--accent); color: var(--fg-on-accent); }
 .cal-mini__day:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
@@ -3025,7 +3084,7 @@ body.pb-dragging { overflow: visible !important; }
 }
 .cal-mini__day--net:hover .amount--inflow,
 .cal-mini__day--net:hover .amount--outflow,
-.cal-mini__day--net:hover .cal-mini__day-zero { color: #fff; }
+.cal-mini__day--net:hover .cal-mini__day-zero { color: var(--fg-on-accent); }
 .cal-mini__day-zero { color: var(--fg-subtle); }
 
 /* When the year view is in "Show net $" mode, hide the WK column
@@ -3706,6 +3765,21 @@ body.pb-dragging { overflow: visible !important; }
 .rec-payee-stack__memo {
   font-size: var(--fs-xs);
   color: var(--fg-muted);
+  /* 21px tall, which misses WCAG 2.2 target-size (24x24 minimum). Only
+     visible once base.css's 44px rule was rewritten at zero specificity: the
+     old (0,1,1) selector had been forcing every button to 44px and hiding
+     what these actually were.
+
+     A ::before hit-area extension was tried first, mirroring .btn::before.
+     It does widen the real tap target, but axe measures
+     getBoundingClientRect and a pseudo-element is invisible to it -- the
+     same blind spot the touch-target census works around with an
+     elementFromPoint probe. So the element itself has to carry the height.
+     3px per row is a cheap price for a control that is genuinely too small
+     to hit. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 .rec-payee-stack__memo.is-placeholder {
   color: var(--fg-subtle);
@@ -3730,7 +3804,7 @@ body.pb-dragging { overflow: visible !important; }
 .rec-post {
   background: var(--ok);
   border-color: var(--ok);
-  color: #fff;
+  color: var(--fg-on-accent);
   padding: 0.2rem 0.55rem;
   min-height: 26px;
   font-size: var(--fs-xs);
@@ -3740,7 +3814,7 @@ body.pb-dragging { overflow: visible !important; }
 .rec-post:hover {
   background: var(--ok);
   border-color: var(--ok);
-  color: #fff;
+  color: var(--fg-on-accent);
   filter: brightness(1.06);
 }
 .rec-summary__label {

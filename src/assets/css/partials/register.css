@@ -88,7 +88,7 @@
   border-radius: 2px;
   cursor: pointer;
   align-self: stretch;
-  color: #fff;
+  color: var(--fg-on-accent);
   transition: background var(--t-fast);
 }
 .cell-sign-flip.is-out { background: var(--danger); }
@@ -274,7 +274,7 @@
   position: absolute;
   inset: -13px;
 }
-.cleared-toggle[aria-pressed="true"] { background: var(--ok); color: #fff; border-color: var(--ok); }
+.cleared-toggle[aria-pressed="true"] { background: var(--ok); color: var(--fg-on-accent); border-color: var(--ok); }
 .cleared-toggle[data-locked="true"] { opacity: 0.6; cursor: not-allowed; }
 .cleared-toggle:focus-visible {
   outline: 2px solid var(--accent);

@@ -118,11 +118,11 @@
    accent would collapse contrast to 1:1. */
 .site-nav__link--cta {
   background: var(--accent);
-  color: #fff;
+  color: var(--fg-on-accent);
   padding: 0.55rem 1.1rem;
   border-radius: var(--radius);
 }
-.site-nav__link--cta:hover { background: var(--accent-hover); color: #fff; }
+.site-nav__link--cta:hover { background: var(--accent-hover); color: var(--fg-on-accent); }
 
 .site-header__actions { display: flex; align-items: center; gap: var(--space-2xs); flex-shrink: 0; margin-left: auto; }
 
@@ -688,9 +688,9 @@ button.search-result:focus-visible {
     top: calc(4rem - 50px);
     inset: auto;
     width: auto;
-    height: calc(100vh - 4rem + 50px);
+    height: calc(100dvh - 4rem + 50px);
     height: calc(100svh - 4rem + 50px);
-    min-height: calc(100vh - 4rem + 50px);
+    min-height: calc(100dvh - 4rem + 50px);
     transform: none;
     padding-top: var(--space-sm);
     padding-bottom: var(--space-sm);
@@ -969,7 +969,7 @@ button.search-result:focus-visible {
   background: linear-gradient(135deg,
     var(--accent),
     color-mix(in oklab, var(--accent), var(--ink) 30%));
-  color: #fff;
+  color: var(--fg-on-accent);
   font-family: var(--font-display);
   font-size: 0.8rem;
   font-weight: 700;
@@ -1081,7 +1081,7 @@ button.search-result:focus-visible {
   background: linear-gradient(135deg,
     var(--accent),
     color-mix(in oklab, var(--accent), var(--ink) 30%));
-  color: #fff;
+  color: var(--fg-on-accent);
 }
 .profile-switcher__item-name {
   min-width: 0;
