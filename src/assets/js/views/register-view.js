@@ -71,6 +71,27 @@ function registerView() {
       frequency: "monthly", customInterval: 1, customUnit: "months", nextDate: "",
     },
 
+    /* Alpine calls this when the view's element is torn down -- which now
+
+       happens on every router navigation away from the register. */
+
+    destroy() {
+
+      if (this._mq && this._onMQChange) {
+
+        if (this._mq.removeEventListener) this._mq.removeEventListener("change", this._onMQChange);
+
+        else if (this._mq.removeListener) this._mq.removeListener(this._onMQChange);
+
+      }
+
+      this._mq = null;
+
+      this._onMQChange = null;
+
+    },
+
+
     init() {
       var params = new URL(window.location.href).searchParams;
       var acct = params.get("account");
@@ -99,6 +120,12 @@ function registerView() {
       var mq = window.matchMedia("(max-width: 767px)");
       this.isMobile = mq.matches;
       var onChange = function (e) { self.isMobile = e.matches; };
+      /* Held on the component so destroy() can detach it. The router
+         re-creates this view on every visit to the register without ever
+         discarding the document, so an un-removed listener here leaked one
+         per visit along with the closure over the whole component. */
+      this._mq = mq;
+      this._onMQChange = onChange;
       if (mq.addEventListener) mq.addEventListener("change", onChange);
       else if (mq.addListener) mq.addListener(onChange);
 

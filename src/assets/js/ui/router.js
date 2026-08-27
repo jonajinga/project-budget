@@ -56,6 +56,14 @@ const CHART_SCRIPTS = [
   "/assets/js/vendor/chartjs-plugin-datalabels.min.js",
 ];
 
+/* layouts/app.njk carries FOUR page.url-keyed script blocks, not three. The
+   fourth is this one, and dropping it made Export PDF silently do nothing on
+   all 13 reports whenever the user arrived by clicking rather than by URL --
+   every report guards with `if (!window.pbExportReportPDF) return;`, so there
+   was no error, no dialog, no download. */
+const REPORT_ROUTES = /^\/app\/reports\//;
+const REPORT_SCRIPTS = ["/assets/js/ui/pdf-export.js"];
+
 const loaded = new Set();
 const fragmentCache = new Map();
 
@@ -77,6 +85,8 @@ function slugFor(path) {
  * factory to window (x-data="budgetView()" needs a global), and they are not
  * ES modules. Resolves on load so the caller can await it. */
 function loadScript(src) {
+  /* Keyed on pathname so a server-rendered "/x.js?v=hash" and a router-
+     injected "/x.js" are recognised as the same file. */
   if (loaded.has(src)) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const el = document.createElement("script");
@@ -93,6 +103,7 @@ async function loadDepsFor(path) {
   if (VIEW_SCRIPTS[path]) deps.push(VIEW_SCRIPTS[path]);
   if (VENDOR_FOR_ROUTE[path]) deps.push(...VENDOR_FOR_ROUTE[path]);
   if (CHART_ROUTES.test(path)) deps.push(...CHART_SCRIPTS);
+  if (REPORT_ROUTES.test(path)) deps.push(...REPORT_SCRIPTS);
   /* Sequential, not Promise.all: d3-sankey needs d3 already on window, and
      the datalabels plugin needs Chart. Order is the contract. */
   for (const src of deps) await loadScript(src);
@@ -117,6 +128,38 @@ function runScripts(container) {
     for (const { name, value } of Array.from(old.attributes)) fresh.setAttribute(name, value);
     fresh.textContent = old.textContent;
     old.replaceWith(fresh);
+  }
+}
+
+/* The other half of that fourth block: an inline script that records report
+   visits so the hub can show a Recents strip. Under the router it never ran,
+   so projectbudget:report:recent stayed null and the strip stayed empty. */
+function logReportVisit(path) {
+  if (path === "/app/reports/" || !/^\/app\/reports\/[^/]+\/$/.test(path)) return;
+  try {
+    const slug = path.split("/").filter(Boolean).pop();
+    const key = "projectbudget:report:recent";
+    const raw = localStorage.getItem(key);
+    let list = raw ? JSON.parse(raw) : [];
+    list = (list || []).filter((e) => e && e.slug && e.slug !== slug);
+    list.unshift({ slug, visited: new Date().toISOString() });
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 10)));
+  } catch (_e) { /* private browsing -- skip, as the inline version did */ }
+}
+
+/* Chart.js parks its instance on the canvas and keeps a ResizeObserver on it.
+   Swapping the fragment detaches the canvas but the instance survives in
+   Chart.instances, holding its data and its observer. Measured: instances
+   grew 2 -> 45 over 75 navigations with two canvases actually in the DOM.
+   Nothing did this before because the document itself used to be discarded. */
+function destroyChartsIn(root) {
+  const Chart = window.Chart;
+  for (const canvas of Array.from(root.querySelectorAll("canvas"))) {
+    try {
+      const inst = (Chart && Chart.getChart && Chart.getChart(canvas)) || canvas.__pbChart;
+      if (inst && typeof inst.destroy === "function") inst.destroy();
+      canvas.__pbChart = null;
+    } catch (_e) { /* a half-built chart is not worth failing a navigation */ }
   }
 }
 
@@ -170,6 +213,7 @@ export async function navigate(rawPath, { push = true, restoreScroll = null } = 
      * The observer is asynchronous, so the swap settles a microtask later
      * rather than synchronously. Nothing here depends on it being synchronous.
      */
+    destroyChartsIn(mount);
     mount.innerHTML = html;
     runScripts(mount);
 
@@ -197,6 +241,10 @@ export async function navigate(rawPath, { push = true, restoreScroll = null } = 
        pushState that is ours to do. */
     window.scrollTo(0, restoreScroll == null ? 0 : restoreScroll);
 
+    logReportVisit(path);
+    /* The sidebar bakes currentUrl at build time and is never re-rendered, so
+       aria-current and the active highlight stayed on the first route for the
+       whole session. partials/app-shell.njk listens for this. */
     window.dispatchEvent(new CustomEvent("pb:navigated", { detail: { path } }));
     /* Deliberately NOT dispatching close-sidebar here. The sidebar links
        already dispatch it themselves (partials/app-shell.njk), and doing it
@@ -238,6 +286,16 @@ function onClick(e) {
 
 export function startRouter() {
   if (!document.getElementById(MOUNT_ID)) return;
+
+  /* Seed from the scripts the server already rendered. The `loaded` set only
+     knew about scripts the router itself injected, so the first hop off /app/
+     re-fetched and re-EXECUTED Chart.js and its datalabels plugin -- ~200 KB
+     re-parsed, window.Chart replaced, and the dashboard's live chart
+     instances orphaned against the old constructor. */
+  for (const el of Array.from(document.querySelectorAll("script[src]"))) {
+    try { loaded.add(new URL(el.src, location.href).pathname); } catch (_e) {}
+  }
+
   document.addEventListener("click", onClick);
   window.addEventListener("popstate", (e) => {
     const path = (e.state && e.state.path) || location.pathname;
