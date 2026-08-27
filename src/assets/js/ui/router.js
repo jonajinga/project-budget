@@ -163,6 +163,78 @@ function destroyChartsIn(root) {
   }
 }
 
+/* Release the outgoing view's Alpine state before dropping it.
+ *
+ * Alpine bindings register effects that SUBSCRIBE to the store. The store
+ * therefore holds a reference to every effect, each effect holds its
+ * component scope, and each scope holds its DOM. Detaching the nodes is not
+ * enough -- the subscription is what keeps them alive, so a view is retained
+ * in full until its effects are released. Measured on this app: 2 KB per
+ * navigation between static routes, 23 KB between light Alpine ones, and
+ * 923 KB between /app/register/ and /app/budget/. It scales with the number
+ * of bindings, which is exactly what an un-released effect list looks like.
+ *
+ * Alpine.destroyTree() is what releases them, and calling it is why this is
+ * fiddly. Two hazards, both learned the hard way:
+ *
+ *  1. NEVER destroyTree(mount). #app-view sits inside the shell's x-data and
+ *     carries an inherited _x_dataStack; wiping it leaves the next initTree
+ *     unable to rebuild the scope chain, and Alpine throws "Cannot convert
+ *     undefined or null to object" on every route. Destroy the CHILDREN.
+ *
+ *  2. Alpine's own MutationObserver runs cleanups again when innerHTML
+ *     removes these nodes, and x-for's cleanup is not idempotent:
+ *
+ *         n(() => { Object.values(e._x_lookup).forEach(...);
+ *                   delete e._x_prevKeys; delete e._x_lookup })
+ *
+ *     The second pass hits Object.values(undefined) and throws -- on every
+ *     route with a list in it, which is nearly all of them. Putting an empty
+ *     lookup back makes that second pass a no-op instead of a crash.
+ *
+ * Restoring the state Alpine just deleted is not elegant, but the alternative
+ * is either the crash or the leak, and patching a vendored library is worse.
+ */
+function teardownAlpineIn(mount) {
+  const A = window.Alpine;
+  if (!A || typeof A.destroyTree !== "function") return;
+
+  /* Snapshot every descendant BEFORE teardown, and record the x-for hosts
+     while their state still exists. The snapshot matters: x-for's cleanup
+     calls .remove() on its rows, so they leave the tree DURING the walk and
+     destroyTree never reaches them. Measured: detached <tr> elements
+     accumulated exactly 64 per visit to the register, each still carrying
+     _x_effects, with their top detached ancestor still holding an
+     _x_dataStack. An effect that is still subscribed keeps its scope, and
+     the scope keeps the DOM -- which is the whole leak. */
+  const all = Array.from(mount.querySelectorAll("*"));
+  const forHosts = all.filter((el) => el._x_lookup !== undefined);
+
+  for (const child of Array.from(mount.children)) {
+    try { A.destroyTree(child); } catch (_e) { /* one bad subtree must not abort the rest */ }
+  }
+
+  /* Sweep whatever the walk could not reach. Alpine.release is its public
+     way to unsubscribe an effect; without this the rows above stay wired to
+     the store for the life of the session. Deliberately excludes `mount`
+     itself -- it belongs to the shell, not the view. */
+  if (typeof A.release === "function") {
+    for (const el of all) {
+      if (!el._x_effects) continue;
+      for (const effect of Array.from(el._x_effects)) {
+        try { A.release(effect); } catch (_e) {}
+      }
+      delete el._x_effects;
+      delete el._x_runEffects;
+    }
+  }
+
+  for (const el of forHosts) {
+    if (el._x_lookup === undefined) el._x_lookup = {};
+    if (el._x_prevKeys === undefined) el._x_prevKeys = [];
+  }
+}
+
 function setTitleFrom(container) {
   const h1 = container.querySelector("h1, .app-page__title");
   document.title = (h1 ? h1.textContent.trim() + " · " : "") + "Project Budget";
@@ -214,6 +286,7 @@ export async function navigate(rawPath, { push = true, restoreScroll = null } = 
      * rather than synchronously. Nothing here depends on it being synchronous.
      */
     destroyChartsIn(mount);
+    teardownAlpineIn(mount);
     mount.innerHTML = html;
     runScripts(mount);
 
