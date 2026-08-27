@@ -7,6 +7,7 @@ eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
 {% from "partials/overflow-menu.njk" import overflow %}
+{% from "partials/empty-state.njk" import emptyState %}
 <div class="app-page" x-data="budgetView()" x-init="init()">
 
   {# Visually-hidden page heading — SR users land on a clear page
@@ -126,6 +127,17 @@ eleventyExcludeFromCollections: true
       </div>
     </div>
   </div>
+
+  {# With no categories every section on this page is x-show-gated off, so
+     the budget rendered as a completely blank screen -- no explanation, no
+     way forward, on the route a new user is most likely to open first. #}
+  {{ emptyState(
+       "!hasCategories && $store.budget.profile",
+       "No categories yet",
+       "The budget is where you give every dollar a job. Start with a group like Housing or Everyday, then add categories to it.",
+       "Add a category group",
+       "newGroupOpen = true; newGroupName = ''"
+     ) }}
 
   <section class="budget" x-show="hasCategories" x-cloak>
     <div x-show="!budgetCollapsed" x-cloak>

@@ -35,16 +35,14 @@
     align-items: stretch;
     height: var(--tabbar-space);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: color-mix(in srgb, var(--bg) 93%, transparent);
+    /* Opaque, deliberately. A translucent bar with a blur behind it looks
+       better, but the text then sits on whatever is scrolling underneath,
+       and contrast becomes indeterminate -- axe scored the labels as a
+       regression (mobile 105 -> 108) because it cannot resolve a background
+       it can see through. A nav bar that is always legible beats one that is
+       usually pretty. */
+    background: var(--bg);
     border-top: 1px solid var(--border);
-  }
-
-  /* Progressive: browsers without color-mix get a solid bar, which is fine. */
-  @supports (backdrop-filter: blur(18px)) or (-webkit-backdrop-filter: blur(18px)) {
-    .tab-bar {
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-    }
   }
 
   .tab-bar__item {

@@ -100,6 +100,65 @@
   .budget__activity::before,
   .budget__available::before { display: none; }
 }
+/* ── Phone layout (below 768px) ───────────────────────────────────────
+   The stacked layout above put each of Assigned / Outflow / Available in
+   its own block with a micro-label over it, which cost roughly 270px per
+   category -- about three categories per screen on a phone, for a view
+   whose entire job is comparing many categories at once.
+
+   Same markup, different shape: the name and the number that actually
+   matters (Available) share the first line, and the two supporting
+   numbers sit under it. The micro-labels go: with only two numbers left
+   and Available carried on the headline row, the labels were repeating
+   the same three words for every category on the page.
+
+   Not touched: the assign input is still the assign input, so the
+   interaction is unchanged. Above 768px this block does not apply and
+   the existing 900px horizontal layout is untouched. */
+@media (max-width: 767px) {
+  .budget__group-header,
+  .budget__row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "cat       available actions"
+      "assigned  outflow   actions";
+    row-gap: 4px;
+    column-gap: var(--space-2xs);
+    padding: 10px var(--space-sm) 11px;
+  }
+
+  /* The headline pair. */
+  .budget__category  { align-self: center; min-width: 0; }
+  .budget__available { align-self: center; text-align: right; font-weight: 640; }
+
+  /* The supporting pair, quieter and smaller. */
+  .budget__assigned,
+  .budget__activity { font-size: var(--fs-xs); }
+  .budget__activity { text-align: right; color: var(--fg-muted); align-self: center; }
+
+  /* Three words repeated down the whole page, once per category. The
+     headline row makes Available unambiguous by position, and the two
+     supporting numbers are read as a pair. */
+  .budget__assigned::before,
+  .budget__activity::before,
+  .budget__available::before { display: none; }
+
+  /* The assign field is the only control in the row, so it sets the row's
+     height. Cap its width so it reads as a field rather than a banner, and
+     keep it on the 44px touch floor -- it is a number entry people tap
+     repeatedly, and this is not the place to shave pixels. */
+  .budget__assigned input,
+  .budget__assigned .budget__assign-input {
+    max-width: 8.5rem;
+    text-align: right;
+  }
+
+  .budget__group-header {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
 /* Column header strip — only useful when rows lay out horizontally
    (>=900px). Below that, the mobile micro-labels do the job. */
 .budget__column-header { display: none; }

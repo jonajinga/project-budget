@@ -94,21 +94,47 @@
 @media (max-width: 767px) {
   .modal-backdrop {
     padding: 0;
-    align-items: stretch;
   }
+  /* A bottom sheet, not a full-screen takeover.
+     Full-screen was the right call when the alternative was a small centred
+     dialog with a dead dimmed strip around it. But it also meant every
+     trivial confirmation replaced the entire app, with no sense of what you
+     were on top of or that dismissing would bring it back. A sheet rises
+     from the edge the thumb is already at, keeps the context visible behind
+     it, and grows only as far as its content needs. */
   .modal {
-    max-width: 100vw;
     max-width: 100dvw;
-    max-height: none;
-    min-height: 100dvh;
-    min-height: 100dvh;
     width: 100%;
+    max-height: 92dvh;      /* always leave the page showing above it */
+    min-height: 0;
     margin: 0;
     border: 0;
-    border-radius: 0;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
     padding: var(--space-xs);
-    padding-top: max(var(--space-xs), env(safe-area-inset-top));
     padding-bottom: max(var(--space-xs), env(safe-area-inset-bottom));
+    overflow-y: auto;
+    /* The grab handle. Purely affordance -- the close button is the
+       accessible control -- so it is a pseudo-element and not in the
+       accessibility tree at all. */
+    padding-top: calc(var(--space-xs) + 14px);
+    position: relative;
+  }
+  .modal::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 5px;
+    border-radius: var(--radius-pill);
+    background: var(--border-strong);
+    opacity: 0.35;
+  }
+  /* Sheets sit at the bottom; the backdrop stops being a full-height
+     flex container and becomes bottom-aligned. */
+  .modal-backdrop {
+    align-items: flex-end;
   }
   .modal .form-row,
   .modal .form-grid,
@@ -126,16 +152,16 @@
   /* Native <dialog> elements get the same treatment so any new
      dialog-based modal inherits fullscreen behavior without needing
      to know about the .modal class system. */
+  /* Native <dialog> gets the same sheet treatment, so a future
+     dialog-based modal inherits it without knowing about .modal. */
   dialog[open] {
-    max-width: 100vw !important;
     max-width: 100dvw !important;
-    max-height: 100dvh !important;
-    max-height: 100dvh !important;
+    max-height: 92dvh !important;
     width: 100%;
-    height: 100%;
-    margin: 0;
+    margin: 0 0 0 0;
+    margin-top: auto;
     border: 0;
-    border-radius: 0;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   }
 }
 @media (min-width: 768px) {
