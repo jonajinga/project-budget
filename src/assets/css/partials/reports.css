@@ -81,7 +81,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.btn.is-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.is-active { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); }
 
 /* Reports toolbar — search + print button above each table. */
 .report-toolbar {
@@ -213,7 +213,7 @@
 }
 .chart-picker__btn.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--fg-on-accent);
 }
 
 /* Month-cell link in report tables — drills to /app/calendar/?m=...

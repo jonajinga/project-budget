@@ -67,7 +67,7 @@
 .docs-sidebar {
   position: sticky;
   top: var(--space-md);
-  max-height: calc(100vh - 4rem);
+  max-height: calc(100dvh - 4rem);
   overflow-y: auto;
   padding-right: var(--space-2xs);
 }
@@ -202,7 +202,7 @@
 .docs-toc {
   position: sticky;
   top: var(--space-md);
-  max-height: calc(100vh - 4rem);
+  max-height: calc(100dvh - 4rem);
   overflow-y: auto;
 }
 .docs-toc__toggle {

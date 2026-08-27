@@ -106,7 +106,7 @@
 .swatch--accent,
 .swatch--link,
 .swatch--ok,
-.swatch--danger { color: #fff; }
+.swatch--danger { color: var(--fg-on-accent); }
 .swatch--fg          { background: var(--fg); }
 .swatch--fg-muted    { background: var(--fg-muted); }
 .swatch--fg-subtle   { background: var(--fg-subtle); }
@@ -131,7 +131,7 @@
 .swatch--danger code {
   background: rgba(0, 0, 0, 0.42);
   border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
+  color: var(--fg-on-accent);
 }
 .swatch--warn code {
   background: rgba(0, 0, 0, 0.18);

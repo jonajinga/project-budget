@@ -12,11 +12,25 @@
 */
 
 :root {
-  /* Typography — Broadsheet stack. */
-  --font-display:  "Playfair Display", Georgia, "Times New Roman", serif;
-  --font-headline: "Lora", Georgia, "Times New Roman", serif;
-  --font-body:     "Source Serif 4", Georgia, "Times New Roman", serif;
-  --font-ui:       "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Typography — the platform's own UI face.
+     Was the Broadsheet stack (Playfair Display / Lora / Source Serif 4),
+     served from fonts.bunny.net. Two reasons it is gone:
+
+     1. It reads as a website. A budgeting app is scanned, not read, and a
+        display serif at 40px on a 390px screen spends the viewport on
+        atmosphere.
+     2. There were no font files in the repo at all, so an offline or
+        packaged build fell back to a system face anyway -- unpredictably,
+        and only once you were offline. Using the system stack deliberately
+        removes a network dependency the native build could not satisfy.
+
+     --font-display and --font-headline are kept as aliases rather than
+     removed: they are referenced across ~10k lines of CSS, and repointing
+     them is a one-line change that cannot miss a site. */
+  --font-ui:       -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display:  var(--font-ui);
+  --font-headline: var(--font-ui);
+  --font-body:     var(--font-ui);
   --font-mono:     ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --fs-xs:   0.8125rem;
@@ -61,15 +75,21 @@
      gap between major sections of an app page. */
   --space-section: clamp(2rem, 4vw, 4rem);
 
-  /* Cards/inputs stay square (--radius: 0); pills/chips get this. */
   --radius-pill: 999px;
 
   --max-width:        1180px;
   --max-width-narrow: 720px;
   --container-pad:    clamp(1rem, 3vw, 2rem);
 
-  --radius: 0;
-  --radius-input: 0;
+  /* A real radius scale. --radius was 0, which is the single biggest reason
+     the app read as a web page rather than an app: every card, input, button
+     and dialog was a hard rectangle. Named by ROLE so a component asks for
+     what it is, not for a number. */
+  --radius-chip:  7px;   /* small controls, icon buttons */
+  --radius-input: 12px;  /* inputs, selects, textareas */
+  --radius:       12px;  /* the default: buttons, small cards */
+  --radius-card:  14px;  /* cards, grouped lists */
+  --radius-sheet: 18px;  /* bottom sheets, modals */
 
   /* ── Default light palette: GitHub Light ──────────────────────────
      Standard "light" theme on the app. The legacy Broadsheet palette
@@ -97,6 +117,11 @@
   --link:         #0969da;
   --link-hover:   #0a3069;
   --danger:       #cf222e;
+  /* Text/icons ON a saturated fill. ~26 sites hardcoded #fff for this, which
+     breaks on the five themes with a light accent (dracula, nord, one-dark,
+     catppuccin, rose-pine) -- white on a pale accent is unreadable. */
+  --fg-on-accent: #ffffff;
+  --fg-on-danger: #ffffff;
   --warn:         #7a5100;
   --ok:           #0f6028;
 

@@ -26,6 +26,9 @@ const CSS_PARTIAL_ORDER = [
   "docs.css",
   "forms.css",
   "fab.css",
+  /* After fab.css: the tab bar hides the FAB's trigger below 768px, and
+     equal-specificity rules are decided by this order. */
+  "tab-bar.css",
   "goal-progress.css",
   "dashboard.css",
   "contact.css",

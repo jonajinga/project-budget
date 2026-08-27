@@ -50,11 +50,17 @@ a:hover { color: var(--link-hover); text-decoration-thickness: 2px; }
 
 /* WCAG 2.2 AA — every interactive element renders at >= 44x44 CSS pixels.
    Components that intentionally pack smaller controls opt out via
-   [data-touch="compact"]. */
-button:not([data-touch="compact"]),
-input[type="submit"]:not([data-touch="compact"]),
-input[type="button"]:not([data-touch="compact"]),
-a.btn:not([data-touch="compact"]) {
+   [data-touch="compact"].
+
+   Both :where() wrappers are load-bearing. This was written as
+   `button:not([data-touch="compact"])`, and :not() contributes its
+   argument's weight -- so the selector scored (0,1,1) and beat `.btn`
+   (0,1,0) on specificity, not source order. That silently made
+   `.btn { min-height: 32px }`, --btn-primary-min and the whole
+   `.btn::before` hit-area system dead code. :where() is always (0,0,0),
+   so this is a true floor a component can override by simply being a
+   component. */
+:where(button, input[type="submit"], input[type="button"], a.btn):where(:not([data-touch="compact"])) {
   min-height: 44px;
   min-width: 44px;
 }
@@ -114,7 +120,7 @@ sup {
   top: -100px;
   z-index: 9999;
   background: var(--accent);
-  color: #fff;
+  color: var(--fg-on-accent);
   padding: var(--space-2xs) var(--space-sm);
   text-decoration: none;
   font-weight: 600;
