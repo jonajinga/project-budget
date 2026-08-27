@@ -14,6 +14,10 @@ export function trashKey(id)              { return PREFIX + "trash:" + id; }
 export function backupKey(profileId, day) { return PREFIX + "backup:" + profileId + ":" + day; }
 export function backupNoteKey(profileId, day) { return PREFIX + "backup-note:" + profileId + ":" + day; }
 export function snapshotKey(profileId, id) { return PREFIX + "snapshot:" + profileId + ":" + id; }
+/* Small, always-uncompressed companion to a snapshot, holding just the
+   fields a listing needs. Without it, listing N snapshots means
+   decompressing and parsing N whole profile bundles. */
+export function snapshotMetaKey(profileId, id) { return PREFIX + "snapshot-meta:" + profileId + ":" + id; }
 
 function safeStorage() {
   try {

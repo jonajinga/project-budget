@@ -120,7 +120,9 @@ export function listTrash() {
     var k = s.key(i);
     if (!k || k.indexOf("projectbudget:trash:") !== 0) continue;
     try {
-      var rec = JSON.parse(s.getItem(k));
+      /* readJSON handles the "PB2:" compressed form; a raw parse threw
+         for every profile past ~2 KB, so trash looked permanently empty. */
+      var rec = readJSON(k);
       if (!rec || !rec.profile) continue;
       var msLeft = TTL_MS - (now - (rec.deletedAt || 0));
       out.push({
@@ -147,10 +149,20 @@ export function pruneTrash() {
     for (var i = 0; i < s.length; i++) {
       var k = s.key(i);
       if (!k || k.indexOf("projectbudget:trash:") !== 0) continue;
-      try {
-        var rec = JSON.parse(s.getItem(k));
-        if (!rec || (now - (rec.deletedAt || 0)) > TRASH_TTL_MS) doomed.push(k);
-      } catch (_e) { doomed.push(k); }
+      /* Only purge what we can positively read AND that has expired.
+         Caveat, pre-existing: a readable record with no deletedAt scores
+         against epoch 0 and is treated as long expired, so it still goes
+         on the first boot. Everything writeJSON stores here has one.
+         This previously used a raw JSON.parse and treated any failure as
+         "this is garbage, delete it" -- so a compressed trash record was
+         destroyed on the next boot, against a UI promising 7 days to
+         recover. An unreadable record is now left in place instead.
+         Nothing currently surfaces such a record -- /app/health-check/
+         only inspects profile contents, not storage keys -- so it will
+         sit there unlisted. That is the deliberate trade: an orphaned
+         key costs storage, deleting it costs the user their data. */
+      var rec = readJSON(k);
+      if (rec && (now - (rec.deletedAt || 0)) > TRASH_TTL_MS) doomed.push(k);
     }
     doomed.forEach(function (k) { s.removeItem(k); });
   } catch (_e) {}

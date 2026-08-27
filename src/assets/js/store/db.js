@@ -31,6 +31,8 @@
    - A user who clears IndexedDB but not localStorage doesn't lose history.
    - We can always read from either backend during boot. */
 
+import { readJSON } from "./persist.js";
+
 const DB_NAME = "ProjectBudget";
 
 let dbPromise = null;
@@ -190,8 +192,13 @@ export async function estimateUsage() {
    we find into Dexie. Idempotent: existing Dexie rows are overwritten
    only when localStorage has a newer updatedAt. Sets a meta flag so we
    don't repeat the scan on every boot. */
-export async function migrateLocalStorageIfNeeded(localStorage) {
-  if (!localStorage) return { migrated: false, reason: "no-localStorage" };
+export async function migrateLocalStorageIfNeeded(available) {
+  /* `available` is only an availability probe. Everything below reads the
+     real global, because readJSON() in persist.js resolves localStorage
+     from module scope and cannot be pointed at an injected object -- so
+     accepting one here and iterating it would mean half this function
+     read the parameter and half read the global. */
+  if (!available) return { migrated: false, reason: "no-localStorage" };
   try {
     var done = await getMeta("localStorage-migrated");
     if (done) return { migrated: false, reason: "already-done" };
@@ -208,14 +215,18 @@ export async function migrateLocalStorageIfNeeded(localStorage) {
       try {
         var raw = localStorage.getItem(k);
         if (!raw) continue;
+        /* Read through readJSON below: anything over ~2 KB is stored
+           compressed, and a raw parse copied nothing while still marking
+           the migration done -- so snapshots and historical backups were
+           left behind with no retry. */
 
         if (k.indexOf("projectbudget:profile:") === 0) {
-          var p = JSON.parse(raw);
+          var p = readJSON(k);
           if (p && p.id) { await putProfile(p); counts.profiles += 1; }
         } else if (k.indexOf("projectbudget:snapshot:") === 0) {
           var parts = k.split(":"); // projectbudget : snapshot : profileId : snapId
           var pid = parts[2], sid = parts[3];
-          var rec = JSON.parse(raw);
+          var rec = readJSON(k);
           if (pid && sid && rec) {
             await putSnapshot(pid, { id: rec.id || sid, label: rec.label || "", createdAt: rec.createdAt, profile: rec.profile });
             counts.snapshots += 1;
@@ -223,7 +234,7 @@ export async function migrateLocalStorageIfNeeded(localStorage) {
         } else if (k.indexOf("projectbudget:backup:") === 0) {
           var b = k.split(":"); // projectbudget : backup : profileId : day
           var bpid = b[2], day = b[3];
-          var snap = JSON.parse(raw);
+          var snap = readJSON(k);
           if (bpid && day && snap) { await putBackup(bpid, day, snap); counts.backups += 1; }
         } else if (k === "projectbudget:active") {
           await setMeta("active", raw);
