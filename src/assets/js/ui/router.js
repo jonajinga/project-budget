@@ -229,6 +229,12 @@ function teardownAlpineIn(mount) {
     }
   }
 
+  /* Tried clearing _x_dataStack/_x_refs/_x_bindings here too, on the theory
+     that the element <-> scope cycle was the retainer. Measured no change
+     (617 KB/nav against 599), so it is not here: deleting a library's
+     internals for no measured gain is worse than leaving them alone. The
+     remaining retainer is still unidentified -- see the commit message. */
+
   for (const el of forHosts) {
     if (el._x_lookup === undefined) el._x_lookup = {};
     if (el._x_prevKeys === undefined) el._x_prevKeys = [];
