@@ -21,22 +21,35 @@ test("contrast sweep across all 13 themes", async ({ seeded }) => {
   test.setTimeout(600_000);
   const report = {};
 
+  /* 26 iterations with no output between them is opaque when it goes wrong:
+     a sweep that stalls looks identical to one that is merely slow, and this
+     one went from 40s to 15+ minutes without a single line to say where. One
+     line per iteration costs nothing and makes the next stall diagnosable. */
   for (const surface of SURFACES) {
     for (const theme of THEMES) {
+      const t0 = Date.now();
       const page = await seeded.newPage();
       await page.addInitScript((t) => {
         try { localStorage.setItem("projectbudget-theme", t); } catch (_e) {}
       }, theme);
+      const tGoto = Date.now();
       await gotoApp(page, surface);
+      const gotoMs = Date.now() - tGoto;
       await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
       await page.waitForTimeout(150);
 
+      const tAxe = Date.now();
       const res = await new AxeBuilder({ page })
         .withRules(["color-contrast"])
         .analyze();
+      const axeMs = Date.now() - tAxe;
       const n = res.violations.reduce((a, v) => a + v.nodes.length, 0);
       (report[surface] ||= {})[theme] = n;
       await page.close();
+      console.log(
+        `  ${surface} ${theme.padEnd(16)} goto ${String(gotoMs + "ms").padEnd(8)}` +
+        ` axe ${String(axeMs + "ms").padEnd(8)} total ${Date.now() - t0}ms`
+      );
     }
   }
 
