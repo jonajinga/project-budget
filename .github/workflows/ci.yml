@@ -35,7 +35,11 @@ jobs:
 
       # Report-only until Phase 4c, then this gains --strict and gates.
       - name: Breakpoint contract
-        run: node scripts/check-breakpoints.mjs
+        # --strict now that the contract is true: the declared set was
+        # amended to the 900 the code actually uses (820 was declared and
+        # used nowhere), and the two real singletons were normalised.
+        # Without the gate it drifts straight back.
+        run: node scripts/check-breakpoints.mjs --strict
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

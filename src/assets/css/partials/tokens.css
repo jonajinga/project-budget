@@ -6,7 +6,13 @@
    doesn't need to change.
 
    Canonical breakpoints (do not introduce ad-hoc values):
-     360 / 480 / 600 / 768 / 820 / 1024 / 1180 / 1280
+     360 / 480 / 600 / 768 / 900 / 1024 / 1180 / 1280
+
+   900, not 820: 820 was declared here and used nowhere, while 900 is used
+   at eight sites across the densest layout code -- it is what drives the
+   budget grid gaining its column-header row. Migrating eight live sites to
+   satisfy a number nothing used would have been churn with a regression
+   risk and no user-visible benefit. The contract was wrong; it is amended.
    CSS custom properties cannot be used inside @media queries — the scale
    above is the contract for every responsive rule in the project.
 */

@@ -709,7 +709,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 /* Smallest phones (<420px) — tighten the tab font once more so the
    12-month row stays a single line without overflowing the viewport. */
-@media (max-width: 419px) {
+@media (max-width: 479px) {
   .month-strip__tab { font-size: 10.5px; padding: 0.25rem 0; }
   .month-strip__year { padding: var(--space-3xs); }
 }
@@ -3566,7 +3566,7 @@ body.pb-dragging { overflow: visible !important; }
    (two tidy rows of 3) to avoid tiles like "Excluded from NW" +
    "Net + excluded" pinching their labels into two lines while the
    final tile overflows the container. */
-@media (max-width: 1199px) { .rec-summary--6col { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1179px) { .rec-summary--6col { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 899px)  { .rec-summary--6col { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 479px)  { .rec-summary--6col { grid-template-columns: 1fr; } }
 
