@@ -74,10 +74,22 @@
 
 .app-main {
   padding: var(--space-lg) var(--container-pad);
-  max-width: var(--max-width);
   width: 100%;
+  /* No max-width. --max-width (1180px) is a READING measure -- the width
+     past which a line of prose gets hard to track back from. It was right
+     when the marketing pages and docs rendered inside this shell, but since
+     they moved to layouts/marketing.njk, /app/* is nothing but data
+     screens, and capping those means an eight-column register stops growing
+     at 1114px in a 1680px window. The columns then squeeze until "Joint
+     Checking" wraps onto two lines and every row is 55-63px instead of 40.
+     A table should use the window it is given. */
   margin-inline: auto;
 }
+
+/* Prose inside the app -- the few remaining explainer pages -- still wants
+   the reading measure, so it asks for it rather than inheriting it. */
+.app-main .prose,
+.app-main .app-doc__prose { max-width: 72ch; }
 
 /* .page wraps any marketing-style article (contact, accessibility,
    etc.). The block-padding gives the content breathing room from the

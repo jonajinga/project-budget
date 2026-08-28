@@ -152,11 +152,29 @@
 }
 .register__table th,
 .register__table td {
-  padding: 0.7rem 0.75rem;
+  /* 0.4rem, not 0.7rem: with single-line rows this lands near Actual
+     Budget's 32px ROW_HEIGHT instead of 55-63px. */
+  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: middle;
+  line-height: var(--lh-data);
+  /* One line per row. A register is scanned down a column -- date against
+     date, amount against amount -- and a row that wraps to three lines
+     breaks that scan for every row beside it. Long values get an ellipsis;
+     the full text is in the row's own edit view and in the title. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* Payee and memo are the two that genuinely run long, so they get the
+   space and take the ellipsis. max-width on a table cell needs a width to
+   resolve against, which is what these percentages provide. */
+.register__table td:nth-child(4),
+.register__table th:nth-child(4) { max-width: 22ch; }
+.register__table td:nth-child(6),
+.register__table th:nth-child(6) { max-width: 24ch; }
 .register__table th {
   font-weight: 600;
   color: var(--fg-muted);
