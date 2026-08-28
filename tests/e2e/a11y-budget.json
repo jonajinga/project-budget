@@ -1,11 +1,11 @@
 {
   "desktop": {
-    "color-contrast": 179,
+    "color-contrast": 144,
     "label": 10
   },
   "mobile": {
-    "color-contrast": 105,
+    "color-contrast": 73,
     "label": 10,
-    "target-size": 73
+    "target-size": 62
   }
 }

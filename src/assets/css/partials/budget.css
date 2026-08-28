@@ -859,7 +859,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 .available-pill--blue {
   background: rgba(44, 95, 138, 0.16);
-  color: var(--link);
+  /* --link (#0969da) on this tint is 3.87:1 -- under the 4.5:1 needed for
+     normal-size text, on the single most repeated element in the budget:
+     one pill per category, 33 of them on the sample household. The darker
+     accent clears it comfortably and reads as the same colour family. */
+  color: var(--accent-hover);
 }
 .available-pill--zero {
   background: var(--bg-alt);
