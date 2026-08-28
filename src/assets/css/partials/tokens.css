@@ -39,15 +39,34 @@
   --font-body:     var(--font-ui);
   --font-mono:     ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --fs-xs:   0.8125rem;
-  --fs-sm:   0.9375rem;
+  /* Type scale, in rem so it scales with the reader's setting.
+     Steps chosen to land on the sizes Apple HIG and Material 3 name, at a
+     16px root (the web default, and Material's body-large):
+
+       --fs-2xs  11px  label-small / Caption 2 -- the platform FLOOR
+       --fs-xs   12px  body-small / Caption 1
+       --fs-sm   14px  body-medium / label-large / Subhead
+       --fs-base 16px  body-large / Callout
+       --fs-md   18px
+       --fs-lg   22px  title-large / Title 2
+       --fs-xl   24px  headline-small
+       --fs-2xl  28px  headline-medium / Title 1
+       --fs-3xl  36px  display-small
+       --fs-4xl  48px  display-medium
+
+     The previous scale sat on a 17px root, which is Apple's NATIVE iOS
+     body size -- correct for native controls, but it made every step 6.25%
+     larger than the equivalent web step, and the app read oversized. */
+  --fs-2xs:  0.6875rem;
+  --fs-xs:   0.75rem;
+  --fs-sm:   0.875rem;
   --fs-base: 1rem;
   --fs-md:   1.125rem;
-  --fs-lg:   1.25rem;
+  --fs-lg:   1.375rem;
   --fs-xl:   1.5rem;
-  --fs-2xl:  2rem;
-  --fs-3xl:  2.625rem;
-  --fs-4xl:  3.25rem;
+  --fs-2xl:  1.75rem;
+  --fs-3xl:  2.25rem;
+  --fs-4xl:  3rem;
 
   --lh-tight: 1.2;
   --lh-base:  1.55;

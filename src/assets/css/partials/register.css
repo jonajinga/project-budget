@@ -82,7 +82,7 @@
   padding: 0;
   font: inherit;
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1;
   border: 0;
   border-radius: 2px;
@@ -256,6 +256,13 @@
    wrapped in 44×44 hit area via the ::before overlay so it still
    passes WCAG 2.2 AAA target size. */
 .cleared-toggle {
+  /* 24x24 floor. At the old 17px root this rendered 20x20 and the broken
+     (0,1,1) button selector was padding it to 44 anyway; with the root on
+     the reader's scale it came out 18x18, under WCAG 2.2's 24x24 minimum.
+     min-* rather than a fixed size so it still grows with the reader. */
+  min-width: 24px;
+  min-height: 24px;
+
   width: 18px; height: 18px;
   padding: 0;
   border: 1px solid var(--border-strong);
@@ -266,7 +273,7 @@
   border-radius: 3px;
   position: relative;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1;
 }
 .cleared-toggle::before {
@@ -475,6 +482,8 @@
   padding-right: 2rem;
 }
 .acct-combo__chevron {
+  min-width: 24px;
+  min-height: 24px;
   position: absolute;
   top: 50%;
   right: 0.5rem;

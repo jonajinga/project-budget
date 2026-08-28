@@ -287,7 +287,20 @@ function welcomeWizard() {
   }
   .welcome-step.is-current { border-left-color: var(--accent); }
   .welcome-step.is-done    { border-left-color: var(--ok); background: color-mix(in oklab, var(--ok) 4%, var(--bg-elevated)); }
-  .welcome-step.is-future  { opacity: 0.6; }
+  /* Muted by COLOUR, not by opacity.
+     `opacity: 0.6` fades everything inside the step -- including text --
+     against the page, and the browser composites it to a colour the
+     original token never chose: --fg-muted (#57606a, 6:1) came out as
+     #9299a0 at 2.47:1. Five contrast failures on this page traced back to
+     this one line. Opacity is a fine way to de-emphasise a shape and a bad
+     way to de-emphasise text, because there is no way to check the result
+     against a contrast target -- it depends on whatever is behind it. */
+  .welcome-step.is-future .welcome-step__title,
+  .welcome-step.is-future .welcome-step__body,
+  .welcome-step.is-future .welcome-step__body > p,
+  .welcome-step.is-future .welcome-step__hint { color: var(--fg-muted); }
+  .welcome-step.is-future .welcome-step__num { background: var(--bg-alt); color: var(--fg-muted); }
+  .welcome-step.is-future .welcome-step__status { color: var(--fg-muted); }
 
   .welcome-step__head {
     display: grid;

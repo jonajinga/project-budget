@@ -748,6 +748,9 @@ body:has(.bulk-actions-bar:not([style*="display: none"])) .toast-stack {
   flex-shrink: 0;
   transition: transform var(--t-fast);
   color: var(--fg-muted);
+  /* px on purpose: this sizes a chevron GLYPH inside a fixed 20x20 box,
+     not body text. Scaling it with the reader's setting would push it out
+     of its own box. */
   font-size: 16px;
   line-height: 1;
   /* Replace the small text glyph with a bold SVG chevron via mask so

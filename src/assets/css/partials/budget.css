@@ -127,9 +127,11 @@
     padding: 10px var(--space-sm) 11px;
   }
 
-  /* The headline pair. */
-  .budget__category  { align-self: center; min-width: 0; }
-  .budget__available { align-self: center; text-align: right; font-weight: 640; }
+  /* The headline pair carries the row's primary content, so it sits at
+     body-large (16px at a default root) -- Material's body-large and
+     Apple's Callout. The supporting numbers below stay a step down. */
+  .budget__category  { align-self: center; min-width: 0; font-size: var(--fs-base); }
+  .budget__available { align-self: center; text-align: right; font-weight: 640; font-size: var(--fs-base); }
 
   /* The supporting pair, quieter and smaller. */
   .budget__assigned,
@@ -710,7 +712,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 /* Smallest phones (<420px) — tighten the tab font once more so the
    12-month row stays a single line without overflowing the viewport. */
 @media (max-width: 479px) {
-  .month-strip__tab { font-size: 10.5px; padding: 0.25rem 0; }
+  .month-strip__tab { font-size: var(--fs-2xs); padding: 0.25rem 0; }
   .month-strip__year { padding: var(--space-3xs); }
 }
 
@@ -2538,6 +2540,13 @@ body.pb-dragging { overflow: visible !important; }
   }
 }
 .cal__entry {
+  /* 24px target floor. These are the draggable transaction chips in a
+     calendar cell -- a real control, tapped and dragged -- and they came
+     out 21.8px tall once the type scale moved onto the reader's root.
+     min-height rather than height so a reader on a larger setting gets a
+     larger chip, and the cell grows with it. */
+  min-height: 24px;
+
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -3766,6 +3775,13 @@ body.pb-dragging { overflow: visible !important; }
   cursor: text;
 }
 .rec-payee-stack__name strong { font-weight: 700; }
+.rec-payee-stack__name {
+  /* Same 24x24 floor as the memo line beneath it -- these are the inline
+     edit targets in the recurring table, and they shrank with the type. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
 .rec-payee-stack__memo {
   font-size: var(--fs-xs);
   color: var(--fg-muted);
@@ -3930,7 +3946,7 @@ body.pb-dragging { overflow: visible !important; }
   }
   .cal-extra-period__stat .stat__term,
   .cal-period-totals__tile dt {
-    font-size: 10px;
+    font-size: var(--fs-2xs);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--fg-muted);

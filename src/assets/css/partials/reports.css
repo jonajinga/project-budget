@@ -39,6 +39,8 @@
 @media (min-width: 600px) and (max-width: 1023px) {
   .chart[id^="chart-"] { min-height: 320px !important; }
 }
+/* px on purpose: this text lives inside an SVG viewBox and scales with
+   the chart's own coordinate system, not with the reader's type size. */
 .chart text { fill: var(--fg); font-family: var(--font-body); font-size: 12px; }
 .chart .axis line, .chart .axis path { stroke: var(--border); }
 .chart .axis text { fill: var(--fg-muted); }
@@ -582,7 +584,7 @@
     bottom: auto;
     right: 40px;
     transform: translateY(-50%);
-    font-size: 10px;
+    font-size: var(--fs-2xs);
     padding: 1px 5px;
     border-radius: var(--radius-chip);
   }

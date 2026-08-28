@@ -1,4 +1,11 @@
-html { font-family: var(--font-body); font-size: 17px; }
+/* font-size: 100%, never a pixel value.
+   A px root pins every rem in the app to a number the reader cannot
+   change, which defeats the OS-level text-size setting outright -- the
+   mechanism Apple calls Dynamic Type and Android calls font scale, and
+   the thing both platforms actually require for accessibility. Measured
+   before this: a reader whose browser default was 24px still got 17px.
+   With 100% the whole scale rides on their preference. */
+html { font-family: var(--font-body); font-size: 100%; }
 
 body {
   background: var(--bg);
@@ -411,4 +418,17 @@ sup {
   ::view-transition-new(root) {
     animation: none !important;
   }
+}
+
+/* <summary> is a control -- it opens and closes a disclosure -- so it
+   carries the same 24x24 target floor as a button. It was 22px tall once
+   the type scale moved onto the reader's root, and nothing had ever given
+   it a size of its own: the old (0,1,1) button selector did not match it,
+   so unlike the buttons it was never inflated to 44 either. It has simply
+   always been undersized, and shrinking the type is what made that
+   visible. min-height, so it still grows with the reader. */
+summary {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
 }
