@@ -3859,3 +3859,90 @@ body.pb-dragging { overflow: visible !important; }
   font-size: var(--fs-xs);
   color: var(--fg-muted);
 }
+
+/* ── Calendar on a phone ──────────────────────────────────────────────
+   The controls came to about 1,450px before a single date was visible:
+   a D/W/M/Y segmented control, month navigation, a 1/2/3/6 span picker, a
+   full-width search field, two filter buttons and a kebab -- then the
+   month card repeated the month name it had just shown and stacked four
+   summary tiles 3-up-plus-1 underneath.
+
+   A calendar whose calendar is below the fold is not a calendar. Nothing
+   is removed; it is packed. */
+@media (max-width: 767px) {
+  /* View switcher and month nav share a line. The D/W/M/Y buttons are
+     single characters, so they get only what they need -- a first attempt
+     let them take their desktop width and squeezed "August 2026" down to
+     "A...", which is worse than the two rows it saved. */
+  /* Two rows, not one. Sharing a line with the D/W/M/Y control left
+     "August 2026" truncated to "A..." even after narrowing the buttons --
+     there is simply not 390px of room for a segmented control, two arrows
+     and a month name. One extra 44px row is a cheap price for a heading
+     that can be read, and the grid still lands at ~400px, half a screen up
+     from where it started. */
+  .cal-toolbar__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+  }
+  .cal-toolbar__views { justify-self: stretch; }
+  .cal-toolbar__nav { justify-content: flex-start; }
+  .cal-toolbar__view {
+    min-width: 40px;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  .cal-toolbar__nav { min-width: 0; gap: 2px; }
+  .cal-toolbar__title {
+    font-size: var(--fs-base);
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  /* The span picker and the filter controls share the next line. */
+  .cal-toolbar__span-buttons { grid-column: 1 / -1; }
+
+  /* Search is the least-used control here and was taking a full row to
+     itself. It keeps its own row but loses the vertical padding. */
+  .cal-toolbar input[type="search"],
+  .cal-toolbar input[type="text"] { min-height: 44px; }
+
+  /* The month card repeats the month name the toolbar is already
+     showing, two lines above it. */
+  .cal-extra-month__title { display: none; }
+
+  /* In / Out / Net / Entries: four short numbers, one row, not 3 + 1. */
+  .cal-extra-period__totals,
+  .cal-period-totals {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .cal-extra-period__stat,
+  .cal-period-totals__tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 6px 8px;
+    min-width: 0;
+  }
+  .cal-extra-period__stat .stat__term,
+  .cal-period-totals__tile dt {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .cal-extra-period__stat .stat__value,
+  .cal-period-totals__tile dd {
+    font-size: var(--fs-sm);
+    font-weight: 620;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+}
