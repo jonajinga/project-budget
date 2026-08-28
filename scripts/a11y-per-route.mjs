@@ -97,7 +97,27 @@ const routes = appRoutes();
 for (const route of routes) {
   try {
     await page.goto("http://localhost:8181" + route, { waitUntil: "domcontentloaded", timeout: 20000 });
-    await page.waitForTimeout(400);
+    /* Wait for the store the way tests/e2e/helpers.js does. A flat timeout
+       measures a half-rendered page and UNDERCOUNTS: an earlier version of
+       this script reported "no per-route change" while the gate was reading
+       141, because most of the app had not rendered yet when axe ran. A
+       measuring tool that quietly reads low is worse than no tool. */
+    await page
+      .waitForFunction(
+        () => window.Alpine && window.Alpine.store && window.Alpine.store("budget"),
+        { timeout: 5000 }
+      )
+      .catch(() => {});
+    await page
+      .waitForFunction(
+        () => {
+          const s = window.Alpine?.store?.("budget");
+          return s ? s.loading === false : false;
+        },
+        { timeout: 6000 }
+      )
+      .catch(() => {});
+    await page.waitForTimeout(250);
     const res = await new AxeBuilder({ page }).analyze();
     const counts = {};
     for (const v of res.violations) counts[v.id] = (counts[v.id] || 0) + v.nodes.length;

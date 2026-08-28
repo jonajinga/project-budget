@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the main window is allowed to do. Deliberately small: this app talks to no network and needs no shell, so the only capabilities are the ones export and external links require.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:allow-open-url",
+    "dialog:allow-save",
+    "dialog:allow-open",
+    "dialog:allow-message",
+    "fs:allow-write-text-file",
+    "fs:allow-read-text-file"
+  ]
+}

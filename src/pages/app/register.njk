@@ -92,7 +92,11 @@ eleventyExcludeFromCollections: true
     <p class="card__body" style="margin-bottom: var(--space-sm);">
       Review each one before it posts. You can skip an occurrence to push the next date forward without recording it.
     </p>
-    <table class="table">
+    {# `recurring-due` gets a phone layout in register.css: five columns do
+       not fit in 390px, and the generic .table fallback left the Amount
+       column -- the one number that matters on a review screen -- scrolled
+       out of sight behind the edge. #}
+    <table class="table recurring-due">
       <thead><tr><th>Date</th><th>Account</th><th>Payee</th><th class="num">Amount</th><th class="num">Actions</th></tr></thead>
       <tbody>
         <template x-for="s in due" :key="s.id">

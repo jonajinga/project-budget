@@ -1,0 +1,25 @@
+[package]
+name = "project-budget"
+version = "0.1.0"
+description = "Envelope budgeting that stays on your device."
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+# staticlib + cdylib are what make an iOS/Android target possible later.
+# Adding them now costs nothing and avoids a restructure when a machine
+# with Xcode and the Android SDK is available.
+name = "project_budget_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-opener = "2"
+
+[features]
+default = []

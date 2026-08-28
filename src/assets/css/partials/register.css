@@ -599,3 +599,65 @@
 .acct-spark--up   { color: var(--ok); }
 .acct-spark--down { color: var(--danger); }
 .acct-spark--flat { color: var(--text-soft); }
+
+/* ── "Recurring transactions due" on a phone ──────────────────────────
+   Five columns (Date, Account, Payee, Amount, Actions) do not fit in
+   390px. The generic .table fallback makes it scroll sideways inside its
+   own container, which put Amount -- the number the whole panel exists to
+   show you -- off the right edge, cut mid-figure.
+
+   Rebuilt as rows rather than a grid: Payee and Amount on the headline,
+   Date and Account beneath it, Actions on their own line. Same markup and
+   the same table semantics for a screen reader; only the visual layout
+   changes, so `scope` and the header row still do their job. */
+@media (max-width: 767px) {
+  .recurring-due,
+  .recurring-due tbody,
+  .recurring-due tr,
+  .recurring-due td {
+    display: block;
+    width: 100%;
+  }
+
+  /* The header row is redundant once each cell is labelled by position,
+     and it cannot line up with a stacked body anyway. Hidden visually,
+     kept for assistive tech. */
+  .recurring-due thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .recurring-due tr {
+    display: grid;
+    /* Date and Account each need their OWN column. Naming one shared area
+       for both put two grid items in the same cell, which overlaps them
+       rather than flowing them -- "2026-05-22" and "Joint Checking" printed
+       on top of each other. */
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "payee  payee   amount"
+      "date   account account"
+      "action action  action";
+    gap: 3px var(--space-2xs);
+    padding: 11px 0 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  /* Source order is Date, Account, Payee, Amount, Actions. */
+  .recurring-due td:nth-child(1) { grid-area: date;    font-size: var(--fs-xs); color: var(--fg-muted); }
+  .recurring-due td:nth-child(2) { grid-area: account; font-size: var(--fs-xs); color: var(--fg-muted); }
+  .recurring-due td:nth-child(3) { grid-area: payee;   font-weight: 550; }
+  .recurring-due td:nth-child(4) { grid-area: amount;  text-align: right; font-weight: 620; white-space: nowrap; }
+  .recurring-due td:nth-child(5) { grid-area: action;  text-align: left; padding-top: 4px; }
+
+  .recurring-due td:nth-child(1)::after { content: " ·"; }
+
+  /* Cell borders belong to a grid of columns. Once each row is its own
+     block, they draw lines through the middle of it. */
+  .recurring-due td { border: 0; padding: 0; }
+}
