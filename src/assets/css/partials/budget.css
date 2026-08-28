@@ -58,7 +58,11 @@
   row-gap: var(--space-2xs);
   column-gap: var(--space-2xs);
   align-items: center;
-  padding: 0.55rem var(--space-sm);
+  /* Actual Budget's table ROW_HEIGHT is 32. This was 52. The type is
+     already a step smaller than theirs, so the difference was entirely
+     padding and leading. */
+  padding: 0.3rem var(--space-sm);
+  line-height: var(--lh-data);
   font-size: var(--fs-sm);
 }
 .budget__category   { grid-area: cat; }
@@ -641,7 +645,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 .month-strip__tab {
   position: relative;
-  padding: 0.55rem 0.4rem;
+  padding: 0.3rem 0.4rem;
   background: transparent;
   border: 0;
   color: var(--fg-muted);
