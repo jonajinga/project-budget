@@ -505,3 +505,91 @@
   font-size: var(--fs-sm);
   color: var(--fg-muted);
 }
+
+/* ── Report hub on a phone ────────────────────────────────────────────
+   Each report was a 210px card: a 36px icon on its own line, a title, and
+   a two-line description. Fourteen of them made the hub 4,730px of
+   scrolling to see a list of fourteen things, two at a time.
+
+   On a phone the hub is an index, not a gallery. The card becomes a row:
+   icon beside the title, description on one line beneath it, clipped
+   rather than wrapped. The descriptions are genuinely useful the first
+   time and noise on every visit after, so they stay -- just not at the
+   cost of two thirds of the viewport. */
+@media (max-width: 767px) {
+  .report-tiles { gap: 0; }
+
+  .report-tiles .report--link {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    margin-top: -1px;   /* collapse the doubled border between rows */
+  }
+
+  .report__link {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-areas:
+      "icon title"
+      "icon lead";
+    align-items: center;
+    column-gap: var(--space-2xs);
+    row-gap: 1px;
+    padding: 11px var(--space-sm) 12px;
+    min-height: 64px;
+  }
+
+  .report__icon {
+    grid-area: icon;
+    align-self: center;
+    margin-bottom: 0;
+    border-radius: var(--radius-chip);
+  }
+
+  .report__title {
+    grid-area: title;
+    font-size: var(--fs-base);
+    margin: 0;
+  }
+
+  .report__lead {
+    grid-area: lead;
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    margin: 0;
+    /* One line. The full text is on the report itself. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The pin and the NEW tag were absolutely positioned into a card's
+     corners. In a row those corners are on top of the text, so the star
+     landed over the description and the tag over the star. Both sit at the
+     end of the row now, and the link reserves the width so nothing runs
+     underneath them. */
+  .report__link { padding-right: 76px; }
+
+  .report__pin {
+    top: 50%;
+    right: 8px;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+
+  .report__tag {
+    top: 50%;
+    bottom: auto;
+    right: 40px;
+    transform: translateY(-50%);
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: var(--radius-chip);
+  }
+
+  /* The page title, its lead and a kebab were followed by an empty
+     recents strip that still reserved its grid gap -- roughly 290px of
+     nothing between the intro and the first report. */
+  .app-page .eyebrow + .report-tiles { margin-top: var(--space-2xs); }
+  .report-recents:empty { display: none; }
+}
