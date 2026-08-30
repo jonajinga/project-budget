@@ -27,6 +27,17 @@ test.describe("router: every app route", () => {
     const routes = appOnlyRoutes().filter((r) => !LEAVES_THE_SHELL.has(r));
     expect(routes.length, "expected the built site to have app routes").toBeGreaterThan(30);
 
+    /* Playwright's default 30s is not a budget this test can fit in. It walks
+       every route in ONE document -- 41 of them, each costing a navigate, a
+       250ms settle and a state probe -- and both projects run in parallel, so
+       they compete for the machine. It was timing out mid-walk on desktop and
+       mobile while every route it had actually reached was passing, which
+       reads as "the router is broken" and is not.
+
+       Scaled to the route list rather than a flat number, so adding routes
+       does not quietly put it back under the limit. */
+    test.setTimeout(20_000 + routes.length * 2_000);
+
     const page = await seeded.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push({ where: page.url(), message: e.message }));
