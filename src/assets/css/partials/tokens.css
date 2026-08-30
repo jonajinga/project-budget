@@ -40,33 +40,52 @@
   --font-mono:     ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Type scale, in rem so it scales with the reader's setting.
-     Steps chosen to land on the sizes Apple HIG and Material 3 name, at a
-     16px root (the web default, and Material's body-large):
 
-       --fs-2xs  11px  label-small / Caption 2 -- the platform FLOOR
-       --fs-xs   12px  body-small / Caption 1
-       --fs-sm   14px  body-medium / label-large / Subhead
-       --fs-base 16px  body-large / Callout
-       --fs-md   18px
-       --fs-lg   22px  title-large / Title 2
-       --fs-xl   24px  headline-small
-       --fs-2xl  28px  headline-medium / Title 1
-       --fs-3xl  36px  display-small
-       --fs-4xl  48px  display-medium
+     Every step sits AT the platform floor rather than above it -- as small
+     as Apple HIG and Material 3 permit, and no smaller:
 
-     The previous scale sat on a 17px root, which is Apple's NATIVE iOS
-     body size -- correct for native controls, but it made every step 6.25%
-     larger than the equivalent web step, and the app read oversized. */
-  --fs-2xs:  0.6875rem;
-  --fs-xs:   0.75rem;
-  --fs-sm:   0.875rem;
-  --fs-base: 1rem;
-  --fs-md:   1.125rem;
-  --fs-lg:   1.375rem;
-  --fs-xl:   1.5rem;
-  --fs-2xl:  1.75rem;
-  --fs-3xl:  2.25rem;
-  --fs-4xl:  3rem;
+       --fs-2xs  11px  label-small / Caption 2 -- the hard FLOOR
+       --fs-xs   12px  Actual Budget verySmallText
+       --fs-sm   13px  Actual Budget smallText -- table cells, row text
+       --fs-base 14px  body-medium
+       --fs-md   15px  Actual Budget mediumText
+       --fs-lg   17px
+       --fs-xl   19px
+       --fs-2xl  22px
+       --fs-3xl  26px
+       --fs-4xl  32px
+
+     Two earlier scales were measured and rejected. The FIRST sat on a 17px
+     root -- Apple's native iOS body size, correct for native controls, but
+     it made every step 6.25% larger than the equivalent web step and the app
+     read oversized. The SECOND was a flat 25% cut of the current one: it
+     lands row text at 10.5px and micro-labels at 8.3px, both under the 11px
+     floor Apple (Caption 2) and Material (label-small) set, so it is not
+     available at any density.
+
+     Four of these are Actual Budget's own values, from
+     packages/component-library/src/styles.ts -- the closest comparable app,
+     and the reference for how small a financial grid can honestly go.
+
+     WHAT THIS SCALE DOES NOT FIX: page height. Measured across nine app
+     routes, cutting the whole scale to the floors moved total height by
+     only 1-4%. Heights here are owned by control minimums and padding, not
+     by glyphs -- see --lh-data below and the 44px touch floor in base.css.
+     Reach for those, not for smaller type, when a screen feels too tall.
+
+     Inputs are unaffected on touch: base.css holds them at max(16px, 1rem)
+     under (any-hover: none), because below 16px iOS zooms the page on
+     focus. */
+  --fs-2xs:  0.6875rem;  /* 11 -- the FLOOR. Apple Caption 2, Material label-small */
+  --fs-xs:   0.75rem;    /* 12 -- Actual Budget verySmallText */
+  --fs-sm:   0.8125rem;  /* 13 -- Actual Budget smallText; table + row text */
+  --fs-base: 0.875rem;   /* 14 -- Material body-medium */
+  --fs-md:   0.9375rem;  /* 15 -- Actual Budget mediumText */
+  --fs-lg:   1.0625rem;  /* 17 */
+  --fs-xl:   1.1875rem;  /* 19 */
+  --fs-2xl:  1.375rem;   /* 22 */
+  --fs-3xl:  1.625rem;   /* 26 */
+  --fs-4xl:  2rem;       /* 32 */
 
   --lh-tight: 1.2;
   /* 1.45, not 1.55. 1.55 is a reading measure -- right for the docs and the

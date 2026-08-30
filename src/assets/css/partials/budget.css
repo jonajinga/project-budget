@@ -235,6 +235,13 @@
   font-size: var(--fs-md);
   border-radius: 0;
   background: transparent;
+  /* An inline box's hit rect IS its line-height -- min-height does not apply
+     to display:inline. At --fs-md 15px the inherited 1.4 gives 21px, under
+     the 24px target floor; this pins the line box at exactly 24 without
+     changing the display type (deliberately inline, so the number flows as
+     text in the group header) or shifting anything horizontally. The row's
+     own min-height is well above 24, so nothing moves. */
+  line-height: 24px;
 }
 .budget__activity-btn.budget__activity-btn--group:not(:disabled):hover {
   background: transparent;
@@ -842,6 +849,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   min-width: 3.5rem;
   max-width: 100%;
   padding: 0.15rem 0.4rem;
+  /* The pill is inline-flex, so its height is line-box + padding + border --
+     which on phones came to ~23px and put 37 of them under the 24px target
+     floor. This was already true before the type scale changed; the smaller
+     scale did not cause it, it just made it one worse. */
+  min-height: 24px;
   border-radius: 999px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1010,6 +1022,9 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   background: transparent;
   font-weight: 700;
   font-size: var(--fs-xl);
+  /* Same reason as --group above: display:inline ignores min-height, so the
+     line box IS the hit target. Measured 44x21 in the touch census. */
+  line-height: 24px;
 }
 @media (max-width: 599px) {
   .budget__total-row .budget__activity-btn.budget__total-value,
@@ -2485,6 +2500,16 @@ body.pb-dragging { overflow: visible !important; }
   cursor: pointer;
   font: inherit;
   color: inherit;
+  /* `font: inherit` and no padding means the day number's hit area is purely
+     its line box, so it tracks the body size -- it measured 24px before the
+     scale came down and 22px after. Pinned here so the target does not move
+     with the type again. Centred because the box is now taller than the
+     glyph. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
 }
 .cal__day-btn:focus-visible {
   outline: 2px solid var(--accent);

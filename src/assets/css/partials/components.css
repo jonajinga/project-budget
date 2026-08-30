@@ -161,6 +161,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* This title is the card's TARGET -- it renders as a button (inline edit)
+     or a link (drill in), and both take their height entirely from the line
+     box, since the text is a single nowrap line with no padding. At the
+     current scale that came to 23px, one short of the 24px floor, which put
+     51 of them under it across /app/accounts/. Pinning the line box is
+     enough for both element types; min-height would not apply to the <a>.
+     The card's own min-height is 56px, so nothing grows. */
+  line-height: 24px;
 }
 .data-card__sub {
   color: var(--fg-muted);
@@ -311,7 +319,14 @@
   font: inherit;
   cursor: text;
   border-radius: var(--radius);
-  min-height: 1.5em;
+  /* 24px, not 1.5em. An em floor scales with the type, so it silently drops
+     below the target minimum whenever the scale comes down -- it measured
+     23px and put 32 of these under it. Note also that the `font: inherit`
+     above RESETS line-height, which is why pinning line-height on
+     .data-card__title did not reach this element: the shorthand sits later
+     in the cascade and wins. min-height applies here because the trigger is
+     inline-block. */
+  min-height: 24px;
 }
 .inline-edit-trigger:hover,
 .snap-label-edit:hover {
@@ -322,6 +337,20 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+/* Flush variant — cancels the padding and negative margin so the trigger
+   aligns with a sibling control inside a .cluster.
+
+   This replaces an inline style="margin:0;padding:0;min-height:0" on the
+   payee card title. That inline style beat every stylesheet rule, so it also
+   cancelled the target floor and held 32 titles at 23px where no CSS fix
+   could reach them. The floor is restated here deliberately: cancelling the
+   spacing must not cancel the hit area. */
+.inline-edit-trigger--flush {
+  margin: 0;
+  padding: 0;
+  min-height: 24px;
+}
+
 .inline-edit-trigger--placeholder { color: var(--fg-muted); font-style: italic; }
 
 /* Payee rename input — flush with surrounding text so opening edit

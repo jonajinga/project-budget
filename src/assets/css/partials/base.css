@@ -22,8 +22,19 @@ body.layout-app,
    structural instead of a silent restyle of the marketing pages. */
 body.layout-marketing {
   font-family: var(--font-ui);
-  font-size: 1rem;
 }
+
+/* The app body is the one that follows the scale. This was `font-size: 1rem`
+   for both, which meant almost nothing in the app consulted --fs-base: the
+   token had 12 references, so cutting the scale left the great majority of
+   app text sitting at the browser default 16px and the whole change measured
+   as 1-4% off page height. This is the line that makes the scale real.
+
+   Marketing keeps 1rem. Those pages are read, not scanned, and 14px body
+   copy is too small for running prose -- the density argument applies to a
+   grid of forty numbers, not to a paragraph. */
+body.layout-app { font-size: var(--fs-base); }
+body.layout-marketing { font-size: 1rem; }
 
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; }
 h5, h6 { font-family: var(--font-headline); font-weight: 600; }
@@ -32,7 +43,11 @@ body.layout-app h2,
 body.layout-app h3,
 body.layout-app h4 { font-family: var(--font-display); }
 
-h1 { font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: var(--lh-tight); }
+/* The only heading that was not on the scale: a hardcoded clamp topping out
+   at 40px, which is display type in an app whose densest row is 13px. Now
+   derived from the tokens like every other heading, so the scale is the one
+   place a size changes. */
+h1 { font-size: clamp(var(--fs-2xl), 3vw, var(--fs-4xl)); line-height: var(--lh-tight); }
 h2 { font-size: var(--fs-2xl); line-height: var(--lh-tight); }
 h3 { font-size: var(--fs-xl); }
 h4 { font-size: var(--fs-lg); }

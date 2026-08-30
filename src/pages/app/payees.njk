@@ -181,8 +181,8 @@ eleventyExcludeFromCollections: true
                      :checked="selectedIds.includes(p.id)"
                      @change="toggleOne(p.id, $event.target.checked)"
                      :aria-label="'Select payee ' + p.name">
-              <button type="button" class="data-card__title inline-edit-trigger"
-                      style="margin: 0; padding: 0; min-height: 0;"
+              <button type="button"
+                      class="data-card__title inline-edit-trigger inline-edit-trigger--flush"
                       @click="startRename(p)"
                       x-text="p.name"></button>
             </div>

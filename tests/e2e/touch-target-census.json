@@ -2,12 +2,12 @@
   "totals": {
     "measured": 2601,
     "failAA": 331,
-    "failAAA": 1958
+    "failAAA": 1963
   },
   "failing": {
     "a": {
-      "smallest": "156x16",
-      "count": 93,
+      "smallest": "116x19",
+      "count": 98,
       "routes": [
         "/app/",
         "/app/about-this-profile/",
@@ -19,7 +19,7 @@
     },
     "input": {
       "smallest": "1x1",
-      "count": 82,
+      "count": 80,
       "routes": [
         "/app/contact/",
         "/app/feedback/",
@@ -30,7 +30,7 @@
       "compact": false
     },
     "input.register__bulk-check": {
-      "smallest": "21x21",
+      "smallest": "20x20",
       "count": 50,
       "routes": [
         "/app/register/"
@@ -38,7 +38,7 @@
       "compact": false
     },
     "a.report-month-link": {
-      "smallest": "68x18",
+      "smallest": "57x16",
       "count": 49,
       "routes": [
         "/app/reports/income-expense/",
@@ -57,18 +57,10 @@
       "compact": false
     },
     "a.cal__entry.cal__entry--clickable": {
-      "smallest": "6x6",
-      "count": 13,
+      "smallest": "6x24",
+      "count": 11,
       "routes": [
         "/app/calendar/"
-      ],
-      "compact": false
-    },
-    "button.acct-combo__chevron": {
-      "smallest": "21x21",
-      "count": 1,
-      "routes": [
-        "/app/register/"
       ],
       "compact": false
     }
