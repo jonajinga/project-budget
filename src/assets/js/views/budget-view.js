@@ -800,6 +800,36 @@ function budgetView() {
     },
     calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
 
+    /* Keystroke guard for money fields.
+
+       The brief was "no non-numerical characters". Taken literally that
+       would also block + - * / ( ), and those are NOT junk here:
+       parseDollars runs the value through PBCalc, so "100+25" in an
+       Assigned cell really does assign 125. The Move Money dialog
+       advertises it ("0.00 · or 100+25"); the inline cell has always
+       supported it without saying so. Stripping operators would delete a
+       working feature to satisfy the wording of a request aimed at
+       letters and punctuation.
+
+       So: digits, one kind of decimal separator, currency/grouping the
+       parser already tolerates, and the calculator operators. Everything
+       else -- letters, %, ^, emoji, stray punctuation -- is refused
+       before it reaches the field.
+
+       beforeinput rather than keydown: it fires for typing AND for paste,
+       drag-drop and IME commits, and preventDefault leaves the caret and
+       the browser's own undo stack untouched. A keydown handler catches
+       typing only, which is how pasted junk usually gets in. */
+    guardAmountInput(e) {
+      var type = e.inputType || "";
+      /* Never block removal, or the browser's own undo/redo. */
+      if (type.indexOf("delete") === 0 || type === "historyUndo" || type === "historyRedo") return;
+      var text = e.data;
+      if (text == null && e.dataTransfer) text = e.dataTransfer.getData("text");
+      if (text == null) return;
+      if (/[^0-9.,$+\-*/() ]/.test(text)) e.preventDefault();
+    },
+
     commitAssign(catId, raw) {
       var cents = this.parseDollars(raw);
       this.$store.budget.assign(catId, this.$store.budget.currentMonth, cents);

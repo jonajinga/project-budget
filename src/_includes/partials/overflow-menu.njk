@@ -24,14 +24,23 @@
 
    `align` controls left/right anchor of the popover; default "right"
    (menu hangs to the left of the kebab, which is the right pattern
-   for action buttons aligned to the right edge of a row).
+   for action buttons aligned to the right edge of a row). It is the
+   PREFERRED anchor, not a guarantee -- ui/menu-position.js clamps the
+   menu into the viewport, so a trigger near an edge still yields a
+   fully visible menu.
+
+   Positioning lives in ui/menu-position.js (window.overflowMenu). The
+   list is placed with position: fixed, which is what lets it escape the
+   scroll containers these menus sit inside -- an absolutely positioned
+   popover is clipped by any ancestor that scrolls or hides overflow.
 #}
 {% macro overflow(label="More actions", align="right", triggerClass="") %}
-<div x-data="{ open: false }"
+<div x-data="overflowMenu('{{ align }}')"
      class="overflow-menu"
      @keydown.escape.window="open = false"
      @click.outside="open = false">
   <button type="button"
+          x-ref="trigger"
           class="btn btn--icon overflow-menu__trigger {{ triggerClass }}"
           :class="open ? 'is-open' : ''"
           :aria-expanded="open.toString()"
@@ -45,7 +54,8 @@
       <circle cx="12" cy="18" r="2"/>
     </svg>
   </button>
-  <ul class="overflow-menu__list overflow-menu__list--{{ align }}"
+  <ul x-ref="list"
+      class="overflow-menu__list overflow-menu__list--{{ align }}"
       role="menu"
       x-show="open"
       x-cloak

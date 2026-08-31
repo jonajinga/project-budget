@@ -125,6 +125,13 @@
   {% if page.url == "/app/calendar/" %}
     <script src="/assets/js/views/calendar-view.js?v={{ build.hash }}" defer></script>
   {% endif %}
+  {# Same rule: overflowMenu() is an x-data factory, used by the kebab macro
+     on nearly every screen, so it has to exist before Alpine boots. Loading
+     it with the other ui/ helpers below Alpine looked harmless and threw
+     "overflowMenu is not defined" on every menu -- Alpine starts in a
+     microtask after its own script, which lands before the next deferred
+     file executes. #}
+  <script src="/assets/js/ui/menu-position.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/vendor/alpine.min.js" defer></script>
   <script src="/assets/js/ui/sortable-bind.js?v={{ build.hash }}" defer></script>
   <script src="/assets/js/ui/command-palette.js?v={{ build.hash }}" defer></script>
