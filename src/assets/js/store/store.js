@@ -232,7 +232,7 @@ export function createStore() {
       if (this._suppressUndo || !this.profile) return;
       var snap = this._snapshotProfile();
       if (!snap) return;
-      this._undoStack.push({ label: label || "Action", profileId: this.active, snapshot: snap });
+      this._undoStack.push({ label: label || "Action", profileId: this.active, snapshot: snap, at: Date.now() });
       if (this._undoStack.length > this._UNDO_LIMIT) this._undoStack.shift();
       /* New action invalidates the redo branch. */
       this._redoStack = [];
@@ -260,13 +260,13 @@ export function createStore() {
       var entry = this._undoStack.pop();
       /* Snapshot current state for redo BEFORE we restore. */
       var current = this._snapshotProfile();
-      if (current) this._redoStack.push({ label: entry.label, profileId: this.active, snapshot: current });
+      if (current) this._redoStack.push({ label: entry.label, profileId: this.active, snapshot: current, at: entry.at || Date.now() });
       this._suppressUndo = true;
       try {
         if (this._restoreSnapshot(entry)) {
           this._bumpLists();
           this._save();
-          this.pushToast("Undone: " + entry.label);
+          if (!this._quietHistory) this.pushToast("Undone: " + entry.label);
         }
       } finally { this._suppressUndo = false; }
     },
@@ -274,16 +274,85 @@ export function createStore() {
       if (!this._redoStack.length) return;
       var entry = this._redoStack.pop();
       var current = this._snapshotProfile();
-      if (current) this._undoStack.push({ label: entry.label, profileId: this.active, snapshot: current });
+      if (current) this._undoStack.push({ label: entry.label, profileId: this.active, snapshot: current, at: entry.at || Date.now() });
       this._suppressUndo = true;
       try {
         if (this._restoreSnapshot(entry)) {
           this._bumpLists();
           this._save();
-          this.pushToast("Redone: " + entry.label);
+          if (!this._quietHistory) this.pushToast("Redone: " + entry.label);
         }
       } finally { this._suppressUndo = false; }
     },
+    /* ---- History as a LIST, not just a top-of-stack ----
+       The buttons alone can only walk one step at a time, so recovering
+       from six bad edits means pressing undo six times and hoping the
+       toast text matches what you meant. These expose the stacks so the
+       UI can show what each step would revert TO and jump straight there.
+
+       Newest first, which is the order the menu reads in. `steps` is how
+       many undo() calls that row costs, so the UI never has to do index
+       arithmetic. */
+    _quietHistory: false,
+
+    undoHistory() {
+      var out = [];
+      for (var i = this._undoStack.length - 1; i >= 0; i--) {
+        out.push({
+          label: this._undoStack[i].label,
+          at: this._undoStack[i].at || 0,
+          steps: this._undoStack.length - i,
+        });
+      }
+      return out;
+    },
+    redoHistory() {
+      var out = [];
+      for (var i = this._redoStack.length - 1; i >= 0; i--) {
+        out.push({
+          label: this._redoStack[i].label,
+          at: this._redoStack[i].at || 0,
+          steps: this._redoStack.length - i,
+        });
+      }
+      return out;
+    },
+
+    /* Walking undo() n times rather than restoring the nth snapshot
+       directly is deliberate: each step has to push its own redo entry,
+       so the redo branch after a multi-step undo is the same as if the
+       user had clicked undo n times. Restoring straight to a snapshot
+       would strip everything in between out of redo. */
+    undoMany(steps) {
+      var n = Math.max(1, Math.min(parseInt(steps, 10) || 1, this._undoStack.length));
+      if (!this._undoStack.length) return;
+      var lastLabel = this.undoLabel();
+      this._quietHistory = true;
+      try { for (var i = 0; i < n; i++) this.undo(); }
+      finally { this._quietHistory = false; }
+      this.pushToast(n === 1 ? "Undone: " + lastLabel : "Undone " + n + " actions");
+    },
+    redoMany(steps) {
+      var n = Math.max(1, Math.min(parseInt(steps, 10) || 1, this._redoStack.length));
+      if (!this._redoStack.length) return;
+      var lastLabel = this.redoLabel();
+      this._quietHistory = true;
+      try { for (var i = 0; i < n; i++) this.redo(); }
+      finally { this._quietHistory = false; }
+      this.pushToast(n === 1 ? "Redone: " + lastLabel : "Redone " + n + " actions");
+    },
+
+    /* "just now" / "4m" / "2h" — a history list without timing makes two
+       identically-labelled edits impossible to tell apart. */
+    historyAge(at) {
+      if (!at) return "";
+      var secs = Math.floor((Date.now() - at) / 1000);
+      if (secs < 45) return "just now";
+      if (secs < 3600) return Math.round(secs / 60) + "m ago";
+      if (secs < 86400) return Math.round(secs / 3600) + "h ago";
+      return Math.round(secs / 86400) + "d ago";
+    },
+
     _clearHistory() { this._undoStack = []; this._redoStack = []; },
 
     /* Persistence backend status. Populated during init():

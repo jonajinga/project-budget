@@ -39,26 +39,129 @@
       </a>
 
       <div class="site-header__actions" x-data>
-        {# Undo / redo — hidden when there's nothing to undo so the
-           header stays clean. Tippy shows the last action label. #}
-        <button type="button"
-                class="site-header__iconbtn"
-                @click="$store.budget.undo()"
-                x-show="$store.budget && $store.budget.canUndo && $store.budget.canUndo()"
-                x-cloak
-                :data-tip="'Undo: ' + ($store.budget.undoLabel() || 'last action') + ' (Ctrl/⌘+Z)'"
-                aria-label="Undo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
-        </button>
-        <button type="button"
-                class="site-header__iconbtn"
-                @click="$store.budget.redo()"
-                x-show="$store.budget && $store.budget.canRedo && $store.budget.canRedo()"
-                x-cloak
-                :data-tip="'Redo: ' + ($store.budget.redoLabel() || 'last undone action') + ' (Ctrl/⌘+Shift+Z)'"
-                aria-label="Redo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
-        </button>
+        {# ---- History cluster: back / forward | undo / redo ----
+
+           All four are ALWAYS rendered and disabled when they would do
+           nothing, rather than appearing and vanishing. A control that
+           disappears moves everything beside it, so the button under the
+           pointer changes between one glance and the next; a dimmed one
+           stays put and also answers "can I undo right now?" without the
+           user having to try it.
+
+           Back/forward mirror the browser's own buttons, which the
+           in-app router makes ambiguous -- the address bar changes, so
+           people reach for them, and the router owns that history.
+           canGoBack/canGoForward come from the router, which tracks its
+           position by stamping an index into each history state; the
+           browser will not tell a page whether back leads anywhere. #}
+        <div class="history-nav"
+             x-data="{ canBack: false, canForward: false }"
+             @pb:history.window="canBack = $event.detail.canBack; canForward = $event.detail.canForward">
+          <button type="button"
+                  class="site-header__iconbtn"
+                  :disabled="!canBack"
+                  @click="window.pbRouter && window.pbRouter.goBack()"
+                  data-tip="Back to the previous screen."
+                  aria-label="Back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button type="button"
+                  class="site-header__iconbtn"
+                  :disabled="!canForward"
+                  @click="window.pbRouter && window.pbRouter.goForward()"
+                  data-tip="Forward to the screen you came back from."
+                  aria-label="Forward">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <span class="history-nav__sep" aria-hidden="true"></span>
+
+        {# Undo and redo are split controls: the icon does one step, the
+           caret opens the list so several can be undone in one go. The
+           list is what makes this recoverable rather than a guessing
+           game -- six bad edits used to mean six clicks and reading the
+           toast each time to check you had not gone too far. #}
+        <div class="history-split" x-data="overflowMenu('right')">
+          <button type="button"
+                  class="site-header__iconbtn history-split__main"
+                  :disabled="!($store.budget && $store.budget.canUndo && $store.budget.canUndo())"
+                  @click="$store.budget.undo()"
+                  :data-tip="($store.budget && $store.budget.canUndo && $store.budget.canUndo()) ? ('Undo: ' + ($store.budget.undoLabel() || 'last action') + ' (Ctrl/⌘+Z)') : 'Nothing to undo yet.'"
+                  aria-label="Undo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          </button>
+          <button type="button"
+                  x-ref="trigger"
+                  class="history-split__caret"
+                  :disabled="!($store.budget && $store.budget.canUndo && $store.budget.canUndo())"
+                  :aria-expanded="open.toString()"
+                  aria-haspopup="menu"
+                  aria-label="Undo history"
+                  data-tip="Pick how far back to undo."
+                  @click="open = !open">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul x-ref="list"
+              class="overflow-menu__list overflow-menu__list--right history-menu"
+              role="menu" x-show="open" x-cloak
+              @keydown.escape.window="open = false"
+              @click.outside="open = false"
+              x-transition.opacity.duration.120ms>
+            <li role="none" class="history-menu__head">Undo back to…</li>
+            <template x-for="(item, i) in ($store.budget ? $store.budget.undoHistory() : [])" :key="'u' + i">
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item history-menu__item"
+                        @click="open = false; $store.budget.undoMany(item.steps)">
+                  <span class="history-menu__label" x-text="item.label"></span>
+                  <span class="history-menu__meta"
+                        x-text="$store.budget.historyAge(item.at) + (item.steps > 1 ? ' · ' + item.steps + ' steps' : '')"></span>
+                </button>
+              </li>
+            </template>
+          </ul>
+        </div>
+
+        <div class="history-split" x-data="overflowMenu('right')">
+          <button type="button"
+                  class="site-header__iconbtn history-split__main"
+                  :disabled="!($store.budget && $store.budget.canRedo && $store.budget.canRedo())"
+                  @click="$store.budget.redo()"
+                  :data-tip="($store.budget && $store.budget.canRedo && $store.budget.canRedo()) ? ('Redo: ' + ($store.budget.redoLabel() || 'last undone action') + ' (Ctrl/⌘+Shift+Z)') : 'Nothing to redo.'"
+                  aria-label="Redo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+          </button>
+          <button type="button"
+                  x-ref="trigger"
+                  class="history-split__caret"
+                  :disabled="!($store.budget && $store.budget.canRedo && $store.budget.canRedo())"
+                  :aria-expanded="open.toString()"
+                  aria-haspopup="menu"
+                  aria-label="Redo history"
+                  data-tip="Pick how far forward to redo."
+                  @click="open = !open">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul x-ref="list"
+              class="overflow-menu__list overflow-menu__list--right history-menu"
+              role="menu" x-show="open" x-cloak
+              @keydown.escape.window="open = false"
+              @click.outside="open = false"
+              x-transition.opacity.duration.120ms>
+            <li role="none" class="history-menu__head">Redo forward to…</li>
+            <template x-for="(item, i) in ($store.budget ? $store.budget.redoHistory() : [])" :key="'r' + i">
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item history-menu__item"
+                        @click="open = false; $store.budget.redoMany(item.steps)">
+                  <span class="history-menu__label" x-text="item.label"></span>
+                  <span class="history-menu__meta"
+                        x-text="$store.budget.historyAge(item.at) + (item.steps > 1 ? ' · ' + item.steps + ' steps' : '')"></span>
+                </button>
+              </li>
+            </template>
+          </ul>
+        </div>
+
         <button type="button"
                 class="site-header__search"
                 aria-label="Search the site"

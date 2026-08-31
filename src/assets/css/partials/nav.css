@@ -126,6 +126,86 @@
 
 .site-header__actions { display: flex; align-items: center; gap: var(--space-2xs); flex-shrink: 0; margin-left: auto; }
 
+/* ---- History cluster: back / forward | undo / redo ----
+ *
+ * Disabled rather than hidden. These four used to appear and disappear with
+ * availability, which moved everything beside them -- the control under the
+ * pointer changed between one glance and the next. Dimmed-in-place also
+ * answers "is there anything to undo?" without making the user click to
+ * find out.
+ *
+ * The dim is a COLOUR change, not opacity. Compositing a button at 0.5
+ * produces whatever the backdrop happens to make it, which is how five
+ * contrast failures got onto the welcome page once already; --fg-subtle is
+ * a token that was checked against the header background. */
+.history-nav { display: flex; align-items: center; gap: 2px; }
+.history-nav__sep {
+  width: 1px;
+  height: 18px;
+  margin-inline: var(--space-3xs);
+  background: var(--border);
+  flex: 0 0 auto;
+}
+
+.site-header__iconbtn:disabled,
+.history-split__caret:disabled {
+  color: var(--fg-subtle);
+  cursor: default;
+  pointer-events: none; /* also suppresses the tooltip's hover target */
+}
+
+/* Split control: icon does one step, caret opens the list. They read as one
+   object, so the hover state covers both halves. */
+.history-split { position: relative; display: inline-flex; align-items: center; }
+.history-split__main { border-start-end-radius: 0; border-end-end-radius: 0; }
+.history-split__caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 24x32. The first draft was 16px wide, which reads fine and fails the
+     24px target floor -- the same floor this app enforces everywhere else,
+     and the spacing exception does not apply because the main button is
+     immediately adjacent. A caret narrower than the floor is exactly the
+     kind of control that is easy to draw and hard to hit. */
+  min-width: 24px;
+  width: 24px;
+  min-height: 24px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  cursor: pointer;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-radius: var(--radius-input);
+}
+.history-split:hover .history-split__caret:not(:disabled),
+.history-split__caret:not(:disabled):hover { background: var(--bg-alt); color: var(--accent); }
+.history-split__caret:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* The dropdown reuses .overflow-menu__list, so ui/menu-position.js places it
+   with the same flip/clamp logic. Wider than a row kebab because it carries
+   a label and a timestamp per line. */
+.history-menu { min-width: 15rem; max-width: min(20rem, calc(100vw - 16px)); }
+.history-menu__head {
+  padding: 0.35rem 0.85rem 0.3rem;
+  color: var(--fg-muted);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.history-menu__item { flex-direction: column; align-items: flex-start; gap: 0; }
+.history-menu__label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-menu__meta { color: var(--fg-muted); font-size: var(--fs-2xs); }
+
 /* Mobile tightening — the app header crams hamburger + profile +
    undo + redo + search + theme picker into a single row. Below
    600px the row overflows and the picker chevron + theme split
@@ -143,9 +223,23 @@
   .site-header__hamburger,
   .site-header__search,
   .site-header__iconbtn { width: 40px; height: 40px; }
-  /* Undo/redo: hide on narrow screens. Power-users use Ctrl+Z. The
-     command palette also has explicit Undo/Redo actions. */
-  .site-header__actions .site-header__iconbtn { display: none; }
+  /* Undo/redo STAY on phones -- being able to take back a mis-tap matters
+     more on a touch screen than on a keyboard, and "Ctrl+Z instead" is not
+     an answer on a device with no Ctrl key.
+
+     What goes instead is back/forward. Six 40px controls plus a hamburger
+     and the profile name do not fit across 360px, and of the six these are
+     the ones the platform already provides: Android has a system back
+     gesture, iOS has an edge swipe, and the bottom tab bar covers the
+     primary destinations. Undo has no such fallback on a phone.
+
+     The carets go too -- the split control is a pointer affordance, and a
+     16px-wide target is the wrong way to spend the width. The full undo
+     LIST is still reachable from the command palette. */
+  .history-nav,
+  .history-nav__sep,
+  .history-split__caret { display: none; }
+  .history-split__main { border-radius: var(--radius-input); }
   /* Profile name: cap aggressively so it truncates instead of
      pushing the theme picker off-screen. */
   .site-header__profile { padding: 0; min-width: 0; }

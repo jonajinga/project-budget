@@ -314,7 +314,14 @@ export async function navigate(rawPath, { push = true, restoreScroll = null } = 
      * first-visit regression is real and should be fixed before this is
      * called done. */
     setTitleFrom(mount);
-    if (push) history.pushState({ path }, "", path);
+    if (push) {
+      /* A new navigation from anywhere but the tip discards the forward
+         branch -- same rule the browser applies. */
+      historyIndex += 1;
+      historyDepth = historyIndex;
+      history.pushState({ path, idx: historyIndex }, "", path);
+      announceHistory();
+    }
 
     /* Browsers restore scroll for back/forward on real navigations; with
        pushState that is ours to do. */
@@ -336,7 +343,15 @@ export async function navigate(rawPath, { push = true, restoreScroll = null } = 
        it would throw away the store, which is the one thing this router
        exists to protect. Report it and leave the user where they are. */
     console.error("router: view init failed for", path, err);
-    if (push) history.pushState({ path }, "", path);
+    if (push) {
+      /* Still a real history entry -- the fragment is on screen. Skipping the
+         bookkeeping here would leave the index one behind for the rest of the
+         session and quietly mis-report canGoBack. */
+      historyIndex += 1;
+      historyDepth = historyIndex;
+      history.pushState({ path, idx: historyIndex }, "", path);
+      announceHistory();
+    }
     return false;
   } finally {
     if (token === navToken && store) store.routeLoading = false;
@@ -378,11 +393,46 @@ export function startRouter() {
   document.addEventListener("click", onClick);
   window.addEventListener("popstate", (e) => {
     const path = (e.state && e.state.path) || location.pathname;
+    /* Trust the state we stamped rather than trying to infer direction: the
+       user can jump several entries at once from the browser's own back
+       menu, and counting steps would drift. */
+    if (e.state && typeof e.state.idx === "number") historyIndex = e.state.idx;
+    announceHistory();
     navigate(path, { push: false });
   });
-  history.replaceState({ path: normalise(location.pathname) }, "", location.href);
+  history.replaceState({ path: normalise(location.pathname), idx: 0 }, "", location.href);
+  historyIndex = 0;
+  historyDepth = 0;
+  announceHistory();
 }
+
+/* ---- Where we are in the session's history ----
+ *
+ * The browser deliberately does not tell a page whether back or forward would
+ * go anywhere -- history.length counts entries from before this page existed
+ * and never shrinks, so it cannot answer it. Buttons that are always enabled
+ * and sometimes do nothing are worse than no buttons, so the router keeps its
+ * own position by stamping an index into each history state.
+ *
+ * `depth` is the highest index reached on the current branch. Navigating from
+ * a back-position truncates the forward branch, exactly as the browser does.
+ */
+let historyIndex = 0;
+let historyDepth = 0;
+
+function announceHistory() {
+  window.dispatchEvent(
+    new CustomEvent("pb:history", {
+      detail: { canBack: historyIndex > 0, canForward: historyIndex < historyDepth },
+    })
+  );
+}
+
+export function canGoBack() { return historyIndex > 0; }
+export function canGoForward() { return historyIndex < historyDepth; }
+export function goBack() { if (canGoBack()) history.back(); }
+export function goForward() { if (canGoForward()) history.forward(); }
 
 /* Exposed for the router's own tests and for anything that needs to navigate
    without a click (the budget view jumps to a filtered register). */
-window.pbRouter = { navigate, startRouter };
+window.pbRouter = { navigate, startRouter, canGoBack, canGoForward, goBack, goForward };
