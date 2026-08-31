@@ -5,6 +5,8 @@ description: "Your active budget at a glance — ready to assign, net worth, thi
 permalink: /app/
 eleventyExcludeFromCollections: true
 ---
+{% from "partials/overflow-menu.njk" import overflow %}
+{% import "partials/dashboard-widgets.njk" as W %}
 <div class="app-page" x-data="dashboardView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -35,341 +37,325 @@ eleventyExcludeFromCollections: true
        src/_includes/layouts/app.njk) is the canonical add path
        on every app page including the dashboard. #}
 
-    {# ==== Hero band: greeting, month, and a one-line insight ==== #}
-    <section class="dash-hero" aria-label="Today's summary">
-      <div class="dash-hero__greeting">
-        <p class="dash-hero__eyebrow" x-text="heroEyebrow()"></p>
-        <h2 class="dash-hero__title" x-text="heroTitle()"></h2>
-        <p class="dash-hero__insight" x-text="heroInsight()"></p>
+
+    {# ---- Dashboard toolbar: which dashboard, and editing it ---- #}
+    <div class="dash-toolbar" x-show="$store.budget.profile" x-cloak>
+      <div class="dash-toolbar__left">
+        <label class="visually-hidden" for="dash-picker">Dashboard</label>
+        <select id="dash-picker" class="input dash-toolbar__picker"
+                :value="activeId()"
+                @change="$store.budget.setActiveDashboard($event.target.value)">
+          <template x-for="d in $store.budget.dashboardList()" :key="d.id">
+            <option :value="d.id" :selected="d.id === activeId()" x-text="d.name"></option>
+          </template>
+        </select>
+        <span class="dash-toolbar__count"
+              x-text="widgets().length + (widgets().length === 1 ? ' widget' : ' widgets')"></span>
       </div>
-      <div class="dash-hero__metric">
-        <p class="dash-hero__metric-label">Net worth</p>
-        <p class="dash-hero__metric-value"
-           :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : ''"
-           x-text="fmt($store.budget.netWorth())"></p>
-        <p class="dash-hero__metric-trend"
-           :class="netWorthDelta().pct >= 0 ? 'is-positive' : 'is-negative'">
-          <span x-text="(netWorthDelta().pct >= 0 ? '↑ ' : '↓ ') + Math.abs(netWorthDelta().pct).toFixed(1) + '%'"></span>
-          <span class="dash-hero__metric-sub">vs 6 months ago</span>
-        </p>
-      </div>
-    </section>
 
-    {# ==== Band B: 6-tile KPI row ==== #}
-    {# Reuses .rec-summary chrome from /app/scheduled/ for consistent
-       semantic-rail tiles; each tile is an <a> so the whole card is
-       clickable and lands on the page that lets you act on the number. #}
-    <section class="dashboard__kpis" aria-label="Key indicators">
-      <a class="rec-summary__tile dashboard__kpi"
-         :class="$store.budget.readyToAssign() < 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
-         href="/app/budget/"
-         data-tip="Dollars not yet assigned to any category this month. Click to open the budget.">
-        <span class="rec-summary__label">Ready to assign</span>
-        <span class="rec-summary__value"
-              :class="$store.budget.readyToAssign() < 0 ? 'amount--outflow' : ''"
-              x-text="fmt($store.budget.readyToAssign())"></span>
-        <span class="dashboard__kpi-sub" x-text="$store.budget.currentMonth"></span>
-      </a>
+      <div class="dash-toolbar__right">
+        {# Edit mode is an explicit toggle rather than always-on drag handles.
+           A dashboard is read far more often than it is rearranged, and grips
+           on every card turn a calm screen into a construction site -- worse,
+           they make an accidental drag a normal outcome of trying to scroll
+           on a touch screen. #}
+        <button type="button" class="btn"
+                :class="editing ? 'btn--primary' : ''"
+                @click="toggleEdit()"
+                :aria-pressed="editing.toString()"
+                :data-tip="editing ? 'Finish editing this dashboard.' : 'Rearrange, resize, add or remove widgets.'">
+          <span x-text="editing ? 'Done' : 'Edit'"></span>
+        </button>
 
-      <a class="rec-summary__tile rec-summary__tile--net dashboard__kpi"
-         href="/app/reports/net-worth/"
-         data-tip="On-budget balances plus tracking assets minus tracking liabilities.">
-        <span class="rec-summary__label">Net worth</span>
-        <span class="rec-summary__value"
-              :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : 'amount--inflow'"
-              x-text="fmt($store.budget.netWorth())"></span>
-        <span class="dashboard__kpi-sub">On budget + tracking</span>
-      </a>
+        <button type="button" class="btn" x-show="editing" x-cloak
+                @click="pickerOpen = true"
+                data-tip="Add a widget to this dashboard.">Add widget</button>
 
-      <a class="rec-summary__tile dashboard__kpi"
-         :class="thisMonthNet() < 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
-         href="/app/reports/income-expense/"
-         data-tip="Income minus expenses for the current month.">
-        <span class="rec-summary__label">This month's net</span>
-        <span class="rec-summary__value"
-              :class="thisMonthNet() < 0 ? 'amount--outflow' : 'amount--inflow'"
-              x-text="fmt(thisMonthNet())"></span>
-        <span class="dashboard__kpi-sub" x-text="'In ' + fmtCompact(thisMonthIncome()) + ' · Out ' + fmtCompact(thisMonthExpense())"></span>
-      </a>
-
-      <a class="rec-summary__tile dashboard__kpi"
-         :class="savingsBandClass()"
-         href="/app/reports/savings-rate/"
-         data-tip="Trailing 3-month savings rate (income minus expenses, divided by income).">
-        <span class="rec-summary__label">Savings rate</span>
-        <span class="rec-summary__value"
-              x-text="savingsRateLabel()"></span>
-        <span class="dashboard__kpi-sub">3-month rolling</span>
-      </a>
-
-      <a class="rec-summary__tile rec-summary__tile--accent dashboard__kpi"
-         href="/app/scheduled/"
-         data-tip="Scheduled transactions hitting within the next 7 days.">
-        <span class="rec-summary__label">Next 7 days</span>
-        <span class="rec-summary__value"
-              :class="upcoming7().totalNet < 0 ? 'amount--outflow' : 'amount--inflow'"
-              x-text="fmt(upcoming7().totalNet)"></span>
-        <span class="dashboard__kpi-sub" x-text="upcoming7().items.length + ' due'"></span>
-      </a>
-
-      <a class="rec-summary__tile dashboard__kpi"
-         :class="overspent().count > 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
-         href="/app/budget/"
-         data-tip="Categories whose available balance is below zero this month.">
-        <span class="rec-summary__label">Overspent</span>
-        <span class="rec-summary__value"
-              :class="overspent().count > 0 ? 'amount--outflow' : ''"
-              x-text="overspent().count"></span>
-        <span class="dashboard__kpi-sub" x-text="overspent().count > 0 ? ('Deficit ' + fmtCompact(overspent().totalDeficit)) : 'Everything covered'"></span>
-      </a>
-    </section>
-
-    {# ==== Smart insights ==== #}
-    <section class="card" x-show="insights().length" x-cloak>
-      <div class="dashboard__card-head">
-        <h2>Insights</h2>
-        <span style="color: var(--fg-muted); font-size: var(--fs-xs);" x-text="insights().length + ' signal' + (insights().length === 1 ? '' : 's')"></span>
-      </div>
-      <ul class="dash-insights">
-        <template x-for="ins in insights()" :key="ins.id">
-          <li class="dash-insight" :class="'dash-insight--' + ins.severity">
-            <span class="dash-insight__icon" aria-hidden="true" x-text="ins.icon"></span>
-            <div class="dash-insight__body">
-              <p class="dash-insight__title" x-text="ins.title"></p>
-              <p class="dash-insight__detail" x-text="ins.detail"></p>
-            </div>
-            <a class="dash-insight__cta" x-show="ins.href" x-cloak :href="ins.href" x-text="ins.cta || 'View'"></a>
+        {% call overflow(label="Dashboard actions") %}
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; newDashboard()">New dashboard…</button>
           </li>
-        </template>
-      </ul>
-    </section>
-
-    {# ==== Account balances grid ==== #}
-    <section class="card" x-show="allAccountsForGrid().length" x-cloak>
-      <div class="dashboard__card-head">
-        <h2>Account balances</h2>
-        <a href="/app/accounts/">Manage accounts &rsaquo;</a>
-      </div>
-      <ul class="dash-accts" data-no-tippy>
-        <template x-for="a in allAccountsForGrid()" :key="a.id">
-          <li class="dash-acct">
-            <a class="dash-acct__link" :href="'/app/register/?account=' + a.id">
-              <span class="dash-acct__group" x-text="a.groupName || 'Other'"></span>
-              <span class="dash-acct__name">
-                <span x-text="a.name"></span>
-                <span class="dash-acct__flag" x-show="a.excludeFromNetWorth" x-cloak
-                      data-tip="Excluded from net worth.">E</span>
-              </span>
-              <span class="dash-acct__balance"
-                    :class="a.balance < 0 ? 'is-negative' : ''"
-                    x-text="fmt(a.balance)"></span>
-            </a>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; renameDashboard()">Rename…</button>
           </li>
-        </template>
-      </ul>
-    </section>
-
-    {# ==== Cash flow this month (mini sankey, pure CSS) ==== #}
-    <section class="card" x-show="flowThisMonth().total > 0" x-cloak>
-      <div class="dashboard__card-head">
-        <h2>Cash flow this month</h2>
-        <a href="/app/reports/sankey/">Full sankey &rsaquo;</a>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; $store.budget.duplicateDashboard(activeId())">Duplicate</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; exportPdf()">Export as PDF…</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; exportLayout()"
+                    data-tip="Saves the layout only — no amounts leave your device.">Export layout…</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; $refs.importFile.click()">Import layout…</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; resetLayout()">Reset to default layout</button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                    @click="open = false; deleteDashboard()">Delete dashboard</button>
+          </li>
+        {% endcall %}
+        {# `hidden`, not .visually-hidden. This input is a mechanism, not a
+           control: it is never focused, tabbed to or clicked by a person --
+           the menu item calls .click() on it, which works fine on a
+           display:none file input in every current browser. .visually-hidden
+           clips to 1x1 instead of removing it, so it rendered as a real 1x1
+           target and showed up in the touch census as a control nobody can
+           hit. #}
+        <input type="file" accept="application/json,.json" x-ref="importFile" hidden
+               @change="importLayout($event)">
       </div>
-      <div class="dash-flow">
-        <ul class="dash-flow__col dash-flow__col--in">
-          <li class="dash-flow__col-head">Income sources</li>
-          <template x-for="row in flowThisMonth().sources" :key="'src-' + row.name">
-            <li class="dash-flow__row">
-              <span class="dash-flow__row-bar">
-                <span class="dash-flow__row-fill dash-flow__row-fill--in"
-                      :style="'--pct:' + row.pct + '%'"></span>
-              </span>
-              <span class="dash-flow__row-meta">
-                <span class="dash-flow__row-name" x-text="row.name"></span>
-                <span class="dash-flow__row-amt" x-text="fmt(row.value)"></span>
-              </span>
-            </li>
-          </template>
-          <li x-show="!flowThisMonth().sources.length" x-cloak class="dash-flow__empty">No income yet.</li>
-        </ul>
-
-        <div class="dash-flow__pivot">
-          <span class="dash-flow__pivot-label">Net</span>
-          <span class="dash-flow__pivot-value"
-                :class="flowThisMonth().net < 0 ? 'amount--outflow' : 'amount--inflow'"
-                x-text="fmt(flowThisMonth().net)"></span>
-          <span class="dash-flow__pivot-sub">
-            <span x-text="fmt(flowThisMonth().income)"></span> in
-            &middot;
-            <span x-text="fmt(flowThisMonth().expense)"></span> out
-          </span>
-        </div>
-
-        <ul class="dash-flow__col dash-flow__col--out">
-          <li class="dash-flow__col-head">Top spending</li>
-          <template x-for="row in flowThisMonth().sinks" :key="'sink-' + row.name">
-            <li class="dash-flow__row dash-flow__row--right">
-              <span class="dash-flow__row-meta">
-                <span class="dash-flow__row-name" x-text="row.name"></span>
-                <span class="dash-flow__row-amt" x-text="fmt(row.value)"></span>
-              </span>
-              <span class="dash-flow__row-bar">
-                <span class="dash-flow__row-fill dash-flow__row-fill--out"
-                      :style="'--pct:' + row.pct + '%'"></span>
-              </span>
-            </li>
-          </template>
-          <li x-show="!flowThisMonth().sinks.length" x-cloak class="dash-flow__empty">No spending yet.</li>
-        </ul>
-      </div>
-    </section>
-
-    {# ==== Band C: This month — sparkline + top categories ==== #}
-    <div class="dashboard__row dashboard__row--2col">
-      <section class="card">
-        <div class="dashboard__card-head">
-          <h2>Income vs expense</h2>
-          <a href="/app/reports/income-expense/">Full report &rsaquo;</a>
-        </div>
-        <div class="chart dashboard__chart" id="dash-chart-ie"></div>
-      </section>
-
-      <section class="card">
-        <div class="dashboard__card-head">
-          <h2>Top categories this month</h2>
-          <a href="/app/reports/spending/">All spending &rsaquo;</a>
-        </div>
-        <p x-show="!topCategoriesRows().length" x-cloak style="color: var(--fg-muted); margin: 0;">No spending yet this month.</p>
-        <ul class="dash-cat-bars" x-show="topCategoriesRows().length" x-cloak>
-          <template x-for="r in topCategoriesRows()" :key="r.categoryId">
-            <li class="dash-cat-bars__row">
-              <a :href="'/app/register/?category=' + r.categoryId" x-text="r.category"></a>
-              <span class="dash-cat-bars__amount" x-text="fmt(r.value)"></span>
-              <span class="dash-cat-bars__bar">
-                <span class="dash-cat-bars__fill" :style="'--pct:' + r.pct + '%'"></span>
-              </span>
-            </li>
-          </template>
-        </ul>
-      </section>
     </div>
 
-    {# ==== Band D: Forecast + upcoming bills ==== #}
-    <div class="dashboard__row dashboard__row--2col">
-      <section class="card">
-        <div class="dashboard__card-head">
-          <h2>30-day cashflow</h2>
-          <a href="/app/reports/projection/">Full projection &rsaquo;</a>
-        </div>
-        <div class="chart dashboard__chart" id="dash-chart-proj"></div>
-      </section>
+    {# ---- The grid ----
+       Widgets come from the active dashboard's ordered list. The :key is the
+       widget id so Alpine MOVES existing nodes on reorder instead of
+       recreating them -- which is what keeps the Chart.js canvases alive
+       through a rearrange. Rebuilding them would leak a chart per move. #}
+    <div class="dash-grid"
+         :class="editing ? 'is-editing' : ''"
+         x-ref="grid"
+         x-show="$store.budget.profile" x-cloak>
+      <template x-for="(widget, i) in widgets()" :key="widget.id">
+        <section class="dash-widget"
+                 :data-widget-id="widget.id"
+                 :style="widgetStyle(widget)"
+                 :aria-label="titleOf(widget.type)">
 
-      <section class="card">
-        <div class="dashboard__card-head">
-          <h2>Upcoming bills (14 days)</h2>
-          <a href="/app/scheduled/">Manage recurring &rsaquo;</a>
-        </div>
-        <p x-show="!upcoming14().items.length" x-cloak style="color: var(--fg-muted); margin: 0;">No scheduled items in the next two weeks.</p>
-        <ul class="dash-bill-list" x-show="upcoming14().items.length" x-cloak>
-          <template x-for="(b, i) in upcoming14().items.slice(0, 8)" :key="i">
-            <li class="dash-bill">
-              <span class="dash-bill__date" x-text="shortDate(b.date)"></span>
-              <span>
-                <span class="dash-bill__payee" x-text="b.payeeName || $store.budget.payeeName(b.payeeId) || '—'"></span>
-                <span class="dash-bill__meta" x-text="($store.budget.findAccount(b.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(b.categoryId) || 'Uncategorized')"></span>
-              </span>
-              <span class="dash-bill__amount" :class="b.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(b.amount)"></span>
-            </li>
-          </template>
-        </ul>
-      </section>
+          {# Editing chrome. Present only in edit mode, so a widget in read
+             mode is exactly the card it always was. #}
+          <div class="dash-widget__chrome" x-show="editing" x-cloak>
+            <button type="button"
+                    class="dash-widget__grip"
+                    data-widget-grip
+                    :aria-label="'Move ' + titleOf(widget.type) + '. Press space to pick up, then arrow keys to move, shift and arrows to resize.'"
+                    data-tip="Drag to move — or press space and use the arrow keys.">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
+                <circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>
+                <circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>
+              </svg>
+            </button>
+            <span class="dash-widget__name" x-text="titleOf(widget.type)"></span>
+            <span class="dash-widget__size" x-text="widget.w + '\u00d7' + widget.h"></span>
+            <button type="button" class="dash-widget__remove"
+                    @click="$store.budget.removeWidget(activeId(), widget.id)"
+                    :aria-label="'Remove ' + titleOf(widget.type)"
+                    data-tip="Remove this widget. Undo brings it back.">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+
+          <template x-if="widget.type === 'hero'">
+<div class="dash-widget__body">{{ W.w_hero() }}</div></template>
+          <template x-if="widget.type === 'kpis'">
+<div class="dash-widget__body">{{ W.w_kpis() }}</div></template>
+          <template x-if="widget.type === 'insights'">
+<div class="dash-widget__body">{{ W.w_insights() }}</div></template>
+          <template x-if="widget.type === 'accounts'">
+<div class="dash-widget__body">{{ W.w_accounts() }}</div></template>
+          <template x-if="widget.type === 'cashflow'">
+<div class="dash-widget__body">{{ W.w_cashflow() }}</div></template>
+          <template x-if="widget.type === 'income-expense'">
+<div class="dash-widget__body">{{ W.w_income_expense() }}</div></template>
+          <template x-if="widget.type === 'top-categories'">
+<div class="dash-widget__body">{{ W.w_top_categories() }}</div></template>
+          <template x-if="widget.type === 'cashflow-30'">
+<div class="dash-widget__body">{{ W.w_cashflow_30() }}</div></template>
+          <template x-if="widget.type === 'upcoming-bills'">
+<div class="dash-widget__body">{{ W.w_upcoming_bills() }}</div></template>
+          <template x-if="widget.type === 'goals'">
+<div class="dash-widget__body">{{ W.w_goals() }}</div></template>
+          <template x-if="widget.type === 'recent'">
+<div class="dash-widget__body">{{ W.w_recent() }}</div></template>
+          <template x-if="widget.type === 'alerts'">
+<div class="dash-widget__body">{{ W.w_alerts() }}</div></template>
+          <template x-if="widget.type === 'quick-actions'">
+<div class="dash-widget__body">{{ W.w_quick_actions() }}</div></template>
+
+          {# Resize handle. Pointer only -- the keyboard equivalent is
+             shift+arrows on the grip, which is discoverable from the grip's
+             own label rather than needing a second focusable control. #}
+          <button type="button" class="dash-widget__resize" data-widget-resize
+                  x-show="editing" x-cloak tabindex="-1" aria-hidden="true"></button>
+        </section>
+      </template>
     </div>
 
-    {# ==== Band E: Goals that need attention ==== #}
-    <section x-show="$store.budget.profile && $store.budget.profile.goals && $store.budget.profile.goals.length" x-cloak>
-      <div class="dashboard__card-head">
-        <h2>Goals needing attention</h2>
-        <a href="/app/budget/">Manage goals &rsaquo;</a>
-      </div>
-      <p x-show="!goalsAttention().length" x-cloak style="color: var(--fg-muted); margin: 0 0 var(--space-md);">All goals are on track this month.</p>
-      <div class="dashboard__row dashboard__row--3col" x-show="goalsAttention().length" x-cloak>
-        <template x-for="g in goalsAttention()" :key="g.goal.id">
-          <article class="dash-goal" :class="g.pct < 0.25 ? 'dash-goal--critical' : (g.pct >= 0.75 ? 'dash-goal--close' : '')">
-            <h3 class="dash-goal__name" x-text="g.categoryName"></h3>
-            <div class="dash-goal__progress">
-              <span class="dash-goal__progress-fill" :style="'--pct:' + Math.min(100, Math.max(0, g.pct * 100)) + '%'"></span>
-            </div>
-            <p class="dash-goal__line">
-              <strong x-text="fmt(g.assigned)"></strong>
-              <span> of </span>
-              <strong x-text="fmt(g.target)"></strong>
-              <span x-text="' (' + Math.round(g.pct * 100) + '%)'"></span>
-            </p>
-            <p class="dash-goal__line" x-show="g.deficit > 0" x-cloak>
-              <span>Needs </span>
-              <strong x-text="fmt(g.deficit)"></strong>
-              <span> more to fully fund this month.</span>
-            </p>
-          </article>
-        </template>
-      </div>
-    </section>
-
-    {# ==== Band F: Recent activity + alerts ==== #}
-    <div class="dashboard__row dashboard__row--2col">
-      <section class="card">
-        <div class="dashboard__card-head">
-          <h2>Recent transactions</h2>
-          <a href="/app/register/">Open register &rsaquo;</a>
+    {# ---- Widget picker ---- #}
+    <div class="modal-backdrop" x-show="pickerOpen" x-cloak
+         @click.self="pickerOpen = false"
+         @keydown.escape.window="pickerOpen = false">
+      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="dash-picker-title">
+        <div class="modal__head">
+          <h2 id="dash-picker-title" class="modal__title">Add a widget</h2>
+          <button type="button" class="modal__close" @click="pickerOpen = false" aria-label="Close">&times;</button>
         </div>
-        <p x-show="!recentTransactions().length" x-cloak style="color: var(--fg-muted); margin: 0;">No transactions yet. Press <kbd>N</kbd> to add one.</p>
-        <ul class="dash-recent" x-show="recentTransactions().length" x-cloak data-no-tippy>
-          <template x-for="t in recentTransactions()" :key="t.id">
-            <li class="dash-recent__row">
-              <span class="dash-recent__date" x-text="shortDate(t.date)"></span>
-              <span>
-                <span class="dash-recent__payee" x-text="$store.budget.payeeName(t.payeeId) || '—'"></span>
-                <span class="dash-recent__meta" x-text="($store.budget.findAccount(t.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(t.categoryId) || 'Uncategorized')"></span>
-              </span>
-              <span class="dash-recent__amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(t.amount)"></span>
-            </li>
-          </template>
-        </ul>
-      </section>
-
-      <section class="card">
-        <div class="dashboard__card-head">
-          <h2>Alerts</h2>
+        <div class="modal__body">
+          <ul class="widget-picker">
+            <template x-for="w in $store.budget.availableWidgets(activeId())" :key="w.type">
+              <li>
+                <button type="button" class="widget-picker__item"
+                        :disabled="w.disabled"
+                        @click="$store.budget.addWidget(activeId(), w.type); pickerOpen = false">
+                  <span class="widget-picker__title" x-text="w.title"></span>
+                  <span class="widget-picker__desc" x-text="w.description"></span>
+                  <span class="widget-picker__on" x-show="w.disabled" x-cloak>Already on this dashboard</span>
+                </button>
+              </li>
+            </template>
+          </ul>
         </div>
-        <p class="dash-alerts__empty" x-show="!alerts().length" x-cloak>Nothing needs attention right now.</p>
-        <ul class="dash-alerts" x-show="alerts().length" x-cloak>
-          <template x-for="a in alerts()" :key="a.id">
-            <li>
-              <a class="dash-alert" :class="'dash-alert--' + a.severity" :href="a.href">
-                <span x-text="a.text"></span>
-                <span class="dash-alert__cta">Open &rsaquo;</span>
-              </a>
-            </li>
-          </template>
-        </ul>
-      </section>
+      </div>
     </div>
-
-    {# ==== Quick actions cluster (kept for screen-reader users + mouse-only users who prefer buttons) ==== #}
-    <section class="card" style="margin-top: var(--space-lg);">
-      <h2 class="card__title">Quick actions</h2>
-      <div class="cluster">
-        <a class="btn btn--primary btn--sm" href="/app/budget/">Open budget</a>
-        <a class="btn btn--secondary btn--sm" href="/app/register/">Enter transactions</a>
-        <a class="btn btn--ghost btn--sm" href="/app/settings/">Settings</a>
-      </div>
-    </section>
   </div>
 </div>
 
 <script>
 function dashboardView() {
   return {
+    /* ---- Dashboard editing ----
+       `editing` is deliberately NOT persisted. Edit mode is a thing you are
+       doing right now, not a property of the dashboard; coming back to the
+       app a day later and finding every card wearing drag handles reads as
+       breakage. */
+    editing: false,
+    pickerOpen: false,
+
+    /* `void ... _listVersion` is this codebase's reactivity handshake, not a
+       stray line. The store does not rely on deep proxying for the profile's
+       collections -- proxying thousands of transactions is what it is
+       avoiding -- so every mutator calls _bumpLists() and every reader that
+       must re-run touches the counter. Without it the dashboard rendered
+       once and then ignored every move, resize, add and remove: the store was
+       correct and the screen was a photograph of the first paint. */
+    activeId() {
+      void this.$store.budget._listVersion;
+      var d = this.$store.budget.activeDashboard();
+      return d ? d.id : null;
+    },
+    widgets() {
+      void this.$store.budget._listVersion;
+      var d = this.$store.budget.activeDashboard();
+      return d ? d.widgets.slice() : [];
+    },
+    titleOf(type) {
+      return this.$store.budget.widgetTitle(type);
+    },
+
+    /* Width in columns, height in rows. Only the span is inline -- the track
+       sizes live in CSS so the grid stays responsive and the phone breakpoint
+       can collapse everything to one column without fighting inline styles. */
+    widgetStyle(widget) {
+      return "grid-column: span " + widget.w + "; grid-row: span " + widget.h + ";";
+    },
+
+    toggleEdit() {
+      this.editing = !this.editing;
+      if (this.editing) this.$nextTick(this._bindGrid.bind(this));
+    },
+
+    _bindGrid() {
+      var self = this;
+      var grid = this.$refs.grid;
+      if (!grid || !window.PBDashGrid) return;
+      window.PBDashGrid.attach(grid, {
+        move: function (id, to) { self.$store.budget.moveWidget(self.activeId(), id, to); },
+        resize: function (id, w, h) { self.$store.budget.resizeWidget(self.activeId(), id, w, h); },
+        sizeOf: function (id) {
+          var w = self.widgets().find(function (x) { return x.id === id; });
+          return w ? { w: w.w, h: w.h } : { w: 6, h: 4 };
+        },
+        titleOf: function (id) {
+          var w = self.widgets().find(function (x) { return x.id === id; });
+          return w ? self.titleOf(w.type) : "Widget";
+        },
+        /* Resize previews on the element so the drag feels direct, then
+           commits once on release -- committing per pointermove would push a
+           hundred undo entries for one gesture. */
+        previewSize: function (el, w, h) {
+          el.style.gridColumn = "span " + Math.max(1, Math.min(12, w));
+          el.style.gridRow = "span " + Math.max(1, Math.min(24, h));
+        },
+        readPreview: function (el) {
+          var col = /span (\d+)/.exec(el.style.gridColumn || "");
+          var row = /span (\d+)/.exec(el.style.gridRow || "");
+          return { w: col ? +col[1] : 6, h: row ? +row[1] : 4 };
+        },
+      });
+    },
+
+    /* ---- dashboard-level actions ---- */
+    newDashboard() {
+      var name = window.prompt("Name this dashboard", "New dashboard");
+      if (name == null) return;
+      this.$store.budget.createDashboard(name.trim() || "New dashboard", []);
+      this.editing = true;
+      this.$nextTick(this._bindGrid.bind(this));
+    },
+    renameDashboard() {
+      var d = this.$store.budget.activeDashboard();
+      if (!d) return;
+      var name = window.prompt("Rename dashboard", d.name);
+      if (name == null) return;
+      this.$store.budget.renameDashboard(d.id, name);
+    },
+    deleteDashboard() {
+      var d = this.$store.budget.activeDashboard();
+      if (!d) return;
+      if (!window.confirm('Delete "' + d.name + '"? Undo will bring it back.')) return;
+      this.$store.budget.deleteDashboard(d.id);
+    },
+    resetLayout() {
+      if (!window.confirm("Reset this dashboard to the default layout?")) return;
+      this.$store.budget.resetDashboard(this.activeId());
+    },
+
+    /* ---- portability ----
+       Layout export carries no figures (see slices/dashboards.js). The PDF
+       does, which is why they are separate menu items with different words. */
+    exportLayout() {
+      var def = this.$store.budget.exportDefinition(this.activeId());
+      if (!def) return;
+      var blob = new Blob([JSON.stringify(def, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = (def.name || "dashboard").replace(/[^a-z0-9]+/gi, "-").toLowerCase() + "-layout.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      this.$store.budget.pushToast("Layout exported — no amounts included");
+    },
+    importLayout(e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var self = this;
+      var reader = new FileReader();
+      reader.onload = function () { self.$store.budget.importDefinition(String(reader.result)); };
+      reader.readAsText(file);
+      e.target.value = "";
+    },
+    exportPdf() {
+      if (!window.PBDashboardPdf) { this.$store.budget.pushToast("PDF export isn't loaded yet — try again in a moment"); return; }
+      var d = this.$store.budget.activeDashboard();
+      window.PBDashboardPdf.export(this.$refs.grid, d ? d.name : "Dashboard");
+    },
+
     chartIE: null,
     chartProj: null,
     /* Inline quick-add state. Pre-populated with today's date + the
@@ -407,25 +393,71 @@ function dashboardView() {
       /* Seed the inline quick-add form. Account is filled in lazily
          via the quickAccounts() getter once the profile loads. */
       this.quickForm.date = new Date().toISOString().slice(0, 10);
-      /* Wait for the budget store + chart bootstrap script-modules to
-         finish loading, then mount the two sparklines. Same polling
-         pattern as the report pages so the timing is predictable. */
+      /* ---- Charts ----
+         The two sparklines live inside widgets now, so their host elements
+         are not guaranteed to exist when init() runs, and they can appear or
+         vanish at any time as widgets are added, removed or reordered.
+
+         The previous one-shot mount assumed a static page and failed
+         silently in the most confusing way possible: mountChart() returns a
+         no-op { redraw, dispose } stub when its selector matches nothing, so
+         there was no error anywhere -- just two permanently empty chart
+         boxes.
+
+         _syncCharts() is therefore idempotent and re-runs after every
+         render. It keys on the host ELEMENT, not on whether a chart object
+         exists: Alpine reuses keyed nodes on reorder but replaces them when
+         a widget is removed and re-added, and a chart still bound to a
+         detached element is exactly the leak this project has chased before. */
+      var CHART_SPECS = [
+        { sel: "#dash-chart-ie", key: "chartIE",
+          render: function () { return window.pbDashRenderIE; },
+          data: function (store) { return store.reportIncomeVsExpense(null, 6); } },
+        { sel: "#dash-chart-proj", key: "chartProj",
+          render: function () { return window.pbDashRenderProj; },
+          data: function (store) { return store.reportProjection(1); } },
+      ];
+      this._chartHosts = {};
+
+      this._syncCharts = function () {
+        if (!window.pbMountChart) return;
+        var store = Alpine.store("budget");
+        for (var i = 0; i < CHART_SPECS.length; i++) {
+          var spec = CHART_SPECS[i];
+          var host = document.querySelector(spec.sel);
+          var mounted = self[spec.key];
+          if (!host) {
+            /* Widget removed — drop the chart with it. */
+            if (mounted) { try { mounted.dispose(); } catch (_e) {} self[spec.key] = null; self._chartHosts[spec.key] = null; }
+            continue;
+          }
+          if (mounted && self._chartHosts[spec.key] === host) continue; /* still good */
+          if (mounted) { try { mounted.dispose(); } catch (_e2) {} }
+          var renderFn = spec.render();
+          if (!renderFn) continue; /* chart module still loading */
+          self[spec.key] = window.pbMountChart(spec.sel, renderFn, (function (sp) {
+            return function () { return sp.data(store); };
+          })(spec));
+          self._chartHosts[spec.key] = host;
+        }
+      };
+
+      /* Wait for the store and the chart module, then keep charts in step
+         with the layout for the rest of the session. */
       var tries = 0;
       var poll = function () {
         var ready = window.Alpine && window.Alpine.store && window.Alpine.store("budget") && window.pbMountChart && window.pbDashRenderIE && window.pbDashRenderProj;
         if (!ready) { if (++tries < 600) setTimeout(poll, 50); return; }
         var store = Alpine.store("budget");
-        self.chartIE = window.pbMountChart("#dash-chart-ie", window.pbDashRenderIE, function () {
-          return store.reportIncomeVsExpense(null, 6);
-        });
-        self.chartProj = window.pbMountChart("#dash-chart-proj", window.pbDashRenderProj, function () {
-          return store.reportProjection(1);
-        });
-        /* Store mutations trip _listVersion; redraw both charts. */
         Alpine.effect(function () {
+          /* Re-runs on any store mutation, which covers both "the data
+             changed, redraw" and "the layout changed, (re)mount". */
           store.profile; store.currentMonth; store._listVersion;
-          if (self.chartIE)   self.chartIE.redraw();
-          if (self.chartProj) self.chartProj.redraw();
+          Alpine.nextTick(function () {
+            self._syncCharts();
+            if (self.chartIE) self.chartIE.redraw();
+            if (self.chartProj) self.chartProj.redraw();
+          });
         });
       };
       poll();

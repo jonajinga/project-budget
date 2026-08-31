@@ -694,3 +694,206 @@
   .dash-flow__row--right .dash-flow__row-meta { text-align: left; }
   .dash-flow__row--right .dash-flow__row-fill { margin-left: 0; }
 }
+
+/* ============================================================
+   Editable dashboard grid
+   ============================================================
+
+   Twelve columns, because 12 divides by 2, 3, 4 and 6 -- every arrangement
+   a person reaches for (halves, thirds, quarters) lands on a whole number,
+   so no widget ever has to be 5.33 columns wide.
+
+   Widgets set their own span inline from the stored layout; everything
+   else lives here so the grid stays responsive. Below the tablet
+   breakpoint every widget becomes full width regardless of its stored
+   span: a 3-column widget on a 390px screen is 90px of unreadable
+   nothing, and honouring the layout there would be obeying the data at
+   the expense of the person. The stored span is not lost -- it is simply
+   not applied at that width, and comes back when the screen does. */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: var(--dash-row, 44px);
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.dash-widget {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.dash-widget__body { min-width: 0; height: 100%; }
+/* The widget bodies are the original cards, which carry their own margins
+   from when they were stacked in a column. In a grid those margins fight
+   the gap and knock rows out of alignment. */
+.dash-widget__body > .card,
+.dash-widget__body > section { margin: 0; height: 100%; }
+
+@media (max-width: 899px) {
+  .dash-grid > .dash-widget { grid-column: 1 / -1 !important; }
+}
+
+/* ---- Edit mode ----
+   Only visible while editing. A dashboard is read far more often than it is
+   rearranged, so the default state carries no extra chrome at all. */
+.dash-grid.is-editing .dash-widget {
+  outline: 1px dashed var(--border);
+  outline-offset: 4px;
+  border-radius: var(--radius-input);
+}
+
+.dash-widget__chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-3xs) var(--space-2xs);
+  margin-bottom: var(--space-3xs);
+  background: var(--bg-alt);
+  border-radius: var(--radius-input);
+  font-size: var(--fs-2xs);
+}
+.dash-widget__name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.dash-widget__size {
+  margin-left: auto;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dash-widget__grip,
+.dash-widget__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 24px: the same target floor everything else in this app answers to. */
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-chip);
+  color: var(--fg-muted);
+  cursor: grab;
+}
+.dash-widget__remove { cursor: pointer; }
+.dash-widget__grip:hover,
+.dash-widget__remove:hover { background: var(--bg); color: var(--accent); }
+.dash-widget__grip:focus-visible,
+.dash-widget__remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.dash-widget.is-dragging { opacity: 0.75; cursor: grabbing; z-index: 5; }
+.dash-widget.is-resizing { z-index: 5; }
+/* Keyboard "picked up" state. It has to be as obvious as the pointer's
+   drag shadow -- someone moving a widget by keyboard gets no cursor to
+   tell them the gesture is live. */
+.dash-widget.is-keyboard-active {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  box-shadow: var(--shadow-md);
+}
+
+.dash-widget__resize {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: nwse-resize;
+  touch-action: none; /* or the browser scrolls instead of resizing */
+}
+.dash-widget__resize::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--fg-muted);
+  border-bottom: 2px solid var(--fg-muted);
+  border-bottom-right-radius: 2px;
+}
+/* Dragging must not select text across the page. */
+.dash-grid.is-rearranging { user-select: none; }
+
+/* ---- Toolbar ---- */
+.dash-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+.dash-toolbar__left,
+.dash-toolbar__right { display: flex; align-items: center; gap: var(--space-2xs); }
+.dash-toolbar__right { margin-left: auto; }
+.dash-toolbar__picker { max-width: 16rem; }
+.dash-toolbar__count { color: var(--fg-muted); font-size: var(--fs-xs); white-space: nowrap; }
+@media (max-width: 599px) { .dash-toolbar__count { display: none; } }
+
+/* ---- Widget picker ---- */
+.widget-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-2xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.widget-picker__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2xs) var(--space-sm);
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+.widget-picker__item:hover:not(:disabled) { border-color: var(--accent); background: var(--bg-alt); }
+.widget-picker__item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.widget-picker__item:disabled { cursor: default; color: var(--fg-subtle); }
+.widget-picker__title { font-weight: 700; font-size: var(--fs-sm); }
+.widget-picker__desc { color: var(--fg-muted); font-size: var(--fs-xs); }
+.widget-picker__on { color: var(--fg-subtle); font-size: var(--fs-2xs); font-style: italic; }
+
+/* ---- Printing a dashboard ----
+   Set by ui/dashboard-pdf.js for the duration of the print dialog. Charts
+   have already been swapped for 2x images by then; this handles everything
+   that should not appear on paper, and stops widgets being split across a
+   page break mid-card. */
+@media print {
+  body.is-printing-dashboard .site-header,
+  body.is-printing-dashboard .app-sidebar,
+  body.is-printing-dashboard .tab-bar,
+  body.is-printing-dashboard .dash-toolbar,
+  body.is-printing-dashboard .fab-quick-add,
+  body.is-printing-dashboard .dash-widget__chrome,
+  body.is-printing-dashboard .dash-widget__resize { display: none !important; }
+
+  body.is-printing-dashboard .dash-grid {
+    gap: 10pt;
+    grid-auto-rows: auto;
+  }
+  body.is-printing-dashboard .dash-widget {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    outline: none;
+  }
+  body.is-printing-dashboard .dash-print-chart { max-width: 100%; height: auto !important; }
+}

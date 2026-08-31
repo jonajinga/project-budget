@@ -52,6 +52,7 @@ export function newProfile(name) {
     scheduled: [],
     budgets: {},
     goals: [],
+    dashboards: [],
     settings: {},
   };
 }
@@ -177,6 +178,12 @@ var ARRAY_FIELDS = [
   "accountGroups", "accounts", "categoryGroups", "categories", "payees",
   "transactions", "trash", "scheduled", "goals", "savedViews", "snapshots",
   "budgetTemplates",
+  /* Dashboards are seeded lazily by dashboardsSlice.dashboardList() rather
+     than by a migration, because profiles arrive from four directions --
+     newProfile, an older export, an import, and the bundled sample -- and
+     only the read path is common to all of them. This entry is what
+     guarantees the field is an array when that read happens. */
+  "dashboards",
 ];
 
 /* Runs on every load, independent of schemaVersion, so a profile already

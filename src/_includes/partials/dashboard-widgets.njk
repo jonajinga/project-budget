@@ -1,0 +1,351 @@
+{# Dashboard widget bodies.
+
+   One macro per widget type. The markup is EXACTLY what the hand-built
+   dashboard rendered -- this was a move, not a rewrite, so a widget that
+   worked before works the same now and any behaviour change here would be
+   a bug rather than an improvement.
+
+   These are called from pages/app/index.njk inside an x-for over the
+   active dashboard's widget list. They run in dashboardView()'s Alpine
+   scope, so every expression they already used still resolves.
+
+   Adding a widget: add a macro here, add an entry to
+   assets/js/domain/dashboard-widgets.js, and add one line to the dispatch
+   list in index.njk. #}
+
+{% macro w_hero() %}
+    <section class="dash-hero" aria-label="Today's summary">
+      <div class="dash-hero__greeting">
+        <p class="dash-hero__eyebrow" x-text="heroEyebrow()"></p>
+        <h2 class="dash-hero__title" x-text="heroTitle()"></h2>
+        <p class="dash-hero__insight" x-text="heroInsight()"></p>
+      </div>
+      <div class="dash-hero__metric">
+        <p class="dash-hero__metric-label">Net worth</p>
+        <p class="dash-hero__metric-value"
+           :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : ''"
+           x-text="fmt($store.budget.netWorth())"></p>
+        <p class="dash-hero__metric-trend"
+           :class="netWorthDelta().pct >= 0 ? 'is-positive' : 'is-negative'">
+          <span x-text="(netWorthDelta().pct >= 0 ? '↑ ' : '↓ ') + Math.abs(netWorthDelta().pct).toFixed(1) + '%'"></span>
+          <span class="dash-hero__metric-sub">vs 6 months ago</span>
+        </p>
+      </div>
+    </section>
+{% endmacro %}
+
+{% macro w_kpis() %}
+    <section class="dashboard__kpis" aria-label="Key indicators">
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="$store.budget.readyToAssign() < 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
+         href="/app/budget/"
+         data-tip="Dollars not yet assigned to any category this month. Click to open the budget.">
+        <span class="rec-summary__label">Ready to assign</span>
+        <span class="rec-summary__value"
+              :class="$store.budget.readyToAssign() < 0 ? 'amount--outflow' : ''"
+              x-text="fmt($store.budget.readyToAssign())"></span>
+        <span class="dashboard__kpi-sub" x-text="$store.budget.currentMonth"></span>
+      </a>
+
+      <a class="rec-summary__tile rec-summary__tile--net dashboard__kpi"
+         href="/app/reports/net-worth/"
+         data-tip="On-budget balances plus tracking assets minus tracking liabilities.">
+        <span class="rec-summary__label">Net worth</span>
+        <span class="rec-summary__value"
+              :class="$store.budget.netWorth() < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="fmt($store.budget.netWorth())"></span>
+        <span class="dashboard__kpi-sub">On budget + tracking</span>
+      </a>
+
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="thisMonthNet() < 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
+         href="/app/reports/income-expense/"
+         data-tip="Income minus expenses for the current month.">
+        <span class="rec-summary__label">This month's net</span>
+        <span class="rec-summary__value"
+              :class="thisMonthNet() < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="fmt(thisMonthNet())"></span>
+        <span class="dashboard__kpi-sub" x-text="'In ' + fmtCompact(thisMonthIncome()) + ' · Out ' + fmtCompact(thisMonthExpense())"></span>
+      </a>
+
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="savingsBandClass()"
+         href="/app/reports/savings-rate/"
+         data-tip="Trailing 3-month savings rate (income minus expenses, divided by income).">
+        <span class="rec-summary__label">Savings rate</span>
+        <span class="rec-summary__value"
+              x-text="savingsRateLabel()"></span>
+        <span class="dashboard__kpi-sub">3-month rolling</span>
+      </a>
+
+      <a class="rec-summary__tile rec-summary__tile--accent dashboard__kpi"
+         href="/app/scheduled/"
+         data-tip="Scheduled transactions hitting within the next 7 days.">
+        <span class="rec-summary__label">Next 7 days</span>
+        <span class="rec-summary__value"
+              :class="upcoming7().totalNet < 0 ? 'amount--outflow' : 'amount--inflow'"
+              x-text="fmt(upcoming7().totalNet)"></span>
+        <span class="dashboard__kpi-sub" x-text="upcoming7().items.length + ' due'"></span>
+      </a>
+
+      <a class="rec-summary__tile dashboard__kpi"
+         :class="overspent().count > 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
+         href="/app/budget/"
+         data-tip="Categories whose available balance is below zero this month.">
+        <span class="rec-summary__label">Overspent</span>
+        <span class="rec-summary__value"
+              :class="overspent().count > 0 ? 'amount--outflow' : ''"
+              x-text="overspent().count"></span>
+        <span class="dashboard__kpi-sub" x-text="overspent().count > 0 ? ('Deficit ' + fmtCompact(overspent().totalDeficit)) : 'Everything covered'"></span>
+      </a>
+    </section>
+{% endmacro %}
+
+{% macro w_insights() %}
+    <section class="card" x-show="insights().length" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Insights</h2>
+        <span style="color: var(--fg-muted); font-size: var(--fs-xs);" x-text="insights().length + ' signal' + (insights().length === 1 ? '' : 's')"></span>
+      </div>
+      <ul class="dash-insights">
+        <template x-for="ins in insights()" :key="ins.id">
+          <li class="dash-insight" :class="'dash-insight--' + ins.severity">
+            <span class="dash-insight__icon" aria-hidden="true" x-text="ins.icon"></span>
+            <div class="dash-insight__body">
+              <p class="dash-insight__title" x-text="ins.title"></p>
+              <p class="dash-insight__detail" x-text="ins.detail"></p>
+            </div>
+            <a class="dash-insight__cta" x-show="ins.href" x-cloak :href="ins.href" x-text="ins.cta || 'View'"></a>
+          </li>
+        </template>
+      </ul>
+    </section>
+{% endmacro %}
+
+{% macro w_accounts() %}
+    <section class="card" x-show="allAccountsForGrid().length" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Account balances</h2>
+        <a href="/app/accounts/">Manage accounts &rsaquo;</a>
+      </div>
+      <ul class="dash-accts" data-no-tippy>
+        <template x-for="a in allAccountsForGrid()" :key="a.id">
+          <li class="dash-acct">
+            <a class="dash-acct__link" :href="'/app/register/?account=' + a.id">
+              <span class="dash-acct__group" x-text="a.groupName || 'Other'"></span>
+              <span class="dash-acct__name">
+                <span x-text="a.name"></span>
+                <span class="dash-acct__flag" x-show="a.excludeFromNetWorth" x-cloak
+                      data-tip="Excluded from net worth.">E</span>
+              </span>
+              <span class="dash-acct__balance"
+                    :class="a.balance < 0 ? 'is-negative' : ''"
+                    x-text="fmt(a.balance)"></span>
+            </a>
+          </li>
+        </template>
+      </ul>
+    </section>
+{% endmacro %}
+
+{% macro w_cashflow() %}
+    <section class="card" x-show="flowThisMonth().total > 0" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Cash flow this month</h2>
+        <a href="/app/reports/sankey/">Full sankey &rsaquo;</a>
+      </div>
+      <div class="dash-flow">
+        <ul class="dash-flow__col dash-flow__col--in">
+          <li class="dash-flow__col-head">Income sources</li>
+          <template x-for="row in flowThisMonth().sources" :key="'src-' + row.name">
+            <li class="dash-flow__row">
+              <span class="dash-flow__row-bar">
+                <span class="dash-flow__row-fill dash-flow__row-fill--in"
+                      :style="'--pct:' + row.pct + '%'"></span>
+              </span>
+              <span class="dash-flow__row-meta">
+                <span class="dash-flow__row-name" x-text="row.name"></span>
+                <span class="dash-flow__row-amt" x-text="fmt(row.value)"></span>
+              </span>
+            </li>
+          </template>
+          <li x-show="!flowThisMonth().sources.length" x-cloak class="dash-flow__empty">No income yet.</li>
+        </ul>
+
+        <div class="dash-flow__pivot">
+          <span class="dash-flow__pivot-label">Net</span>
+          <span class="dash-flow__pivot-value"
+                :class="flowThisMonth().net < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="fmt(flowThisMonth().net)"></span>
+          <span class="dash-flow__pivot-sub">
+            <span x-text="fmt(flowThisMonth().income)"></span> in
+            &middot;
+            <span x-text="fmt(flowThisMonth().expense)"></span> out
+          </span>
+        </div>
+
+        <ul class="dash-flow__col dash-flow__col--out">
+          <li class="dash-flow__col-head">Top spending</li>
+          <template x-for="row in flowThisMonth().sinks" :key="'sink-' + row.name">
+            <li class="dash-flow__row dash-flow__row--right">
+              <span class="dash-flow__row-meta">
+                <span class="dash-flow__row-name" x-text="row.name"></span>
+                <span class="dash-flow__row-amt" x-text="fmt(row.value)"></span>
+              </span>
+              <span class="dash-flow__row-bar">
+                <span class="dash-flow__row-fill dash-flow__row-fill--out"
+                      :style="'--pct:' + row.pct + '%'"></span>
+              </span>
+            </li>
+          </template>
+          <li x-show="!flowThisMonth().sinks.length" x-cloak class="dash-flow__empty">No spending yet.</li>
+        </ul>
+      </div>
+    </section>
+{% endmacro %}
+
+{% macro w_income_expense() %}
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Income vs expense</h2>
+          <a href="/app/reports/income-expense/">Full report &rsaquo;</a>
+        </div>
+        <div class="chart dashboard__chart" id="dash-chart-ie"></div>
+      </section>
+{% endmacro %}
+
+{% macro w_top_categories() %}
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Top categories this month</h2>
+          <a href="/app/reports/spending/">All spending &rsaquo;</a>
+        </div>
+        <p x-show="!topCategoriesRows().length" x-cloak style="color: var(--fg-muted); margin: 0;">No spending yet this month.</p>
+        <ul class="dash-cat-bars" x-show="topCategoriesRows().length" x-cloak>
+          <template x-for="r in topCategoriesRows()" :key="r.categoryId">
+            <li class="dash-cat-bars__row">
+              <a :href="'/app/register/?category=' + r.categoryId" x-text="r.category"></a>
+              <span class="dash-cat-bars__amount" x-text="fmt(r.value)"></span>
+              <span class="dash-cat-bars__bar">
+                <span class="dash-cat-bars__fill" :style="'--pct:' + r.pct + '%'"></span>
+              </span>
+            </li>
+          </template>
+        </ul>
+      </section>
+{% endmacro %}
+
+{% macro w_cashflow_30() %}
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>30-day cashflow</h2>
+          <a href="/app/reports/projection/">Full projection &rsaquo;</a>
+        </div>
+        <div class="chart dashboard__chart" id="dash-chart-proj"></div>
+      </section>
+{% endmacro %}
+
+{% macro w_upcoming_bills() %}
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Upcoming bills (14 days)</h2>
+          <a href="/app/scheduled/">Manage recurring &rsaquo;</a>
+        </div>
+        <p x-show="!upcoming14().items.length" x-cloak style="color: var(--fg-muted); margin: 0;">No scheduled items in the next two weeks.</p>
+        <ul class="dash-bill-list" x-show="upcoming14().items.length" x-cloak>
+          <template x-for="(b, i) in upcoming14().items.slice(0, 8)" :key="i">
+            <li class="dash-bill">
+              <span class="dash-bill__date" x-text="shortDate(b.date)"></span>
+              <span>
+                <span class="dash-bill__payee" x-text="b.payeeName || $store.budget.payeeName(b.payeeId) || '—'"></span>
+                <span class="dash-bill__meta" x-text="($store.budget.findAccount(b.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(b.categoryId) || 'Uncategorized')"></span>
+              </span>
+              <span class="dash-bill__amount" :class="b.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(b.amount)"></span>
+            </li>
+          </template>
+        </ul>
+      </section>
+{% endmacro %}
+
+{% macro w_goals() %}
+    <section x-show="$store.budget.profile && $store.budget.profile.goals && $store.budget.profile.goals.length" x-cloak>
+      <div class="dashboard__card-head">
+        <h2>Goals needing attention</h2>
+        <a href="/app/budget/">Manage goals &rsaquo;</a>
+      </div>
+      <p x-show="!goalsAttention().length" x-cloak style="color: var(--fg-muted); margin: 0 0 var(--space-md);">All goals are on track this month.</p>
+      <div class="dashboard__row dashboard__row--3col" x-show="goalsAttention().length" x-cloak>
+        <template x-for="g in goalsAttention()" :key="g.goal.id">
+          <article class="dash-goal" :class="g.pct < 0.25 ? 'dash-goal--critical' : (g.pct >= 0.75 ? 'dash-goal--close' : '')">
+            <h3 class="dash-goal__name" x-text="g.categoryName"></h3>
+            <div class="dash-goal__progress">
+              <span class="dash-goal__progress-fill" :style="'--pct:' + Math.min(100, Math.max(0, g.pct * 100)) + '%'"></span>
+            </div>
+            <p class="dash-goal__line">
+              <strong x-text="fmt(g.assigned)"></strong>
+              <span> of </span>
+              <strong x-text="fmt(g.target)"></strong>
+              <span x-text="' (' + Math.round(g.pct * 100) + '%)'"></span>
+            </p>
+            <p class="dash-goal__line" x-show="g.deficit > 0" x-cloak>
+              <span>Needs </span>
+              <strong x-text="fmt(g.deficit)"></strong>
+              <span> more to fully fund this month.</span>
+            </p>
+          </article>
+        </template>
+      </div>
+    </section>
+{% endmacro %}
+
+{% macro w_recent() %}
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Recent transactions</h2>
+          <a href="/app/register/">Open register &rsaquo;</a>
+        </div>
+        <p x-show="!recentTransactions().length" x-cloak style="color: var(--fg-muted); margin: 0;">No transactions yet. Press <kbd>N</kbd> to add one.</p>
+        <ul class="dash-recent" x-show="recentTransactions().length" x-cloak data-no-tippy>
+          <template x-for="t in recentTransactions()" :key="t.id">
+            <li class="dash-recent__row">
+              <span class="dash-recent__date" x-text="shortDate(t.date)"></span>
+              <span>
+                <span class="dash-recent__payee" x-text="$store.budget.payeeName(t.payeeId) || '—'"></span>
+                <span class="dash-recent__meta" x-text="($store.budget.findAccount(t.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(t.categoryId) || 'Uncategorized')"></span>
+              </span>
+              <span class="dash-recent__amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(t.amount)"></span>
+            </li>
+          </template>
+        </ul>
+      </section>
+{% endmacro %}
+
+{% macro w_alerts() %}
+      <section class="card">
+        <div class="dashboard__card-head">
+          <h2>Alerts</h2>
+        </div>
+        <p class="dash-alerts__empty" x-show="!alerts().length" x-cloak>Nothing needs attention right now.</p>
+        <ul class="dash-alerts" x-show="alerts().length" x-cloak>
+          <template x-for="a in alerts()" :key="a.id">
+            <li>
+              <a class="dash-alert" :class="'dash-alert--' + a.severity" :href="a.href">
+                <span x-text="a.text"></span>
+                <span class="dash-alert__cta">Open &rsaquo;</span>
+              </a>
+            </li>
+          </template>
+        </ul>
+      </section>
+{% endmacro %}
+
+{% macro w_quick_actions() %}
+    <section class="card" style="margin-top: var(--space-lg);">
+      <h2 class="card__title">Quick actions</h2>
+      <div class="cluster">
+        <a class="btn btn--primary btn--sm" href="/app/budget/">Open budget</a>
+        <a class="btn btn--secondary btn--sm" href="/app/register/">Enter transactions</a>
+        <a class="btn btn--ghost btn--sm" href="/app/settings/">Settings</a>
+      </div>
+    </section>
+{% endmacro %}

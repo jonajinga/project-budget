@@ -79,6 +79,7 @@ import { GOAL_TYPES } from "../domain/goals.js";
    stays the design. */
 import { reportsSlice } from "./slices/reports.js";
 import { dashboardSlice } from "./slices/dashboard.js";
+import { dashboardsSlice } from "./slices/dashboards.js";
 import { importExportSlice } from "./slices/import-export.js";
 import { goalsSlice } from "./slices/goals.js";
 import { reconcileSlice } from "./slices/reconcile.js";
@@ -794,6 +795,7 @@ export function createStore() {
          · Export / import ……………………………… ./slices/import-export.js
          · Reports ………………………………………………… ./slices/reports.js
          · Dashboard widgets ……………………… ./slices/dashboard.js
+         · Dashboard layouts / CRUD …… ./slices/dashboards.js
        The composed slice methods all `this`-bind to this store. */
 
 
@@ -844,6 +846,7 @@ export function createStore() {
     goalsSlice,
     importExportSlice,
     reportsSlice,
-    dashboardSlice
+    dashboardSlice,
+    dashboardsSlice
   );
 }
