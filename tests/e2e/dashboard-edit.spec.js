@@ -171,3 +171,95 @@ test("a second dashboard is independent of the first", async ({ seeded }) => {
   const back = await layout(page);
   expect(back.types).toEqual(first.types);
 });
+
+/* ---------------------------------------------------------------------------
+   Phase 0 corrective tests.
+
+   These three assert properties the shipped dashboard got wrong. Each one is
+   written to fail against the code as it stands, so that passing means the
+   defect is gone rather than that the assertion was weak.
+   ------------------------------------------------------------------------- */
+
+const undoDepth = (page) =>
+  page.evaluate(() => window.Alpine.store("budget")._undoStack.length);
+
+async function pickUpFirstWidget(page) {
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.waitForTimeout(250);
+  await page.locator("[data-widget-grip]:visible").first().focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator(".dash-widget.is-keyboard-active")).toHaveCount(1);
+}
+
+/* A gesture is one action, so it is one undo entry.
+ *
+ * _recordUndo deep-clones the ENTIRE profile - 723KB on the seeded sample - so
+ * committing per step does not merely mislabel history, it evicts real user
+ * actions from a 50-entry stack and clones most of a megabyte per keypress.
+ * Three arrow presses inside one pick-up/drop is still one move. */
+test("a multi-step keyboard move records exactly one undo entry", async ({ seeded }) => {
+  const page = await openDashboard(seeded);
+  await pickUpFirstWidget(page);
+
+  const before = await undoDepth(page);
+  for (let i = 0; i < 3; i++) {
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(200);
+  }
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(250);
+
+  const after = await undoDepth(page);
+  expect(after - before, "three arrow presses in one gesture must cost one undo entry").toBe(1);
+});
+
+/* Cancelling costs nothing. Escape currently replays a move AND a resize
+ * through the store, so abandoning a drag is more expensive than completing
+ * one - and it leaves "Move widget" entries describing a move that was
+ * explicitly rejected. */
+test("cancelling a keyboard move records no undo entry at all", async ({ seeded }) => {
+  const page = await openDashboard(seeded);
+  await pickUpFirstWidget(page);
+
+  const before = await undoDepth(page);
+  const orderBefore = (await layout(page)).types;
+
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(200);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(200);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(250);
+
+  expect(await undoDepth(page), "a cancelled gesture must not touch the undo stack").toBe(before);
+  expect((await layout(page)).types, "escape must restore the original order").toEqual(orderBefore);
+});
+
+/* The keyboard story is built on announcements. The grid looked them up on
+ * "#pb-live", which does not exist anywhere in the app - the real regions are
+ * #pb-live-polite and #pb-live-assertive - so every announcement was dropped
+ * silently, and no gate noticed because axe cannot see a region never written
+ * to. */
+test("picking a widget up announces into the real live region", async ({ seeded }) => {
+  const page = await openDashboard(seeded);
+  await pickUpFirstWidget(page);
+
+  await expect
+    .poll(() => page.locator("#pb-live-polite").innerText(), { timeout: 3000 })
+    .not.toBe("");
+});
+
+/* Chart hosts must not carry ids. Once a chart widget can be added twice - the
+ * entire point of the rebuild - fixed ids produce duplicate-id-active, which is
+ * a ZERO-tolerance rule in the a11y ratchet, not a budgeted one. */
+test("chart widgets are addressed by data attribute, never by a fixed id", async ({ seeded }) => {
+  const page = await openDashboard(seeded);
+  await page.waitForTimeout(800);
+
+  const m = await page.evaluate(() => ({
+    fixedIds: document.querySelectorAll('[id^="dash-chart"]').length,
+    hosts: document.querySelectorAll("[data-chart-host]").length,
+  }));
+  expect(m.fixedIds, "no chart host may carry a hardcoded id").toBe(0);
+  expect(m.hosts, "the chart widgets must still be present and addressable").toBeGreaterThan(0);
+});

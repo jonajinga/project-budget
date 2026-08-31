@@ -132,6 +132,7 @@ eleventyExcludeFromCollections: true
       <template x-for="(widget, i) in widgets()" :key="widget.id">
         <section class="dash-widget"
                  :data-widget-id="widget.id"
+                 :data-widget-kind="$store.budget.widgetKind(widget.type)"
                  :style="widgetStyle(widget)"
                  :aria-label="titleOf(widget.type)">
 
@@ -409,11 +410,15 @@ function dashboardView() {
          exists: Alpine reuses keyed nodes on reorder but replaces them when
          a widget is removed and re-added, and a chart still bound to a
          detached element is exactly the leak this project has chased before. */
+      /* Addressed by data attribute, never by id. A chart widget can be
+         placed more than once, and duplicate ids on rendered content trip
+         axe's duplicate-id-active, which is a ZERO-tolerance rule in the
+         ratchet rather than a budgeted one. */
       var CHART_SPECS = [
-        { sel: "#dash-chart-ie", key: "chartIE",
+        { sel: '[data-chart-view="income-expense"]', key: "chartIE",
           render: function () { return window.pbDashRenderIE; },
           data: function (store) { return store.reportIncomeVsExpense(null, 6); } },
-        { sel: "#dash-chart-proj", key: "chartProj",
+        { sel: '[data-chart-view="projection"]', key: "chartProj",
           render: function () { return window.pbDashRenderProj; },
           data: function (store) { return store.reportProjection(1); } },
       ];

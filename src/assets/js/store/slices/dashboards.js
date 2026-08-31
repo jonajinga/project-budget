@@ -104,6 +104,15 @@ export const dashboardsSlice = {
     return spec ? spec.title : String(type || "Widget");
   },
 
+  /* "chart" or "panel". The height policy differs by kind -- a chart needs a
+     fixed box because Chart.js sizes to its container, while a panel needs to
+     grow to its content -- and the catalogue already records which is which,
+     so this reads it rather than adding a second list to keep in step. */
+  widgetKind(type) {
+    var spec = widgetSpec(type);
+    return spec && spec.chart ? "chart" : "panel";
+  },
+
   /* Types already placed on a dashboard, so the picker can grey out the
      singletons instead of letting someone add a second "Today's summary"
      and wonder why the screen looks broken. */

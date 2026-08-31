@@ -713,9 +713,17 @@
 .dash-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-auto-rows: var(--dash-row, 44px);
+  /* minmax, not a fixed height. With `grid-auto-rows: 44px` a widget spanning
+     3 rows was allotted 132px while its content was 235px, and since the grid
+     aligns items to `start` they were not clipped -- they were drawn straight
+     over the widgets below. Measured on the shipped build: 11 overlapping
+     widget pairs at 390px and 7 at 768px. That, not spacing or colour, is why
+     the dashboard read as unfinished.
+     The stored h is therefore a FLOOR: n * 44px minimum, then the track grows
+     to whatever the content needs. */
+  grid-auto-rows: minmax(var(--dash-row), auto);
   gap: var(--space-md);
-  align-items: start;
+  align-items: stretch;
 }
 
 .dash-widget {
@@ -724,7 +732,15 @@
   flex-direction: column;
   position: relative;
 }
-.dash-widget__body { min-width: 0; height: 100%; }
+/* Height policy, which differs by what is inside.
+ *
+ * A chart genuinely wants a fixed box: Chart.js sizes itself to its
+ * container, so a content-sized parent holding a container-sized child sizes
+ * in a circle. Everything else -- panels, tables, lists -- wants its stored
+ * height as a FLOOR and then to grow, because a card that clips its own last
+ * row looks broken in a way a slightly tall card does not. */
+.dash-widget__body { min-width: 0; height: 100%; min-height: 0; }
+.dash-widget[data-widget-kind="chart"] .dash-widget__body { overflow: hidden; }
 /* The widget bodies are the original cards, which carry their own margins
    from when they were stacked in a column. In a grid those margins fight
    the gap and knock rows out of alignment. */
@@ -732,6 +748,12 @@
 .dash-widget__body > section { margin: 0; height: 100%; }
 
 @media (max-width: 899px) {
+  /* Both axes have to be released, not just the column.
+     Resetting grid-column alone left the inline `grid-row: span N` in force,
+     so a widget went full width while staying clamped to N * 44px and its
+     content simply overflowed the card. That is a large part of why this read
+     as unfinished on a phone, and it was one long payee name away from
+     failing the smoke gate's 390px horizontal-overflow check. */
   .dash-grid > .dash-widget { grid-column: 1 / -1 !important; }
 }
 
@@ -896,4 +918,13 @@
     outline: none;
   }
   body.is-printing-dashboard .dash-print-chart { max-width: 100%; height: auto !important; }
+}
+
+/* A widget that has nothing to show still says so. See the header comment in
+   partials/dashboard-widgets.njk: on a dashboard an empty widget is a placed
+   object, not an absent one, so silence reads as breakage. */
+.dash-widget__empty {
+  padding: var(--space-sm);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
 }

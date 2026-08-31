@@ -173,6 +173,10 @@
 /* Narrower variant for confirm / alert dialogs — keeps the destructive
    action front and center instead of stretching across a 540px field. */
 .modal--sm { max-width: 420px; }
+/* Used by the dashboard widget picker since the day it shipped, with no rule
+   behind it -- so that dialog rendered at the base modal width and read as
+   unstyled. A picker is a grid of choices and wants the room. */
+.modal--wide { max-width: 880px; }
 
 /* When .modal__close is reused inside table rows as a per-row remove
    button (split editor, list editors, etc.), strip the float so it

@@ -128,6 +128,12 @@
 
   --radius-pill: 999px;
 
+  /* Dashboard grid row unit. dashboard.css read var(--dash-row, 44px) while
+     nothing anywhere defined it, so every stored widget height resolved
+     through the fallback -- the layout worked by accident and a widget's
+     stored h was decorative. 44px matches the touch floor, so a one-row
+     widget is exactly one tappable band tall. */
+  --dash-row:         44px;
   --max-width:        1180px;
   --max-width-narrow: 720px;
   --container-pad:    clamp(1rem, 3vw, 2rem);

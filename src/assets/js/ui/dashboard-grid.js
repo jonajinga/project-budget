@@ -11,15 +11,26 @@
  *   Keyboard  focus the grip, Space/Enter to pick up, arrows to move or
  *             resize, Space/Enter to drop, Escape to cancel.
  *
- * The keyboard path is not a lesser fallback: it is the same store calls,
- * announced through the same live region, and cancel restores the original
- * position because a half-finished rearrangement you cannot undo is worse
- * than not being able to start one.
+ * ONE GESTURE IS ONE UNDO ENTRY. This is the rule the first version broke,
+ * and it broke it expensively: _recordUndo deep-clones the WHOLE profile
+ * (723KB on the bundled sample), and move was committed from pointermove and
+ * from every arrow keypress. Dragging across eight slots cloned most of a
+ * megabyte eight times and evicted eight entries of real history from a
+ * 50-entry stack; Escape then replayed a move AND a resize, so abandoning a
+ * drag cost more than finishing one.
  *
- * MOVE IS REORDER. Position comes from list order (see slices/dashboards.js
- * for why), so a move is "put this widget at index N" and the CSS grid flows
- * the rest. Nothing is absolutely positioned, so there is nothing to collide
- * and no holes to garbage-collect.
+ * So the gesture is previewed in CSS and committed once on release:
+ *
+ *   pointermove / arrow  ->  rewrite inline `order`, no store call
+ *   pointerup / Space    ->  api.move(...) exactly once
+ *   Escape               ->  drop the preview, zero store calls
+ *
+ * PREVIEW WITH `order`, NEVER insertBefore. .dash-grid is a CSS grid, so
+ * items honour `order` and the visual arrangement can be changed without
+ * touching DOM structure. Moving the nodes instead would mutate an x-for's
+ * children out from under Alpine, which is precisely how _x_lookup
+ * desynchronises -- the failure ui/router.js documents at length -- and it
+ * would tear down and rebuild the live Chart.js canvases on every pointermove.
  *
  * POINTER EVENTS, not mouse/touch pairs: one code path covers mouse, touch
  * and pen, and setPointerCapture keeps the gesture alive when the pointer
@@ -30,33 +41,63 @@
 (function () {
   var GRID_COLUMNS = 12;
 
+  /* The app has two permanent announcers (layouts/base.njk) and a helper that
+     knows to clear-then-set on the next frame, because assistive tech only
+     reacts to a CHANGE -- "moved to position 3" twice in a row is silent
+     otherwise. The first version hand-rolled this lookup against "#pb-live",
+     an element that does not exist anywhere in the app, so every announcement
+     the keyboard path made was dropped in silence. No gate caught it: axe
+     cannot see a live region that is never written to. */
   function announce(msg) {
-    /* Reuse the app's live region if it is there; say nothing if not,
-       rather than inventing a second one that screen readers would have to
-       track separately. */
-    var region = document.getElementById("pb-live") || document.querySelector("[data-live-region]");
-    if (region) region.textContent = msg;
+    if (window.PBAnnounce && window.PBAnnounce.announce) window.PBAnnounce.announce(msg);
   }
 
   function widgetEls(grid) {
     return Array.prototype.slice.call(grid.querySelectorAll("[data-widget-id]"));
   }
 
-  function indexOfEl(grid, el) {
-    return widgetEls(grid).indexOf(el);
+  /* DOM order equals store order (the x-for renders the widget array), but
+     while a gesture is previewing, `order` means the two diverge on screen.
+     Anything hit-testing against the screen has to sort by what the user can
+     actually see. */
+  function visualEls(grid) {
+    return widgetEls(grid).sort(function (a, b) {
+      var ra = a.getBoundingClientRect();
+      var rb = b.getBoundingClientRect();
+      return ra.top - rb.top || ra.left - rb.left;
+    });
+  }
+
+  /* Show the arrangement that WOULD result from moving `from` to `to`,
+     without moving anything. Because the preview already reflects the
+     intended arrangement, a visual slot index is the store index it would
+     occupy -- which is what lets the hit test return a store index directly. */
+  function applyOrderPreview(grid, from, to) {
+    var els = widgetEls(grid);
+    var seq = els.map(function (_, i) { return i; });
+    var moved = seq.splice(from, 1)[0];
+    seq.splice(to, 0, moved);
+    seq.forEach(function (domIndex, visualPos) {
+      els[domIndex].style.order = String(visualPos);
+    });
+  }
+
+  function clearOrderPreview(grid) {
+    widgetEls(grid).forEach(function (el) { el.style.order = ""; });
   }
 
   /* Which slot is the pointer over? Compares against element centres rather
      than edges: edge-based hit testing makes the drop target flicker between
      two widgets when the pointer sits on a boundary. */
   function slotFromPoint(grid, x, y, dragged) {
-    var els = widgetEls(grid).filter(function (e) { return e !== dragged; });
-    for (var i = 0; i < els.length; i++) {
-      var r = els[i].getBoundingClientRect();
-      if (y < r.top + r.height / 2) return indexOfEl(grid, els[i]);
-      if (y <= r.bottom && x < r.left + r.width / 2) return indexOfEl(grid, els[i]);
+    var els = visualEls(grid);
+    var others = els.filter(function (e) { return e !== dragged; });
+    for (var i = 0; i < others.length; i++) {
+      var r = others[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) return i;
+      if (y <= r.bottom && x < r.left + r.width / 2) return i;
     }
-    return widgetEls(grid).length - 1;
+    return others.length;
   }
 
   window.PBDashGrid = {
@@ -66,11 +107,16 @@
       if (!grid || grid.__pbGridBound) return;
       grid.__pbGridBound = true;
 
-      var drag = null; /* { el, id, pointerId, startIndex } */
-      var resize = null; /* { el, id, startX, startY, startW, startH, colPx, rowPx } */
-      var kb = null; /* { el, id, mode, startIndex, startW, startH } */
+      var drag = null; /* { el, id, pointerId, from, preview } */
+      var resize = null;
+      var kb = null; /* { el, id, from, preview, startW, startH } */
 
-      /* ---------- pointer: move ---------- */
+      function commitMove(state) {
+        clearOrderPreview(grid);
+        if (state.preview !== state.from) api.move(state.id, state.preview);
+      }
+
+      /* ---------- pointer ---------- */
       grid.addEventListener("pointerdown", function (e) {
         var grip = e.target.closest("[data-widget-grip]");
         var handle = e.target.closest("[data-widget-resize]");
@@ -85,7 +131,7 @@
           var styles = getComputedStyle(grid);
           var gap = parseFloat(styles.columnGap || styles.gap || "0") || 0;
           var colPx = (grid.clientWidth - gap * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
-          var rowPx = parseFloat(getComputedStyle(grid).getPropertyValue("grid-auto-rows")) || 40;
+          var rowPx = parseFloat(styles.getPropertyValue("grid-auto-rows")) || 44;
           resize = {
             el: el, id: el.getAttribute("data-widget-id"),
             startX: e.clientX, startY: e.clientY,
@@ -96,9 +142,10 @@
           el.setPointerCapture(e.pointerId);
           el.classList.add("is-resizing");
         } else {
+          var from = widgetEls(grid).indexOf(el);
           drag = {
             el: el, id: el.getAttribute("data-widget-id"),
-            pointerId: e.pointerId, startIndex: indexOfEl(grid, el),
+            pointerId: e.pointerId, from: from, preview: from,
           };
           el.setPointerCapture(e.pointerId);
           el.classList.add("is-dragging");
@@ -110,18 +157,14 @@
         if (resize) {
           var dw = Math.round((e.clientX - resize.startX) / resize.colPx);
           var dh = Math.round((e.clientY - resize.startY) / resize.rowPx);
-          var w = resize.startW + dw;
-          var h = resize.startH + dh;
-          /* Preview live so the gesture feels direct; the store call happens
-             once on release rather than on every pixel, which would push a
-             hundred undo entries for one drag. */
-          api.previewSize(resize.el, w, h);
+          api.previewSize(resize.el, resize.startW + dw, resize.startH + dh);
           return;
         }
         if (!drag) return;
         var to = slotFromPoint(grid, e.clientX, e.clientY, drag.el);
-        var from = indexOfEl(grid, drag.el);
-        if (to !== from && to >= 0) api.move(drag.id, to);
+        if (to === drag.preview) return;
+        drag.preview = to;
+        applyOrderPreview(grid, drag.from, to);
       });
 
       function endPointer(e) {
@@ -135,18 +178,18 @@
         if (drag) {
           drag.el.classList.remove("is-dragging");
           grid.classList.remove("is-rearranging");
-          try { drag.el.releasePointerCapture(drag.pointerId); } catch (_e) {}
-          var moved = indexOfEl(grid, drag.el) !== drag.startIndex;
-          if (moved) announce("Widget moved to position " + (indexOfEl(grid, drag.el) + 1));
+          try { drag.el.releasePointerCapture(drag.pointerId); } catch (_e2) {}
+          commitMove(drag);
+          if (drag.preview !== drag.from) {
+            announce("Widget moved to position " + (drag.preview + 1));
+          }
           drag = null;
         }
       }
       grid.addEventListener("pointerup", endPointer);
       grid.addEventListener("pointercancel", endPointer);
 
-      /* ---------- keyboard: move and resize ----------
-         Space/Enter picks up. While held, arrows move (or resize with Shift).
-         Space/Enter drops, Escape cancels back to where it started. */
+      /* ---------- keyboard ---------- */
       grid.addEventListener("keydown", function (e) {
         var grip = e.target.closest("[data-widget-grip]");
         if (!grip) return;
@@ -157,15 +200,18 @@
         if (e.key === " " || e.key === "Enter") {
           e.preventDefault();
           if (kb && kb.id === id) {
-            announce("Widget dropped at position " + (indexOfEl(grid, el) + 1));
+            var landed = kb.preview;
+            commitMove(kb);
             el.classList.remove("is-keyboard-active");
             kb = null;
+            announce("Widget dropped at position " + (landed + 1));
           } else {
+            var from = widgetEls(grid).indexOf(el);
             var size = api.sizeOf(id);
-            kb = { el: el, id: id, startIndex: indexOfEl(grid, el), startW: size.w, startH: size.h };
+            kb = { el: el, id: id, from: from, preview: from, startW: size.w, startH: size.h };
             el.classList.add("is-keyboard-active");
             announce(
-              "Picked up " + api.titleOf(id) + ", position " + (kb.startIndex + 1) + " of " +
+              "Picked up " + api.titleOf(id) + ", position " + (from + 1) + " of " +
                 widgetEls(grid).length + ". Arrow keys move, shift and arrow keys resize, " +
                 "space to drop, escape to cancel."
             );
@@ -175,12 +221,17 @@
 
         if (!kb || kb.id !== id) return;
 
+        /* Cancel is free. It drops the CSS preview and restores the size the
+           widget had at pick-up; nothing reaches the store, so abandoning a
+           gesture leaves no trace in history at all. */
         if (e.key === "Escape") {
           e.preventDefault();
-          api.move(id, kb.startIndex);
-          api.resize(id, kb.startW, kb.startH);
+          clearOrderPreview(grid);
+          if (api.sizeOf(id).w !== kb.startW || api.sizeOf(id).h !== kb.startH) {
+            api.resize(id, kb.startW, kb.startH);
+          }
           el.classList.remove("is-keyboard-active");
-          announce("Cancelled — widget back at position " + (kb.startIndex + 1));
+          announce("Cancelled, widget back at position " + (kb.from + 1));
           kb = null;
           return;
         }
@@ -192,34 +243,26 @@
         var delta = arrows[e.key];
 
         if (e.shiftKey) {
+          /* Resize still commits per keypress, deliberately: each press is a
+             discrete decision with its own visible result, and the sizes are
+             clamped so the stack cannot run away the way move could. */
           var s = api.sizeOf(id);
-          var nw = horizontal ? s.w + delta : s.w;
-          var nh = horizontal ? s.h : s.h + delta;
-          api.resize(id, nw, nh);
+          api.resize(id, horizontal ? s.w + delta : s.w, horizontal ? s.h : s.h + delta);
           var after = api.sizeOf(id);
           announce(api.titleOf(id) + " is now " + after.w + " of 12 columns, " + after.h + " rows");
-        } else {
-          var cur = indexOfEl(grid, el);
-          /* Up/down move by a whole row where that is meaningful; with a flow
-             layout the honest approximation is one slot, and saying so in the
-             announcement is better than pretending to a 2-D model the layout
-             does not have. */
-          var next = Math.max(0, Math.min(widgetEls(grid).length - 1, cur + delta));
-          if (next !== cur) {
-            api.move(id, next);
-            announce(api.titleOf(id) + " moved to position " + (next + 1) + " of " + widgetEls(grid).length);
-            /* The element is re-rendered by Alpine; re-focus its grip so the
-               gesture can continue. Without this the first arrow key ends the
-               interaction and the user has to tab back. */
-            requestAnimationFrame(function () {
-              var again = grid.querySelector('[data-widget-id="' + id + '"] [data-widget-grip]');
-              if (again) {
-                again.focus();
-                again.closest("[data-widget-id]").classList.add("is-keyboard-active");
-              }
-            });
-          }
+          return;
         }
+
+        var next = Math.max(0, Math.min(widgetEls(grid).length - 1, kb.preview + delta));
+        if (next === kb.preview) return;
+        kb.preview = next;
+        applyOrderPreview(grid, kb.from, next);
+        announce(api.titleOf(id) + " moved to position " + (next + 1) + " of " + widgetEls(grid).length);
+        /* No re-focus dance is needed any more. Previously each arrow key
+           committed to the store, Alpine re-rendered the row, and the grip
+           under the user's finger was replaced mid-gesture -- so focus had to
+           be chased across a rebuilt DOM. Previewing in CSS leaves the very
+           same element focused for the whole gesture. */
       });
     },
   };

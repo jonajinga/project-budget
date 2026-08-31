@@ -1,5 +1,13 @@
 {# Dashboard widget bodies.
 
+   EMPTY STATES ARE NOT OPTIONAL HERE. These macros were lifted out of the
+   hand-built page, where a section with no data hid itself with x-show and the
+   page simply closed up around it. On a dashboard the widget is a placed
+   object: hiding its contents leaves a card that is present, sized, titled in
+   the edit chrome, and blank. Measured on the default layout with the bundled
+   sample, two of the thirteen rendered as empty cards. So the card always
+   renders and says why it is empty.
+
    One macro per widget type. The markup is EXACTLY what the hand-built
    dashboard rendered -- this was a move, not a rewrite, so a widget that
    worked before works the same now and any behaviour change here would be
@@ -102,7 +110,8 @@
 {% endmacro %}
 
 {% macro w_insights() %}
-    <section class="card" x-show="insights().length" x-cloak>
+    <section class="card">
+      <div x-show="insights().length" x-cloak>
       <div class="dashboard__card-head">
         <h2>Insights</h2>
         <span style="color: var(--fg-muted); font-size: var(--fs-xs);" x-text="insights().length + ' signal' + (insights().length === 1 ? '' : 's')"></span>
@@ -119,11 +128,14 @@
           </li>
         </template>
       </ul>
+    </div>
+      <div class="dash-widget__empty" x-show="!(insights().length)" x-cloak>Insights appear once there are a few weeks of activity to compare.</div>
     </section>
 {% endmacro %}
 
 {% macro w_accounts() %}
-    <section class="card" x-show="allAccountsForGrid().length" x-cloak>
+    <section class="card">
+      <div x-show="allAccountsForGrid().length" x-cloak>
       <div class="dashboard__card-head">
         <h2>Account balances</h2>
         <a href="/app/accounts/">Manage accounts &rsaquo;</a>
@@ -145,11 +157,14 @@
           </li>
         </template>
       </ul>
+    </div>
+      <div class="dash-widget__empty" x-show="!(allAccountsForGrid().length)" x-cloak>No open accounts yet. Add one to see balances here.</div>
     </section>
 {% endmacro %}
 
 {% macro w_cashflow() %}
-    <section class="card" x-show="flowThisMonth().total > 0" x-cloak>
+    <section class="card">
+      <div x-show="flowThisMonth().total > 0" x-cloak>
       <div class="dashboard__card-head">
         <h2>Cash flow this month</h2>
         <a href="/app/reports/sankey/">Full sankey &rsaquo;</a>
@@ -201,6 +216,8 @@
           <li x-show="!flowThisMonth().sinks.length" x-cloak class="dash-flow__empty">No spending yet.</li>
         </ul>
       </div>
+    </div>
+      <div class="dash-widget__empty" x-show="!(flowThisMonth().total > 0)" x-cloak>No money has moved this month yet.</div>
     </section>
 {% endmacro %}
 
@@ -210,7 +227,7 @@
           <h2>Income vs expense</h2>
           <a href="/app/reports/income-expense/">Full report &rsaquo;</a>
         </div>
-        <div class="chart dashboard__chart" id="dash-chart-ie"></div>
+        <div class="chart dashboard__chart" data-chart-host data-chart-view="income-expense"></div>
       </section>
 {% endmacro %}
 
@@ -241,7 +258,7 @@
           <h2>30-day cashflow</h2>
           <a href="/app/reports/projection/">Full projection &rsaquo;</a>
         </div>
-        <div class="chart dashboard__chart" id="dash-chart-proj"></div>
+        <div class="chart dashboard__chart" data-chart-host data-chart-view="projection"></div>
       </section>
 {% endmacro %}
 
@@ -268,7 +285,8 @@
 {% endmacro %}
 
 {% macro w_goals() %}
-    <section x-show="$store.budget.profile && $store.budget.profile.goals && $store.budget.profile.goals.length" x-cloak>
+    <section>
+      <div x-show="$store.budget.profile && $store.budget.profile.goals && $store.budget.profile.goals.length" x-cloak>
       <div class="dashboard__card-head">
         <h2>Goals needing attention</h2>
         <a href="/app/budget/">Manage goals &rsaquo;</a>
@@ -295,6 +313,8 @@
           </article>
         </template>
       </div>
+    </div>
+      <div class="dash-widget__empty" x-show="!($store.budget.profile && $store.budget.profile.goals && $store.budget.profile.goals.length)" x-cloak>No goals need attention right now.</div>
     </section>
 {% endmacro %}
 
@@ -340,7 +360,7 @@
 {% endmacro %}
 
 {% macro w_quick_actions() %}
-    <section class="card" style="margin-top: var(--space-lg);">
+    <section class="card">
       <h2 class="card__title">Quick actions</h2>
       <div class="cluster">
         <a class="btn btn--primary btn--sm" href="/app/budget/">Open budget</a>
