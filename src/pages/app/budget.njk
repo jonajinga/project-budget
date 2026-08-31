@@ -280,7 +280,6 @@ eleventyExcludeFromCollections: true
                            :aria-label="'Assigned for ' + c.name"
                            :value="formatAssigned($store.budget.assignedFor(c.id))"
                            data-tip="Type an amount, or an expression like 100+25."
-                           @beforeinput="guardAmountInput($event)"
                            @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id)); $event.target.select()"
                            @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
                            @keydown.enter="$event.target.blur()">
