@@ -240,12 +240,38 @@
   .history-nav__sep,
   .history-split__caret { display: none; }
   .history-split__main { border-radius: var(--radius-input); }
+}
+
+/* Under 480px something has to give, and it is not undo/redo: those were
+   asked for explicitly and a mis-tap on a phone is the case they exist for.
+   The theme toggle goes instead. It is a set-once preference rather than an
+   action -- nobody switches theme repeatedly mid-session -- and it remains
+   on /app/settings/ and in the command palette. Dropping it returns ~44px,
+   which is the difference between a readable profile name and two
+   characters. */
+@media (max-width: 479px) {
+  /* Scoped to the header on purpose. `.theme-picker` is used by TWO
+     unrelated components -- this header dropdown and the swatch grid on
+     /app/settings/ -- so a bare `.theme-picker { display: none }` blanks the
+     settings page as well. (That collision is pre-existing and worth
+     untangling: app.css loads after components.css, so the settings grid's
+     `display: grid` is currently applied to this dropdown too.) */
+  .site-header__actions .theme-picker { display: none; }
   /* Profile name: cap aggressively so it truncates instead of
      pushing the theme picker off-screen. */
-  .site-header__profile { padding: 0; min-width: 0; }
+  /* max-width in ch was the bug behind the overlapping title. The name
+     clipped at its OWN 14ch (~91px) while its flex parent had been squeezed
+     to 38px by the controls beside it, so it painted 53px of text straight
+     over the undo button. A percentage clips to whatever the parent actually
+     got, which is the only width that exists. */
+  .site-header__profile { padding: 0; min-width: 0; flex: 1 1 auto; }
   .site-header__profile-name {
     font-size: var(--fs-sm);
-    max-width: 14ch;
+    max-width: 100%;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* Theme picker: drop the chevron-open button on narrow screens.
      Users can still long-press / use the search modal to switch

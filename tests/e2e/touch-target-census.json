@@ -1,8 +1,8 @@
 {
   "totals": {
-    "measured": 2687,
-    "failAA": 331,
-    "failAAA": 1963
+    "measured": 2647,
+    "failAA": 335,
+    "failAAA": 1965
   },
   "failing": {
     "a": {
@@ -50,7 +50,7 @@
     },
     "input.budget__bulk-check": {
       "smallest": "16x16",
-      "count": 43,
+      "count": 47,
       "routes": [
         "/app/budget/"
       ],

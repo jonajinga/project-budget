@@ -99,7 +99,7 @@
    layout kicks in (>=900px). Below that, the mobile 2-row grid
    keeps them so users know which number is Assigned vs Outflow
    vs Available without a column header above. */
-@media (min-width: 900px) {
+@media (min-width: 600px) {
   .budget__assigned::before,
   .budget__activity::before,
   .budget__available::before { display: none; }
@@ -119,14 +119,21 @@
    Not touched: the assign input is still the assign input, so the
    interaction is unchanged. Above 768px this block does not apply and
    the existing 900px horizontal layout is untouched. */
-@media (max-width: 767px) {
+@media (max-width: 599px) {
   .budget__group-header,
   .budget__row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    /* Name on its own line, then the three numbers in equal columns beneath
+       it. The previous shape put Available on the headline and left Assigned
+       stranded in the wide name column on line two, so no two numbers in a
+       row shared an edge and nothing lined up down the page -- which is the
+       whole point of a budget table. Equal columns mean the three values sit
+       under each other on every row, and each keeps its micro-label because
+       there is no column header this far down. */
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
     grid-template-areas:
-      "cat       available actions"
-      "assigned  outflow   actions";
-    row-gap: 4px;
+      "cat      cat     cat       actions"
+      "assigned outflow available actions";
+    row-gap: 2px;
     column-gap: var(--space-2xs);
     padding: 10px var(--space-sm) 11px;
   }
@@ -134,20 +141,27 @@
   /* The headline pair carries the row's primary content, so it sits at
      body-large (16px at a default root) -- Material's body-large and
      Apple's Callout. The supporting numbers below stay a step down. */
-  .budget__category  { align-self: center; min-width: 0; font-size: var(--fs-base); }
-  .budget__available { align-self: center; text-align: right; font-weight: 640; font-size: var(--fs-base); }
-
-  /* The supporting pair, quieter and smaller. */
+  .budget__category  { align-self: center; min-width: 0; font-size: var(--fs-sm); font-weight: 600; }
+  .budget__available { text-align: right; font-weight: 640; }
   .budget__assigned,
-  .budget__activity { font-size: var(--fs-xs); }
-  .budget__activity { text-align: right; color: var(--fg-muted); align-self: center; }
+  .budget__activity  { font-size: var(--fs-xs); }
+  .budget__activity  { text-align: right; color: var(--fg-muted); }
 
-  /* Three words repeated down the whole page, once per category. The
-     headline row makes Available unambiguous by position, and the two
-     supporting numbers are read as a pair. */
+  /* Labels stay here. With three numbers side by side and no column header
+     on screen, position alone does not say which is which -- and the pill,
+     the input and the plain number are different enough shapes that a reader
+     cannot infer an order from them. */
   .budget__assigned::before,
   .budget__activity::before,
-  .budget__available::before { display: none; }
+  .budget__available::before {
+    display: block;
+    padding-right: 0;
+    text-align: right;
+  }
+  /* All three labels right-aligned, because all three VALUES are: the input
+     is full-width with text-align right, so a left-aligned label sat at the
+     opposite end of its own column from the number it names. */
+  .budget__assigned::before { text-align: right; padding-right: 0.4rem; }
 
   /* The assign field is the only control in the row, so it sets the row's
      height. Cap its width so it reads as a field rather than a banner, and
@@ -155,7 +169,8 @@
      repeatedly, and this is not the place to shave pixels. */
   .budget__assigned input,
   .budget__assigned .budget__assign-input {
-    max-width: 8.5rem;
+    width: 100%;
+    max-width: 100%;
     text-align: right;
   }
 
@@ -165,10 +180,12 @@
   }
 }
 
-/* Column header strip — only useful when rows lay out horizontally
-   (>=900px). Below that, the mobile micro-labels do the job. */
+/* Column header strip — useful exactly when rows lay out horizontally, so
+   it now arrives with the table at 600px rather than at 900. Below that the
+   per-row micro-labels do the job, because a header bar scrolled off the top
+   of a phone screen labels nothing. */
 .budget__column-header { display: none; }
-@media (min-width: 900px) {
+@media (min-width: 600px) {
   .budget__column-header { display: grid; }
 }
 .budget__row { border-top: 1px solid var(--border-soft); }
@@ -370,22 +387,34 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    display: none has been replaced by the grid layout. */
 .budget__activity { display: block; }
 
-/* Horizontal row layout only kicks in at >=900px where the cat
-   column has real room. Below 900px (tablet portrait, large
-   phones) the mobile 2-row grid keeps the cat name on its own
-   line so labels like "Maintenance" never truncate to "Mai…". */
-@media (min-width: 900px) {
+/* Horizontal row layout, from 600px up.
+ *
+ * This used to start at 900px, which left everything between 600 and 899 --
+ * tablet portrait, landscape phones, a split-screen window -- on a two-line
+ * card whose three numbers did not share a column. Measured at 760px: the
+ * category name was given 508px of mostly empty space while Assigned,
+ * Outflow and Available shared 128px, with Assigned's right edge at x=176
+ * and the other two at x=684. Three numbers, three different alignments,
+ * no column headers, in an 87px row. The same screen at 900px was a 39px
+ * row with all three in tidy right-aligned columns.
+ *
+ * The table was never the problem; the 900px gate was. Fixed 9rem columns
+ * genuinely do not fit at 600 (they need 748px before gaps), so the columns
+ * flex between a floor that still holds "-$25,662.50" and the old fixed
+ * width, and the name takes what is left. */
+@media (min-width: 600px) {
   .budget__group-header,
   .budget__row {
-    /* Number columns sized so a five-figure signed pill ("-$25,662.50")
-       plus the pill chrome fits without overflowing the grid cell.
-       Final `auto` column holds the kebab anchored to the right edge. */
-    grid-template-columns: minmax(0, 1fr) 9rem 9rem 9rem auto;
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(5.5rem, 9rem)) auto;
     grid-template-areas: "cat assigned outflow available actions";
-    column-gap: var(--space-sm);
+    column-gap: var(--space-2xs);
     row-gap: 0;
   }
   .budget__activity { text-align: right; font-variant-numeric: tabular-nums; }
+}
+@media (min-width: 900px) {
+  .budget__group-header,
+  .budget__row { column-gap: var(--space-sm); }
 }
 @media (min-width: 1180px) {
   .budget__group-header,
