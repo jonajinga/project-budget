@@ -148,8 +148,10 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+/* em would make this 0.75 of the header text -- 9.75px on desktop and 9px on
+   a phone, both under the 11px floor. The floor token instead. */
 .table th .sort-ind {
-  font-size: 0.75em;
+  font-size: var(--fs-2xs);
   color: var(--accent);
   width: 0.75em;
   display: inline-block;

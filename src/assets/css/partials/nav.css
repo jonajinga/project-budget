@@ -372,7 +372,8 @@
 }
 .search-modal__hint kbd {
   font-family: var(--font-mono);
-  font-size: 0.85em;
+  /* Not em: 0.85 of the hint's own small size lands under the 11px floor. */
+  font-size: var(--fs-2xs);
   padding: 1px 5px;
   border: 1px solid var(--border);
   border-radius: var(--radius-input);
@@ -383,7 +384,7 @@
 }
 @media (max-width: 599px) {
   .search-modal__hint { font-size: var(--fs-xs); padding: var(--space-sm); }
-  .search-modal__hint kbd { padding: 0 4px; font-size: 0.75em; }
+  .search-modal__hint kbd { padding: 0 4px; font-size: var(--fs-2xs); }
 }
 .search-modal__results { list-style: none; padding: 0; margin: 0; }
 .search-modal__section { border-top: 1px solid var(--border-soft); }
@@ -748,7 +749,7 @@ button.search-result:focus-visible {
   border: 0;
   color: var(--fg-subtle);
   font: inherit;
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -856,7 +857,7 @@ button.search-result:focus-visible {
 }
 .save-status__eyebrow {
   font-family: var(--font-ui);
-  font-size: 0.6rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1026,7 +1027,7 @@ button.search-result:focus-visible {
    accent text + accent avatar + check, without a heavy bg tint so
    the list still reads as a list rather than 1 highlighted block. */
 .profile-switcher__menu-head {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 700;
@@ -1167,7 +1168,7 @@ button.search-result:focus-visible {
   border: 0;
   color: var(--fg-subtle);
   font: inherit;
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1218,7 +1219,7 @@ button.search-result:focus-visible {
   border: 0;
   color: var(--fg-subtle);
   font: inherit;
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1271,7 +1272,7 @@ button.search-result:focus-visible {
   color: var(--accent);
   font-family: var(--font-ui);
   font-variant-numeric: tabular-nums;
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   line-height: 1;
   text-transform: none;
@@ -1341,7 +1342,7 @@ button.search-result:focus-visible {
   background: var(--bg-alt);
   color: var(--fg-muted);
   font-family: var(--font-ui);
-  font-size: 0.6rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;

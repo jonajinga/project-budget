@@ -86,7 +86,7 @@
 .budget__available::before {
   content: attr(data-label);
   display: block;
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -786,7 +786,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   justify-content: center;
 }
 .budget-stat__label {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 700;
@@ -2042,7 +2042,7 @@ body.pb-dragging { overflow: visible !important; }
 }
 .cal-extra-period__stat .stat__term {
   margin: 0;
-  font-size: 0.6rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--fg-muted);
@@ -2138,7 +2138,7 @@ body.pb-dragging { overflow: visible !important; }
   border-left-color: var(--border-strong);
 }
 .period-modal__filters .cal-extra-period__stat .stat__term {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
 }
 .period-modal__filters .cal-extra-period__stat .stat__value {
   font-family: var(--font-ui);
@@ -2179,7 +2179,7 @@ body.pb-dragging { overflow: visible !important; }
   border-radius: 4px;
 }
 .cal-extra-period__stat .stat__term {
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--fg-muted);
@@ -2414,14 +2414,14 @@ body.pb-dragging { overflow: visible !important; }
   line-height: 1.15;
 }
 .cal__wknum-stat-label {
-  font-size: 0.5625rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--fg-muted);
   font-weight: 700;
 }
 .cal__wknum-stat-value {
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
 }
 .cal__wknum-stat--net {
@@ -2676,7 +2676,7 @@ body.pb-dragging { overflow: visible !important; }
   gap: 3px;
 }
 .cal__cell-total-label {
-  font-size: 0.6rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--fg-muted);
@@ -2700,7 +2700,7 @@ body.pb-dragging { overflow: visible !important; }
 }
 .cal__cell-total--net .cal__cell-total-label {
   color: var(--fg);
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
 }
 .cal__cell-total--net .cal__cell-total-value {
   font-size: var(--fs-xs);
@@ -2941,7 +2941,7 @@ body.pb-dragging { overflow: visible !important; }
   outline-offset: 2px;
 }
 .cal-mini__stat .stat__term {
-  font-size: 0.5625rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--fg-muted);
@@ -2990,7 +2990,7 @@ body.pb-dragging { overflow: visible !important; }
   justify-items: center;
 }
 .cal-mini__row-cells--weekdays {
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
   color: var(--fg-muted);
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -3007,7 +3007,7 @@ body.pb-dragging { overflow: visible !important; }
 .cal-mini__row-cells > .cal-mini__cell { justify-self: stretch; }
 .cal-mini__row--head {
   margin-bottom: 2px;
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
   color: var(--fg-subtle);
   align-items: center;
 }
@@ -3023,7 +3023,7 @@ body.pb-dragging { overflow: visible !important; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--fg-muted);
@@ -3032,7 +3032,7 @@ body.pb-dragging { overflow: visible !important; }
   padding: 0;
 }
 .cal-mini__wknum--head {
-  font-size: 0.5625rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -3120,7 +3120,7 @@ body.pb-dragging { overflow: visible !important; }
    Tighter font + tabular nums so 3-4 char values like "-$1.2k" fit
    in the small mini cell. */
 .cal-mini__day--net {
-  font-size: 0.5625rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -3249,7 +3249,7 @@ body.pb-dragging { overflow: visible !important; }
   min-width: 0;
 }
 .cal-week__total dt {
-  font-size: 0.625rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -3419,7 +3419,7 @@ body.pb-dragging { overflow: visible !important; }
   border-left-color: var(--border-strong);
 }
 .cal-period-totals__tile dt {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--fg-muted);
@@ -3618,7 +3618,7 @@ body.pb-dragging { overflow: visible !important; }
   container-type: inline-size;
 }
 .rec-summary--6col .rec-summary__label {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   line-height: 1.2;
   /* Reserve 2 lines so 1- and 2-line labels share a baseline; keeps
      the value tier aligned across tiles even when "Excluded from NW"
