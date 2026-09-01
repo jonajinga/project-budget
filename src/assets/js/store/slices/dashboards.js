@@ -506,6 +506,36 @@ export const dashboardsSlice = {
     return out;
   },
 
+  /* ---- what the builder asks for ---- */
+
+  paramsFor(sourceId) {
+    var spec = sourceSpec(sourceId);
+    return (spec && spec.params) || [];
+  },
+
+  sourceTitle(sourceId) {
+    var spec = sourceSpec(sourceId);
+    return spec ? spec.title : "";
+  },
+
+  /* Default geometry for a source/view pair. The view's minimum wins where it
+     is larger, so switching a chart to a big number does not leave a 4-row
+     hole where a two-row figure now sits. */
+  defaultSizeFor(sourceId, viewId) {
+    var spec = sourceSpec(sourceId);
+    return clampSize(sourceId, viewId, spec ? spec.w : 6, spec ? spec.h : 4);
+  },
+
+  /* A draft, normalised exactly as it would be if stored, so the preview
+     shows the widget you are actually going to get - clamped size, coerced
+     params, fallback view and all - rather than an idealised version of it. */
+  previewWidget(draft) {
+    var w = normalizeWidget(draft, newId);
+    if (!w) return null;
+    w.id = "preview";
+    return w;
+  },
+
   /* Which views the builder may offer for a source. */
   viewsFor(sourceId) {
     return viewsForSource(sourceSpec(sourceId)).map(function (id) {

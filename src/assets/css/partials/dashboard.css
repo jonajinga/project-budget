@@ -1001,3 +1001,95 @@
 .dash-empty__title { margin: 0; font-size: var(--fs-lg); }
 .dash-empty__body { margin: 0; max-width: 46ch; color: var(--fg-muted); font-size: var(--fs-sm); }
 .dash-empty__actions { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-top: var(--space-2xs); }
+
+/* ---- Widget builder -----------------------------------------------------
+   Configuration on the left, a live preview on the right at >=900px; stacked
+   below that, because a preview squeezed beside a form on a phone is a
+   thumbnail of nothing. */
+.builder__body { display: grid; gap: var(--space-md); }
+@media (min-width: 900px) {
+  .builder__body { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); align-items: start; }
+}
+.builder__config { min-width: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
+
+.builder__sources { list-style: none; margin: 0; padding: 0; max-height: 15rem; overflow: auto; }
+.builder__group { margin-bottom: var(--space-2xs); }
+.builder__group-title {
+  margin: 0 0 2px;
+  color: var(--fg-muted);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.builder__group-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.builder__source {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2xs) var(--space-sm);
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+.builder__source:hover:not(:disabled) { border-color: var(--accent); background: var(--bg-alt); }
+.builder__source.is-selected { border-color: var(--accent); background: var(--accent-soft, var(--bg-alt)); }
+.builder__source:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.builder__source:disabled { cursor: default; color: var(--fg-subtle); }
+.builder__source-title { font-weight: 600; font-size: var(--fs-sm); }
+.builder__source-desc { color: var(--fg-muted); font-size: var(--fs-xs); }
+.builder__source-on { color: var(--fg-subtle); font-size: var(--fs-2xs); font-style: italic; }
+
+.builder__segmented { display: flex; flex-wrap: wrap; gap: 2px; }
+.builder__seg {
+  min-height: 32px;
+  padding: 0 var(--space-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-chip);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.builder__seg.is-on { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); }
+.builder__seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.builder__preview { min-width: 0; }
+.builder__preview-label {
+  margin: 0 0 var(--space-3xs);
+  color: var(--fg-muted);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+/* The preview is one widget, so it does not need twelve columns - but it must
+   still be a .dash-grid so the widget lays out exactly as it will on the
+   board. */
+.builder__preview-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); min-height: 12rem; }
+.builder__preview-grid > .dash-widget { grid-column: 1 / -1 !important; }
+.builder__preview-empty { color: var(--fg-muted); font-size: var(--fs-sm); }
+.builder__foot { display: flex; justify-content: flex-end; gap: var(--space-2xs); }
+
+.dash-widget__config {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-chip);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.dash-widget__config:hover { background: var(--bg); color: var(--accent); }
+.dash-widget__config:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

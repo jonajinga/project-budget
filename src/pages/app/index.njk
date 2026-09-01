@@ -8,6 +8,7 @@ eleventyExcludeFromCollections: true
 {% from "partials/overflow-menu.njk" import overflow %}
 {% import "partials/dashboard-widgets.njk" as W %}
 {% import "partials/dashboard-views.njk" as V2 %}
+{% import "partials/dashboard-body.njk" as B %}
 <div class="app-page" x-data="dashboardView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -69,7 +70,7 @@ eleventyExcludeFromCollections: true
         </button>
 
         <button type="button" class="btn" x-show="editing" x-cloak
-                @click="pickerOpen = true"
+                @click="openBuilder()"
                 data-tip="Add a widget to this dashboard.">Add widget</button>
 
         {% call overflow(label="Dashboard actions") %}
@@ -153,6 +154,12 @@ eleventyExcludeFromCollections: true
             </button>
             <span class="dash-widget__name" x-text="titleOf(widget)"></span>
             <span class="dash-widget__size" x-text="widget.w + '\u00d7' + widget.h"></span>
+            <button type="button" class="dash-widget__config"
+                    @click="configureWidget(widget)"
+                    :aria-label="'Configure ' + titleOf(widget)"
+                    data-tip="Change what this widget shows.">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
             <button type="button" class="dash-widget__remove"
                     @click="$store.budget.removeWidget(activeId(), widget.id)"
                     :aria-label="'Remove ' + titleOf(widget)"
@@ -161,55 +168,7 @@ eleventyExcludeFromCollections: true
             </button>
           </div>
 
-          <template x-if="widget.view === 'panel:hero'">
-<div class="dash-widget__body">{{ W.w_hero() }}</div></template>
-          <template x-if="widget.view === 'panel:kpis'">
-<div class="dash-widget__body">{{ W.w_kpis() }}</div></template>
-          <template x-if="widget.view === 'panel:insights'">
-<div class="dash-widget__body">{{ W.w_insights() }}</div></template>
-          <template x-if="widget.view === 'panel:accounts'">
-<div class="dash-widget__body">{{ W.w_accounts() }}</div></template>
-          <template x-if="widget.view === 'panel:cashflow'">
-<div class="dash-widget__body">{{ W.w_cashflow() }}</div></template>
-          <template x-if="widget.view === 'panel:income-expense'">
-<div class="dash-widget__body">{{ W.w_income_expense() }}</div></template>
-          <template x-if="widget.view === 'panel:top-categories'">
-<div class="dash-widget__body">{{ W.w_top_categories() }}</div></template>
-          <template x-if="widget.view === 'panel:cashflow-30'">
-<div class="dash-widget__body">{{ W.w_cashflow_30() }}</div></template>
-          <template x-if="widget.view === 'panel:upcoming-bills'">
-<div class="dash-widget__body">{{ W.w_upcoming_bills() }}</div></template>
-          <template x-if="widget.view === 'panel:goals'">
-<div class="dash-widget__body">{{ W.w_goals() }}</div></template>
-          <template x-if="widget.view === 'panel:recent'">
-<div class="dash-widget__body">{{ W.w_recent() }}</div></template>
-          <template x-if="widget.view === 'panel:alerts'">
-<div class="dash-widget__body">{{ W.w_alerts() }}</div></template>
-          <template x-if="widget.view === 'panel:quick-actions'">
-<div class="dash-widget__body">{{ W.w_quick_actions() }}</div></template>
-
-          {# The generic views. One block each, driven by the source's declared
-             fields, so every report source is renderable four ways without a
-             line of per-source markup. A chart host carries no id -- a chart
-             widget can be placed twice and duplicate ids on rendered content
-             trip axe's zero-tolerance duplicate-id-active. #}
-          <template x-if="$store.budget.widgetKind(widget) === 'table'">
-            <div class="dash-widget__body">{{ V2.v_table() }}</div>
-          </template>
-          <template x-if="$store.budget.widgetKind(widget) === 'list'">
-            <div class="dash-widget__body">{{ V2.v_list() }}</div>
-          </template>
-          <template x-if="$store.budget.widgetKind(widget) === 'stat'">
-            <div class="dash-widget__body">{{ V2.v_stat() }}</div>
-          </template>
-          <template x-if="$store.budget.widgetKind(widget) === 'chart' && widget.source.indexOf('report:') === 0">
-            <div class="dash-widget__body">
-              <div class="chart dashboard__chart"
-                   data-chart-host
-                   :data-widget-id="widget.id"
-                   :data-chart-module="$store.budget.widgetModule(widget)"></div>
-            </div>
-          </template>
+          {{ B.widgetBody() }}
 
           {# Resize handle. Pointer only -- the keyboard equivalent is
              shift+arrows on the grip, which is discoverable from the grip's
@@ -230,42 +189,151 @@ eleventyExcludeFromCollections: true
       </p>
       <div class="dash-empty__actions">
         <button type="button" class="btn btn--primary"
-                @click="editing = true; pickerOpen = true">Add a widget</button>
+                @click="editing = true; openBuilder()">Add a widget</button>
         <button type="button" class="btn"
                 @click="$store.budget.resetDashboard(activeId())">Use the default layout</button>
       </div>
     </div>
 
-    {# ---- Widget picker ---- #}
-    <div class="modal-backdrop" x-show="pickerOpen" x-cloak
-         @click.self="pickerOpen = false"
-         @keydown.escape.window="pickerOpen = false">
-      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="dash-picker-title">
-        <div class="modal__head">
-          <h2 id="dash-picker-title" class="modal__title">Add a widget</h2>
-          <button type="button" class="modal__close" @click="pickerOpen = false" aria-label="Close">&times;</button>
-        </div>
-        <div class="modal__body">
-          <ul class="widget-picker">
-            <template x-for="w in ($store.budget._listVersion, $store.budget.availableWidgets(activeId()))" :key="w.id">
-              <li>
-                <button type="button" class="widget-picker__item"
-                        :disabled="w.disabled"
-                        @click="$store.budget.addWidget(activeId(), w.id); pickerOpen = false">
-                  <span class="widget-picker__title" x-text="w.title"></span>
-                  <span class="widget-picker__desc" x-text="w.description"></span>
-                  <span class="widget-picker__on" x-show="w.disabled" x-cloak>Already on this dashboard</span>
-                </button>
-              </li>
-            </template>
-          </ul>
+    {# ---- Widget builder ----
+
+       Rendered with x-if, NOT x-show, and that is an accessibility-budget
+       decision rather than a stylistic one. An x-show dialog leaves its dozen
+       form controls in the DOM on every axe run of /app/ and in every
+       touch-target census pass, where they count against caps that are
+       already at their limit. x-if keeps them out until the dialog opens.
+
+       Add and Configure are the same dialog. Configuring is just the same
+       form opened over an existing widget, which is why there is one set of
+       markup and one commit path rather than two that drift. #}
+    <template x-if="builderOpen">
+      <div class="modal-backdrop"
+           @click.self="closeBuilder()"
+           @keydown.escape.window="closeBuilder()">
+        <div class="modal modal--wide builder" role="dialog" aria-modal="true"
+             aria-labelledby="dash-builder-title">
+          <div class="modal__head">
+            <h2 id="dash-builder-title" class="modal__title"
+                x-text="builderMode === 'edit' ? 'Configure widget' : 'Add a widget'"></h2>
+            <button type="button" class="modal__close" @click="closeBuilder()" aria-label="Close">&times;</button>
+          </div>
+
+          <div class="modal__body builder__body">
+            <div class="builder__config">
+              {# 1. Source #}
+              <div class="field">
+                <label class="field__label" for="bld-search">What do you want to see?</label>
+                <input id="bld-search" class="input" type="search" x-model="builderSearch"
+                       placeholder="Search sources" autocomplete="off">
+              </div>
+              {# A plain list of buttons, deliberately NOT role="listbox".
+                 The sources are grouped, so the options end up nested inside
+                 per-group sub-lists rather than as direct children of the
+                 listbox - which axe flags as aria-required-children,
+                 aria-required-parent and listitem, three NEW rule ids, and
+                 the ratchet fails on a new rule id outright rather than
+                 budgeting it. Buttons in a list are already operable and
+                 announced; aria-pressed carries the selected state. #}
+              <ul class="builder__sources" aria-label="Data source">
+                <template x-for="grp in builderGroups()" :key="grp.family">
+                  <li class="builder__group">
+                    <p class="builder__group-title" x-text="grp.label"></p>
+                    <ul class="builder__group-list">
+                      <template x-for="src in grp.items" :key="src.id">
+                        <li>
+                          <button type="button" class="builder__source"
+                                  :aria-pressed="(draft.source === src.id).toString()"
+                                  :class="draft.source === src.id ? 'is-selected' : ''"
+                                  :disabled="src.disabled"
+                                  @click="chooseSource(src.id)">
+                            <span class="builder__source-title" x-text="src.title"></span>
+                            <span class="builder__source-desc" x-text="src.description"></span>
+                            <span class="builder__source-on" x-show="src.disabled" x-cloak>Already on this dashboard</span>
+                          </button>
+                        </li>
+                      </template>
+                    </ul>
+                  </li>
+                </template>
+              </ul>
+
+              {# 2. Shape #}
+              <div class="field" x-show="draft.source && builderViews().length > 1" x-cloak>
+                <span class="field__label" id="bld-shape-label">Show it as</span>
+                <div class="builder__segmented" role="group" aria-labelledby="bld-shape-label">
+                  <template x-for="v in builderViews()" :key="v.id">
+                    <button type="button"
+                            class="builder__seg"
+                            :class="draft.view === v.id ? 'is-on' : ''"
+                            :aria-pressed="(draft.view === v.id).toString()"
+                            @click="chooseView(v.id)"
+                            x-text="v.title"></button>
+                  </template>
+                </div>
+              </div>
+
+              {# 3. Options, generated from the source's declared params #}
+              <template x-for="prm in builderParams()" :key="prm.key">
+                <div class="field">
+                  <label class="field__label" :for="'bld-p-' + prm.key" x-text="prm.label"></label>
+                  <input class="input"
+                         :id="'bld-p-' + prm.key"
+                         :type="prm.type === 'int' ? 'number' : (prm.type === 'month' ? 'month' : 'text')"
+                         :min="prm.min" :max="prm.max"
+                         :value="draft.params[prm.key] == null ? '' : draft.params[prm.key]"
+                         @input="setParam(prm, $event.target.value)">
+                  <p class="field__hint" x-show="prm.hint" x-cloak x-text="prm.hint"></p>
+                </div>
+              </template>
+
+              {# 4. Title #}
+              <div class="field" x-show="draft.source" x-cloak>
+                <label class="field__label" for="bld-title">Name it (optional)</label>
+                <input id="bld-title" class="input" type="text" x-model="draft.title"
+                       :placeholder="draftSourceTitle()" maxlength="60">
+                <p class="field__hint">Two widgets from the same data are told apart by their names.</p>
+              </div>
+            </div>
+
+            {# Live preview, rendered through the SAME macro the board uses. #}
+            <div class="builder__preview" aria-live="off">
+              <p class="builder__preview-label">Preview</p>
+              <div class="dash-grid builder__preview-grid" x-ref="previewGrid">
+                <template x-for="widget in previewList()" :key="widget.id">
+                  <section class="dash-widget"
+                           :data-widget-id="widget.id"
+                           :data-widget-kind="$store.budget.widgetKind(widget)"
+                           :style="widgetStyle(widget)"
+                           :aria-label="titleOf(widget)">
+                    {{ B.widgetBody() }}
+                  </section>
+                </template>
+              </div>
+              <p class="builder__preview-empty" x-show="!draft.source" x-cloak>
+                Pick a source and it will draw here with your own numbers.
+              </p>
+            </div>
+          </div>
+
+          <div class="modal__foot builder__foot">
+            <button type="button" class="btn" @click="closeBuilder()">Cancel</button>
+            <button type="button" class="btn btn--primary"
+                    :disabled="!draft.source"
+                    @click="commitBuilder()"
+                    x-text="builderMode === 'edit' ? 'Save changes' : 'Add to dashboard'"></button>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
+
   </div>
 </div>
 
 <script>
+/* activeId() is a method on the component; builderGroups runs before `this`
+   is convenient in the closure above, so this keeps the call explicit. */
+function activeIdSafe(vm) { return vm.activeId(); }
+
 function dashboardView() {
   return {
     /* ---- Dashboard editing ----
@@ -274,7 +342,162 @@ function dashboardView() {
        app a day later and finding every card wearing drag handles reads as
        breakage. */
     editing: false,
-    pickerOpen: false,
+
+    /* ---- The builder ----
+       One dialog for both "add" and "configure". The draft is a full widget
+       descriptor rather than a pile of separate fields, so the live preview
+       can render it through the very same macro the board uses and the commit
+       is a single call with no assembly step in between. */
+    builderOpen: false,
+    builderMode: "add",
+    builderSearch: "",
+    builderEditId: null,
+    draft: { source: "", view: "", params: {}, settings: {}, title: "", w: 6, h: 4 },
+
+    openBuilder() {
+      this.builderMode = "add";
+      this.builderEditId = null;
+      this.builderSearch = "";
+      this.draft = { source: "", view: "", params: {}, settings: {}, title: "", w: 6, h: 4 };
+      this.builderOpen = true;
+    },
+
+    /* Configure opens the same form over an existing widget. */
+    configureWidget(widget) {
+      this.builderMode = "edit";
+      this.builderEditId = widget.id;
+      this.builderSearch = "";
+      this.draft = {
+        source: widget.source,
+        view: widget.view,
+        params: Object.assign({}, widget.params),
+        settings: Object.assign({}, widget.settings),
+        title: widget.title || "",
+        w: widget.w,
+        h: widget.h,
+      };
+      this.builderOpen = true;
+    },
+
+    closeBuilder() {
+      this.builderOpen = false;
+      /* Drop the preview's chart so it cannot outlive the dialog that owns
+         it - the same element-keyed teardown the board relies on. */
+      if (window.PBDashCharts && this.$refs.previewGrid) {
+        window.PBDashCharts.destroy(this.$refs.previewGrid);
+      }
+    },
+
+    /* One api shape, two grids. `list` supplies whichever widget collection
+       that grid is rendering. */
+    _chartApi(list) {
+      var self = this;
+      var find = function (id) { return list().find(function (x) { return x.id === id; }); };
+      return {
+        dataFor: function (id) { var w = find(id); return w ? self.$store.budget.widgetData(w) : null; },
+        needsFor: function (id) { var w = find(id); return w ? self.$store.budget.widgetNeeds(w) : []; },
+      };
+    },
+
+    /* The draft is local state, so a store mutation does not fire for it and
+       the chart effect above would not re-run. Sync the preview whenever the
+       draft actually changes. */
+    _syncPreview() {
+      var self = this;
+      this.$nextTick(function () {
+        if (window.PBDashCharts && self.builderOpen && self.$refs.previewGrid) {
+          window.PBDashCharts.sync(self.$refs.previewGrid, self._chartApi(self.previewList.bind(self)));
+        }
+      });
+    },
+
+    /* Sources grouped by family, filtered by the search box. "Your money now"
+       first because that is what most people are looking for. */
+    builderGroups() {
+      void this.$store.budget._listVersion;
+      var q = (this.builderSearch || "").trim().toLowerCase();
+      var all = this.$store.budget.availableWidgets(activeIdSafe(this));
+      var match = function (s) {
+        if (!q) return true;
+        return (s.title + " " + s.description).toLowerCase().indexOf(q) !== -1;
+      };
+      var groups = [
+        { family: "panels", label: "Your money now", items: [] },
+        { family: "reports", label: "Reports", items: [] },
+      ];
+      all.filter(match).forEach(function (s) {
+        var g = groups.find(function (x) { return x.family === s.family; });
+        if (g) g.items.push(s);
+      });
+      return groups.filter(function (g) { return g.items.length; });
+    },
+
+    chooseSource(id) {
+      var views = this.$store.budget.viewsFor(id);
+      this.draft.source = id;
+      this.draft.view = views.length ? views[0].id : "";
+      this.draft.params = this.defaultParamsFor(id);
+      this.draft.settings = {};
+      var size = this.$store.budget.defaultSizeFor(id, this.draft.view);
+      this.draft.w = size.w;
+      this.draft.h = size.h;
+      this._syncPreview();
+    },
+
+    chooseView(id) {
+      this.draft.view = id;
+      var size = this.$store.budget.defaultSizeFor(this.draft.source, id);
+      this.draft.w = size.w;
+      this.draft.h = size.h;
+      this._syncPreview();
+    },
+
+    defaultParamsFor(sourceId) {
+      var out = {};
+      this.$store.budget.paramsFor(sourceId).forEach(function (p) { out[p.key] = p.default; });
+      return out;
+    },
+
+    builderViews() {
+      return this.draft.source ? this.$store.budget.viewsFor(this.draft.source) : [];
+    },
+
+    builderParams() {
+      return this.draft.source ? this.$store.budget.paramsFor(this.draft.source) : [];
+    },
+
+    setParam(decl, raw) {
+      var v = raw === "" ? null : raw;
+      if (decl.type === "int" && v != null) v = parseInt(v, 10);
+      this.draft.params[decl.key] = v;
+      this._syncPreview();
+    },
+
+    draftSourceTitle() {
+      return this.$store.budget.sourceTitle(this.draft.source);
+    },
+
+    /* A one-element list so the preview can use the same x-for + macro the
+       board does. Normalised through the store so what is previewed is
+       exactly what would be stored - clamped sizes, coerced params and all. */
+    previewList() {
+      void this.$store.budget._listVersion;
+      if (!this.draft.source) return [];
+      var w = this.$store.budget.previewWidget(this.draft);
+      return w ? [w] : [];
+    },
+
+    commitBuilder() {
+      if (!this.draft.source) return;
+      if (this.builderMode === "edit" && this.builderEditId) {
+        this.$store.budget.updateWidget(this.activeId(), this.builderEditId, this.draft);
+      } else {
+        this.$store.budget.addWidget(this.activeId(), this.draft);
+      }
+      this.builderOpen = false;
+    },
+
+
 
     /* `void ... _listVersion` is this codebase's reactivity handshake, not a
        stray line. The store does not rely on deep proxying for the profile's
@@ -546,16 +769,15 @@ function dashboardView() {
                the two hardcoded panel sparklines; this one is driven entirely
                by what is on the board. */
             if (window.PBDashCharts && self.$refs.grid) {
-              window.PBDashCharts.sync(self.$refs.grid, {
-                dataFor: function (id) {
-                  var w = self.widgets().find(function (x) { return x.id === id; });
-                  return w ? self.$store.budget.widgetData(w) : null;
-                },
-                needsFor: function (id) {
-                  var w = self.widgets().find(function (x) { return x.id === id; });
-                  return w ? self.$store.budget.widgetNeeds(w) : [];
-                },
-              });
+              window.PBDashCharts.sync(self.$refs.grid, self._chartApi(self.widgets.bind(self)));
+            }
+            /* The builder's preview is a real grid holding a real widget, so
+               it needs the same chart controller. Without this a chart source
+               previews as an empty box while a table source previews fine,
+               which is exactly the sort of "looks broken" the preview exists
+               to prevent. */
+            if (window.PBDashCharts && self.builderOpen && self.$refs.previewGrid) {
+              window.PBDashCharts.sync(self.$refs.previewGrid, self._chartApi(self.previewList.bind(self)));
             }
           });
         });

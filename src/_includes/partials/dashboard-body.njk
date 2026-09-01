@@ -1,0 +1,67 @@
+{# The widget body dispatch, in ONE place.
+
+   Both the dashboard grid and the builder's live preview render through this
+   macro, so a widget cannot look one way in the configuration dialog and
+   another on the board. That is the entire reason it is a macro rather than
+   markup inlined into the grid: a preview that renders through a second code
+   path is a preview of nothing.
+
+   It expects `widget` in scope - the grid supplies it from its x-for, and the
+   builder supplies a one-element list holding the draft. #}
+
+{# Macros do not inherit the caller's imports, so this file imports what it
+   dispatches to rather than relying on the page having done so. #}
+{% import "partials/dashboard-widgets.njk" as W %}
+{% import "partials/dashboard-views.njk" as V2 %}
+
+{% macro widgetBody() %}
+          <template x-if="widget.view === 'panel:hero'">
+<div class="dash-widget__body">{{ W.w_hero() }}</div></template>
+          <template x-if="widget.view === 'panel:kpis'">
+<div class="dash-widget__body">{{ W.w_kpis() }}</div></template>
+          <template x-if="widget.view === 'panel:insights'">
+<div class="dash-widget__body">{{ W.w_insights() }}</div></template>
+          <template x-if="widget.view === 'panel:accounts'">
+<div class="dash-widget__body">{{ W.w_accounts() }}</div></template>
+          <template x-if="widget.view === 'panel:cashflow'">
+<div class="dash-widget__body">{{ W.w_cashflow() }}</div></template>
+          <template x-if="widget.view === 'panel:income-expense'">
+<div class="dash-widget__body">{{ W.w_income_expense() }}</div></template>
+          <template x-if="widget.view === 'panel:top-categories'">
+<div class="dash-widget__body">{{ W.w_top_categories() }}</div></template>
+          <template x-if="widget.view === 'panel:cashflow-30'">
+<div class="dash-widget__body">{{ W.w_cashflow_30() }}</div></template>
+          <template x-if="widget.view === 'panel:upcoming-bills'">
+<div class="dash-widget__body">{{ W.w_upcoming_bills() }}</div></template>
+          <template x-if="widget.view === 'panel:goals'">
+<div class="dash-widget__body">{{ W.w_goals() }}</div></template>
+          <template x-if="widget.view === 'panel:recent'">
+<div class="dash-widget__body">{{ W.w_recent() }}</div></template>
+          <template x-if="widget.view === 'panel:alerts'">
+<div class="dash-widget__body">{{ W.w_alerts() }}</div></template>
+          <template x-if="widget.view === 'panel:quick-actions'">
+<div class="dash-widget__body">{{ W.w_quick_actions() }}</div></template>
+
+          {# The generic views. One block each, driven by the source's declared
+             fields, so every report source is renderable four ways without a
+             line of per-source markup. A chart host carries no id -- a chart
+             widget can be placed twice and duplicate ids on rendered content
+             trip axe's zero-tolerance duplicate-id-active. #}
+          <template x-if="$store.budget.widgetKind(widget) === 'table'">
+            <div class="dash-widget__body">{{ V2.v_table() }}</div>
+          </template>
+          <template x-if="$store.budget.widgetKind(widget) === 'list'">
+            <div class="dash-widget__body">{{ V2.v_list() }}</div>
+          </template>
+          <template x-if="$store.budget.widgetKind(widget) === 'stat'">
+            <div class="dash-widget__body">{{ V2.v_stat() }}</div>
+          </template>
+          <template x-if="$store.budget.widgetKind(widget) === 'chart' && widget.source.indexOf('report:') === 0">
+            <div class="dash-widget__body">
+              <div class="chart dashboard__chart"
+                   data-chart-host
+                   :data-widget-id="widget.id"
+                   :data-chart-module="$store.budget.widgetModule(widget)"></div>
+            </div>
+          </template>
+{% endmacro %}
