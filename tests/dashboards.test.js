@@ -477,3 +477,27 @@ describe("authored widgets", () => {
     expect(h.duplicateWidget(d.id, hero.id), "a singleton must not duplicate").toBeNull();
   });
 });
+
+/* A chart renderer that reaches for window.d3 and returns silently when it is
+   absent is invisible to every other check: no error, no console output, just
+   an empty widget. Two of the eleven were shipped that way. Derive the fact
+   from the renderer source rather than trusting the registry to be honest. */
+describe("chart views declare the libraries their renderer actually needs", () => {
+  it("every renderer that touches window.d3 declares it", async () => {
+    const { readFileSync } = await import("node:fs");
+    const undeclared = [];
+    for (const v of VIEWS.filter((x) => x.kind === "chart" && x.module)) {
+      let src = "";
+      try {
+        src = readFileSync(`src/assets/js/charts/${v.module}.js`, "utf8");
+      } catch (_e) {
+        undeclared.push(`${v.id} -> charts/${v.module}.js is missing`);
+        continue;
+      }
+      const usesD3 = /window\.d3|\bd3\./.test(src);
+      const declaresD3 = (v.needs || []).indexOf("d3") !== -1;
+      if (usesD3 && !declaresD3) undeclared.push(`${v.id} uses d3 but does not declare it`);
+    }
+    expect(undeclared).toEqual([]);
+  });
+});

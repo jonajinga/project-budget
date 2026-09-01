@@ -80,12 +80,12 @@ test("a widget can be moved with the keyboard alone", async ({ seeded }) => {
   await page.keyboard.press("Space");
   await expect(page.locator(".dash-widget.is-keyboard-active")).toHaveCount(1);
   await page.keyboard.press("ArrowRight");
-  await page.waitForTimeout(350);
   await page.keyboard.press("Space");
-  await page.waitForTimeout(200);
+  await expect
+    .poll(async () => (await layout(page)).types.join(","), { timeout: 5000 })
+    .not.toBe(before.types.join(","));
 
   const after = await layout(page);
-  expect(after.types, "the keyboard move must reorder the layout").not.toEqual(before.types);
   expect(after.types[1]).toBe(before.types[0]);
   expect([...after.types].sort(), "a move must not add or drop widgets").toEqual([...before.types].sort());
   expect(after.domOrder[1]).toBe(before.domOrder[0]);
@@ -101,10 +101,14 @@ test("a widget can be resized with the keyboard alone", async ({ seeded }) => {
   await page.keyboard.press("Space");
   await expect(page.locator(".dash-widget.is-keyboard-active"), "pickup did not register").toHaveCount(1);
   await page.keyboard.press("Shift+ArrowLeft");
-  await page.waitForTimeout(350);
 
+  /* Poll rather than sleep. A fixed wait passes on an idle machine and fails
+     under full-suite load, which produces an assertion failure that looks
+     like a product bug and is not one. */
+  await expect
+    .poll(async () => (await layout(page)).sizes[0], { timeout: 5000 })
+    .not.toBe(before.sizes[0]);
   const after = await layout(page);
-  expect(after.sizes[0], "shift+left must narrow the widget").not.toBe(before.sizes[0]);
 
   /* And the span actually reaches the element, not just the store. */
   const span = await page.locator(".dash-widget").first().getAttribute("style");

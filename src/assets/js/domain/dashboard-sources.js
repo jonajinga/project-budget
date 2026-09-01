@@ -48,7 +48,12 @@ function pTopN(def) {
   return { key: "topN", type: "int", label: "How many", default: def, min: 3, max: 40 };
 }
 function pFromMonth() {
-  return { key: "fromMonth", type: "month", label: "From month", default: null };
+  /* resolveBack turns "no choice made" into a WINDOW rather than a single
+     month. reportSpending treats a null from as "same as to", so a widget
+     added with defaults asked for one month and usually rendered "No spending
+     in this range." -- which reads as a broken widget, not as an empty range.
+     Six months is what the equivalent report pages open on. */
+  return { key: "fromMonth", type: "month", label: "From month", default: null, resolveBack: 5 };
 }
 function pToMonth() {
   return { key: "toMonth", type: "month", label: "To month", default: null,

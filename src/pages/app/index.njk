@@ -7,6 +7,7 @@ eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
 {% import "partials/dashboard-widgets.njk" as W %}
+{% import "partials/dashboard-views.njk" as V2 %}
 <div class="app-page" x-data="dashboardView()" x-init="init()">
   <header class="app-page__header">
     <div>
@@ -187,6 +188,29 @@ eleventyExcludeFromCollections: true
           <template x-if="widget.view === 'panel:quick-actions'">
 <div class="dash-widget__body">{{ W.w_quick_actions() }}</div></template>
 
+          {# The generic views. One block each, driven by the source's declared
+             fields, so every report source is renderable four ways without a
+             line of per-source markup. A chart host carries no id -- a chart
+             widget can be placed twice and duplicate ids on rendered content
+             trip axe's zero-tolerance duplicate-id-active. #}
+          <template x-if="$store.budget.widgetKind(widget) === 'table'">
+            <div class="dash-widget__body">{{ V2.v_table() }}</div>
+          </template>
+          <template x-if="$store.budget.widgetKind(widget) === 'list'">
+            <div class="dash-widget__body">{{ V2.v_list() }}</div>
+          </template>
+          <template x-if="$store.budget.widgetKind(widget) === 'stat'">
+            <div class="dash-widget__body">{{ V2.v_stat() }}</div>
+          </template>
+          <template x-if="$store.budget.widgetKind(widget) === 'chart' && widget.source.indexOf('report:') === 0">
+            <div class="dash-widget__body">
+              <div class="chart dashboard__chart"
+                   data-chart-host
+                   :data-widget-id="widget.id"
+                   :data-chart-module="$store.budget.widgetModule(widget)"></div>
+            </div>
+          </template>
+
           {# Resize handle. Pointer only -- the keyboard equivalent is
              shift+arrows on the grip, which is discoverable from the grip's
              own label rather than needing a second focusable control. #}
@@ -253,6 +277,46 @@ function dashboardView() {
       var d = this.$store.budget.activeDashboard();
       return d ? d.widgets.slice() : [];
     },
+    /* ---- generic view helpers ----
+       Formatting is driven by the FIELD's declared flags, never guessed from
+       the value: an amount is money because the source says the field is
+       money, not because it happens to be large. */
+    fmtField(value, field) {
+      if (value == null || value === "") return "";
+      if (field && field.money) return this.fmt(value);
+      if (field && field.percent) {
+        var n = Number(value);
+        return isFinite(n) ? Math.round(n * 100) + "%" : "";
+      }
+      return String(value);
+    },
+
+    statText(stat) {
+      if (!stat) return "";
+      if (stat.money) return this.fmt(stat.value);
+      if (stat.percent) return Math.round(stat.value * 100) + "%";
+      return String(stat.value);
+    },
+
+    /* A widget only ever shows as many rows as its height can hold. Without
+       this a 3-row table widget renders forty rows and simply grows, which
+       makes the stored height meaningless and the grid ragged. */
+    rowLimit(widget) {
+      return Math.max(3, (widget.h || 4) * 2);
+    },
+
+    rowLabel(widget, row) {
+      var fields = this.$store.budget.widgetFields(widget);
+      for (var i = 0; i < fields.length; i++) if (!fields[i].numeric) return String(row[fields[i].key] || "");
+      return "";
+    },
+
+    rowValue(widget, row) {
+      var fields = this.$store.budget.widgetFields(widget);
+      for (var i = 0; i < fields.length; i++) if (fields[i].numeric) return this.fmtField(row[fields[i].key], fields[i]);
+      return "";
+    },
+
     titleOf(widget) {
       return this.$store.budget.widgetTitle(widget);
     },
@@ -462,6 +526,21 @@ function dashboardView() {
             self._syncCharts();
             if (self.chartIE) self.chartIE.redraw();
             if (self.chartProj) self.chartProj.redraw();
+            /* Authored report widgets. Separate from _syncCharts, which owns
+               the two hardcoded panel sparklines; this one is driven entirely
+               by what is on the board. */
+            if (window.PBDashCharts && self.$refs.grid) {
+              window.PBDashCharts.sync(self.$refs.grid, {
+                dataFor: function (id) {
+                  var w = self.widgets().find(function (x) { return x.id === id; });
+                  return w ? self.$store.budget.widgetData(w) : null;
+                },
+                needsFor: function (id) {
+                  var w = self.widgets().find(function (x) { return x.id === id; });
+                  return w ? self.$store.budget.widgetNeeds(w) : [];
+                },
+              });
+            }
           });
         });
       };

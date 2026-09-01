@@ -382,9 +382,128 @@ export const dashboardsSlice = {
     void this._listVersion;
     var spec = sourceSpec(widget && widget.source);
     if (!spec || !spec.method || typeof this[spec.method] !== "function") return null;
-    var params = widget.params || {};
+    var params = this._resolveParams(spec, widget.params || {});
     var args = (spec.args || []).map(function (k) { return params[k]; });
-    return this[spec.method].apply(this, args);
+    try {
+      return this[spec.method].apply(this, args);
+    } catch (err) {
+      /* A report that throws must not take the page with it. Every route is
+         gated by router-all-routes.spec.js on ANY console.error, and one bad
+         widget should degrade to an empty card rather than failing a build or
+         blanking a dashboard. warn, deliberately, not error. */
+      console.warn("widget data failed for", widget.source, err);
+      return null;
+    }
+  },
+
+  /* A null param means "follow the app", which is what keeps a widget current
+     instead of pinned to whenever it was created. Most methods already treat
+     null that way. Ranges do not: reportYearOverYear dereferences .from
+     immediately, so a null range is a TypeError rather than a default. The
+     range is resolved here, anchored on currentMonth, matching what
+     /app/reports/year-over-year/ computes for its own initial state. */
+  _resolveParams(spec, params) {
+    var out = {};
+    var self = this;
+    (spec.params || []).forEach(function (decl) {
+      var v = params[decl.key];
+      if (decl.type === "month" && !v && decl.resolveBack) {
+        out[decl.key] = self._monthsBack(
+          self.currentMonth || new Date().toISOString().slice(0, 7), decl.resolveBack);
+        return;
+      }
+      if (decl.type === "range" && !v) {
+        var anchor = self.currentMonth || new Date().toISOString().slice(0, 7);
+        var isPrior = decl.key === "priorRange";
+        out[decl.key] = {
+          from: self._monthsBack(anchor, isPrior ? 23 : 11),
+          to: self._monthsBack(anchor, isPrior ? 12 : 0),
+        };
+        return;
+      }
+      out[decl.key] = v;
+    });
+    return out;
+  },
+
+  _monthsBack(month, n) {
+    var parts = String(month).split("-");
+    var d = new Date(Number(parts[0]), Number(parts[1]) - 1 - n, 1);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  },
+
+  /* ---- what the generic views read ----
+     table, list and stat have no renderer of their own: they are markup over
+     a source's declared fields. That is the whole reason adding a source costs
+     one registry entry and nothing else. */
+
+  widgetFields(widget) {
+    var spec = sourceSpec(widget && widget.source);
+    return (spec && spec.fields) || [];
+  },
+
+  /* Rows for a table or list. `series` and `rows` are both arrays of objects,
+     so one path serves both; anything else (a graph, a matrix) has no tabular
+     reading and returns empty rather than rendering nonsense. */
+  widgetRows(widget) {
+    void this._listVersion;
+    var spec = sourceSpec(widget && widget.source);
+    if (!spec || (spec.shape !== "series" && spec.shape !== "rows")) return [];
+    var data = this.widgetData(widget);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /* One number plus a caption. Aggregates the source's first money field,
+     because that is what a person means by "the number" for a spending or
+     income report; the aggregation itself is a view setting. */
+  widgetStat(widget) {
+    void this._listVersion;
+    var fields = this.widgetFields(widget);
+    var field = null;
+    for (var i = 0; i < fields.length; i++) {
+      if (fields[i].numeric) { field = fields[i]; break; }
+    }
+    if (!field) return null;
+    var rows = this.widgetRows(widget);
+    var values = [];
+    for (var r = 0; r < rows.length; r++) {
+      var v = Number(rows[r][field.key]);
+      if (isFinite(v)) values.push(v);
+    }
+    if (!values.length) return { value: 0, label: field.label, money: !!field.money, empty: true };
+    var agg = (widget.settings && widget.settings.agg) || "sum";
+    var value;
+    if (agg === "avg") value = values.reduce(function (a, b) { return a + b; }, 0) / values.length;
+    else if (agg === "last") value = values[values.length - 1];
+    else if (agg === "max") value = Math.max.apply(null, values);
+    else value = values.reduce(function (a, b) { return a + b; }, 0);
+    var caption = { sum: "Total", avg: "Average", last: "Latest", max: "Highest" }[agg] || "Total";
+    return {
+      value: Math.round(value),
+      label: caption + " " + field.label.toLowerCase(),
+      money: !!field.money,
+      percent: !!field.percent,
+      count: values.length,
+    };
+  },
+
+  /* The chart module a widget's view names, for the chart controller. */
+  widgetModule(widget) {
+    var v = viewSpec(widget && widget.view);
+    return v && v.module ? v.module : "";
+  },
+
+  /* Libraries a widget's view needs before it can draw. D3 is 280KB and only
+     three of the eleven renderers want it, so a dashboard with no D3 chart
+     should never pay for it. */
+  widgetNeeds(widget) {
+    var v = viewSpec(widget && widget.view);
+    var s = sourceSpec(widget && widget.source);
+    var out = [];
+    [(v && v.needs) || [], (s && s.needs) || []].forEach(function (list) {
+      list.forEach(function (n) { if (out.indexOf(n) === -1) out.push(n); });
+    });
+    return out;
   },
 
   /* Which views the builder may offer for a source. */

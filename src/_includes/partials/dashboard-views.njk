@@ -1,0 +1,82 @@
+{# Generic widget views: table, ranked list, big number.
+
+   These three have NO JavaScript renderer. They are markup over the source's
+   declared `fields` (assets/js/domain/dashboard-sources.js), which is what
+   makes fourteen sources times four views cost a handful of files instead of
+   fifty: adding a source adds a registry entry, and it is immediately
+   renderable four ways.
+
+   They run inside dashboardView()'s Alpine scope with `widget` in scope from
+   the grid's x-for, and read through the store so the reactivity handshake
+   (_listVersion) is honoured in one place rather than in each macro.
+
+   Every value goes through fmtField(), which formats by the FIELD's declared
+   flags rather than by guessing from the value: an amount is money because
+   the field says so, not because it happens to be large. #}
+
+{% macro v_table() %}
+<div class="dash-view dash-view--table">
+  <table class="dash-view__table">
+    <thead>
+      <tr>
+        <template x-for="f in $store.budget.widgetFields(widget)" :key="f.key">
+          <th :class="f.numeric ? 'num' : ''" x-text="f.label"></th>
+        </template>
+      </tr>
+    </thead>
+    <tbody>
+      <template x-for="(row, ri) in $store.budget.widgetRows(widget).slice(0, rowLimit(widget))" :key="ri">
+        <tr>
+          <template x-for="f in $store.budget.widgetFields(widget)" :key="f.key">
+            <td :class="f.numeric ? 'num' : ''" x-text="fmtField(row[f.key], f)"></td>
+          </template>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+  <p class="dash-widget__empty" x-show="!$store.budget.widgetRows(widget).length" x-cloak>
+    Nothing to show for this range yet.
+  </p>
+</div>
+{% endmacro %}
+
+{# A ranked list reads better than a table when there are two columns and an
+   order that matters -- top payees, biggest categories. Same data, same
+   fields; it takes the first non-numeric field as the label and the first
+   numeric one as the value. #}
+{% macro v_list() %}
+<div class="dash-view dash-view--list">
+  <ul class="dash-view__list">
+    <template x-for="(row, ri) in $store.budget.widgetRows(widget).slice(0, rowLimit(widget))" :key="ri">
+      <li class="dash-view__row">
+        <span class="dash-view__label" x-text="rowLabel(widget, row)"></span>
+        <span class="dash-view__value num" x-text="rowValue(widget, row)"></span>
+      </li>
+    </template>
+  </ul>
+  <p class="dash-widget__empty" x-show="!$store.budget.widgetRows(widget).length" x-cloak>
+    Nothing to show for this range yet.
+  </p>
+</div>
+{% endmacro %}
+
+{# One number, and what it is. The aggregation is a view setting, so the same
+   source can appear twice as "total spent" and "average spent". #}
+{% macro v_stat() %}
+<div class="dash-view dash-view--stat">
+  <template x-if="$store.budget.widgetStat(widget)">
+    <div>
+      <p class="dash-view__stat-value"
+         x-text="statText($store.budget.widgetStat(widget))"></p>
+      <p class="dash-view__stat-label" x-text="$store.budget.widgetStat(widget).label"></p>
+      <p class="dash-view__stat-meta"
+         x-show="$store.budget.widgetStat(widget).count"
+         x-cloak
+         x-text="'over ' + $store.budget.widgetStat(widget).count + ' rows'"></p>
+    </div>
+  </template>
+  <p class="dash-widget__empty" x-show="!$store.budget.widgetStat(widget)" x-cloak>
+    This source has no number to summarise.
+  </p>
+</div>
+{% endmacro %}

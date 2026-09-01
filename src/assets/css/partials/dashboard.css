@@ -928,3 +928,57 @@
   color: var(--fg-muted);
   font-size: var(--fs-sm);
 }
+
+/* ---- Generic widget views -----------------------------------------------
+   table / list / stat are markup over a source's declared fields, so these
+   styles are the only per-view cost of making every report source renderable
+   four different ways. */
+.dash-view { height: 100%; overflow: auto; padding: var(--space-2xs) var(--space-sm) var(--space-sm); }
+
+.dash-view__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.dash-view__table th,
+.dash-view__table td {
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0; /* lets the ellipsis actually engage inside a table cell */
+}
+.dash-view__table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+  color: var(--fg-muted);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.dash-view__table td { border-top: 1px solid var(--border-soft); }
+.dash-view__table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.dash-view__list { list-style: none; margin: 0; padding: 0; }
+.dash-view__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0.3rem 0;
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--fs-sm);
+}
+.dash-view__row:first-child { border-top: 0; }
+.dash-view__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-view__value { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+
+.dash-view--stat { display: flex; align-items: center; justify-content: center; text-align: center; }
+.dash-view__stat-value {
+  margin: 0;
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+}
+.dash-view__stat-label { margin: 2px 0 0; color: var(--fg-muted); font-size: var(--fs-sm); }
+.dash-view__stat-meta { margin: 2px 0 0; color: var(--fg-subtle); font-size: var(--fs-2xs); }
