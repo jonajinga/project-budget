@@ -1093,3 +1093,35 @@
 }
 .dash-widget__config:hover { background: var(--bg); color: var(--accent); }
 .dash-widget__config:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ---- Dashboard tab strip ------------------------------------------------
+   A <select> hid how many dashboards there were and which one you were on
+   until you opened it. A strip answers both at a glance. It scrolls sideways
+   rather than wrapping, so a long list cannot push the actions off the row -
+   and the scroll container is the strip, never the page. */
+.dash-tabs {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.dash-tabs__tab {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 var(--space-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-chip);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dash-tabs__tab:hover { background: var(--bg-alt); color: var(--fg); }
+.dash-tabs__tab.is-active { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); }
+.dash-tabs__tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.dash-widget__more { min-width: 24px; min-height: 24px; }

@@ -43,14 +43,24 @@ eleventyExcludeFromCollections: true
     {# ---- Dashboard toolbar: which dashboard, and editing it ---- #}
     <div class="dash-toolbar" x-show="$store.budget.profile" x-cloak>
       <div class="dash-toolbar__left">
-        <label class="visually-hidden" for="dash-picker">Dashboard</label>
-        <select id="dash-picker" class="input dash-toolbar__picker"
-                :value="($store.budget._listVersion, activeId())"
-                @change="$store.budget.setActiveDashboard($event.target.value)">
+        {# A tab strip, not a <select>. Dashboards are places you switch
+           between, and a strip shows how many there are and which one you are
+           on without opening anything. It scrolls horizontally rather than
+           wrapping, so a long list never pushes the actions off the row.
+
+           `id="dash-picker"` is kept on the strip because it is the labelled
+           control for this group. #}
+        <div id="dash-picker" class="dash-tabs" role="tablist" aria-label="Dashboard">
           <template x-for="d in ($store.budget._listVersion, $store.budget.dashboardList())" :key="d.id">
-            <option :value="d.id" :selected="d.id === activeId()" x-text="d.name"></option>
+            <button type="button"
+                    class="dash-tabs__tab"
+                    role="tab"
+                    :class="d.id === activeId() ? 'is-active' : ''"
+                    :aria-selected="(d.id === activeId()).toString()"
+                    @click="$store.budget.setActiveDashboard(d.id)"
+                    x-text="d.name"></button>
           </template>
-        </select>
+        </div>
         <span class="dash-toolbar__count"
               x-text="widgets().length + (widgets().length === 1 ? ' widget' : ' widgets')"></span>
       </div>
@@ -160,6 +170,25 @@ eleventyExcludeFromCollections: true
                     data-tip="Change what this widget shows.">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
+            {% call overflow(label="Widget actions", triggerClass="dash-widget__more") %}
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item"
+                        @click="open = false; configureWidget(widget)">Configure...</button>
+              </li>
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item"
+                        @click="open = false; $store.budget.duplicateWidget(activeId(), widget.id)">Duplicate</button>
+              </li>
+              <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item"
+                        @click="open = false; $store.budget.moveWidget(activeId(), widget.id, 0)">Move to top</button>
+              </li>
+              <li role="none">
+                <button type="button" role="menuitem" class="overflow-menu__item"
+                        @click="open = false; $store.budget.moveWidget(activeId(), widget.id, widgets().length - 1)">Move to bottom</button>
+              </li>
+            {% endcall %}
             <button type="button" class="dash-widget__remove"
                     @click="$store.budget.removeWidget(activeId(), widget.id)"
                     :aria-label="'Remove ' + titleOf(widget)"
@@ -194,6 +223,54 @@ eleventyExcludeFromCollections: true
                 @click="$store.budget.resetDashboard(activeId())">Use the default layout</button>
       </div>
     </div>
+
+    {# ---- Ask / confirm ----
+       The two dialogs that replaced window.prompt and window.confirm. Both
+       use x-if so their controls stay out of the axe sweep and the touch
+       census while closed, and both restate the app's modal contract:
+       role=dialog, aria-modal, Escape closes, click outside closes. #}
+    <template x-if="ask.open">
+      <div class="modal-backdrop" @click.self="ask.open = false"
+           @keydown.escape.window="ask.open = false">
+        <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="dash-ask-title">
+          <div class="modal__head">
+            <h2 id="dash-ask-title" class="modal__title" x-text="ask.title"></h2>
+            <button type="button" class="modal__close" @click="ask.open = false" aria-label="Close">&times;</button>
+          </div>
+          <form class="modal__body" @submit.prevent="submitAsk()">
+            <div class="field">
+              <label class="field__label" for="dash-ask-input" x-text="ask.label"></label>
+              <input id="dash-ask-input" class="input" type="text" x-model="ask.value" maxlength="60">
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn" @click="ask.open = false">Cancel</button>
+              <button type="submit" class="btn btn--primary" x-text="ask.confirm"></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="confirmer.open">
+      <div class="modal-backdrop" @click.self="confirmer.open = false"
+           @keydown.escape.window="confirmer.open = false">
+        <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="dash-confirm-title">
+          <div class="modal__head">
+            <h2 id="dash-confirm-title" class="modal__title" x-text="confirmer.title"></h2>
+            <button type="button" class="modal__close" @click="confirmer.open = false" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal__body">
+            <p x-text="confirmer.body"></p>
+            <div class="form-actions">
+              <button type="button" class="btn" @click="confirmer.open = false">Cancel</button>
+              <button type="button" class="btn"
+                      :class="confirmer.danger ? 'btn--danger' : 'btn--primary'"
+                      @click="submitConfirm()" x-text="confirmer.confirm"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     {# ---- Widget builder ----
 
@@ -603,29 +680,85 @@ function dashboardView() {
     },
 
     /* ---- dashboard-level actions ---- */
+    /* ---- dashboard-level actions ----
+       window.prompt and window.confirm are gone. They are unstyled, ignore
+       the app's theme, cannot be reached by the keyboard in the same way as
+       the rest of the UI, and on a phone they read as a browser error rather
+       than part of the product. They are also untestable through the UI: a
+       native dialog is resolved out of band, which made a test fail
+       intermittently with the action simply never happening. */
+    ask: { open: false, title: "", label: "", value: "", confirm: "", onOk: null },
+    confirmer: { open: false, title: "", body: "", confirm: "", danger: false, onOk: null },
+
+    openAsk(opts) {
+      this.ask = Object.assign({ open: true, title: "", label: "", value: "", confirm: "Save", onOk: null }, opts);
+      this.$nextTick(function () {
+        var el = document.getElementById("dash-ask-input");
+        if (el) { el.focus(); el.select(); }
+      });
+    },
+    submitAsk() {
+      var fn = this.ask.onOk;
+      var value = String(this.ask.value || "").trim();
+      this.ask.open = false;
+      if (fn) fn(value);
+    },
+    openConfirm(opts) {
+      this.confirmer = Object.assign(
+        { open: true, title: "", body: "", confirm: "Confirm", danger: false, onOk: null }, opts);
+    },
+    submitConfirm() {
+      var fn = this.confirmer.onOk;
+      this.confirmer.open = false;
+      if (fn) fn();
+    },
+
     newDashboard() {
-      var name = window.prompt("Name this dashboard", "New dashboard");
-      if (name == null) return;
-      this.$store.budget.createDashboard(name.trim() || "New dashboard", []);
-      this.editing = true;
-      this.$nextTick(this._bindGrid.bind(this));
+      var self = this;
+      this.openAsk({
+        title: "New dashboard",
+        label: "Name",
+        value: "New dashboard",
+        confirm: "Create",
+        onOk: function (name) {
+          self.$store.budget.createDashboard(name || "New dashboard", []);
+          self.editing = true;
+          self.$nextTick(self._bindGrid.bind(self));
+        },
+      });
     },
     renameDashboard() {
+      var self = this;
       var d = this.$store.budget.activeDashboard();
       if (!d) return;
-      var name = window.prompt("Rename dashboard", d.name);
-      if (name == null) return;
-      this.$store.budget.renameDashboard(d.id, name);
+      this.openAsk({
+        title: "Rename dashboard",
+        label: "Name",
+        value: d.name,
+        confirm: "Rename",
+        onOk: function (name) { if (name) self.$store.budget.renameDashboard(d.id, name); },
+      });
     },
     deleteDashboard() {
+      var self = this;
       var d = this.$store.budget.activeDashboard();
       if (!d) return;
-      if (!window.confirm('Delete "' + d.name + '"? Undo will bring it back.')) return;
-      this.$store.budget.deleteDashboard(d.id);
+      this.openConfirm({
+        title: "Delete this dashboard?",
+        body: '"' + d.name + '" will be removed. Undo brings it straight back.',
+        confirm: "Delete",
+        danger: true,
+        onOk: function () { self.$store.budget.deleteDashboard(d.id); },
+      });
     },
     resetLayout() {
-      if (!window.confirm("Reset this dashboard to the default layout?")) return;
-      this.$store.budget.resetDashboard(this.activeId());
+      var self = this;
+      this.openConfirm({
+        title: "Reset this dashboard?",
+        body: "Every widget goes back to the standard layout. Undo brings your arrangement back.",
+        confirm: "Reset",
+        onOk: function () { self.$store.budget.resetDashboard(self.activeId()); },
+      });
     },
 
     /* ---- portability ----

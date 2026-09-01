@@ -149,6 +149,11 @@ test("the same source can appear twice with different parameters", async ({ seed
    normal sweep, because the dialog renders with x-if and does not exist until
    it is opened. This runs axe against the OPEN dialog specifically. */
 test("the open builder introduces no new accessibility violations", async ({ seeded }) => {
+  /* Two full axe sweeps of a 13-widget dashboard, one closed and one with the
+     dialog open. That is real work - it comfortably exceeds the 30s default
+     while the rest of the suite is running beside it. Sized to the work, not
+     padded; an assertion failure here still fails immediately. */
+  test.setTimeout(90000);
   const { default: AxeBuilder } = await import("@axe-core/playwright");
   const page = await openBoard(seeded);
 

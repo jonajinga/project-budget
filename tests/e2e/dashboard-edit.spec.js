@@ -327,7 +327,7 @@ test("chart widgets are addressed by data attribute, never by a fixed id", async
    ------------------------------------------------------------------------- */
 test("creating a dashboard updates the switcher and explains the empty board", async ({ seeded }) => {
   const page = await openDashboard(seeded);
-  const optionsBefore = await page.locator("#dash-picker option").count();
+  const tabsBefore = await page.locator(".dash-tabs__tab").count();
 
   /* Created through the store, not through the menu, and deliberately so.
      The menu item still calls window.prompt - a native dialog that Playwright
@@ -344,17 +344,22 @@ test("creating a dashboard updates the switcher and explains the empty board", a
   /* The switcher must list the new dashboard. Without the reactivity
      handshake this stays at its old count and the control shows blank. */
   await expect
-    .poll(() => page.locator("#dash-picker option").count(), { timeout: 5000 })
-    .toBe(optionsBefore + 1);
+    .poll(() => page.locator(".dash-tabs__tab").count(), { timeout: 5000 })
+    .toBe(tabsBefore + 1);
 
   const selected = await page.evaluate(() => {
-    const sel = document.querySelector("#dash-picker");
+    const tabs = [...document.querySelectorAll(".dash-tabs__tab")];
+    const active = tabs.find((t) => t.classList.contains("is-active"));
     const store = window.Alpine.store("budget");
-    return { value: sel.value, active: store.activeDashboardId(),
-             text: [...sel.options].map((o) => o.text) };
+    return {
+      text: tabs.map((t) => t.textContent.trim()),
+      activeLabel: active ? active.textContent.trim() : null,
+      activeName: (store.activeDashboard() || {}).name || null,
+    };
   });
   expect(selected.text, "the new dashboard must be listed by name").toContain("My dashboard");
-  expect(selected.value, "the control must show the dashboard you are actually on").toBe(selected.active);
+  expect(selected.activeLabel, "the strip must mark the dashboard you are actually on")
+    .toBe(selected.activeName);
 
   /* An empty board says so, and offers the way out. */
   const empty = page.locator(".dash-empty");
