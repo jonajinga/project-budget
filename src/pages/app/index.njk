@@ -233,10 +233,8 @@ eleventyExcludeFromCollections: true
       <div class="modal-backdrop" @click.self="ask.open = false"
            @keydown.escape.window="ask.open = false">
         <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="dash-ask-title">
-          <div class="modal__head">
-            <h2 id="dash-ask-title" class="modal__title" x-text="ask.title"></h2>
-            <button type="button" class="modal__close" @click="ask.open = false" aria-label="Close">&times;</button>
-          </div>
+          <button type="button" class="modal__close" @click="ask.open = false" aria-label="Close">&times;</button>
+          <h2 id="dash-ask-title" class="modal__title" x-text="ask.title"></h2>
           <form class="modal__body" @submit.prevent="submitAsk()">
             <div class="field">
               <label class="field__label" for="dash-ask-input" x-text="ask.label"></label>
@@ -255,10 +253,8 @@ eleventyExcludeFromCollections: true
       <div class="modal-backdrop" @click.self="confirmer.open = false"
            @keydown.escape.window="confirmer.open = false">
         <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="dash-confirm-title">
-          <div class="modal__head">
-            <h2 id="dash-confirm-title" class="modal__title" x-text="confirmer.title"></h2>
-            <button type="button" class="modal__close" @click="confirmer.open = false" aria-label="Close">&times;</button>
-          </div>
+          <button type="button" class="modal__close" @click="confirmer.open = false" aria-label="Close">&times;</button>
+          <h2 id="dash-confirm-title" class="modal__title" x-text="confirmer.title"></h2>
           <div class="modal__body">
             <p x-text="confirmer.body"></p>
             <div class="form-actions">
@@ -289,11 +285,9 @@ eleventyExcludeFromCollections: true
            @keydown.escape.window="closeBuilder()">
         <div class="modal modal--wide builder" role="dialog" aria-modal="true"
              aria-labelledby="dash-builder-title">
-          <div class="modal__head">
-            <h2 id="dash-builder-title" class="modal__title"
+          <button type="button" class="modal__close" @click="closeBuilder()" aria-label="Close">&times;</button>
+          <h2 id="dash-builder-title" class="modal__title"
                 x-text="builderMode === 'edit' ? 'Configure widget' : 'Add a widget'"></h2>
-            <button type="button" class="modal__close" @click="closeBuilder()" aria-label="Close">&times;</button>
-          </div>
 
           <div class="modal__body builder__body">
             <div class="builder__config">

@@ -330,3 +330,10 @@
   width: 100%;
   min-width: 0;
 }
+
+/* The dialog heading sits after a float: right close button, so it needs to
+   clear it or the two overlap. Written down because .modal__head was used by
+   the dashboard's dialogs before it existed as a rule, and an undefined class
+   fails silently: the close button floated beside the wrong column and the
+   markup looked correct. */
+.modal__title { clear: none; margin-top: 0; }

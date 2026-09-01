@@ -956,7 +956,19 @@
   letter-spacing: 0.05em;
 }
 .dash-view__table td { border-top: 1px solid var(--border-soft); }
-.dash-view__table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.dash-view__table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  /* A number needs exactly its own width; the label column should have
+     everything else. Without this every column shares the width equally and
+     "Chase Mortgage Co" truncates to "Chase ..." while a $5,360 column sits
+     in twice the space it needs. */
+  width: 1%;
+  white-space: nowrap;
+  max-width: none;
+}
+.dash-view__table th:first-child,
+.dash-view__table td:first-child { width: auto; }
 
 .dash-view__list { list-style: none; margin: 0; padding: 0; }
 .dash-view__row {
