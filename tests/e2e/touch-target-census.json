@@ -1,8 +1,8 @@
 {
   "totals": {
-    "measured": 2647,
-    "failAA": 335,
-    "failAAA": 1965
+    "measured": 2645,
+    "failAA": 334,
+    "failAAA": 1963
   },
   "failing": {
     "a": {
@@ -58,7 +58,7 @@
     },
     "a.cal__entry.cal__entry--clickable": {
       "smallest": "6x24",
-      "count": 11,
+      "count": 10,
       "routes": [
         "/app/calendar/"
       ],
