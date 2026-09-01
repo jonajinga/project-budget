@@ -27,7 +27,7 @@ const layout = (page) =>
   page.evaluate(() => {
     const d = window.Alpine.store("budget").activeDashboard();
     return {
-      types: d.widgets.map((w) => w.type),
+      types: d.widgets.map((w) => w.source),
       sizes: d.widgets.map((w) => w.w + "x" + w.h),
       domOrder: [...document.querySelectorAll(".dash-widget")].map((e) => e.getAttribute("aria-label")),
       domCount: document.querySelectorAll(".dash-widget").length,
@@ -153,12 +153,12 @@ test("a second dashboard is independent of the first", async ({ seeded }) => {
   const first = await layout(page);
 
   await page.evaluate(() =>
-    window.Alpine.store("budget").createDashboard("Bills only", ["upcoming-bills", "recent"])
+    window.Alpine.store("budget").createDashboard("Bills only", ["panel:upcoming-bills", "panel:recent"])
   );
   await page.waitForTimeout(500);
 
   const second = await layout(page);
-  expect(second.types).toEqual(["upcoming-bills", "recent"]);
+  expect(second.types).toEqual(["panel:upcoming-bills", "panel:recent"]);
   expect(second.domCount).toBe(2);
 
   /* Switching back must bring the original layout with it — a shared widget

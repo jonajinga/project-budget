@@ -132,9 +132,9 @@ eleventyExcludeFromCollections: true
       <template x-for="(widget, i) in widgets()" :key="widget.id">
         <section class="dash-widget"
                  :data-widget-id="widget.id"
-                 :data-widget-kind="$store.budget.widgetKind(widget.type)"
+                 :data-widget-kind="$store.budget.widgetKind(widget)"
                  :style="widgetStyle(widget)"
-                 :aria-label="titleOf(widget.type)">
+                 :aria-label="titleOf(widget)">
 
           {# Editing chrome. Present only in edit mode, so a widget in read
              mode is exactly the card it always was. #}
@@ -142,7 +142,7 @@ eleventyExcludeFromCollections: true
             <button type="button"
                     class="dash-widget__grip"
                     data-widget-grip
-                    :aria-label="'Move ' + titleOf(widget.type) + '. Press space to pick up, then arrow keys to move, shift and arrows to resize.'"
+                    :aria-label="'Move ' + titleOf(widget) + '. Press space to pick up, then arrow keys to move, shift and arrows to resize.'"
                     data-tip="Drag to move — or press space and use the arrow keys.">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
@@ -150,41 +150,41 @@ eleventyExcludeFromCollections: true
                 <circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>
               </svg>
             </button>
-            <span class="dash-widget__name" x-text="titleOf(widget.type)"></span>
+            <span class="dash-widget__name" x-text="titleOf(widget)"></span>
             <span class="dash-widget__size" x-text="widget.w + '\u00d7' + widget.h"></span>
             <button type="button" class="dash-widget__remove"
                     @click="$store.budget.removeWidget(activeId(), widget.id)"
-                    :aria-label="'Remove ' + titleOf(widget.type)"
+                    :aria-label="'Remove ' + titleOf(widget)"
                     data-tip="Remove this widget. Undo brings it back.">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>
 
-          <template x-if="widget.type === 'hero'">
+          <template x-if="widget.view === 'panel:hero'">
 <div class="dash-widget__body">{{ W.w_hero() }}</div></template>
-          <template x-if="widget.type === 'kpis'">
+          <template x-if="widget.view === 'panel:kpis'">
 <div class="dash-widget__body">{{ W.w_kpis() }}</div></template>
-          <template x-if="widget.type === 'insights'">
+          <template x-if="widget.view === 'panel:insights'">
 <div class="dash-widget__body">{{ W.w_insights() }}</div></template>
-          <template x-if="widget.type === 'accounts'">
+          <template x-if="widget.view === 'panel:accounts'">
 <div class="dash-widget__body">{{ W.w_accounts() }}</div></template>
-          <template x-if="widget.type === 'cashflow'">
+          <template x-if="widget.view === 'panel:cashflow'">
 <div class="dash-widget__body">{{ W.w_cashflow() }}</div></template>
-          <template x-if="widget.type === 'income-expense'">
+          <template x-if="widget.view === 'panel:income-expense'">
 <div class="dash-widget__body">{{ W.w_income_expense() }}</div></template>
-          <template x-if="widget.type === 'top-categories'">
+          <template x-if="widget.view === 'panel:top-categories'">
 <div class="dash-widget__body">{{ W.w_top_categories() }}</div></template>
-          <template x-if="widget.type === 'cashflow-30'">
+          <template x-if="widget.view === 'panel:cashflow-30'">
 <div class="dash-widget__body">{{ W.w_cashflow_30() }}</div></template>
-          <template x-if="widget.type === 'upcoming-bills'">
+          <template x-if="widget.view === 'panel:upcoming-bills'">
 <div class="dash-widget__body">{{ W.w_upcoming_bills() }}</div></template>
-          <template x-if="widget.type === 'goals'">
+          <template x-if="widget.view === 'panel:goals'">
 <div class="dash-widget__body">{{ W.w_goals() }}</div></template>
-          <template x-if="widget.type === 'recent'">
+          <template x-if="widget.view === 'panel:recent'">
 <div class="dash-widget__body">{{ W.w_recent() }}</div></template>
-          <template x-if="widget.type === 'alerts'">
+          <template x-if="widget.view === 'panel:alerts'">
 <div class="dash-widget__body">{{ W.w_alerts() }}</div></template>
-          <template x-if="widget.type === 'quick-actions'">
+          <template x-if="widget.view === 'panel:quick-actions'">
 <div class="dash-widget__body">{{ W.w_quick_actions() }}</div></template>
 
           {# Resize handle. Pointer only -- the keyboard equivalent is
@@ -207,11 +207,11 @@ eleventyExcludeFromCollections: true
         </div>
         <div class="modal__body">
           <ul class="widget-picker">
-            <template x-for="w in $store.budget.availableWidgets(activeId())" :key="w.type">
+            <template x-for="w in $store.budget.availableWidgets(activeId())" :key="w.id">
               <li>
                 <button type="button" class="widget-picker__item"
                         :disabled="w.disabled"
-                        @click="$store.budget.addWidget(activeId(), w.type); pickerOpen = false">
+                        @click="$store.budget.addWidget(activeId(), w.id); pickerOpen = false">
                   <span class="widget-picker__title" x-text="w.title"></span>
                   <span class="widget-picker__desc" x-text="w.description"></span>
                   <span class="widget-picker__on" x-show="w.disabled" x-cloak>Already on this dashboard</span>
@@ -253,8 +253,8 @@ function dashboardView() {
       var d = this.$store.budget.activeDashboard();
       return d ? d.widgets.slice() : [];
     },
-    titleOf(type) {
-      return this.$store.budget.widgetTitle(type);
+    titleOf(widget) {
+      return this.$store.budget.widgetTitle(widget);
     },
 
     /* Width in columns, height in rows. Only the span is inline -- the track
@@ -282,7 +282,7 @@ function dashboardView() {
         },
         titleOf: function (id) {
           var w = self.widgets().find(function (x) { return x.id === id; });
-          return w ? self.titleOf(w.type) : "Widget";
+          return w ? self.titleOf(w) : "Widget";
         },
         /* Resize previews on the element so the drag feels direct, then
            commits once on release -- committing per pointermove would push a

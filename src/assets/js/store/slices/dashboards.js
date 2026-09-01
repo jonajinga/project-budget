@@ -14,8 +14,8 @@
  * one arrangement works at every width and "move" means the same thing on a
  * desktop and a handset.
  *
- * SHARING. exportDefinition() emits layout only -- widget types, sizes,
- * order, settings -- and never touches transactions, balances or names of
+ * SHARING. exportDefinition() emits layout only -- sources, views, params,
+ * sizes and order -- and never touches transactions, balances or names of
  * accounts. That split exists so sharing a dashboard can never leak a
  * number by accident: what travels is the SHAPE of a view, and it fills with
  * the recipient's own data. A rendered snapshot with real figures is a
@@ -27,22 +27,36 @@
  */
 
 import { newId } from "../schema.js";
-import { DEFAULT_LAYOUT, WIDGETS, widgetSpec, clampSize } from "../../domain/dashboard-widgets.js";
+import {
+  DEFAULT_LAYOUT, SOURCES, sourceSpec, viewSpec, viewsForSource,
+  normalizeWidget, legacyTypeToWidget, isLegacyWidget, availableSources, clampSize,
+} from "../../domain/dashboard-widgets.js";
 
 function nowISO() { return new Date().toISOString(); }
 
-function makeWidget(type) {
-  var spec = widgetSpec(type);
-  if (!spec) return null;
-  return { id: newId(), type: type, w: spec.w, h: spec.h, settings: {} };
+/* Everything that creates a widget goes through normalizeWidget, so a record
+   can never exist in a shape the renderer has to defend against. */
+function makeWidget(descriptor) {
+  var d = typeof descriptor === "string" ? { source: descriptor } : (descriptor || {});
+  var src = sourceSpec(d.source);
+  if (!src) return null;
+  return normalizeWidget({
+    source: d.source,
+    view: d.view || src.defaultView,
+    params: d.params,
+    settings: d.settings,
+    title: d.title,
+    w: d.w != null ? d.w : src.w,
+    h: d.h != null ? d.h : src.h,
+  }, newId);
 }
 
 function makeDashboard(name, layout) {
   var now = nowISO();
-  var types = layout || DEFAULT_LAYOUT;
+  var ids = layout || DEFAULT_LAYOUT;
   var widgets = [];
-  for (var i = 0; i < types.length; i++) {
-    var w = makeWidget(types[i]);
+  for (var i = 0; i < ids.length; i++) {
+    var w = makeWidget(ids[i]);
     if (w) widgets.push(w);
   }
   return {
@@ -71,6 +85,26 @@ export const dashboardsSlice = {
       /* No undo entry and no toast: this is not something the user did. */
       this._save();
     }
+    /* Upgrade v1 records where they are read, not in a migration file.
+       Profiles arrive from four directions -- newProfile, an older export, an
+       import, and the bundled sample -- and the read path is the only one all
+       four share. Idempotent by construction: normalizeWidget returns a v2
+       record unchanged, so this can run on every read. */
+    var upgraded = false;
+    for (var di = 0; di < this.profile.dashboards.length; di++) {
+      var dash = this.profile.dashboards[di];
+      if (!dash || !Array.isArray(dash.widgets)) continue;
+      if (!dash.widgets.some(isLegacyWidget)) continue;
+      var next = [];
+      for (var wi = 0; wi < dash.widgets.length; wi++) {
+        var up = legacyTypeToWidget(dash.widgets[wi], newId);
+        if (up) next.push(up);
+      }
+      dash.widgets = next;
+      upgraded = true;
+    }
+    if (upgraded) this._save();
+
     return this.profile.dashboards.filter(function (d) { return !d.deletedAt; });
   },
 
@@ -95,22 +129,22 @@ export const dashboardsSlice = {
     return null;
   },
 
-  /* The template needs a widget's human title, and the catalogue is an ES
-     module while the page's dashboardView() is a plain script -- it cannot
-     import. Exposing it through the store keeps one source of truth instead
-     of a second copy on window. */
-  widgetTitle(type) {
-    var spec = widgetSpec(type);
-    return spec ? spec.title : String(type || "Widget");
+  /* A user-supplied title always wins; otherwise the source names itself.
+     Titles are why two widgets from one source with different ranges are
+     tellable apart, so this is not cosmetic. */
+  widgetTitle(widget) {
+    if (widget && typeof widget.title === "string" && widget.title) return widget.title;
+    var spec = sourceSpec(widget && widget.source);
+    return spec ? spec.title : "Widget";
   },
 
-  /* "chart" or "panel". The height policy differs by kind -- a chart needs a
-     fixed box because Chart.js sizes to its container, while a panel needs to
-     grow to its content -- and the catalogue already records which is which,
-     so this reads it rather than adding a second list to keep in step. */
-  widgetKind(type) {
-    var spec = widgetSpec(type);
-    return spec && spec.chart ? "chart" : "panel";
+  /* The height policy differs by kind: a chart needs a fixed box because
+     Chart.js sizes to its container, everything else grows to its content. */
+  widgetKind(widget) {
+    var v = viewSpec(widget && widget.view);
+    if (!v) return "panel";
+    if (v.kind === "panel") return v.chart ? "chart" : "panel";
+    return v.kind;
   },
 
   /* Types already placed on a dashboard, so the picker can grey out the
@@ -120,20 +154,13 @@ export const dashboardsSlice = {
     var d = this.findDashboard(dashId) || this.activeDashboard();
     var out = Object.create(null);
     if (!d) return out;
-    for (var i = 0; i < d.widgets.length; i++) out[d.widgets[i].type] = true;
+    for (var i = 0; i < d.widgets.length; i++) out[d.widgets[i].source] = true;
     return out;
   },
 
   availableWidgets(dashId) {
     var used = this.widgetTypesOn(dashId);
-    return WIDGETS.map(function (spec) {
-      return {
-        type: spec.type,
-        title: spec.title,
-        description: spec.description,
-        disabled: !!(spec.singleton && used[spec.type]),
-      };
-    });
+    return availableSources(used);
   },
 
   /* ---- dashboard CRUD ---- */
@@ -231,22 +258,24 @@ export const dashboardsSlice = {
 
   /* ---- widget operations ---- */
 
-  addWidget(dashId, type) {
+  addWidget(dashId, descriptor) {
     var d = this.findDashboard(dashId) || this.activeDashboard();
     if (!d) return null;
-    var spec = widgetSpec(type);
+    var sourceId = typeof descriptor === "string" ? descriptor : (descriptor && descriptor.source);
+    var spec = sourceSpec(sourceId);
     if (!spec) return null;
-    if (spec.singleton && this.widgetTypesOn(d.id)[type]) {
+    if (spec.singleton && this.widgetTypesOn(d.id)[sourceId]) {
       this.pushToast("That widget is already on this dashboard");
       return null;
     }
+    var w = makeWidget(descriptor);
+    if (!w) return null;
     this._recordUndo("Add widget");
-    var w = makeWidget(type);
     d.widgets.push(w);
     this._touchDashboard(d);
     this._bumpLists();
     this._save();
-    this.pushToast(spec.title + " added");
+    this.pushToast((w.title || spec.title) + " added");
     return w;
   },
 
@@ -255,13 +284,13 @@ export const dashboardsSlice = {
     if (!d) return;
     var idx = d.widgets.findIndex(function (w) { return w.id === widgetId; });
     if (idx < 0) return;
-    var spec = widgetSpec(d.widgets[idx].type);
+    var label = this.widgetTitle(d.widgets[idx]);
     this._recordUndo("Remove widget");
     d.widgets.splice(idx, 1);
     this._touchDashboard(d);
     this._bumpLists();
     this._save();
-    this.pushToast((spec ? spec.title : "Widget") + " removed — undo to bring it back");
+    this.pushToast(label + " removed - undo to bring it back");
   },
 
   /* Order IS position, so moving a widget is a splice. Index is clamped
@@ -287,7 +316,7 @@ export const dashboardsSlice = {
     if (!d) return;
     var widget = d.widgets.find(function (x) { return x.id === widgetId; });
     if (!widget) return;
-    var size = clampSize(widget.type, w, h);
+    var size = clampSize(widget.source, widget.view, w, h);
     if (size.w === widget.w && size.h === widget.h) return;
     this._recordUndo("Resize widget");
     widget.w = size.w;
@@ -295,6 +324,75 @@ export const dashboardsSlice = {
     this._touchDashboard(d);
     this._bumpLists();
     this._save();
+  },
+
+  /* ONE undo entry for a whole reconfiguration. The settings dialog can change
+     the title, the view, several params and several view settings at once;
+     that is one decision by the user and must be one step in history. */
+  updateWidget(dashId, widgetId, patch) {
+    var d = this.findDashboard(dashId) || this.activeDashboard();
+    if (!d) return null;
+    var idx = d.widgets.findIndex(function (x) { return x.id === widgetId; });
+    if (idx < 0) return null;
+    var current = d.widgets[idx];
+    var merged = normalizeWidget({
+      id: current.id,
+      source: (patch && patch.source) || current.source,
+      view: patch && patch.view !== undefined ? patch.view : current.view,
+      params: patch && patch.params !== undefined ? patch.params : current.params,
+      settings: patch && patch.settings !== undefined ? patch.settings : current.settings,
+      title: patch && patch.title !== undefined ? patch.title : current.title,
+      w: patch && patch.w !== undefined ? patch.w : current.w,
+      h: patch && patch.h !== undefined ? patch.h : current.h,
+    }, newId);
+    if (!merged) return null;
+    this._recordUndo("Configure widget");
+    d.widgets[idx] = merged;
+    this._touchDashboard(d);
+    this._bumpLists();
+    this._save();
+    return merged;
+  },
+
+  /* The fastest route to the capability this rebuild exists for: the same
+     source twice, with different params, side by side. */
+  duplicateWidget(dashId, widgetId) {
+    var d = this.findDashboard(dashId) || this.activeDashboard();
+    if (!d) return null;
+    var idx = d.widgets.findIndex(function (x) { return x.id === widgetId; });
+    if (idx < 0) return null;
+    var src = sourceSpec(d.widgets[idx].source);
+    if (src && src.singleton) {
+      this.pushToast("That widget can only appear once");
+      return null;
+    }
+    this._recordUndo("Duplicate widget");
+    var copy = normalizeWidget(JSON.parse(JSON.stringify(d.widgets[idx])), newId);
+    copy.id = newId();
+    d.widgets.splice(idx + 1, 0, copy);
+    this._touchDashboard(d);
+    this._bumpLists();
+    this._save();
+    return copy;
+  },
+
+  /* The one data path every non-panel widget renders through. Panels return
+     null and read the store from their own markup, as they always have. */
+  widgetData(widget) {
+    void this._listVersion;
+    var spec = sourceSpec(widget && widget.source);
+    if (!spec || !spec.method || typeof this[spec.method] !== "function") return null;
+    var params = widget.params || {};
+    var args = (spec.args || []).map(function (k) { return params[k]; });
+    return this[spec.method].apply(this, args);
+  },
+
+  /* Which views the builder may offer for a source. */
+  viewsFor(sourceId) {
+    return viewsForSource(sourceSpec(sourceId)).map(function (id) {
+      var v = viewSpec(id);
+      return { id: id, title: v.title, kind: v.kind };
+    });
   },
 
   setWidgetSettings(dashId, widgetId, settings) {
@@ -318,11 +416,14 @@ export const dashboardsSlice = {
     if (!d) return null;
     return {
       kind: "projectbudget.dashboard",
-      formatVersion: 1,
+      formatVersion: 2,
       name: d.name,
       exportedAt: nowISO(),
       widgets: d.widgets.map(function (w) {
-        return { type: w.type, w: w.w, h: w.h, settings: w.settings || {} };
+        return {
+          source: w.source, view: w.view, params: w.params || {},
+          settings: w.settings || {}, title: w.title || "", w: w.w, h: w.h,
+        };
       }),
     };
   },
@@ -345,17 +446,13 @@ export const dashboardsSlice = {
     var widgets = [];
     var skipped = 0;
     for (var i = 0; i < data.widgets.length; i++) {
-      var raw = data.widgets[i] || {};
-      var spec = widgetSpec(raw.type);
-      if (!spec) { skipped++; continue; }
-      var size = clampSize(raw.type, raw.w, raw.h);
-      widgets.push({
-        id: newId(),
-        type: raw.type,
-        w: size.w,
-        h: size.h,
-        settings: raw.settings && typeof raw.settings === "object" ? raw.settings : {},
-      });
+      /* v1 files carry `type`, v2 carry `source`; legacyTypeToWidget accepts
+         either, and normalizeWidget strips anything not declared -- which is
+         what stops a hand-edited file introducing an x/y layout model the rest
+         of the app does not implement. */
+      var w = legacyTypeToWidget(data.widgets[i], newId);
+      if (!w) { skipped++; continue; }
+      widgets.push(w);
     }
     if (!widgets.length) { this.pushToast("That dashboard had no widgets this version understands"); return null; }
     this._recordUndo("Import dashboard");

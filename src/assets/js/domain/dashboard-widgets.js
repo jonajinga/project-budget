@@ -1,161 +1,147 @@
-/* The widget catalogue.
+/* Widget validation and the v1 -> v2 upgrade.
  *
- * Every widget the dashboard can show is declared here once: its type key,
- * the label a person sees in the picker, what it is for, and how big it
- * wants to be. The template renders from this; the store seeds default
- * layouts from this; the picker lists from this. Adding a widget means
- * adding an entry here and a matching markup block in the dashboard
- * template -- there is no third place to remember.
+ * Everything that can put a widget into a dashboard comes through here:
+ * addWidget, updateWidget, importDefinition, the lazy upgrade on read, and the
+ * builder's live preview. That is deliberate. Two of those five handle input
+ * this app did not create -- an exported file someone was sent, or a record
+ * written by an older version -- so "validate at the edge" would mean
+ * validating in several edges and eventually missing one.
  *
- * SIZING. `w` is columns out of 12, `h` is row units (see --dash-row in
- * dashboard.css). Both are the DEFAULT and the user can change them;
- * `minW`/`minH` are the point below which the widget stops being readable
- * rather than merely small -- a sparkline at 2 columns is a smudge, and a
- * table at 1 row is a header with nothing under it.
+ * The rule is: a widget that reaches the renderer is already known-good, or it
+ * does not reach the renderer at all.
  *
- * `chart: true` marks widgets that own a Chart.js canvas. The view uses it
- * to tear charts down before a re-layout and rebuild them after, which is
- * what stops the leak that a naive re-render would cause.
- *
- * `singleton: true` means more than one makes no sense (two "Today's
- * summary" headers is a mistake, two "Top categories" is not).
+ * UNKNOWN KEYS ARE STRIPPED, and that is load-bearing rather than tidiness.
+ * The layout model is an ordered list with a column span, argued at length in
+ * store/slices/dashboards.js. An imported file carrying x/y coordinates would
+ * quietly introduce a second, free-positioning layout model that nothing else
+ * in the app understands. Rebuilding the record from declared fields only is
+ * what makes that unrepresentable.
  */
 
-export const WIDGETS = [
-  {
-    type: "hero",
-    title: "Today's summary",
-    description: "Greeting, the month's headline number, and where you stand.",
-    w: 12, h: 3, minW: 6, minH: 2,
-    singleton: true,
-  },
-  {
-    type: "kpis",
-    title: "Key indicators",
-    description: "To-assign, overspent, income and expense tiles for the month.",
-    w: 12, h: 3, minW: 4, minH: 2,
-    singleton: true,
-  },
-  {
-    type: "alerts",
-    title: "Alerts",
-    description: "Anything needing attention — overspending, overdue, low balances.",
-    w: 6, h: 4, minW: 3, minH: 2,
-    singleton: true,
-  },
-  {
-    type: "insights",
-    title: "Insights",
-    description: "Observations about this month compared with your recent history.",
-    w: 6, h: 4, minW: 3, minH: 2,
-    singleton: true,
-  },
-  {
-    type: "accounts",
-    title: "Account balances",
-    description: "Every open account grouped, with balances and the total.",
-    w: 12, h: 5, minW: 4, minH: 3,
-    singleton: true,
-  },
-  {
-    type: "cashflow",
-    title: "Cash flow this month",
-    description: "Money in against money out, with the pivot between them.",
-    w: 12, h: 4, minW: 6, minH: 3,
-    singleton: true,
-  },
-  {
-    type: "income-expense",
-    title: "Income vs expense",
-    description: "Monthly income and expense side by side over time.",
-    w: 6, h: 5, minW: 4, minH: 4,
-    chart: true,
-  },
-  {
-    type: "top-categories",
-    title: "Top categories",
-    description: "Where the money went this month, largest first.",
-    w: 6, h: 5, minW: 3, minH: 3,
-  },
-  {
-    type: "cashflow-30",
-    title: "30-day cash flow",
-    description: "Projected balance over the next 30 days.",
-    w: 6, h: 5, minW: 4, minH: 4,
-    chart: true,
-  },
-  {
-    type: "upcoming-bills",
-    title: "Upcoming bills",
-    description: "Scheduled transactions due in the next two weeks.",
-    w: 6, h: 5, minW: 3, minH: 3,
-  },
-  {
-    type: "goals",
-    title: "Goals needing attention",
-    description: "Goals that are behind, and what they need to catch up.",
-    w: 12, h: 4, minW: 4, minH: 3,
-    singleton: true,
-  },
-  {
-    type: "recent",
-    title: "Recent transactions",
-    description: "The latest activity across every account.",
-    w: 6, h: 5, minW: 3, minH: 3,
-  },
-  {
-    type: "quick-actions",
-    title: "Quick actions",
-    description: "Add a transaction, jump to the budget, import, reconcile.",
-    w: 6, h: 4, minW: 3, minH: 2,
-    singleton: true,
-  },
-];
+import { SOURCES, sourceSpec, sourceIdForLegacyType, DEFAULT_LAYOUT } from "./dashboard-sources.js";
+import { VIEWS, viewSpec, viewsForSource } from "./dashboard-views.js";
+
+export { SOURCES, VIEWS, sourceSpec, viewSpec, viewsForSource, DEFAULT_LAYOUT };
 
 export const GRID_COLUMNS = 12;
+var MAX_ROWS = 24;
+var MAX_TITLE = 60;
 
-var _byType = null;
-export function widgetSpec(type) {
-  if (!_byType) {
-    _byType = Object.create(null);
-    for (var i = 0; i < WIDGETS.length; i++) _byType[WIDGETS[i].type] = WIDGETS[i];
-  }
-  return _byType[type] || null;
-}
-
-/* The layout a brand-new dashboard gets, and what "Reset layout" restores.
- * Deliberately the order the hand-built dashboard used, so upgrading an
- * existing profile does not rearrange a screen someone already knows. */
-export const DEFAULT_LAYOUT = [
-  "hero",
-  "kpis",
-  "alerts",
-  "insights",
-  "accounts",
-  "cashflow",
-  "income-expense",
-  "top-categories",
-  "cashflow-30",
-  "upcoming-bills",
-  "goals",
-  "recent",
-  "quick-actions",
-];
-
-/* Clamp a widget to something renderable. Called on every resize and on
- * import, because an imported definition is untrusted input -- a hand-edited
- * or older file can carry w: 40 or h: 0, and a widget spanning 40 columns of
- * a 12-column grid silently breaks the whole row. */
-export function clampSize(type, w, h) {
-  var spec = widgetSpec(type);
-  var minW = spec ? spec.minW || 1 : 1;
-  var minH = spec ? spec.minH || 1 : 1;
+/* Sizes clamp against the VIEW's minimum, not the source's: the same data as a
+   big number is readable at 2x2 where a chart is a smudge. */
+export function clampSize(sourceId, viewId, w, h) {
+  var src = sourceSpec(sourceId);
+  var view = viewSpec(viewId);
+  var minW = (view && view.minW) || 2;
+  var minH = (view && view.minH) || 2;
+  var defW = (src && src.w) || 6;
+  var defH = (src && src.h) || 4;
   var nw = Math.round(Number(w));
   var nh = Math.round(Number(h));
-  if (!isFinite(nw) || nw <= 0) nw = spec ? spec.w : 6;
-  if (!isFinite(nh) || nh <= 0) nh = spec ? spec.h : 4;
+  if (!isFinite(nw) || nw <= 0) nw = defW;
+  if (!isFinite(nh) || nh <= 0) nh = defH;
   return {
     w: Math.max(minW, Math.min(GRID_COLUMNS, nw)),
-    h: Math.max(minH, Math.min(24, nh)),
+    h: Math.max(minH, Math.min(MAX_ROWS, nh)),
   };
+}
+
+function coerceParam(decl, raw) {
+  if (decl.type === "int") {
+    var n = Math.round(Number(raw));
+    if (!isFinite(n)) return decl.default;
+    if (typeof decl.min === "number") n = Math.max(decl.min, n);
+    if (typeof decl.max === "number") n = Math.min(decl.max, n);
+    return n;
+  }
+  if (decl.type === "month") {
+    /* null is meaningful: it means "follow the current month", which is what
+       keeps a widget current instead of pinned to when it was made. */
+    if (raw == null || raw === "") return null;
+    return /^\d{4}-\d{2}$/.test(String(raw)) ? String(raw) : decl.default;
+  }
+  if (decl.type === "range") {
+    if (!raw || typeof raw !== "object") return decl.default;
+    var from = /^\d{4}-\d{2}$/.test(String(raw.from)) ? String(raw.from) : null;
+    var to = /^\d{4}-\d{2}$/.test(String(raw.to)) ? String(raw.to) : null;
+    return from && to ? { from: from, to: to } : decl.default;
+  }
+  if (decl.type === "enum") {
+    var ok = (decl.options || []).some(function (o) { return o.value === raw; });
+    return ok ? raw : decl.default;
+  }
+  if (decl.type === "bool") return raw === true || raw === "true";
+  return raw == null ? decl.default : raw;
+}
+
+function coerceDeclared(decls, raw) {
+  var out = {};
+  var given = raw && typeof raw === "object" ? raw : {};
+  (decls || []).forEach(function (d) { out[d.key] = coerceParam(d, given[d.key]); });
+  return out;
+}
+
+/* The single gate. Returns a clean record, or null to drop the widget --
+   which is what an unknown source means, since rendering a card that says
+   nothing is worse than not placing it. */
+export function normalizeWidget(raw, makeId) {
+  if (!raw || typeof raw !== "object") return null;
+
+  var sourceId = raw.source || (raw.type ? sourceIdForLegacyType(raw.type) : null);
+  var src = sourceSpec(sourceId);
+  if (!src) return null;
+
+  /* A view the source does not accept falls back rather than dropping the
+     widget: the data is still valid and the user still wants it on screen,
+     they just asked to draw it a way this version cannot. */
+  var allowed = viewsForSource(src);
+  var viewId = raw.view && allowed.indexOf(raw.view) !== -1 ? raw.view : src.defaultView;
+  var view = viewSpec(viewId);
+  if (!view) return null;
+
+  var size = clampSize(sourceId, viewId, raw.w, raw.h);
+  var title = typeof raw.title === "string" ? raw.title.trim().slice(0, MAX_TITLE) : "";
+
+  return {
+    id: raw.id || (makeId ? makeId() : null),
+    source: sourceId,
+    params: coerceDeclared(src.params, raw.params),
+    view: viewId,
+    settings: coerceDeclared(view.settings, raw.settings),
+    title: title,
+    w: size.w,
+    h: size.h,
+  };
+}
+
+/* v1 records were {id, type, w, h, settings}. The upgrade runs on the read
+   path, so it covers every way a profile can arrive -- a fresh seed, an older
+   export, an import, the bundled sample -- rather than only the one a
+   migration file would catch. It must be idempotent: it runs on every read. */
+export function legacyTypeToWidget(raw, makeId) {
+  if (!raw) return null;
+  if (raw.source) return normalizeWidget(raw, makeId); /* already v2 */
+  return normalizeWidget(
+    { id: raw.id, type: raw.type, w: raw.w, h: raw.h, settings: raw.settings, title: raw.title },
+    makeId
+  );
+}
+
+export function isLegacyWidget(raw) {
+  return !!(raw && !raw.source && raw.type);
+}
+
+/* What the builder offers. Singleton panels already on the board are marked
+   rather than hidden, so the picker still explains why they are unavailable. */
+export function availableSources(usedSourceIds) {
+  var used = usedSourceIds || {};
+  return SOURCES.map(function (s) {
+    return {
+      id: s.id,
+      family: s.family,
+      title: s.title,
+      description: s.description,
+      disabled: !!(s.singleton && used[s.id]),
+    };
+  });
 }
