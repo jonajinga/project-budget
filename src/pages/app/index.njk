@@ -44,9 +44,9 @@ eleventyExcludeFromCollections: true
       <div class="dash-toolbar__left">
         <label class="visually-hidden" for="dash-picker">Dashboard</label>
         <select id="dash-picker" class="input dash-toolbar__picker"
-                :value="activeId()"
+                :value="($store.budget._listVersion, activeId())"
                 @change="$store.budget.setActiveDashboard($event.target.value)">
-          <template x-for="d in $store.budget.dashboardList()" :key="d.id">
+          <template x-for="d in ($store.budget._listVersion, $store.budget.dashboardList())" :key="d.id">
             <option :value="d.id" :selected="d.id === activeId()" x-text="d.name"></option>
           </template>
         </select>
@@ -220,6 +220,22 @@ eleventyExcludeFromCollections: true
       </template>
     </div>
 
+    {# A brand-new dashboard is deliberately empty. Without this it renders as
+       a blank page with a toolbar, which is indistinguishable from breakage --
+       it was reported as "entirely broken", and reasonably so. #}
+    <div class="dash-empty" x-show="$store.budget.profile && !widgets().length" x-cloak>
+      <h2 class="dash-empty__title">This dashboard is empty</h2>
+      <p class="dash-empty__body">
+        Add the widgets you want, or start from the standard layout and change it.
+      </p>
+      <div class="dash-empty__actions">
+        <button type="button" class="btn btn--primary"
+                @click="editing = true; pickerOpen = true">Add a widget</button>
+        <button type="button" class="btn"
+                @click="$store.budget.resetDashboard(activeId())">Use the default layout</button>
+      </div>
+    </div>
+
     {# ---- Widget picker ---- #}
     <div class="modal-backdrop" x-show="pickerOpen" x-cloak
          @click.self="pickerOpen = false"
@@ -231,7 +247,7 @@ eleventyExcludeFromCollections: true
         </div>
         <div class="modal__body">
           <ul class="widget-picker">
-            <template x-for="w in $store.budget.availableWidgets(activeId())" :key="w.id">
+            <template x-for="w in ($store.budget._listVersion, $store.budget.availableWidgets(activeId()))" :key="w.id">
               <li>
                 <button type="button" class="widget-picker__item"
                         :disabled="w.disabled"

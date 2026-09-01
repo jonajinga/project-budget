@@ -76,10 +76,27 @@ test("a widget can be moved with the keyboard alone", async ({ seeded }) => {
   const before = await layout(page);
 
   /* No pointer anywhere in this test: focus the grip, pick up, move, drop. */
-  await page.locator("[data-widget-grip]:visible").first().focus();
+  const grip = page.locator("[data-widget-grip]:visible").first();
+  await grip.focus();
   await page.keyboard.press("Space");
   await expect(page.locator(".dash-widget.is-keyboard-active")).toHaveCount(1);
+  /* Same reason as the resize test below: hold focus across the auto-retrying
+     assertion so the keystroke reaches the grip. */
+  await grip.focus();
   await page.keyboard.press("ArrowRight");
+
+  /* Wait for the ARROW to take effect before committing with Space.
+     Since phase 0 a move previews in CSS `order` and only commits on drop, so
+     the gesture needs both keys to land - one dropped keystroke now means no
+     move at all, where before it meant a smaller move. Firing both keys blind
+     and then asserting the end state cannot tell "the app ignored the arrow"
+     from "the harness dropped it", so each step is waited on separately. */
+  await expect
+    .poll(async () => page.evaluate(() =>
+      [...document.querySelectorAll(".dash-widget")].some((el) => el.style.order !== "")
+    ), { timeout: 5000 })
+    .toBe(true);
+
   await page.keyboard.press("Space");
   await expect
     .poll(async () => (await layout(page)).types.join(","), { timeout: 5000 })
@@ -97,9 +114,24 @@ test("a widget can be resized with the keyboard alone", async ({ seeded }) => {
   await page.waitForTimeout(250);
 
   const before = await layout(page);
-  await page.locator("[data-widget-grip]:visible").first().focus();
+  const grip = page.locator("[data-widget-grip]:visible").first();
+  await grip.focus();
   await page.keyboard.press("Space");
   await expect(page.locator(".dash-widget.is-keyboard-active"), "pickup did not register").toHaveCount(1);
+
+  /* Re-assert focus immediately before the keystroke that matters.
+     The gesture is driven entirely by keydown reaching the grip, and the
+     assertion above is auto-retrying, so an arbitrary amount of time can pass
+     between focusing and pressing. This test failed about one run in eight,
+     with the store untouched and the undo stack empty - the keystroke was
+     going somewhere other than the grip. Holding focus removes the race in
+     DELIVERING the input without weakening what is being proved: the real
+     handler still has to run and the store still has to change.
+     Worth being straight about: this was not root-caused. It could not be
+     reproduced in 30 runs outside the Playwright fixture with the identical
+     gesture and timing, which points at the harness rather than the app, but
+     that is inference and not evidence. */
+  await grip.focus();
   await page.keyboard.press("Shift+ArrowLeft");
 
   /* Poll rather than sleep. A fixed wait passes on an idle machine and fails
@@ -190,9 +222,11 @@ const undoDepth = (page) =>
 async function pickUpFirstWidget(page) {
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.waitForTimeout(250);
-  await page.locator("[data-widget-grip]:visible").first().focus();
+  const grip = page.locator("[data-widget-grip]:visible").first();
+  await grip.focus();
   await page.keyboard.press("Space");
   await expect(page.locator(".dash-widget.is-keyboard-active")).toHaveCount(1);
+  await grip.focus();
 }
 
 /* A gesture is one action, so it is one undo entry.
@@ -266,4 +300,53 @@ test("chart widgets are addressed by data attribute, never by a fixed id", async
   }));
   expect(m.fixedIds, "no chart host may carry a hardcoded id").toBe(0);
   expect(m.hosts, "the chart widgets must still be present and addressable").toBeGreaterThan(0);
+});
+
+/* ---------------------------------------------------------------------------
+   Reported from a real browser as "entirely broken": create a new dashboard
+   and you get a blank page with a blank dropdown and no way forward.
+
+   Two separate faults, both invisible to every other test because they only
+   appear AFTER a mutation:
+
+   1. The switcher's x-for read dashboardList() without touching _listVersion,
+      so it never re-ran. A new dashboard became active while the <select>
+      still listed only the old one - and with no option matching the value,
+      the control renders empty. That is the blank dropdown.
+
+   2. A new dashboard is deliberately empty, but rendered as a bare toolbar
+      over nothing, which is indistinguishable from a crash.
+   ------------------------------------------------------------------------- */
+test("creating a dashboard updates the switcher and explains the empty board", async ({ seeded }) => {
+  const page = await openDashboard(seeded);
+  page.on("dialog", (d) => d.accept("My dashboard"));
+
+  const optionsBefore = await page.locator("#dash-picker option").count();
+
+  await page.locator(".dash-toolbar .overflow-menu__trigger").first().click();
+  await page.getByRole("menuitem", { name: /New dashboard/ }).click();
+
+  /* The switcher must list the new dashboard. Without the reactivity
+     handshake this stays at its old count and the control shows blank. */
+  await expect
+    .poll(() => page.locator("#dash-picker option").count(), { timeout: 5000 })
+    .toBe(optionsBefore + 1);
+
+  const selected = await page.evaluate(() => {
+    const sel = document.querySelector("#dash-picker");
+    const store = window.Alpine.store("budget");
+    return { value: sel.value, active: store.activeDashboardId(),
+             text: [...sel.options].map((o) => o.text) };
+  });
+  expect(selected.text, "the new dashboard must be listed by name").toContain("My dashboard");
+  expect(selected.value, "the control must show the dashboard you are actually on").toBe(selected.active);
+
+  /* An empty board says so, and offers the way out. */
+  const empty = page.locator(".dash-empty");
+  await expect(empty).toBeVisible();
+  await expect(empty).toContainText("empty");
+
+  await page.getByRole("button", { name: "Use the default layout" }).click();
+  await expect.poll(() => page.locator(".dash-widget").count(), { timeout: 5000 }).toBeGreaterThan(5);
+  await expect(empty).toBeHidden();
 });

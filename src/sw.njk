@@ -1,3 +1,7 @@
+---
+permalink: /sw.js
+eleventyExcludeFromCollections: true
+---
 /* Project Budget service worker.
  *
  * Strategy:
@@ -19,7 +23,19 @@
  * version so stale assets don't linger.
  */
 
-const CACHE_VERSION = "pb-v2026-05-17-45";
+/* Derived from the build, never hand-maintained.
+ *
+ * This was a hardcoded constant with a comment telling whoever touched the
+ * file to bump it. Nobody did, for months. Every asset URL already carries
+ * ?v=<build hash> and changes on every build, so the app was shipping fresh
+ * assets to a cache keyed on a version string frozen at 2026-05-17 -- which
+ * meant a returning browser kept serving the May build of the CSS and JS
+ * while fetching new HTML. The visible symptom was a dashboard that rendered
+ * blank with a dead menu: new markup driven by an old script.
+ *
+ * A version a human has to remember to change is a version that goes stale.
+ * This one cannot: it is the same token the asset URLs use. */
+const CACHE_VERSION = "pb-{{ build.hash }}";
 const STATIC_CACHE = "pb-static-" + CACHE_VERSION;
 const RUNTIME_CACHE = "pb-runtime-" + CACHE_VERSION;
 

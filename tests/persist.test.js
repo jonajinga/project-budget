@@ -108,6 +108,12 @@ describe("persist: compression round-trip", () => {
 });
 
 describe("persist: scheduleSave soft cap", () => {
+  /* 20,000 synthetic rows, ~2.8 MB raw, then LZ-compressed - genuinely slow
+     work rather than a hang. It takes ~1.5s idle and has been measured at
+     6.6s while the Playwright suite is running beside it, so the 5s default
+     turns a correct test into a coin flip. A timeout failure here says
+     nothing about the code under test; an assertion failure would, and still
+     will. Sized to the work, not padded. */
   it("skips localStorage write when compressed payload exceeds 500 KB", async () => {
     var { scheduleSave } = await import("../src/assets/js/store/persist.js");
     /* Build a profile that compresses to >500 KB — needs lots of unique
@@ -144,7 +150,7 @@ describe("persist: scheduleSave soft cap", () => {
         resolve(new Error("onError should not fire when soft-cap triggers"));
       });
     });
-  }, 5000);
+  }, 30000);
 
   it("writes normally when payload is under the soft cap", async () => {
     var { scheduleSave } = await import("../src/assets/js/store/persist.js");

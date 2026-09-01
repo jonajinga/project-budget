@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import { gotoApp } from "./helpers.js";
+import { SOURCES } from "../../src/assets/js/domain/dashboard-sources.js";
 
 /* One widget per source, at its default view.
  *
@@ -38,13 +39,15 @@ test("every source renders something at its default view", async ({ seeded }) =>
   ).catch(() => {});
   await page.waitForTimeout(600);
 
-  const placed = await page.evaluate(async () => {
+  /* The ids come from Node, not from a dynamic import inside evaluate. That
+     import returned "Resulting promise was garbage collected" intermittently
+     under suite load - the module fetch outlived the evaluate's own promise. */
+  const ids = SOURCES.filter((s) => s.family === "reports").map((s) => s.id);
+  const placed = await page.evaluate((sourceIds) => {
     const store = window.Alpine.store("budget");
-    const mod = await import("/assets/js/domain/dashboard-sources.js");
-    const ids = mod.SOURCES.filter((s) => s.family === "reports").map((s) => s.id);
-    const d = store.createDashboard("All sources", ids);
-    return { asked: ids.length, placed: d.widgets.length };
-  });
+    const d = store.createDashboard("All sources", sourceIds);
+    return { asked: sourceIds.length, placed: d.widgets.length };
+  }, ids);
   expect(placed.placed, "every report source must be placeable").toBe(placed.asked);
   expect(placed.asked, "the registry should not have quietly emptied").toBeGreaterThan(10);
 
@@ -92,8 +95,7 @@ test("D3 loads only when a widget that needs it is on the board", async ({ seede
   expect(d3Requests, "the default board has no D3 widget and must not fetch D3").toEqual([]);
 
   await page.evaluate(() => {
-    const s = window.Alpine.store("budget");
-    s.createDashboard("Treemap only", ["report:spending"]);
+    window.Alpine.store("budget").createDashboard("Treemap only", ["report:spending"]);
   });
   await expect.poll(() => d3Requests.length, { timeout: 15000 }).toBeGreaterThan(0);
 });

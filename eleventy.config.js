@@ -158,7 +158,11 @@ export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy({ "src/favicon.ico": "favicon.ico" });
   eleventyConfig.addPassthroughCopy({ "src/favicon.svg": "favicon.svg" });
   eleventyConfig.addPassthroughCopy({ "src/manifest.webmanifest": "manifest.webmanifest" });
-  eleventyConfig.addPassthroughCopy({ "src/sw.js": "sw.js" });
+  /* sw.js is authored as src/sw.njk and emitted through the template
+     pipeline, NOT passed through, so its cache version can interpolate
+     {{ build.hash }}. As a passthrough copy it could not, which is why the
+     version sat frozen at a hand-typed date while every asset URL around it
+     changed on every build. */
 
   // ---- Watch -------------------------------------------------------------
   eleventyConfig.addWatchTarget("src/assets/css/partials/");
