@@ -260,6 +260,13 @@
     return _jsPDFPromise;
   }
   window.pbEnsureJsPDF = ensureJsPDF;
+  /* The dashboard composes a multi-section document from the same primitives
+     a report uses. Exposing these three is what stops it growing a second
+     renderer that drifts from this one - captureChart and svgToPNG were
+     already exported for the same reason. */
+  window.pbDrawTable = drawTable;
+  window.pbDrawKPIStrip = drawKPIStrip;
+  window.pbStampFooters = stampFooters;
 
   /* The main entry point. Returns a Promise that resolves when the
      PDF has been triggered for download. */

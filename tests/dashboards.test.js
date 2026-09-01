@@ -501,3 +501,58 @@ describe("chart views declare the libraries their renderer actually needs", () =
     expect(undeclared).toEqual([]);
   });
 });
+
+/* Every panel must say what it contributes to a printed document - even if
+   the answer is "nothing". A source with no entry at all is a widget that
+   silently vanishes from someone's PDF; an explicit null is a decision. */
+describe("pdf blocks", () => {
+  it("every panel source has a block, present or explicitly none", async () => {
+    const { hasBlock } = await import("../src/assets/js/domain/dashboard-pdf-blocks.js");
+    const missing = SOURCES
+      .filter((s) => s.family === "panels")
+      .filter((s) => !hasBlock(s.id))
+      .map((s) => s.id);
+    expect(missing, "panels with no PDF block declared").toEqual([]);
+  });
+
+  it("a block is one of the two shapes the PDF primitives understand", async () => {
+    const { PANEL_BLOCKS } = await import("../src/assets/js/domain/dashboard-pdf-blocks.js");
+    /* A store rich enough for the projections to read from. */
+    const h = makeHost([dashboardsSlice]);
+    h.netWorth = () => 123456;
+    h.readyToAssign = () => 5000;
+    h.overspentCount = () => 2;
+    h.dashboardAlerts = () => [{ message: "Something is due" }];
+    h.accountBalance = () => 1000;
+    h.reportIncomeVsExpense = () => [{ month: "2024-01", income: 100, expense: 50, net: 50 }];
+    h.reportSpending = () => [{ category: "Food", value: 900 }];
+    h.reportProjection = () => [{ month: "2024-02", expected: 700 }];
+    h.upcomingBills = () => [{ date: "2024-01-09", payeeName: "Rent", amount: -1000 }];
+    h.goalsNeedingAttention = () => [{ category: "Car", needed: 400 }];
+    h.payeeName = () => "Someone";
+    h.profile.accounts = [{ id: "a1", name: "Checking" }];
+    h.profile.transactions = [{ id: "t1", date: "2024-01-02", payeeId: "p1", amount: -250 }];
+
+    const bad = [];
+    for (const [id, fn] of Object.entries(PANEL_BLOCKS)) {
+      const block = fn(h);
+      if (block === null) continue; /* deliberately nothing to print */
+      if (!block || (block.kind !== "kpis" && block.kind !== "table")) {
+        bad.push(`${id} returned ${JSON.stringify(block)}`);
+        continue;
+      }
+      if (block.kind === "kpis" && !Array.isArray(block.kpis)) bad.push(`${id} kpis is not an array`);
+      if (block.kind === "table" && (!Array.isArray(block.columns) || !Array.isArray(block.rows))) {
+        bad.push(`${id} table is missing columns or rows`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("a panel whose data throws yields null rather than losing the document", async () => {
+    const { blockFor } = await import("../src/assets/js/domain/dashboard-pdf-blocks.js");
+    const hostile = { netWorth() { throw new Error("boom"); } };
+    expect(blockFor("panel:hero", hostile)).toBeNull();
+    expect(blockFor("panel:does-not-exist", hostile)).toBeUndefined();
+  });
+});

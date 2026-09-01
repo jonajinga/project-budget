@@ -788,9 +788,42 @@ function dashboardView() {
       e.target.value = "";
     },
     exportPdf() {
-      if (!window.PBDashboardPdf) { this.$store.budget.pushToast("PDF export isn't loaded yet — try again in a moment"); return; }
-      var d = this.$store.budget.activeDashboard();
-      window.PBDashboardPdf.export(this.$refs.grid, d ? d.name : "Dashboard");
+      var self = this;
+      if (!window.PBDashboardPdf) {
+        this.$store.budget.pushToast("PDF export is still loading - try again in a moment");
+        return;
+      }
+      var store = this.$store.budget;
+      var d = store.activeDashboard();
+      var grid = this.$refs.grid;
+      store.pushToast("Building your PDF...");
+      window.PBDashboardPdf.export({
+        name: d ? d.name : "Dashboard",
+        profileName: store.profile ? store.profile.name : "",
+        today: new Date().toISOString().slice(0, 10),
+        widgets: this.widgets(),
+        kindOf: function (w) { return store.widgetKind(w); },
+        titleOf: function (w) { return store.widgetTitle(w); },
+        fieldsFor: function (w) { return store.widgetFields(w); },
+        rowsFor: function (w) { return store.widgetRows(w); },
+        statFor: function (w) { return store.widgetStat(w); },
+        blockFor: function (sourceId) { return store.pdfBlockFor(sourceId); },
+        formatField: function (v, f) { return self.fmtField(v, f); },
+        formatStat: function (s) { return self.statText(s); },
+        hostFor: function (id) {
+          return grid ? grid.querySelector('[data-chart-host][data-widget-id="' + id + '"]') : null;
+        },
+      }).then(function (res) {
+        if (!res || !res.ok) {
+          store.pushToast("Could not build the PDF");
+          return;
+        }
+        store.pushToast(
+          res.skipped && res.skipped.length
+            ? "PDF saved - " + res.skipped.length + " widget(s) had nothing to print"
+            : "PDF saved"
+        );
+      });
     },
 
     chartIE: null,

@@ -150,9 +150,11 @@
      page into entries in projectbudget:savedViews, captures the
      live URL so filters are recall-able with one click. #}
   <script src="/assets/js/ui/save-view.js?v={{ build.hash }}" defer></script>
-  {# Per-report PDF export — uses the already-conditional jsPDF
-     vendor. Only loaded on reports pages. #}
-  {% if page.url and page.url.startsWith("/app/reports/") %}
+  {# PDF export — uses the already-conditional jsPDF vendor, which is itself
+     fetched lazily on first use, so loading this file costs a few KB and no
+     network round trip. Reports pages and the dashboard: the dashboard
+     composes a multi-section document from the same primitives. #}
+  {% if page.url and (page.url.startsWith("/app/reports/") or page.url == "/app/") %}
     <script src="/assets/js/ui/pdf-export.js?v={{ build.hash }}" defer></script>
     {# Visit logger — writes /app/reports/<slug>/ visits to localStorage
        so the hub can render a "Recents" strip. Skips the hub itself. #}

@@ -27,6 +27,7 @@
  */
 
 import { newId } from "../schema.js";
+import { blockFor } from "../../domain/dashboard-pdf-blocks.js";
 import {
   DEFAULT_LAYOUT, SOURCES, sourceSpec, viewSpec, viewsForSource,
   normalizeWidget, legacyTypeToWidget, isLegacyWidget, availableSources, clampSize,
@@ -534,6 +535,12 @@ export const dashboardsSlice = {
     if (!w) return null;
     w.id = "preview";
     return w;
+  },
+
+  /* What a panel widget contributes to a printed document. Report widgets do
+     not need this - their view already says how to draw them. */
+  pdfBlockFor(sourceId) {
+    return blockFor(sourceId, this);
   },
 
   /* Which views the builder may offer for a source. */

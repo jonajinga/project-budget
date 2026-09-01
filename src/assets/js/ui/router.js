@@ -61,7 +61,13 @@ const CHART_SCRIPTS = [
    all 13 reports whenever the user arrived by clicking rather than by URL --
    every report guards with `if (!window.pbExportReportPDF) return;`, so there
    was no error, no dialog, no download. */
-const REPORT_ROUTES = /^\/app\/reports\//;
+/* Reports AND the dashboard. The dashboard's PDF is composed from the same
+   primitives (pbDrawTable, pbDrawKPIStrip, pbCaptureChart), so it needs the
+   same file. `|$` matches /app/ exactly, the way CHART_ROUTES above does.
+   Getting this wrong is not hypothetical: the comment below records Export
+   PDF silently doing nothing on all thirteen reports when this list was
+   dropped. */
+const REPORT_ROUTES = /^\/app\/(reports\/|$)/;
 const REPORT_SCRIPTS = ["/assets/js/ui/pdf-export.js"];
 
 const loaded = new Set();
