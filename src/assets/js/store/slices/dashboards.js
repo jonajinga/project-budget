@@ -1,4 +1,4 @@
-/* Dashboards slice — multiple named dashboards, each an ordered list of
+/* Dashboards slice -- multiple named dashboards, each an ordered list of
  * sized widgets.
  *
  * LAYOUT MODEL. A dashboard is an ORDERED LIST, not a free x/y plane. Each
@@ -228,7 +228,7 @@ export const dashboardsSlice = {
   deleteDashboard(id) {
     var live = this.dashboardList();
     if (live.length <= 1) {
-      this.pushToast("That's your only dashboard — rename or reset it instead");
+      this.pushToast("That's your only dashboard -- rename or reset it instead");
       return false;
     }
     var d = this.findDashboard(id);
@@ -241,7 +241,7 @@ export const dashboardsSlice = {
     }
     this._bumpLists();
     this._save();
-    this.pushToast("Dashboard deleted — undo to bring it back");
+    this.pushToast("Dashboard deleted -- undo to bring it back");
     return true;
   },
 
@@ -618,7 +618,7 @@ export const dashboardsSlice = {
     this.setActiveDashboard(d.id);
     this._bumpLists();
     this._save();
-    this.pushToast(skipped ? "Dashboard imported — " + skipped + " unknown widget(s) skipped" : "Dashboard imported");
+    this.pushToast(skipped ? "Dashboard imported -- " + skipped + " unknown widget(s) skipped" : "Dashboard imported");
     return d;
   },
 

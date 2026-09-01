@@ -6,6 +6,7 @@ export default [
   { slug: "recurring",             name: "Recurring",             summary: "Templates that surface on the due date — never post automatically." },
   { slug: "calendar",              name: "Calendar",              summary: "Day, week, month, and year views of what posted and what's coming." },
   { slug: "reports",               name: "Reports",               summary: "Make sense of where your money goes — and where it's going." },
+  { slug: "dashboards",            name: "Dashboards",            summary: "Build the view you want from your own data, and keep several of them." },
   { slug: "importing",             name: "Importing data",        summary: "Bring transactions in from CSV, OFX, QFX, QIF, or GoCardless exports." },
   { slug: "profiles-backups",      name: "Profiles and backups",  summary: "Multiple budgets in one browser. Daily snapshots and export." },
   { slug: "privacy-security",      name: "Privacy and security",  summary: "What lives in your browser, what never leaves it, and how to self-host." },

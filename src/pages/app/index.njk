@@ -1,7 +1,7 @@
 ---
 layout: layouts/app.njk
 title: "Dashboard"
-description: "Your active budget at a glance — ready to assign, net worth, this month's flow, upcoming bills, goal progress, and alerts."
+description: "Your active budget at a glance -- ready to assign, net worth, this month's flow, upcoming bills, goal progress, and alerts."
 permalink: /app/
 eleventyExcludeFromCollections: true
 ---
@@ -24,7 +24,7 @@ eleventyExcludeFromCollections: true
   <div class="empty-state" x-show="!$store.budget.profile" x-cloak>
     <h2 class="empty-state__title">Create your first profile</h2>
     <p class="empty-state__body">
-      A profile is a complete budget — its own accounts, categories, transactions, and goals. Create as many as you need and switch between them whenever you like. Profiles are stored only in this browser.
+      A profile is a complete budget -- its own accounts, categories, transactions, and goals. Create as many as you need and switch between them whenever you like. Profiles are stored only in this browser.
     </p>
     <div class="empty-state__actions">
       <a class="btn btn--primary" href="/app/profiles/">Create a profile</a>
@@ -34,7 +34,7 @@ eleventyExcludeFromCollections: true
 
   <div x-show="$store.budget.profile" x-cloak>
 
-    {# Inline quick-add removed — the persistent FAB
+    {# Inline quick-add removed -- the persistent FAB
        (src/_includes/partials/fab-quick-add.njk, mounted in
        src/_includes/layouts/app.njk) is the canonical add path
        on every app page including the dashboard. #}
@@ -86,11 +86,11 @@ eleventyExcludeFromCollections: true
         {% call overflow(label="Dashboard actions") %}
           <li role="none">
             <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; newDashboard()">New dashboard…</button>
+                    @click="open = false; newDashboard()">New dashboard...</button>
           </li>
           <li role="none">
             <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; renameDashboard()">Rename…</button>
+                    @click="open = false; renameDashboard()">Rename...</button>
           </li>
           <li role="none">
             <button type="button" role="menuitem" class="overflow-menu__item"
@@ -99,16 +99,16 @@ eleventyExcludeFromCollections: true
           <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
           <li role="none">
             <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; exportPdf()">Export as PDF…</button>
+                    @click="open = false; exportPdf()">Export as PDF...</button>
           </li>
           <li role="none">
             <button type="button" role="menuitem" class="overflow-menu__item"
                     @click="open = false; exportLayout()"
-                    data-tip="Saves the layout only — no amounts leave your device.">Export layout…</button>
+                    data-tip="Saves the layout only -- no amounts leave your device.">Export layout...</button>
           </li>
           <li role="none">
             <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; $refs.importFile.click()">Import layout…</button>
+                    @click="open = false; $refs.importFile.click()">Import layout...</button>
           </li>
           <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
           <li role="none">
@@ -155,7 +155,7 @@ eleventyExcludeFromCollections: true
                     class="dash-widget__grip"
                     data-widget-grip
                     :aria-label="'Move ' + titleOf(widget) + '. Press space to pick up, then arrow keys to move, shift and arrows to resize.'"
-                    data-tip="Drag to move — or press space and use the arrow keys.">
+                    data-tip="Drag to move -- or press space and use the arrow keys.">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
                 <circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>
@@ -776,7 +776,7 @@ function dashboardView() {
       a.click();
       document.body.removeChild(a);
       setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-      this.$store.budget.pushToast("Layout exported — no amounts included");
+      this.$store.budget.pushToast("Layout exported -- no amounts included");
     },
     importLayout(e) {
       var file = e.target.files && e.target.files[0];
@@ -838,7 +838,7 @@ function dashboardView() {
        The dashboard surfaces a dozen getters that each walk the full
        transactions list (1,000+ rows at sample scale). Alpine
        re-evaluates them on every reactivity tick, so without caching
-       a single mutation re-walks the list dozens of times — visibly
+       a single mutation re-walks the list dozens of times -- visibly
        slow on mobile. _memo() returns a cached value keyed on
        _listVersion + currentMonth + a per-call salt; cache is
        invalidated automatically on any store mutation that bumps
@@ -901,7 +901,7 @@ function dashboardView() {
           var host = document.querySelector(spec.sel);
           var mounted = self[spec.key];
           if (!host) {
-            /* Widget removed — drop the chart with it. */
+            /* Widget removed -- drop the chart with it. */
             if (mounted) { try { mounted.dispose(); } catch (_e) {} self[spec.key] = null; self._chartHosts[spec.key] = null; }
             continue;
           }
@@ -1029,7 +1029,7 @@ function dashboardView() {
       var hour = now.getHours();
       var greeting = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening");
       var profile = this.$store.budget.profile;
-      return greeting + (profile && profile.name ? " — " + profile.name : "");
+      return greeting + (profile && profile.name ? " -- " + profile.name : "");
     },
     heroTitle() {
       var d = new Date();
@@ -1048,7 +1048,7 @@ function dashboardView() {
         return os.count + " categor" + (os.count === 1 ? "y is" : "ies are") + " overspent by " + this.fmt(os.totalDeficit) + " this month.";
       }
       if (rta > 10000) {
-        return this.fmt(rta) + " is unassigned for " + s.currentMonth + " — assign every dollar a job.";
+        return this.fmt(rta) + " is unassigned for " + s.currentMonth + " -- assign every dollar a job.";
       }
       if (net > 0) {
         return "Net positive this month: " + this.fmt(net) + " saved so far.";
@@ -1122,7 +1122,7 @@ function dashboardView() {
     },
 
     /* ---- Smart insights ---- */
-    /* Walks the recent activity + budget to surface 0–6 plain-
+    /* Walks the recent activity + budget to surface 0-6 plain-
        English signals. Each insight returns
          { id, severity, icon, title, detail, href?, cta? }
        severity = ok | info | warn | danger drives the color rail. */
@@ -1212,7 +1212,7 @@ function dashboardView() {
             severity: "info",
             icon: "↻",
             title: subs.length + " recurring charge" + (subs.length === 1 ? "" : "s") + " detected",
-            detail: self.fmt(monthly) + " / month estimated — review for anything you don't need.",
+            detail: self.fmt(monthly) + " / month estimated -- review for anything you don't need.",
             href: "/app/reports/subscriptions/",
             cta: "Audit",
           });
@@ -1276,7 +1276,7 @@ function dashboardView() {
         style: "currency", currency: "USD", maximumFractionDigits: 0,
       });
     },
-    /* Compact form for sub-labels — "$1.2k" / "$4.5M". */
+    /* Compact form for sub-labels -- "$1.2k" / "$4.5M". */
     /* Magnitude-aware compact format. Drop the decimal once the
        leading value is >=100 so big numbers ($754k, $1.2M) don't
        imply false precision; keep 1 decimal for small/medium
@@ -1303,7 +1303,7 @@ function dashboardView() {
       return months[Number(parts[1]) - 1] + " " + Number(parts[2]);
     },
 
-    /* ---- This-month flow (1-month report) — memoized ---- */
+    /* ---- This-month flow (1-month report) -- memoized ---- */
     _thisMonthRow() {
       var self = this;
       return this._memo("_thisMonthRow", function () {
@@ -1315,7 +1315,7 @@ function dashboardView() {
     thisMonthExpense() { return this._thisMonthRow().expense; },
     thisMonthNet()     { return this._thisMonthRow().net; },
 
-    /* ---- Savings rate (3-month rolling) — memoized ---- */
+    /* ---- Savings rate (3-month rolling) -- memoized ---- */
     savingsRatePct() {
       var self = this;
       return this._memo("savingsRatePct", function () {
@@ -1329,7 +1329,7 @@ function dashboardView() {
     },
     savingsRateLabel() {
       var p = this.savingsRatePct();
-      if (p === null) return "—";
+      if (p === null) return "--";
       return p.toFixed(0) + "%";
     },
     savingsBandClass() {
@@ -1340,7 +1340,7 @@ function dashboardView() {
       return "rec-summary__tile--accent";
     },
 
-    /* ---- Upcoming bills (delegated to store) — memoized ---- */
+    /* ---- Upcoming bills (delegated to store) -- memoized ---- */
     upcoming7()  {
       var self = this;
       return this._memo("upcoming7",  function () { return self.$store.budget.upcomingBills(7); });
@@ -1356,7 +1356,7 @@ function dashboardView() {
       return this._memo("overspent", function () { return self.$store.budget.overspentCount(); });
     },
 
-    /* ---- Top spending categories this month — memoized ---- */
+    /* ---- Top spending categories this month -- memoized ---- */
     topCategoriesRows() {
       var self = this;
       return this._memo("topCategoriesRows", function () {
@@ -1375,13 +1375,13 @@ function dashboardView() {
       });
     },
 
-    /* ---- Goals needing attention — memoized ---- */
+    /* ---- Goals needing attention -- memoized ---- */
     goalsAttention() {
       var self = this;
       return this._memo("goalsAttention", function () { return self.$store.budget.goalsNeedingAttention(3); });
     },
 
-    /* ---- Recent transactions (last 10, newest first) — memoized ---- */
+    /* ---- Recent transactions (last 10, newest first) -- memoized ---- */
     recentTransactions() {
       var self = this;
       return this._memo("recentTransactions", function () {
@@ -1392,7 +1392,7 @@ function dashboardView() {
       });
     },
 
-    /* ---- Alerts (delegated to store) — memoized ---- */
+    /* ---- Alerts (delegated to store) -- memoized ---- */
     alerts() {
       var self = this;
       return this._memo("alerts", function () { return self.$store.budget.dashboardAlerts(); });
