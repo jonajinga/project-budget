@@ -35,6 +35,11 @@ eleventyExcludeFromCollections: true
         <span aria-hidden="true">&larr;</span>
         <span x-text="prevYearLabel()"></span>
       </button>
+      <button type="button" class="month-strip__year month-strip__step"
+              @click="$store.budget.setMonth(prevMonthValue())"
+              aria-label="Previous month" data-tip="Previous month">
+        <span aria-hidden="true">&lsaquo;</span>
+      </button>
       <div class="month-strip__tabs">
         <template x-for="m in monthsOfYear()" :key="m.value">
           <button type="button"
@@ -46,6 +51,11 @@ eleventyExcludeFromCollections: true
                   x-text="m.label"></button>
         </template>
       </div>
+      <button type="button" class="month-strip__year month-strip__step"
+              @click="$store.budget.setMonth(nextMonthValue())"
+              aria-label="Next month" data-tip="Next month">
+        <span aria-hidden="true">&rsaquo;</span>
+      </button>
       <button type="button" class="month-strip__year"
               @click="$store.budget.setMonth(nextYearMonth())"
               aria-label="Next year">
@@ -155,7 +165,8 @@ eleventyExcludeFromCollections: true
     <div>
       <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
         <div class="budget__group cat-group">
-          <div class="budget__group-header budget__group-header--row" style="background: var(--bg-elevated);">
+          <div class="budget__group-header budget__group-header--row" style="background: var(--bg-elevated);"
+               :data-group-id="group.group ? group.group.id : ''">
             <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
               <input type="checkbox" class="budget__bulk-check"
                      x-show="group.categories.length"
@@ -236,6 +247,7 @@ eleventyExcludeFromCollections: true
             <div>
               <template x-for="c in group.categories" :key="c.id">
                 <div class="budget__row cat-row"
+                     :data-cat-id="c.id"
                      :class="isCatSelected(c.id) ? 'budget__row--selected' : ''">
                   <div class="budget__category">
                     <div class="budget__category-row">
@@ -275,14 +287,27 @@ eleventyExcludeFromCollections: true
                        keystroke replaces the amount, which is what typing
                        into a filled budget cell is nearly always for.
                        Arrow keys or a second click still place a caret. #}
-                    <input type="text" inputmode="decimal"
-                           data-touch="compact"
-                           :aria-label="'Assigned for ' + c.name"
-                           :value="formatAssigned($store.budget.assignedFor(c.id))"
-                           data-tip="Type an amount, or an expression like 100+25."
-                           @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id)); $event.target.select()"
-                           @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
-                           @keydown.enter="$event.target.blur()">
+                    <template x-if="!assignReadOnly(c)">
+                      <input type="text" inputmode="decimal"
+                             data-touch="compact"
+                             :aria-label="'Assigned for ' + c.name"
+                             :value="formatAssigned($store.budget.assignedFor(c.id))"
+                             data-tip="Type an amount, or an expression like 100+25."
+                             @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id)); $event.target.select()"
+                             @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
+                             @keydown.enter="$event.target.blur()">
+                    </template>
+                    {# Income categories are funded by their transactions and
+                       payment pools by Move money — auto-assign and the bulk
+                       helpers already skip both, so an editable cell here was
+                       a promise the rest of the page refused to honor. #}
+                    <template x-if="assignReadOnly(c)">
+                      <span class="budget__assigned-locked num"
+                            :data-tip="$store.budget.isPaymentCategory(c.id)
+                              ? 'Payment pools are funded with Move money, not direct assignment.'
+                              : 'Income categories receive money from transactions. Assign it from Ready to Assign instead.'"
+                            x-text="formatAssigned($store.budget.assignedFor(c.id))"></span>
+                    </template>
                   </div>
                   <div class="budget__activity" data-label="Outflow">
                     <button type="button" class="budget__activity-btn"
@@ -353,430 +378,11 @@ eleventyExcludeFromCollections: true
             </div>
 
             <p x-show="!group.categories.length" x-cloak style="padding: var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm);">
-              No categories in this group yet. Use the group menu (⋮) to add one, or drag one here from another group.
+              No categories in this group yet. Use the group menu (⋮) to add one.
             </p>
           </div>
         </div>
       </template>
-    </div>
-
-    {# Move-money modal — reallocate Assigned dollars between two
-       categories (or payment pools) in one move. Net total assigned
-       stays the same; from-row decrements, to-row increments. #}
-    <div class="modal-backdrop" x-show="moveMoneyOpen" x-cloak
-         @keydown.escape.window="moveMoneyOpen = false">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bd-mv-title"
-           @click.outside="moveMoneyOpen = false" style="max-width: 680px;">
-        <button class="modal__close" type="button" @click="moveMoneyOpen = false" aria-label="Close">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
-        </button>
-        <header class="auto-assign__header">
-          <p class="eyebrow">Move money</p>
-          <h2 class="modal__title" id="bd-mv-title" style="margin: 0;">
-            Reallocate Assigned in <span x-text="monthHeaderLabel()"></span>
-          </h2>
-          <p class="auto-assign__lead">
-            Decrement one category's Assigned and increment another by the same amount. Total Assigned for the month stays the same. Works for payment pools too.
-          </p>
-        </header>
-
-        <form @submit.prevent="submitMoveMoney()">
-          <div class="form-stack">
-            <div class="field">
-              <label class="field__label" for="bd-mv-from">From</label>
-              <select class="select" id="bd-mv-from" x-model="moveMoneyForm.fromId" required>
-                <option value="">Select category</option>
-                <template x-for="opt in moveMoneyCategoryOptions()" :key="opt.id">
-                  <option :value="opt.id"
-                          x-text="opt.label + ' · Available ' + formatCents(opt.available)"></option>
-                </template>
-              </select>
-              <p class="field__hint" x-show="moveMoneyForm.fromId" x-cloak
-                 x-text="'Currently Assigned: ' + formatCents(_assignedFor(moveMoneyForm.fromId))"></p>
-            </div>
-            <div class="field">
-              <label class="field__label" for="bd-mv-to">To</label>
-              <select class="select" id="bd-mv-to" x-model="moveMoneyForm.toId" required>
-                <option value="">Select category</option>
-                <template x-for="opt in moveMoneyCategoryOptions()" :key="'to-' + opt.id">
-                  <option :value="opt.id"
-                          :disabled="opt.id === moveMoneyForm.fromId"
-                          x-text="opt.label + ' · Available ' + formatCents(opt.available)"></option>
-                </template>
-              </select>
-            </div>
-            <div class="field">
-              <label class="field__label" for="bd-mv-amount">Amount</label>
-              <input class="input" id="bd-mv-amount" type="text" x-model="moveMoneyForm.amount"
-                     placeholder="0.00 · or 100+25" inputmode="decimal" required
-                     data-tip="Calculator: type expressions like 100 + 25 — they evaluate on save.">
-              <p class="field__hint calc-preview"
-                 x-show="calcPreview(moveMoneyForm.amount)" x-cloak
-                 x-text="calcPreview(moveMoneyForm.amount)"></p>
-            </div>
-          </div>
-          <div class="form-actions">
-            <button class="btn btn--primary" type="submit"
-                    :disabled="!moveMoneyForm.fromId || !moveMoneyForm.toId || moveMoneyForm.fromId === moveMoneyForm.toId"
-                    data-tip="Apply the move (undoable with Cmd/Ctrl+Z).">Move money</button>
-            <button class="btn btn--ghost" type="button" @click="moveMoneyOpen = false">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {# Auto-assign modal — pick a strategy, see a per-strategy preview
-       total, then apply. Each strategy walks every non-payment
-       category and sets its Assigned for the active month. #}
-    <div class="modal-backdrop" x-show="autoAssignOpen" x-cloak
-         @keydown.escape.window="autoAssignOpen = false">
-      <div class="modal auto-assign" role="dialog" aria-modal="true" aria-labelledby="bd-auto-title"
-           @click.outside="autoAssignOpen = false">
-        <button class="modal__close" type="button" @click="autoAssignOpen = false" aria-label="Close">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
-        </button>
-        <header class="auto-assign__header">
-          <p class="eyebrow">Auto-assign · <span x-text="autoAssignScope.name"></span></p>
-          <h2 class="modal__title" id="bd-auto-title" style="margin: 0;">
-            Fill <span x-text="monthHeaderLabel()"></span> from a template
-          </h2>
-          <p class="auto-assign__lead">
-            Pick a strategy.
-            <span x-show="autoAssignScope.kind === 'all'">Categories that don't apply are left unchanged.</span>
-            <span x-show="autoAssignScope.kind === 'group'">Only categories in <strong x-text="autoAssignScope.name"></strong> are touched.</span>
-            <span x-show="autoAssignScope.kind === 'category'">Only the <strong x-text="autoAssignScope.name"></strong> category is touched.</span>
-            <span x-show="autoAssignScope.kind === 'selection'">Only the <strong x-text="autoAssignScope.name"></strong> are touched.</span>
-            You can tweak any row after.
-          </p>
-        </header>
-
-        <ul class="auto-assign__list">
-          <template x-for="opt in autoAssignStrategies()" :key="opt.id">
-            <li>
-              <button type="button"
-                      class="auto-assign__opt"
-                      :class="{
-                        'is-selected': autoAssignChoice === opt.id,
-                        'is-disabled': opt.disabled
-                      }"
-                      @click="!opt.disabled && (autoAssignChoice = opt.id)"
-                      :disabled="opt.disabled"
-                      :aria-pressed="(autoAssignChoice === opt.id).toString()">
-                <div class="auto-assign__opt-head">
-                  <span class="auto-assign__opt-radio" aria-hidden="true">
-                    <svg x-show="autoAssignChoice === opt.id" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
-                  </span>
-                  <span class="auto-assign__opt-label" x-text="opt.label"></span>
-                  <span class="auto-assign__opt-total"
-                        :class="opt.disabled ? 'auto-assign__opt-total--muted' : (opt.preview < 0 ? 'amount--outflow' : 'amount--inflow')"
-                        x-text="opt.disabled ? '—' : formatCents(opt.preview)"></span>
-                </div>
-                <p class="auto-assign__opt-hint" x-text="opt.hint"></p>
-              </button>
-            </li>
-          </template>
-        </ul>
-
-        <div class="auto-assign__footer">
-          <p class="auto-assign__count" x-show="autoAssignChoice" x-cloak>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            <span x-text="autoAssignSummary()"></span>
-          </p>
-          <p class="auto-assign__count auto-assign__count--placeholder" x-show="!autoAssignChoice">
-            Select a strategy above to preview the impact.
-          </p>
-        </div>
-
-        <div class="form-actions">
-          <button class="btn btn--primary" type="button"
-                  :disabled="!autoAssignChoice"
-                  @click="applyAutoAssign()"
-                  data-tip="Apply the selected strategy to this month's Assigned column.">Apply auto-assign</button>
-          <button class="btn btn--ghost" type="button" @click="autoAssignOpen = false">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    {# Add-group modal — fired from the toolbar "+ Group" button. #}
-    <div class="modal-backdrop" x-show="newGroupOpen" x-cloak @keydown.escape.window="newGroupOpen = false">
-      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-group-title"
-           @click.outside="newGroupOpen = false">
-        <h2 class="modal__title" id="bd-group-title">New category group</h2>
-        <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);">
-          Groups organize the budget. Examples: Monthly bills, Subscriptions, Reserves.
-        </p>
-        <form @submit.prevent="submitNewGroup()">
-          <div class="field">
-            <label class="field__label" for="bd-group-name">Group name</label>
-            <input class="input" id="bd-group-name" type="text" x-model="newGroupName" required autofocus>
-          </div>
-          <div class="form-actions">
-            <button class="btn btn--primary" type="submit">Create group</button>
-            <button class="btn btn--ghost" type="button" @click="newGroupOpen = false">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {# Add-category modal — fired from any group header "+" icon. #}
-    <div class="modal-backdrop" x-show="newCatOpen" x-cloak @keydown.escape.window="newCatOpen = false">
-      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-cat-title"
-           @click.outside="newCatOpen = false">
-        <h2 class="modal__title" id="bd-cat-title">
-          New category in <span x-text="newCatGroupName || 'group'"></span>
-        </h2>
-        <form @submit.prevent="submitNewCategory()">
-          <div class="field">
-            <label class="field__label" for="bd-cat-name">Category name</label>
-            <input class="input" id="bd-cat-name" type="text" x-model="newCatName" required autofocus
-                   placeholder="e.g. Groceries, Rent, Coffee">
-          </div>
-          <div class="form-actions">
-            <button class="btn btn--primary" type="submit">Add category</button>
-            <button class="btn btn--ghost" type="button" @click="newCatOpen = false">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {# Delete-group confirm — replaces window.confirm() so the dialog
-       matches the rest of the app. #}
-    <div class="modal-backdrop" x-show="deleteGroupId" x-cloak @keydown.escape.window="deleteGroupId = null">
-      <div class="modal modal--sm" role="alertdialog" aria-modal="true"
-           @click.outside="deleteGroupId = null"
-           @keydown.enter.window.prevent="confirmDeleteGroup()" aria-labelledby="budget-dlg1-title">
-        <h2 class="modal__title" id="budget-dlg1-title">Delete this group?</h2>
-        <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
-          Categories inside <strong x-text="deleteGroupName"></strong> become ungrouped but are kept along with their activity and goals.
-        </p>
-        <div class="form-actions">
-          <button class="btn btn--danger" type="button" @click="confirmDeleteGroup()" autofocus>Delete group</button>
-          <button class="btn btn--ghost" type="button" @click="deleteGroupId = null">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    {# Delete-category confirm — same chrome as the group variant. #}
-    <div class="modal-backdrop" x-show="deleteCatId" x-cloak @keydown.escape.window="deleteCatId = null">
-      <div class="modal modal--sm" role="alertdialog" aria-modal="true"
-           @click.outside="deleteCatId = null"
-           @keydown.enter.window.prevent="confirmDeleteCategory()" aria-labelledby="budget-dlg2-title">
-        <h2 class="modal__title" id="budget-dlg2-title">Delete this category?</h2>
-        <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
-          <strong x-text="deleteCatName"></strong>'s activity becomes uncategorized but stays in the register. Goals on this category are removed.
-        </p>
-        <div class="form-actions">
-          <button class="btn btn--danger" type="button" @click="confirmDeleteCategory()" autofocus>Delete category</button>
-          <button class="btn btn--ghost" type="button" @click="deleteCatId = null">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    {# Rename modal — works for both groups and categories. #}
-    <div class="modal-backdrop" x-show="renameOpen" x-cloak @keydown.escape.window="renameOpen = false">
-      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-rename-title"
-           @click.outside="renameOpen = false">
-        <h2 class="modal__title" id="bd-rename-title">
-          Rename <span x-text="renameKind"></span>
-        </h2>
-        <form @submit.prevent="submitRename()">
-          <div class="field">
-            <label class="field__label" for="bd-rename-name">New name</label>
-            <input class="input" id="bd-rename-name" type="text" x-model="renameName" required autofocus
-                   @keydown.escape="renameOpen = false">
-          </div>
-          <div class="form-actions">
-            <button class="btn btn--primary" type="submit">Save</button>
-            <button class="btn btn--ghost" type="button" @click="renameOpen = false">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {# Activity drill-down modal — opened by clicking any Outflow
-       number on the budget grid. Lists every contributing transaction
-       for the selected scope (category, group, or all) in the
-       currently-active month, with a total at the bottom. #}
-    <div class="modal-backdrop" x-show="activityOpen" x-cloak @keydown.escape.window="activityOpen = false">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bd-act-title"
-           @click.outside="activityOpen = false" style="max-width: 760px;">
-        <button class="modal__close" type="button" @click="activityOpen = false" aria-label="Close">&times;</button>
-        <h2 class="modal__title" id="bd-act-title">
-          <span x-text="activityScope.name"></span>
-          <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);"
-                x-text="' · ' + monthHeaderLabel()"></span>
-        </h2>
-        <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);"
-           x-text="activityTxns().length + ' transaction' + (activityTxns().length === 1 ? '' : 's')"></p>
-
-        <div class="table-scroll">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col" style="white-space: nowrap;">Date</th>
-                <th scope="col">Account</th>
-                <th scope="col">Payee</th>
-                <th scope="col" x-show="activityScope.kind !== 'category'">Category</th>
-                <th scope="col">Memo</th>
-                <th scope="col" class="num">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="t in activityTxns()" :key="t.id + '-' + (t.splitKey || '')">
-                <tr class="activity-row"
-                    @click="openInRegister(t)"
-                    :data-tip="'Open ' + ($store.budget.payeeName(t.payeeId) || 'this transaction') + ' in the register.'"
-                    tabindex="0"
-                    @keydown.enter="openInRegister(t)"
-                    @keydown.space.prevent="openInRegister(t)"
-                    role="button"
-                    :aria-label="'Open ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' from ' + t.date + ' in the register'">
-                  <td style="white-space: nowrap;" x-text="t.date"></td>
-                  <td x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></td>
-                  <td x-text="$store.budget.payeeName(t.payeeId) || '—'"></td>
-                  <td x-show="activityScope.kind !== 'category'"
-                      x-text="$store.budget.categoryName(t.categoryId) || 'Uncategorized'"
-                      style="color: var(--fg-muted);"></td>
-                  <td style="color: var(--fg-muted);" x-text="t.memo || ''"></td>
-                  <td class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                      x-text="formatCents(t.amount)"></td>
-                </tr>
-              </template>
-              <tr x-show="!activityTxns().length" x-cloak>
-                <td :colspan="activityScope.kind !== 'category' ? 6 : 5"
-                    style="color: var(--fg-muted); text-align: center; padding: var(--space-md);">
-                  No transactions in this scope for the active month.
-                </td>
-              </tr>
-            </tbody>
-            <tfoot x-show="activityTxns().length" x-cloak>
-              <tr style="border-top: 2px solid var(--border);">
-                <td :colspan="activityScope.kind !== 'category' ? 5 : 4"
-                    style="font-weight: 600;">Total</td>
-                <td class="num" style="font-weight: 700;"
-                    :class="activityTotal() < 0 ? 'amount--outflow' : 'amount--inflow'"
-                    x-text="formatCents(activityTotal())"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div class="form-actions" style="margin-top: var(--space-md);">
-          <a class="btn btn--secondary btn--sm"
-             x-show="activityScope.kind === 'category'"
-             :href="'/app/register/?category=' + activityScope.id"
-             data-tip="Open these transactions in the full register.">Open in register</a>
-          <button class="btn btn--ghost btn--sm" type="button" @click="activityOpen = false">Close</button>
-        </div>
-      </div>
-    </div>
-
-    {# Goal modal — reuses the categories-page form so users can set,
-       change, or remove a goal without leaving the budget. Shows a
-       live status panel above the form with the current funding %,
-       what's assigned this month, and what's still needed. #}
-    <div class="modal-backdrop" x-show="goalCatId" x-cloak @keydown.escape.window="goalCatId = null">
-      <div class="modal" role="dialog" aria-modal="true" @click.outside="goalCatId = null"
-           style="max-width: 620px;" aria-labelledby="bd-goal-title">
-        <button class="modal__close" type="button" @click="goalCatId = null" aria-label="Close">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
-        </button>
-        <header class="auto-assign__header">
-          <p class="eyebrow">Goal</p>
-          <h2 class="modal__title" id="bd-goal-title" style="margin: 0;">
-            <span x-text="$store.budget.categoryName(goalCatId)"></span>
-            <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);">
-              · <span x-text="monthHeaderLabel()"></span>
-            </span>
-          </h2>
-        </header>
-
-        {# Current-status snapshot — only when a goal already exists.
-           Shows progress bar + 4 stat tiles (target / assigned-MTD /
-           needed-this-month / status). #}
-        <div class="goal-status" x-show="$store.budget.findGoal(goalCatId)" x-cloak>
-          <div class="goal-status__bar-row">
-            <span class="goal-status__cap"
-                  x-text="goalPctForModal() >= 100 ? '✓ 100% funded' : (goalPctForModal() + '% funded')"></span>
-            <div class="goal-status__bar" :data-tip="goalStatusTooltip()"
-                 role="progressbar"
-                 aria-label="Goal progress"
-                 :aria-valuenow="goalPctForModal()"
-                 :aria-valuetext="goalPctForModal() + '% of goal'"
-                 aria-valuemin="0" aria-valuemax="100">
-              <span class="goal-status__fill"
-                    :class="goalPctForModal() >= 100 ? 'goal-status__fill--funded' : (goalPctForModal() >= 50 ? 'goal-status__fill--partial' : 'goal-status__fill--low')"
-                    :style="'width:' + Math.min(100, goalPctForModal()) + '%'"></span>
-            </div>
-          </div>
-
-          <dl class="goal-status__stats">
-            <div class="goal-status__stat" data-tip="The full amount this goal is asking for this month.">
-              <dt>Target</dt>
-              <dd x-text="formatCents(goalCurrentTarget())"></dd>
-            </div>
-            <div class="goal-status__stat" data-tip="Dollars you've assigned to this category in the active month.">
-              <dt>Assigned</dt>
-              <dd class="amount--inflow"
-                  x-text="formatCents($store.budget.assignedFor(goalCatId, $store.budget.currentMonth))"></dd>
-            </div>
-            <div class="goal-status__stat" data-tip="Total dollars currently sitting in this category (carry-in + this month's assigned + activity).">
-              <dt>Available</dt>
-              <dd :class="categoryAvailable(goalCatId) < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="formatCents(categoryAvailable(goalCatId))"></dd>
-            </div>
-            <div class="goal-status__stat goal-status__stat--needed"
-                 data-tip="What's still missing this month to meet the goal target.">
-              <dt>Still needed</dt>
-              <dd :class="$store.budget.goalNeeded(goalCatId) > 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="$store.budget.goalNeeded(goalCatId) > 0 ? formatCents($store.budget.goalNeeded(goalCatId)) : '✓ Funded'"></dd>
-            </div>
-          </dl>
-
-          <p class="goal-status__hint" x-text="goalNarrative()"></p>
-        </div>
-
-        <p class="goal-status__hint goal-status__hint--new"
-           x-show="!$store.budget.findGoal(goalCatId)" x-cloak>
-          No goal set yet. Pick a goal type and target below — the budget will track funding progress against it every month.
-        </p>
-
-        <form @submit.prevent="saveGoal()" style="margin-top: var(--space-md);">
-          <div class="form-stack">
-            <div class="field">
-              <label class="field__label" for="bd-g-type">Goal type</label>
-              <select class="select" id="bd-g-type" x-model="goalForm.type">
-                <template x-for="t in $store.budget.GOAL_TYPES" :key="t.value">
-                  <option :value="t.value" x-text="t.label"></option>
-                </template>
-              </select>
-              <p class="field__hint" x-text="goalTypeHint()"></p>
-            </div>
-            <div class="form-row">
-              <div class="field">
-                <label class="field__label" for="bd-g-target">Target amount</label>
-                <input class="input" id="bd-g-target" type="text" x-model="goalForm.target"
-                       inputmode="decimal" placeholder="0.00" required
-                       data-tip="Calculator: type expressions like 250+75 — they evaluate on save.">
-                <p class="field__hint calc-preview" x-show="calcPreview(goalForm.target)" x-cloak
-                   x-text="calcPreview(goalForm.target)"></p>
-              </div>
-              <div class="field" x-show="goalForm.type === 'targetByDate'" x-cloak>
-                <label class="field__label" for="bd-g-date">By date</label>
-                <input class="input" id="bd-g-date" type="date" x-model="goalForm.byDate">
-                <p class="field__hint" x-show="goalForm.byDate" x-cloak
-                   x-text="goalDateHint()"></p>
-              </div>
-            </div>
-          </div>
-          <div class="form-actions">
-            <button class="btn btn--primary" type="submit">Save goal</button>
-            <button class="btn btn--ghost" type="button" @click="removeGoal()"
-                    x-show="$store.budget.findGoal(goalCatId)">Remove goal</button>
-            <button class="btn btn--ghost" type="button" @click="goalCatId = null">Cancel</button>
-          </div>
-        </form>
-      </div>
     </div>
 
     </div> {# /budgetCollapsed wrapper #}
@@ -898,9 +504,9 @@ eleventyExcludeFromCollections: true
      values as a named template, or apply a saved template to the
      current month. Templates live on the profile under
      `budgetTemplates`. #}
-  <div class="modal-backdrop" x-show="templatesOpen" x-cloak @keydown.escape.window="templatesOpen = false">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tpl-title"
-         @click.outside="templatesOpen = false" style="max-width: 560px;">
+  <template x-if="templatesOpen">
+  <div class="modal-backdrop" @click.self="templatesOpen = false" @keydown.escape.window="templatesOpen = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tpl-title" style="max-width: 560px;">
       <button class="modal__close" type="button" @click="templatesOpen = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
@@ -955,4 +561,440 @@ eleventyExcludeFromCollections: true
       </div>
     </div>
   </div>
+  </template>
+
+  {# The nine grid modals live OUTSIDE both the hasCategories section
+     and the budgetCollapsed wrapper: their triggers stay visible when
+     the grid is collapsed, and the empty-state CTA opens the New-group
+     modal on a profile with zero categories. Rendered with x-if so a
+     closed dialog's controls stay out of axe and the touch census. #}
+    {# Move-money modal — reallocate Assigned dollars between two
+       categories (or payment pools) in one move. Net total assigned
+       stays the same; from-row decrements, to-row increments. #}
+    <template x-if="moveMoneyOpen">
+    <div class="modal-backdrop" @click.self="moveMoneyOpen = false"
+         @keydown.escape.window="moveMoneyOpen = false">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bd-mv-title" style="max-width: 680px;">
+        <button class="modal__close" type="button" @click="moveMoneyOpen = false" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <header class="auto-assign__header">
+          <p class="eyebrow">Move money</p>
+          <h2 class="modal__title" id="bd-mv-title" style="margin: 0;">
+            Reallocate Assigned in <span x-text="monthHeaderLabel()"></span>
+          </h2>
+          <p class="auto-assign__lead">
+            Decrement one category's Assigned and increment another by the same amount. Total Assigned for the month stays the same. Works for payment pools too.
+          </p>
+        </header>
+
+        <form @submit.prevent="submitMoveMoney()">
+          <div class="form-stack">
+            <div class="field">
+              <label class="field__label" for="bd-mv-from">From</label>
+              <select class="select" id="bd-mv-from" x-model="moveMoneyForm.fromId" required>
+                <option value="">Select category</option>
+                <template x-for="opt in moveMoneyCategoryOptions()" :key="opt.id">
+                  <option :value="opt.id"
+                          x-text="opt.label + ' · Available ' + formatCents(opt.available)"></option>
+                </template>
+              </select>
+              <p class="field__hint" x-show="moveMoneyForm.fromId" x-cloak
+                 x-text="'Currently Assigned: ' + formatCents(_assignedFor(moveMoneyForm.fromId))"></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="bd-mv-to">To</label>
+              <select class="select" id="bd-mv-to" x-model="moveMoneyForm.toId" required>
+                <option value="">Select category</option>
+                <template x-for="opt in moveMoneyCategoryOptions()" :key="'to-' + opt.id">
+                  <option :value="opt.id"
+                          :disabled="opt.id === moveMoneyForm.fromId"
+                          x-text="opt.label + ' · Available ' + formatCents(opt.available)"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="bd-mv-amount">Amount</label>
+              <input class="input" id="bd-mv-amount" type="text" x-model="moveMoneyForm.amount"
+                     placeholder="0.00 · or 100+25" inputmode="decimal" required
+                     data-tip="Calculator: type expressions like 100 + 25 — they evaluate on save.">
+              <p class="field__hint calc-preview"
+                 x-show="calcPreview(moveMoneyForm.amount)" x-cloak
+                 x-text="calcPreview(moveMoneyForm.amount)"></p>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit"
+                    :disabled="!moveMoneyForm.fromId || !moveMoneyForm.toId || moveMoneyForm.fromId === moveMoneyForm.toId"
+                    data-tip="Apply the move (undoable with Cmd/Ctrl+Z).">Move money</button>
+            <button class="btn btn--ghost" type="button" @click="moveMoneyOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    </template>
+
+    {# Auto-assign modal — pick a strategy, see a per-strategy preview
+       total, then apply. Each strategy walks every non-payment
+       category and sets its Assigned for the active month. #}
+    <template x-if="autoAssignOpen">
+    <div class="modal-backdrop" @click.self="autoAssignOpen = false"
+         @keydown.escape.window="autoAssignOpen = false">
+      <div class="modal auto-assign" role="dialog" aria-modal="true" aria-labelledby="bd-auto-title">
+        <button class="modal__close" type="button" @click="autoAssignOpen = false" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <header class="auto-assign__header">
+          <p class="eyebrow">Auto-assign · <span x-text="autoAssignScope.name"></span></p>
+          <h2 class="modal__title" id="bd-auto-title" style="margin: 0;">
+            Fill <span x-text="monthHeaderLabel()"></span> from a template
+          </h2>
+          <p class="auto-assign__lead">
+            Pick a strategy.
+            <span x-show="autoAssignScope.kind === 'all'">Categories that don't apply are left unchanged.</span>
+            <span x-show="autoAssignScope.kind === 'group'">Only categories in <strong x-text="autoAssignScope.name"></strong> are touched.</span>
+            <span x-show="autoAssignScope.kind === 'category'">Only the <strong x-text="autoAssignScope.name"></strong> category is touched.</span>
+            <span x-show="autoAssignScope.kind === 'selection'">Only the <strong x-text="autoAssignScope.name"></strong> are touched.</span>
+            You can tweak any row after.
+          </p>
+        </header>
+
+        <ul class="auto-assign__list">
+          <template x-for="opt in autoAssignStrategies()" :key="opt.id">
+            <li>
+              <button type="button"
+                      class="auto-assign__opt"
+                      :class="{
+                        'is-selected': autoAssignChoice === opt.id,
+                        'is-disabled': opt.disabled
+                      }"
+                      @click="!opt.disabled && (autoAssignChoice = opt.id)"
+                      :disabled="opt.disabled"
+                      :aria-pressed="(autoAssignChoice === opt.id).toString()">
+                <div class="auto-assign__opt-head">
+                  <span class="auto-assign__opt-radio" aria-hidden="true">
+                    <svg x-show="autoAssignChoice === opt.id" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+                  </span>
+                  <span class="auto-assign__opt-label" x-text="opt.label"></span>
+                  <span class="auto-assign__opt-total"
+                        :class="opt.disabled ? 'auto-assign__opt-total--muted' : (opt.preview < 0 ? 'amount--outflow' : 'amount--inflow')"
+                        x-text="opt.disabled ? '—' : formatCents(opt.preview)"></span>
+                </div>
+                <p class="auto-assign__opt-hint" x-text="opt.hint"></p>
+              </button>
+            </li>
+          </template>
+        </ul>
+
+        <div class="auto-assign__footer">
+          <p class="auto-assign__count" x-show="autoAssignChoice" x-cloak>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span x-text="autoAssignSummary()"></span>
+          </p>
+          <p class="auto-assign__count auto-assign__count--placeholder" x-show="!autoAssignChoice">
+            Select a strategy above to preview the impact.
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn--primary" type="button"
+                  :disabled="!autoAssignChoice"
+                  @click="applyAutoAssign()"
+                  data-tip="Apply the selected strategy to this month's Assigned column.">Apply auto-assign</button>
+          <button class="btn btn--ghost" type="button" @click="autoAssignOpen = false">Cancel</button>
+        </div>
+      </div>
+    </div>
+    </template>
+
+    {# Add-group modal — fired from the toolbar "+ Group" button. #}
+    <template x-if="newGroupOpen">
+    <div class="modal-backdrop" @click.self="newGroupOpen = false" @keydown.escape.window="newGroupOpen = false">
+      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-group-title">
+        <h2 class="modal__title" id="bd-group-title">New category group</h2>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);">
+          Groups organize the budget. Examples: Monthly bills, Subscriptions, Reserves.
+        </p>
+        <form @submit.prevent="submitNewGroup()">
+          <div class="field">
+            <label class="field__label" for="bd-group-name">Group name</label>
+            <input class="input" id="bd-group-name" type="text" x-model="newGroupName" required autofocus>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Create group</button>
+            <button class="btn btn--ghost" type="button" @click="newGroupOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    </template>
+
+    {# Add-category modal — fired from any group header "+" icon. #}
+    <template x-if="newCatOpen">
+    <div class="modal-backdrop" @click.self="newCatOpen = false" @keydown.escape.window="newCatOpen = false">
+      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-cat-title">
+        <h2 class="modal__title" id="bd-cat-title">
+          New category in <span x-text="newCatGroupName || 'group'"></span>
+        </h2>
+        <form @submit.prevent="submitNewCategory()">
+          <div class="field">
+            <label class="field__label" for="bd-cat-name">Category name</label>
+            <input class="input" id="bd-cat-name" type="text" x-model="newCatName" required autofocus
+                   placeholder="e.g. Groceries, Rent, Coffee">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Add category</button>
+            <button class="btn btn--ghost" type="button" @click="newCatOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    </template>
+
+    {# Delete-group confirm — replaces window.confirm() so the dialog
+       matches the rest of the app. #}
+    <template x-if="deleteGroupId">
+    <div class="modal-backdrop" @click.self="deleteGroupId = null" @keydown.escape.window="deleteGroupId = null">
+      <div class="modal modal--sm" role="alertdialog" aria-modal="true"
+           @keydown.enter.window.prevent="confirmDeleteGroup()" aria-labelledby="budget-dlg1-title">
+        <h2 class="modal__title" id="budget-dlg1-title">Delete this group?</h2>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
+          Categories inside <strong x-text="deleteGroupName"></strong> become ungrouped but are kept along with their activity and goals.
+        </p>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="button" @click="confirmDeleteGroup()" autofocus>Delete group</button>
+          <button class="btn btn--ghost" type="button" @click="deleteGroupId = null">Cancel</button>
+        </div>
+      </div>
+    </div>
+    </template>
+
+    {# Delete-category confirm — same chrome as the group variant. #}
+    <template x-if="deleteCatId">
+    <div class="modal-backdrop" @click.self="deleteCatId = null" @keydown.escape.window="deleteCatId = null">
+      <div class="modal modal--sm" role="alertdialog" aria-modal="true"
+           @keydown.enter.window.prevent="confirmDeleteCategory()" aria-labelledby="budget-dlg2-title">
+        <h2 class="modal__title" id="budget-dlg2-title">Delete this category?</h2>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
+          <strong x-text="deleteCatName"></strong>'s activity becomes uncategorized but stays in the register. Goals on this category are removed.
+        </p>
+        <div class="form-actions">
+          <button class="btn btn--danger" type="button" @click="confirmDeleteCategory()" autofocus>Delete category</button>
+          <button class="btn btn--ghost" type="button" @click="deleteCatId = null">Cancel</button>
+        </div>
+      </div>
+    </div>
+    </template>
+
+    {# Rename modal — works for both groups and categories. #}
+    <template x-if="renameOpen">
+    <div class="modal-backdrop" @click.self="renameOpen = false" @keydown.escape.window="renameOpen = false">
+      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-rename-title">
+        <h2 class="modal__title" id="bd-rename-title">
+          Rename <span x-text="renameKind"></span>
+        </h2>
+        <form @submit.prevent="submitRename()">
+          <div class="field">
+            <label class="field__label" for="bd-rename-name">New name</label>
+            <input class="input" id="bd-rename-name" type="text" x-model="renameName" required autofocus
+                   @keydown.escape="renameOpen = false">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Save</button>
+            <button class="btn btn--ghost" type="button" @click="renameOpen = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    </template>
+
+    {# Activity drill-down modal — opened by clicking any Outflow
+       number on the budget grid. Lists every contributing transaction
+       for the selected scope (category, group, or all) in the
+       currently-active month, with a total at the bottom. #}
+    <template x-if="activityOpen">
+    <div class="modal-backdrop" @click.self="activityOpen = false" @keydown.escape.window="activityOpen = false">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bd-act-title" style="max-width: 760px;">
+        <button class="modal__close" type="button" @click="activityOpen = false" aria-label="Close">&times;</button>
+        <h2 class="modal__title" id="bd-act-title">
+          <span x-text="activityScope.name"></span>
+          <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);"
+                x-text="' · ' + monthHeaderLabel()"></span>
+        </h2>
+        <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);"
+           x-text="activityTxns().length + ' transaction' + (activityTxns().length === 1 ? '' : 's')"></p>
+
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col" style="white-space: nowrap;">Date</th>
+                <th scope="col">Account</th>
+                <th scope="col">Payee</th>
+                <th scope="col" x-show="activityScope.kind !== 'category'">Category</th>
+                <th scope="col">Memo</th>
+                <th scope="col" class="num">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="t in activityTxns()" :key="t.id + '-' + (t.splitKey || '')">
+                <tr class="activity-row"
+                    @click="openInRegister(t)"
+                    :data-tip="'Open ' + ($store.budget.payeeName(t.payeeId) || 'this transaction') + ' in the register.'"
+                    tabindex="0"
+                    @keydown.enter="openInRegister(t)"
+                    @keydown.space.prevent="openInRegister(t)"
+                    role="button"
+                    :aria-label="'Open ' + ($store.budget.payeeName(t.payeeId) || 'transaction') + ' from ' + t.date + ' in the register'">
+                  <td style="white-space: nowrap;" x-text="t.date"></td>
+                  <td x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></td>
+                  <td x-text="$store.budget.payeeName(t.payeeId) || '—'"></td>
+                  <td x-show="activityScope.kind !== 'category'"
+                      x-text="$store.budget.categoryName(t.categoryId) || 'Uncategorized'"
+                      style="color: var(--fg-muted);"></td>
+                  <td style="color: var(--fg-muted);" x-text="t.memo || ''"></td>
+                  <td class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(t.amount)"></td>
+                </tr>
+              </template>
+              <tr x-show="!activityTxns().length" x-cloak>
+                <td :colspan="activityScope.kind !== 'category' ? 6 : 5"
+                    style="color: var(--fg-muted); text-align: center; padding: var(--space-md);">
+                  No transactions in this scope for the active month.
+                </td>
+              </tr>
+            </tbody>
+            <tfoot x-show="activityTxns().length" x-cloak>
+              <tr style="border-top: 2px solid var(--border);">
+                <td :colspan="activityScope.kind !== 'category' ? 5 : 4"
+                    style="font-weight: 600;">Total</td>
+                <td class="num" style="font-weight: 700;"
+                    :class="activityTotal() < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(activityTotal())"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="form-actions" style="margin-top: var(--space-md);">
+          <a class="btn btn--secondary btn--sm"
+             x-show="activityScope.kind === 'category'"
+             :href="'/app/register/?category=' + activityScope.id"
+             data-tip="Open these transactions in the full register.">Open in register</a>
+          <button class="btn btn--ghost btn--sm" type="button" @click="activityOpen = false">Close</button>
+        </div>
+      </div>
+    </div>
+    </template>
+
+    {# Goal modal — reuses the categories-page form so users can set,
+       change, or remove a goal without leaving the budget. Shows a
+       live status panel above the form with the current funding %,
+       what's assigned this month, and what's still needed. #}
+    <template x-if="goalCatId">
+    <div class="modal-backdrop" @click.self="goalCatId = null" @keydown.escape.window="goalCatId = null">
+      <div class="modal" role="dialog" aria-modal="true"
+           style="max-width: 620px;" aria-labelledby="bd-goal-title">
+        <button class="modal__close" type="button" @click="goalCatId = null" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <header class="auto-assign__header">
+          <p class="eyebrow">Goal</p>
+          <h2 class="modal__title" id="bd-goal-title" style="margin: 0;">
+            <span x-text="$store.budget.categoryName(goalCatId)"></span>
+            <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);">
+              · <span x-text="monthHeaderLabel()"></span>
+            </span>
+          </h2>
+        </header>
+
+        {# Current-status snapshot — only when a goal already exists.
+           Shows progress bar + 4 stat tiles (target / assigned-MTD /
+           needed-this-month / status). #}
+        <div class="goal-status" x-show="$store.budget.findGoal(goalCatId)" x-cloak>
+          <div class="goal-status__bar-row">
+            <span class="goal-status__cap"
+                  x-text="goalPctForModal() >= 100 ? '✓ 100% funded' : (goalPctForModal() + '% funded')"></span>
+            <div class="goal-status__bar" :data-tip="goalStatusTooltip()"
+                 role="progressbar"
+                 aria-label="Goal progress"
+                 :aria-valuenow="goalPctForModal()"
+                 :aria-valuetext="goalPctForModal() + '% of goal'"
+                 aria-valuemin="0" aria-valuemax="100">
+              <span class="goal-status__fill"
+                    :class="goalPctForModal() >= 100 ? 'goal-status__fill--funded' : (goalPctForModal() >= 50 ? 'goal-status__fill--partial' : 'goal-status__fill--low')"
+                    :style="'width:' + Math.min(100, goalPctForModal()) + '%'"></span>
+            </div>
+          </div>
+
+          <dl class="goal-status__stats">
+            <div class="goal-status__stat" data-tip="The full amount this goal is asking for this month.">
+              <dt>Target</dt>
+              <dd x-text="formatCents(goalCurrentTarget())"></dd>
+            </div>
+            <div class="goal-status__stat" data-tip="Dollars you've assigned to this category in the active month.">
+              <dt>Assigned</dt>
+              <dd class="amount--inflow"
+                  x-text="formatCents($store.budget.assignedFor(goalCatId, $store.budget.currentMonth))"></dd>
+            </div>
+            <div class="goal-status__stat" data-tip="Total dollars currently sitting in this category (carry-in + this month's assigned + activity).">
+              <dt>Available</dt>
+              <dd :class="categoryAvailable(goalCatId) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(categoryAvailable(goalCatId))"></dd>
+            </div>
+            <div class="goal-status__stat goal-status__stat--needed"
+                 data-tip="What's still missing this month to meet the goal target.">
+              <dt>Still needed</dt>
+              <dd :class="$store.budget.goalNeeded(goalCatId) > 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="$store.budget.goalNeeded(goalCatId) > 0 ? formatCents($store.budget.goalNeeded(goalCatId)) : '✓ Funded'"></dd>
+            </div>
+          </dl>
+
+          <p class="goal-status__hint" x-text="goalNarrative()"></p>
+        </div>
+
+        <p class="goal-status__hint goal-status__hint--new"
+           x-show="!$store.budget.findGoal(goalCatId)" x-cloak>
+          No goal set yet. Pick a goal type and target below — the budget will track funding progress against it every month.
+        </p>
+
+        <form @submit.prevent="saveGoal()" style="margin-top: var(--space-md);">
+          <div class="form-stack">
+            <div class="field">
+              <label class="field__label" for="bd-g-type">Goal type</label>
+              <select class="select" id="bd-g-type" x-model="goalForm.type">
+                <template x-for="t in $store.budget.GOAL_TYPES" :key="t.value">
+                  <option :value="t.value" x-text="t.label"></option>
+                </template>
+              </select>
+              <p class="field__hint" x-text="goalTypeHint()"></p>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label class="field__label" for="bd-g-target">Target amount</label>
+                <input class="input" id="bd-g-target" type="text" x-model="goalForm.target"
+                       inputmode="decimal" placeholder="0.00" required
+                       data-tip="Calculator: type expressions like 250+75 — they evaluate on save.">
+                <p class="field__hint calc-preview" x-show="calcPreview(goalForm.target)" x-cloak
+                   x-text="calcPreview(goalForm.target)"></p>
+              </div>
+              <div class="field" x-show="goalForm.type === 'targetByDate'" x-cloak>
+                <label class="field__label" for="bd-g-date">By date</label>
+                <input class="input" id="bd-g-date" type="date" x-model="goalForm.byDate">
+                <p class="field__hint" x-show="goalForm.byDate" x-cloak
+                   x-text="goalDateHint()"></p>
+              </div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Save goal</button>
+            <button class="btn btn--ghost" type="button" @click="removeGoal()"
+                    x-show="$store.budget.findGoal(goalCatId)">Remove goal</button>
+            <button class="btn btn--ghost" type="button" @click="goalCatId = null">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    </template>
+
 </div>

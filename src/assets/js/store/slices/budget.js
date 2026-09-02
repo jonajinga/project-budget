@@ -118,6 +118,35 @@ export const budgetSlice = {
     this._save();
   },
 
+  /**
+   * Write a whole {categoryId: cents} map onto one month under a
+   * SINGLE undo entry and a single save. Every multi-category
+   * assignment path (auto-assign, quick fills) must come through
+   * here — calling assign() in a loop records one undo entry and one
+   * full-profile save per category, which evicts the 50-entry undo
+   * history in one gesture.
+   * @param {Object<string, number>} assignments categoryId -> cents
+   * @param {string} [month]
+   * @param {string} [label] undo label
+   * @returns {number} count of categories written
+   */
+  applyAssignments(assignments, month, label) {
+    if (!this.profile) return 0;
+    var ids = Object.keys(assignments || {});
+    if (!ids.length) return 0;
+    var m = month || this.currentMonth;
+    this._recordUndo(label || ("Assign " + ids.length + " categories"));
+    var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
+    var nextAssigned = Object.assign({}, existing.assigned || {});
+    ids.forEach(function (id) {
+      nextAssigned[id] = Math.round(Number(assignments[id]) || 0);
+    });
+    this.profile.budgets[m] = Object.assign({}, existing, { assigned: nextAssigned });
+    this._bumpLists();
+    this._save();
+    return ids.length;
+  },
+
   /* ---- Bulk-clear helpers --------------------------------------- */
   /**
    * Set assigned to 0 for every catId in `categoryIds` in `month`,
@@ -337,13 +366,25 @@ export const budgetSlice = {
     return true;
   },
 
-  /* Quick-assign helpers — they return cents; UI calls assign(). */
+  /* Quick-assign helpers — they return cents; UI applies them via
+     applyAssignments(). These are the single source of truth for the
+     auto-assign strategies (the view used to reimplement all four). */
   /**
    * @param {id} categoryId
    * @param {string} [month]
-   * @returns {number} cents that were assigned in the prior month
+   * @returns {number} cents assigned to the category in the PRIOR month
    */
-  quickLastMonth(categoryId, month) {
+  quickLastMonthAssigned(categoryId, month) {
+    if (!this.profile) return 0;
+    return budgetAssigned(this.profile, categoryId, prevMonth(month || this.currentMonth));
+  },
+  /**
+   * @param {id} categoryId
+   * @param {string} [month]
+   * @returns {number} cents of absolute outflow in the PRIOR month
+   *   (a net-refund month suggests 0)
+   */
+  quickLastMonthSpent(categoryId, month) {
     if (!this.profile) return 0;
     return quickAssignLastMonth(this.profile, categoryId, month || this.currentMonth);
   },
@@ -359,12 +400,13 @@ export const budgetSlice = {
   },
   /**
    * @param {id} categoryId
-   * @param {string} [month] currently unused
-   * @returns {number} cents — the goal target for the category, or 0
+   * @param {string} [month]
+   * @returns {number} cents the category's goal still needs in the
+   *   month to be fully funded, or 0 with no goal
    */
   quickGoalTarget(categoryId, month) {
     var goal = this.findGoal(categoryId);
     if (!goal) return 0;
-    return goal.target || 0;
+    return this.goalNeeded(categoryId, month || this.currentMonth) || 0;
   },
 };

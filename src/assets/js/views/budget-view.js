@@ -100,9 +100,8 @@ function budgetView() {
       var next = Math.max(0, Math.min(groupBuckets.length - 1, idx + delta));
       if (next === idx) return;
       this.$store.budget.moveCategoryGroup(group.id, next);
-      var self = this;
       this.$nextTick(function () {
-        var el = document.querySelector('[data-sortable-id="' + group.id + '"] .dnd-handle');
+        var el = document.querySelector('[data-group-id="' + group.id + '"] .overflow-menu__trigger');
         if (el) el.focus();
       });
     },
@@ -116,7 +115,7 @@ function budgetView() {
       if (next === idx) return;
       this.$store.budget.moveCategory(c.id, groupId, next);
       this.$nextTick(function () {
-        var el = document.querySelector('[data-sortable-id="' + c.id + '"] .dnd-handle');
+        var el = document.querySelector('[data-cat-id="' + c.id + '"] .overflow-menu__trigger');
         if (el) el.focus();
       });
     },
@@ -315,7 +314,6 @@ function budgetView() {
       var store = this.$store.budget;
       if (!store.profile) return { cats: {}, total: 0 };
       var month = store.currentMonth;
-      var self = this;
       var cats = {};
       var total = 0;
       var scope = this.autoAssignScope || { kind: "all" };
@@ -333,38 +331,25 @@ function budgetView() {
         cats[catId] = cents;
         total += cents;
       }
+      /* Each strategy delegates to the store's quick-assign helper —
+         one implementation, shared with any future quick-fill UI. */
       allCats.forEach(function (c) {
         if (strategy === "goals") {
-          /* Underfunded — what each goal still needs this month. */
-          var g = store.findGoal(c.id);
-          if (!g) return;
-          var need = store.goalNeeded(c.id, month) || 0;
+          if (!store.findGoal(c.id)) return;
+          var need = store.quickGoalTarget(c.id, month) || 0;
           if (need > 0) add(c.id, need);
         } else if (strategy === "last-month-assigned") {
-          var prev = self._prevMonth(month);
-          var prevAssigned = store.assignedFor(c.id, prev) || 0;
+          var prevAssigned = store.quickLastMonthAssigned(c.id, month) || 0;
           if (prevAssigned > 0) add(c.id, prevAssigned);
         } else if (strategy === "last-month-spent") {
-          var prev2 = self._prevMonth(month);
-          var act = Math.abs(Math.min(0, store.activityFor(c.id, prev2) || 0));
+          var act = store.quickLastMonthSpent(c.id, month) || 0;
           if (act > 0) add(c.id, act);
         } else if (strategy === "avg-3-spent") {
-          var sum = 0;
-          var cursor = month;
-          for (var i = 0; i < 3; i++) {
-            cursor = self._prevMonth(cursor);
-            sum += Math.abs(Math.min(0, store.activityFor(c.id, cursor) || 0));
-          }
-          var avg = Math.round(sum / 3);
+          var avg = store.quickAvg(c.id, month, 3) || 0;
           if (avg > 0) add(c.id, avg);
         }
       });
       return { cats: cats, total: total };
-    },
-    _prevMonth(iso) {
-      var parts = (iso || "").split("-").map(Number);
-      var d = new Date(parts[0], parts[1] - 2, 1);
-      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
     },
     autoAssignStrategies() {
       var goals = this._autoAssignPlan("goals");
@@ -523,9 +508,12 @@ function budgetView() {
         confirmLabel: "Apply auto-assign",
       }).then(function (ok) {
         if (!ok) return;
-        ids.forEach(function (catId) {
-          self.$store.budget.assign(catId, month, plan.cats[catId]);
-        });
+        /* One store write for the whole plan — assign() in a loop
+           records one undo entry and one save per category, which
+           evicts the entire 50-entry undo history in one click. */
+        self.$store.budget.applyAssignments(
+          plan.cats, month, "Auto-assign (" + ids.length + ")"
+        );
         self.$store.budget.pushToast("Auto-assigned " + ids.length + " categor" + (ids.length === 1 ? "y" : "ies") + ".");
         self.autoAssignOpen = false;
         self.autoAssignChoice = "";
@@ -723,17 +711,20 @@ function budgetView() {
       var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
       return g ? (g.target || 0) : 0;
     },
+    /* Same goalNeeded-derived measure as the row badge and bar. */
     goalPctForModal() {
       var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
       if (!g || !g.target) return 0;
-      var assigned = this.$store.budget.assignedFor(this.goalCatId, this.$store.budget.currentMonth) || 0;
-      return Math.max(0, Math.min(999, Math.round((assigned / g.target) * 100)));
+      var needed = this.$store.budget.goalNeeded(this.goalCatId) || 0;
+      var pct = (1 - needed / g.target) * 100;
+      if (!isFinite(pct) || pct < 0) pct = 0;
+      return Math.round(Math.min(100, pct));
     },
     goalStatusTooltip() {
       var pct = this.goalPctForModal();
-      var assigned = this.$store.budget.assignedFor(this.goalCatId, this.$store.budget.currentMonth) || 0;
-      var target = this.goalCurrentTarget();
-      return pct + "% funded · " + this.formatCents(assigned) + " of " + this.formatCents(target) + " target";
+      var needed = this.$store.budget.goalNeeded(this.goalCatId) || 0;
+      if (needed <= 0) return pct + "% funded · target met for this month";
+      return pct + "% funded · " + this.formatCents(needed) + " still needed";
     },
     goalNarrative() {
       var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
@@ -758,8 +749,17 @@ function budgetView() {
       return "~" + this.formatCents(perMonth) + " per month for " + monthsBetween + " month" + (monthsBetween === 1 ? "" : "s") + ".";
     },
 
-    /* Drag/drop handled by SortableJS via
-       /assets/js/ui/sortable-bind.js. Markup carries data-sortable-*. */
+    /* Reordering is keyboard/menu driven (Move up / Move down in the
+       row and group kebabs) — there is no drag-and-drop on this page. */
+
+    /* Income categories are funded by their own transactions and
+       payment pools by Move money — neither takes direct assignment
+       (auto-assign and the bulk helpers already skip them), so the
+       Assigned cell renders read-only for both. */
+    assignReadOnly(c) {
+      var s = this.$store.budget;
+      return s.isPaymentCategory(c.id) || s.isIncomeCategory(c.id);
+    },
 
     get hasCategories() {
       return !!(this.$store.budget.profile && this.$store.budget.profile.categories.length);
@@ -890,15 +890,17 @@ function budgetView() {
       return "Need " + this.formatCents(n);
     },
 
-    /* Goal progress bar — % of the goal target funded this month.
-       Uses assigned (not available) so the bar reflects what the user
-       committed *this period*, not carry-over from prior months. */
+    /* Goal progress bar — derived from goalNeeded, the SAME measure
+       the badge uses, so "Funded" always sits beside a full bar. A
+       row previously mixed two measures (badge from goalNeeded, bar
+       from assigned/target) and could read "Funded" over an 80% bar
+       for refill goals. */
     goalPercent(catId) {
       void this.$store.budget._listVersion;
       var g = this.$store.budget.findGoal(catId);
       if (!g || !g.target) return 0;
-      var assigned = this.$store.budget.assignedFor(catId);
-      var pct = (assigned / g.target) * 100;
+      var needed = this.$store.budget.goalNeeded(catId) || 0;
+      var pct = (1 - needed / g.target) * 100;
       if (!isFinite(pct) || pct < 0) pct = 0;
       return Math.round(Math.min(100, pct));
     },
@@ -911,9 +913,10 @@ function budgetView() {
     goalBarTooltip(catId) {
       var g = this.$store.budget.findGoal(catId);
       if (!g || !g.target) return "";
-      var assigned = this.$store.budget.assignedFor(catId);
+      var needed = this.$store.budget.goalNeeded(catId) || 0;
       var pct = this.goalPercent(catId);
-      return pct + "% funded: " + this.formatCents(assigned) + " of " + this.formatCents(g.target);
+      if (needed <= 0) return "Goal met for this month.";
+      return pct + "% funded: " + this.formatCents(needed) + " still needed";
     },
 
     /* ---- Month strip helpers ----------------------------------------

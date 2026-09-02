@@ -595,6 +595,22 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   border-color: var(--accent);
   padding: 0.3rem 0.65rem;
 }
+/* Read-only Assigned value for income and payment-pool categories.
+   Same metrics as the input (right edge, tabular digits, transparent
+   border) so the column stays aligned; muted so it reads as display,
+   not entry. */
+.budget__assigned-locked {
+  display: block;
+  width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  padding: 0.3rem 0.65rem 0.3rem 0;
+  border: 1px solid transparent;
+}
+@media (max-width: 599px) {
+  .budget__assigned-locked { padding: 0.15rem 0.55rem 0.15rem 0; }
+}
 /* On phones the input lives in the 3-pill bottom row next to the
    Outflow + Available pills, so give it matching pill chrome so
    the row reads as three equal entries. */
@@ -671,6 +687,15 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 .month-strip__year:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+/* Single-step month arrows (the fix for the year-boundary trap: the
+   year arrows land on the SAME month number of the next year, so
+   December -> January used to take two clicks through a wrong month).
+   Same chrome as the year buttons, tighter padding, bigger glyph. */
+.month-strip__step {
+  padding: 0.5rem 0.45rem;
+  font-size: var(--fs-md);
+  line-height: 1;
 }
 .month-strip__tabs {
   display: grid;
@@ -753,7 +778,18 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    12-month row stays a single line without overflowing the viewport. */
 @media (max-width: 479px) {
   .month-strip__tab { font-size: var(--fs-2xs); padding: 0.25rem 0; }
-  .month-strip__year { padding: var(--space-3xs); }
+  /* At phone width the strip cannot hold 16 targets at the 24px
+     WCAG 2.5.8 floor: adding the two month-step arrows squeezed all
+     12 month tabs under it (the a11y ratchet caught this at 390px).
+     Keep the FREQUENT action -- single-month stepping, which also
+     fixes the year-boundary trap -- and drop the year-jump arrows;
+     any month is still reachable by stepping or via the tabs, and
+     the year arrows return at 480px. */
+  .month-strip__year { display: none; }
+  .month-strip__step {
+    display: inline-flex;
+    padding: var(--space-3xs) 0.65rem;
+  }
 }
 
 /* Budget HUD — single surface that holds the month strip + toolbar.

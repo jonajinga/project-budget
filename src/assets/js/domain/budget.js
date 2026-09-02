@@ -271,6 +271,7 @@ export function readyToAssign(profile, month) {
 /* Quick-assign helpers for the budget UI. */
 /**
  * Absolute outflow from the prior month — suggested assignment amount.
+ * Net-inflow months (refunds) suggest 0, not the refund amount.
  * @param {Profile} profile
  * @param {string} categoryId
  * @param {string} month YYYY-MM (current month)
@@ -278,7 +279,7 @@ export function readyToAssign(profile, month) {
  */
 export function quickAssignLastMonth(profile, categoryId, month) {
   var last = prevMonth(month);
-  return Math.abs(activity(profile, categoryId, last));
+  return Math.abs(Math.min(0, activity(profile, categoryId, last)));
 }
 
 /**
@@ -296,7 +297,9 @@ export function quickAssignAverageSpending(profile, categoryId, month, n) {
   var cursor = month;
   for (var i = 0; i < window; i++) {
     cursor = prevMonth(cursor);
-    total += Math.abs(activity(profile, categoryId, cursor));
+    /* Only outflow counts toward the suggestion — a refund month is a
+       0-spend month, not a negative-spend month. */
+    total += Math.abs(Math.min(0, activity(profile, categoryId, cursor)));
     samples += 1;
   }
   return samples ? Math.round(total / samples) : 0;
