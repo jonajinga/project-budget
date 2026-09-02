@@ -339,7 +339,14 @@ eleventyExcludeFromCollections: true
                          x-show="$store.budget.findGoal(c.id)"
                          x-cloak
                          :class="goalBarClass(c.id)"
-                         :style="'--pct:' + goalPercent(c.id)"
+                         {# OBJECT form, not string: a string :style
+                            rewrites the whole style attribute and its
+                            effect re-runs on every bump (goalPercent
+                            touches _listVersion) while x-show's does
+                            not - so it erased x-show's display:none and
+                            every goalless row grew a phantom bar after
+                            any mutation. Object form merges. #}
+                         :style="{ '--pct': goalPercent(c.id) }"
                          :data-tip="goalBarTooltip(c.id)"
                          role="progressbar"
                          :aria-label="'Goal progress for ' + c.name"

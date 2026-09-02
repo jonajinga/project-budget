@@ -69,3 +69,29 @@ test("income categories render a read-only Assigned value, not an input", async 
   await expect(row.locator(".budget__assigned .budget__assigned-locked")).toHaveCount(1);
   await page.close();
 });
+
+test("a store mutation does not resurrect hidden goal bars", async ({ seeded }) => {
+  /* Shipped long before the revamp: x-show and a STRING :style binding
+     shared the goal-bar element. The string form rewrites the whole
+     style attribute, and its effect re-runs on every _listVersion bump
+     while x-show's (depending only on profile.goals) does not - so any
+     mutation wiped the inline display:none and every goalless row grew
+     a phantom 0% bar. */
+  const page = await seeded.newPage();
+  await gotoApp(page, "/app/budget/");
+  await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
+  await page.waitForTimeout(300);
+  const visibleBars = () => page.evaluate(() =>
+    [...document.querySelectorAll(".budget__row .goal-bar")]
+      .filter((el) => getComputedStyle(el).display !== "none").length
+  );
+  const goals = await page.evaluate(() => window.Alpine.store("budget").profile.goals.length);
+  expect(await visibleBars()).toBe(goals);
+  await page.evaluate(() => {
+    const s = window.Alpine.store("budget");
+    s.assign(s.profile.categories.find((c) => c.name === "Groceries").id, "2026-03", 12345);
+  });
+  await page.waitForTimeout(400);
+  expect(await visibleBars(), "bars must not appear on goalless rows after a mutation").toBe(goals);
+  await page.close();
+});
