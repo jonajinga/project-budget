@@ -353,20 +353,25 @@ eleventyExcludeFromCollections: true
                      order. Every cell carries data-month. #}
                   <template x-for="vm in visibleMonths()" :key="'c-' + c.id + '-' + vm">
                     <div style="display: contents;">
-                      <div class="budget__assigned" data-label="Assigned" :data-month="vm">
+                      <div class="budget__assigned" data-label="Assigned" :data-month="vm"
+                           :tabindex="cellTabIndex(c.id, vm)"
+                           @focus="setFocusCell(c.id, vm)"
+                           @keydown="onCellKeydown(c, vm, $event)"
+                           :aria-label="c.name + ', ' + monthShortLabel(vm) + ': assigned ' + formatCents($store.budget.assignedFor(c.id, vm)) + '. Press Enter to edit.'">
                         {# select() on focus: the cell always holds a value, so
                            the first keystroke replaces the amount. Arrow keys
                            or a second click still place a caret. #}
                         <template x-if="!assignReadOnly(c)">
                           <input type="text" inputmode="decimal"
-                                 data-touch="compact"
+                                 data-touch="compact" tabindex="-1"
                                  :data-month="vm"
                                  :aria-label="'Assigned for ' + c.name + ', ' + monthShortLabel(vm)"
                                  :value="formatAssigned($store.budget.assignedFor(c.id, vm))"
                                  data-tip="Type an amount, or an expression like 100+25."
                                  @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id, vm)); $event.target.select()"
-                                 @blur="commitAssign(c.id, vm, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id, vm));"
-                                 @keydown.enter="$event.target.blur()">
+                                 @blur="onAssignBlur(c, vm, $event)"
+                                 @keydown.enter="onAssignKeyEnter($event)"
+                                 @keydown.escape.stop="onAssignKeyEscape($event)">
                         </template>
                         {# Income categories are funded by their transactions
                            and payment pools by Move money — auto-assign and

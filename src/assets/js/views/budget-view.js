@@ -430,6 +430,123 @@ function budgetView() {
       }
     },
 
+    /* ---- Roving tabindex over the Assigned cells (phase 5) ------
+       The register grid's proven pattern: exactly ONE cell tabbable,
+       arrows move the roving point, Enter or a digit starts the edit,
+       Escape cancels without committing. Focus is applied
+       SYNCHRONOUSLY (the register's _focusCellNode lesson: deferring
+       to $nextTick drops arrow keypresses mid-hold). */
+    focusCell: { catId: null, month: null },
+    _editCancel: false,
+    _returnFocus: false,
+    /* Visible, editable categories in grid order: collapsed groups and
+       read-only rows (income, payment pools) are skipped. */
+    flattenedNavCats() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var self = this;
+      var out = [];
+      (s.categoryGroupsView() || []).forEach(function (b) {
+        if (b.group && s.isCatGroupCollapsed(b.group.id)) return;
+        (b.categories || []).forEach(function (c) {
+          if (self.assignReadOnly(c)) return;
+          out.push(c.id);
+        });
+      });
+      return out;
+    },
+    _rovingCell() {
+      var months = this.visibleMonths();
+      if (this.focusCell.catId
+          && months.indexOf(this.focusCell.month) !== -1
+          && this.flattenedNavCats().indexOf(this.focusCell.catId) !== -1) {
+        return this.focusCell;
+      }
+      var cats = this.flattenedNavCats();
+      if (!cats.length) return { catId: null, month: null };
+      return { catId: cats[0], month: months[0] };
+    },
+    cellTabIndex(catId, month) {
+      var r = this._rovingCell();
+      return r.catId === catId && r.month === month ? 0 : -1;
+    },
+    setFocusCell(catId, month) {
+      this.focusCell = { catId: catId, month: month };
+      /* Follow the roving point in the inspector - but never FORCE the
+         pane open (the user may have closed it for the third column). */
+      if (this.inspectorDocked && this.inspectorOpen) {
+        this.sel = { catId: catId, month: month };
+        this._loadInspectorState();
+      }
+    },
+    _focusCellNode(catId, month) {
+      var q = '.budget__row[data-cat-id="' + catId + '"] .budget__assigned[data-month="' + month + '"]';
+      var el = document.querySelector(q);
+      if (el && el.focus) { el.focus(); return; }
+      this.$nextTick(function () {
+        var late = document.querySelector(q);
+        if (late && late.focus) late.focus();
+      });
+    },
+    onCellKeydown(c, vm, e) {
+      /* keydown bubbles from the cell's own input; only handle keys
+         pressed ON the cell itself. */
+      if (e.target !== e.currentTarget) return;
+      var months = this.visibleMonths();
+      var cats = this.flattenedNavCats();
+      var col = months.indexOf(vm);
+      var row = cats.indexOf(c.id);
+      if (col === -1 || row === -1) return;
+      if (/^[0-9.]$/.test(e.key)) {
+        e.preventDefault();
+        this._startCellEdit(c.id, vm, e.key);
+        return;
+      }
+      var nc = col;
+      var nr = row;
+      switch (e.key) {
+        case "ArrowRight": nc = Math.min(months.length - 1, col + 1); break;
+        case "ArrowLeft":  nc = Math.max(0, col - 1); break;
+        case "ArrowDown":  nr = Math.min(cats.length - 1, row + 1); break;
+        case "ArrowUp":    nr = Math.max(0, row - 1); break;
+        case "Home":       nc = 0; break;
+        case "End":        nc = months.length - 1; break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          this._startCellEdit(c.id, vm, null);
+          return;
+        default: return;
+      }
+      e.preventDefault();
+      this.setFocusCell(cats[nr], months[nc]);
+      this._focusCellNode(cats[nr], months[nc]);
+    },
+    _startCellEdit(catId, vm, seedKey) {
+      var input = document.querySelector(
+        '.budget__row[data-cat-id="' + catId + '"] .budget__assigned[data-month="' + vm + '"] input'
+      );
+      if (!input) return;
+      input.focus(); /* the input's @focus swaps to plain digits + select() */
+      if (seedKey != null) input.value = seedKey;
+    },
+    onAssignKeyEnter(e) { this._returnFocus = true; e.target.blur(); },
+    onAssignKeyEscape(e) { this._editCancel = true; this._returnFocus = true; e.target.blur(); },
+    onAssignBlur(c, vm, e) {
+      if (this._editCancel) {
+        this._editCancel = false;
+        e.target.value = this.formatAssigned(this.$store.budget.assignedFor(c.id, vm));
+      } else {
+        this.commitAssign(c.id, vm, e.target.value);
+        e.target.value = this.formatAssigned(this.$store.budget.assignedFor(c.id, vm));
+      }
+      if (this._returnFocus) {
+        this._returnFocus = false;
+        this.focusCell = { catId: c.id, month: vm };
+        this._focusCellNode(c.id, vm);
+      }
+    },
+
     /* ---- Multi-month columns (phase 2) --------------------------
        The anchor is ALWAYS $store.budget.currentMonth (the leftmost
        column); extra columns run forward. monthCount is the user's

@@ -764,6 +764,13 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     padding: 0.15rem 0.55rem;
   }
 }
+/* The roving Assigned cell (phase 5): a focusable grid cell needs a
+   visible focus state distinct from the input's own. */
+.budget__assigned:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-input);
+}
 .budget__activity, .budget__available {
   text-align: right;
   font-variant-numeric: tabular-nums;
