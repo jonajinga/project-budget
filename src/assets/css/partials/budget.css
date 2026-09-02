@@ -1686,82 +1686,9 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   color: var(--fg-muted);
 }
 
-/* ---- Drag-and-drop handles + Sortable state classes ---------------
-   Drag is powered by SortableJS via /assets/js/ui/sortable-bind.js.
-   The library applies these state classes during a drag:
-     .is-ghost     - the placeholder where the dragged item will land
-     .is-chosen    - the originating item under the cursor
-     .is-dragging  - the floating drag image (mirror)
-   .dnd-handle is the grab cursor + uses Sortable's `handle:` selector
-   so the rest of the row stays clickable / editable.
-
-   Visual: matches the site header's hamburger icon — three
-   horizontal lines, 2px stroke, rounded caps. Same glyph the user
-   sees in the header so the affordance reads consistently across
-   the whole app. Inline SVG background, crisp at any zoom. */
-.dnd-handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-input);
-  cursor: grab;
-  user-select: none;
-  flex-shrink: 0;
-  touch-action: none;
-  /* Hide any legacy text content (☰) so only the SVG glyph shows. */
-  font-size: 0;
-  line-height: 0;
-  color: transparent;
-  background-color: transparent;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23524b43' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 18px 18px;
-  padding: 0;
-  transition: background-color var(--t-fast);
-}
-.dnd-handle:hover {
-  background-color: var(--bg-alt);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c0392b' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
-}
-.dnd-handle:active { cursor: grabbing; }
-.dnd-handle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 /* Dark theme — lighten the strokes for contrast on the dark surface. */
-[data-theme="dark"] .dnd-handle {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b3aba0' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
-}
-[data-theme="dark"] .dnd-handle:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e05a4b' stroke-width='2' stroke-linecap='round'><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='18' x2='21' y2='18'/></svg>");
-}
 /* Inline variant for paragraph mentions — keeps the text-based look. */
-.dnd-handle--inline {
-  width: auto;
-  height: auto;
-  display: inline;
-  padding: 0 0.2em;
-  background-image: none;
-  background-color: var(--bg-alt);
-  border-radius: 4px;
-  font-size: inherit;
-  line-height: inherit;
-  color: var(--fg-muted);
-}
-/* Match the three-line hamburger that the live .dnd-handle paints via
-   its background SVG so the inline reference reads as the same icon
-   the user grabs. Previously this used ⋮⋮ which looked nothing like
-   the actual handle. */
-.dnd-handle--inline::before { content: "\2630"; }
 /* Compact handle for the dense budget grid — same glyph, smaller box. */
-.dnd-handle--sm {
-  width: 18px;
-  height: 18px;
-  background-size: 14px 14px;
-}
 
 /* SortableJS-applied state classes. The heavy opacity dim only
    applies while a drag is actively in progress (body.pb-dragging).
@@ -1797,12 +1724,6 @@ body.pb-dragging { overflow: visible !important; }
    mouse precision. Hit area expands via ::before pseudo-element
    so the visual stays unchanged. */
 @media (any-hover: none) {
-  .dnd-handle { position: relative; }
-  .dnd-handle::before {
-    content: "";
-    position: absolute;
-    inset: -10px;
-  }
 }
 
 /* ---- Calendar page -----------------------------------------------
