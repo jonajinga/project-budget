@@ -76,11 +76,14 @@ function monthsBetween(fromMonth, toISO) {
  * @param {Profile} profile
  * @param {object|null} goal
  * @param {string} month YYYY-MM
+ * @param {object} [rowIn] precomputed categoryRow for (goal.categoryId, month)
+ *   - the store passes its table-backed row so goal math never re-walks
+ *   the carry chain; omitted, the reference scan runs.
  * @returns {number} cents (always >= 0)
  */
-export function needed(profile, goal, month) {
+export function needed(profile, goal, month, rowIn) {
   if (!goal) return 0;
-  var row = categoryRow(profile, goal.categoryId, month);
+  var row = rowIn || categoryRow(profile, goal.categoryId, month);
   var target = goal.target || 0;
 
   switch (goal.type) {
@@ -120,12 +123,14 @@ export function needed(profile, goal, month) {
  * @param {Profile} profile
  * @param {object|null} goal
  * @param {string} month YYYY-MM
+ * @param {object} [rowIn] precomputed categoryRow (see needed())
+ * @param {number} [neededIn] precomputed needed() for the same args
  * @returns {string|null}
  */
-export function statusFor(profile, goal, month) {
+export function statusFor(profile, goal, month, rowIn, neededIn) {
   if (!goal) return null;
-  var n = needed(profile, goal, month);
-  var row = categoryRow(profile, goal.categoryId, month);
+  var row = rowIn || categoryRow(profile, goal.categoryId, month);
+  var n = neededIn != null ? neededIn : needed(profile, goal, month, row);
   if (n === 0) return "funded";
   if (row.assigned > 0) return "partial";
   if (row.available >= (goal.target || 0)) return "over";

@@ -304,3 +304,192 @@ export function quickAssignAverageSpending(profile, categoryId, month, n) {
   }
   return samples ? Math.round(total / samples) : 0;
 }
+
+/* ---- The month index (Phase 1 of the budget revamp) ----------------
+   The functions above recompute from raw transaction scans and are kept
+   as the REFERENCE implementation: tests/budget-index.test.js holds the
+   two implementations equal over every month x category of the bundled
+   sample. The store slice reads through the index; the legacy scans
+   stay for cold paths and for the differential suite. */
+
+/**
+ * One O(T) pass over the profile: activity bucketed per month per
+ * category (payment categories derived from card charges/payments,
+ * exactly as activity() does), inflow-to-budget per month, and total
+ * assigned per month.
+ * @param {Profile} profile
+ * @returns {{ months: string[], act: Object<string, Object<string, number>>,
+ *             inflow: Object<string, number>, assignedTotal: Object<string, number> }}
+ */
+export function buildMonthIndex(profile) {
+  var act = {};
+  var inflow = {};
+  var assignedTotal = {};
+  var monthSet = new Set();
+
+  var pm = paymentMap(profile); /* cardAccountId -> payment category id */
+  var payCatSet = new Set(Object.values(pm));
+
+  function bump(m, catId, cents) {
+    var bucket = act[m] || (act[m] = {});
+    bucket[catId] = (bucket[catId] || 0) + cents;
+  }
+
+  profile.transactions.forEach(function (t) {
+    if (!t.date) return;
+    var m = t.date.slice(0, 7);
+    monthSet.add(m);
+
+    /* Payment-category derivation, mirroring activity()'s card branch:
+       positive transfers on the card are payments (subtract); negative
+       CATEGORIZED amounts (incl. split legs with a category) are
+       charges (add). Uncategorized charges are informational only. */
+    var payCat = pm[t.accountId];
+    if (payCat) {
+      if (t.transferTxnId) {
+        if (t.amount > 0) bump(m, payCat, -t.amount);
+      } else {
+        if (t.amount < 0 && t.categoryId) bump(m, payCat, Math.abs(t.amount));
+        if (t.amount < 0 && t.splits) {
+          t.splits.forEach(function (s) {
+            if (s.categoryId) bump(m, payCat, Math.abs(s.amount));
+          });
+        }
+      }
+    }
+
+    /* Normal bucketing, mirroring activity()'s default branch. A txn
+       categorized DIRECTLY to a payment category is ignored there
+       (payment activity comes only from the card derivation above), so
+       it is skipped here too. */
+    if (t.transferTxnId) return;
+    if (t.splits) {
+      t.splits.forEach(function (s) {
+        if (s.categoryId && !payCatSet.has(s.categoryId)) bump(m, s.categoryId, s.amount || 0);
+      });
+    } else if (t.categoryId) {
+      if (!payCatSet.has(t.categoryId)) bump(m, t.categoryId, t.amount || 0);
+    } else if (t.amount > 0) {
+      /* Uncategorized positive non-transfer non-split = inflow to budget. */
+      inflow[m] = (inflow[m] || 0) + t.amount;
+    }
+  });
+
+  Object.keys(profile.budgets || {}).forEach(function (m) {
+    monthSet.add(m);
+    assignedTotal[m] = totalAssignedInMonth(profile, m);
+  });
+
+  return { months: [...monthSet].sort(), act: act, inflow: inflow, assignedTotal: assignedTotal };
+}
+
+/**
+ * One forward O(months x categories) pass over the index. Yields every
+ * category's {carryIn, assigned, activity, available} for every data
+ * month up to throughMonth, plus Ready-to-Assign per month - the carry
+ * clamp captures per-month overspending "lost", which is exactly the
+ * amount readyToAssign() deducts from the following months.
+ * @param {Profile} profile
+ * @param {string} throughMonth YYYY-MM (the table horizon, inclusive)
+ * @param {object} [index] a buildMonthIndex() result to reuse
+ * @returns {object} table for tableCategoryRow / tableReadyToAssign
+ */
+export function buildBudgetTable(profile, throughMonth, index) {
+  var idx = index || buildMonthIndex(profile);
+  var months = idx.months.filter(function (m) { return m <= throughMonth; });
+  if (!months.length || months[months.length - 1] !== throughMonth) {
+    months = months.concat([throughMonth]);
+  }
+
+  var rows = {};
+  var carryOut = {};
+  var rolling = {};
+  profile.categories.forEach(function (c) {
+    rows[c.id] = {};
+    carryOut[c.id] = {};
+    rolling[c.id] = 0;
+  });
+
+  var rtaByMonth = {};
+  var rtaAfterByMonth = {};
+  var inflowCum = 0;
+  var assignedCum = 0;
+  var lostCum = 0;
+
+  months.forEach(function (m) {
+    var bucket = idx.act[m] || {};
+    var assignedMap = (profile.budgets[m] && profile.budgets[m].assigned) || {};
+    var lostThisMonth = 0;
+    profile.categories.forEach(function (c) {
+      var a = assignedMap[c.id] || 0;
+      var actv = bucket[c.id] || 0;
+      var carry = rolling[c.id];
+      var available = carry + a + actv;
+      rows[c.id][m] = { carryIn: carry, assigned: a, activity: actv, available: available };
+      if (available < 0) {
+        lostThisMonth += -available;
+        rolling[c.id] = 0;
+      } else {
+        rolling[c.id] = available;
+      }
+      carryOut[c.id][m] = rolling[c.id];
+    });
+
+    inflowCum += idx.inflow[m] || 0;
+    assignedCum += idx.assignedTotal[m] || 0;
+    /* RTA at m sees losses BEFORE m only; the carried-forward state
+       (rtaAfter) includes m's own losses. */
+    rtaByMonth[m] = inflowCum - assignedCum - lostCum;
+    lostCum += lostThisMonth;
+    rtaAfterByMonth[m] = inflowCum - assignedCum - lostCum;
+  });
+
+  return {
+    through: throughMonth,
+    months: months,
+    rows: rows,
+    carryOut: carryOut,
+    rtaByMonth: rtaByMonth,
+    rtaAfterByMonth: rtaAfterByMonth,
+  };
+}
+
+/**
+ * Row lookup with empty-month derivation: a month absent from the table
+ * inherits the clamped carry of the last data month before it. Returns
+ * null for months past the table's horizon (callers must rebuild with a
+ * later throughMonth rather than trust a wrong answer).
+ * @param {object} table buildBudgetTable() result
+ * @param {string} categoryId
+ * @param {string} month YYYY-MM
+ * @returns {{carryIn:number,assigned:number,activity:number,available:number}|null}
+ */
+export function tableCategoryRow(table, categoryId, month) {
+  if (month > table.through) return null;
+  var byMonth = table.rows[categoryId];
+  if (!byMonth) return { carryIn: 0, assigned: 0, activity: 0, available: 0 };
+  var row = byMonth[month];
+  if (row) return row;
+  var carry = 0;
+  for (var i = table.months.length - 1; i >= 0; i--) {
+    if (table.months[i] < month) { carry = table.carryOut[categoryId][table.months[i]]; break; }
+  }
+  return { carryIn: carry, assigned: 0, activity: 0, available: carry };
+}
+
+/**
+ * Ready-to-Assign lookup with the same empty-month rule: an absent
+ * month carries the previous data month's post-loss state forward.
+ * Returns null past the horizon.
+ * @param {object} table buildBudgetTable() result
+ * @param {string} month YYYY-MM
+ * @returns {number|null} cents
+ */
+export function tableReadyToAssign(table, month) {
+  if (month > table.through) return null;
+  if (Object.prototype.hasOwnProperty.call(table.rtaByMonth, month)) return table.rtaByMonth[month];
+  for (var i = table.months.length - 1; i >= 0; i--) {
+    if (table.months[i] < month) return table.rtaAfterByMonth[table.months[i]];
+  }
+  return 0;
+}

@@ -49,8 +49,15 @@ export const goalsSlice = {
    */
   goalNeeded(categoryId, month) {
     if (!this.profile) return 0;
-    var g = findGoalForCategory(this.profile, categoryId);
-    return goalNeeded(this.profile, g, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    /* Memoized, and fed the slice's table-backed row: statusFor+needed
+       used to cost 3-4 full carry-chain walks PER GOAL ROW per render. */
+    return this._memo("goalNeeded:" + categoryId + ":" + m, function () {
+      var g = findGoalForCategory(self.profile, categoryId);
+      if (!g) return 0;
+      return goalNeeded(self.profile, g, m, self.categoryRow(categoryId, m));
+    });
   },
   /**
    * @param {id} categoryId
@@ -59,7 +66,14 @@ export const goalsSlice = {
    */
   goalStatus(categoryId, month) {
     if (!this.profile) return null;
-    var g = findGoalForCategory(this.profile, categoryId);
-    return goalStatusFor(this.profile, g, month || this.currentMonth);
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("goalStatus:" + categoryId + ":" + m, function () {
+      var g = findGoalForCategory(self.profile, categoryId);
+      if (!g) return null;
+      var row = self.categoryRow(categoryId, m);
+      var n = goalNeeded(self.profile, g, m, row);
+      return goalStatusFor(self.profile, g, m, row, n);
+    });
   },
 };

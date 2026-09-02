@@ -5,12 +5,9 @@
 
 import {
   thisMonth, prevMonth, nextMonth,
-  activity as budgetActivity,
   assigned as budgetAssigned,
   totalAssignedInMonth as totalAssignedInMonthImpl,
-  categoryRow as categoryRowImpl,
-  totalInflowToBudget as totalInflowToBudgetImpl,
-  readyToAssign as readyToAssignImpl,
+  buildMonthIndex, buildBudgetTable, tableCategoryRow, tableReadyToAssign,
   quickAssignLastMonth,
   quickAssignAverageSpending,
 } from "../../domain/budget.js";
@@ -26,6 +23,29 @@ export const budgetSlice = {
   /** Reset the active month to today's calendar month. */
   jumpToThisMonth() { this.currentMonth = thisMonth(); },
 
+  /* ---- The month index / budget table (Phase 1) ------------------
+     One O(T) index pass and one forward O(months x categories) table
+     pass serve EVERY row and RTA read for every visible month. The
+     table's horizon is max(currentMonth, _budgetHorizon, queried
+     month), so one memo entry covers all columns of a multi-month
+     view; _budgetHorizon is set by the view when it shows months past
+     currentMonth. Cache invalidation is _listVersion, same as every
+     other memo. */
+  _budgetHorizon: null,
+  _monthIndex() {
+    var self = this;
+    return this._memo("monthIndex", function () { return buildMonthIndex(self.profile); });
+  },
+  _budgetTable(month) {
+    var h = this.currentMonth;
+    if (this._budgetHorizon && this._budgetHorizon > h) h = this._budgetHorizon;
+    if (month && month > h) h = month;
+    var self = this;
+    return this._memo("budgetTable:" + h, function () {
+      return buildBudgetTable(self.profile, h, self._monthIndex());
+    });
+  },
+
   /**
    * @param {string} [month] YYYY-MM, defaults to currentMonth
    * @returns {number} cents available to assign this month
@@ -33,8 +53,8 @@ export const budgetSlice = {
   readyToAssign(month) {
     if (!this.profile) return 0;
     var m = month || this.currentMonth;
-    var self = this;
-    return this._memo("rta:" + m, function () { return readyToAssignImpl(self.profile, m); });
+    var v = tableReadyToAssign(this._budgetTable(m), m);
+    return v == null ? 0 : v;
   },
   /**
    * @param {id} categoryId
@@ -48,10 +68,8 @@ export const budgetSlice = {
   categoryRow(categoryId, month) {
     if (!this.profile) return { carryIn: 0, assigned: 0, activity: 0, available: 0 };
     var m = month || this.currentMonth;
-    var self = this;
-    return this._memo("catRow:" + categoryId + ":" + m, function () {
-      return categoryRowImpl(self.profile, categoryId, m);
-    });
+    var row = tableCategoryRow(this._budgetTable(m), categoryId, m);
+    return row || { carryIn: 0, assigned: 0, activity: 0, available: 0 };
   },
   /**
    * @param {string} [month]
@@ -70,8 +88,10 @@ export const budgetSlice = {
   totalInflowToBudget(month) {
     if (!this.profile) return 0;
     var m = month || this.currentMonth;
-    var self = this;
-    return this._memo("totalInflow:" + m, function () { return totalInflowToBudgetImpl(self.profile, m); });
+    var idx = this._monthIndex();
+    var sum = 0;
+    idx.months.forEach(function (mm) { if (mm <= m) sum += idx.inflow[mm] || 0; });
+    return sum;
   },
   /**
    * @param {id} categoryId
@@ -92,8 +112,8 @@ export const budgetSlice = {
   activityFor(categoryId, month) {
     if (!this.profile) return 0;
     var m = month || this.currentMonth;
-    var self = this;
-    return this._memo("activity:" + categoryId + ":" + m, function () { return budgetActivity(self.profile, categoryId, m); });
+    var bucket = this._monthIndex().act[m];
+    return (bucket && bucket[categoryId]) || 0;
   },
 
   /**
@@ -189,7 +209,7 @@ export const budgetSlice = {
     var self = this;
     var n = 0;
     categoryIds.forEach(function (id) {
-      var row = categoryRowImpl(self.profile, id, m);
+      var row = self.categoryRow(id, m);
       if (row.available === 0) return;
       /* available = carryIn + assigned + activity, so set
          assigned = -carryIn - activity to land on 0. */

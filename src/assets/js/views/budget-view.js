@@ -738,15 +738,19 @@ function budgetView() {
     },
     goalDateHint() {
       if (this.goalForm.type !== "targetByDate" || !this.goalForm.byDate) return "";
-      var target = new Date(this.goalForm.byDate);
-      var today = new Date();
-      var monthsBetween = (target.getFullYear() - today.getFullYear()) * 12
-                       + (target.getMonth() - today.getMonth());
-      if (monthsBetween <= 0) return "Target date is in the past or this month.";
+      /* Months remaining from the VIEWED month, inclusive of both
+         endpoints - the same count domain/goals.js divides by. It was
+         computed from new Date(), so the hint disagreed with the goal
+         math whenever the user was viewing any month but the real one. */
+      var from = (this.$store.budget.currentMonth || "").split("-").map(Number);
+      var to = this.goalForm.byDate.split("-").map(Number);
+      if (!from[0] || !to[0]) return "";
+      var monthsLeft = (to[0] - from[0]) * 12 + ((to[1] || 1) - from[1]) + 1;
+      if (monthsLeft <= 0) return "Target date is before the month you are viewing.";
       var amount = this.parseDollars(this.goalForm.target);
       if (amount <= 0) return "";
-      var perMonth = Math.round(amount / monthsBetween);
-      return "~" + this.formatCents(perMonth) + " per month for " + monthsBetween + " month" + (monthsBetween === 1 ? "" : "s") + ".";
+      var perMonth = Math.round(amount / monthsLeft);
+      return "~" + this.formatCents(perMonth) + " per month for " + monthsLeft + " month" + (monthsLeft === 1 ? "" : "s") + ".";
     },
 
     /* Reordering is keyboard/menu driven (Move up / Move down in the

@@ -96,3 +96,31 @@ describe("goalsSlice", () => {
     expect(ctx.host.goalStatus("anything")).toBeNull();
   });
 });
+
+/* ---- Phase 1: goal math reads through the budget table ------------- */
+
+describe("goal math memoization", () => {
+  it("goalNeeded goes through the slice's categoryRow (memoized), not a raw scan", () => {
+    var ctx = build();
+    ctx.host.addGoal({ categoryId: ctx.cat.id, type: "refillUpTo", target: 50000 });
+    var calls = 0;
+    var orig = ctx.host.categoryRow;
+    ctx.host.categoryRow = function () { calls += 1; return orig.apply(this, arguments); };
+    ctx.host.goalNeeded(ctx.cat.id, "2024-03");
+    ctx.host.goalNeeded(ctx.cat.id, "2024-03");
+    /* First call computes through the slice's row accessor; the second
+       is served from the memo without touching it again. */
+    expect(calls).toBe(1);
+  });
+
+  it("goalStatus computes one row + one needed, and both agree with the domain", () => {
+    var ctx = build();
+    ctx.host.addGoal({ categoryId: ctx.cat.id, type: "monthlyFixed", target: 30000 });
+    ctx.host.assign(ctx.cat.id, "2024-03", 10000);
+    expect(ctx.host.goalNeeded(ctx.cat.id, "2024-03")).toBe(20000);
+    expect(ctx.host.goalStatus(ctx.cat.id, "2024-03")).toBe("partial");
+    ctx.host.assign(ctx.cat.id, "2024-03", 30000);
+    expect(ctx.host.goalNeeded(ctx.cat.id, "2024-03")).toBe(0);
+    expect(ctx.host.goalStatus(ctx.cat.id, "2024-03")).toBe("funded");
+  });
+});
