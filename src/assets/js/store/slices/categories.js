@@ -197,6 +197,27 @@ export const categoriesSlice = {
     this._save();
   },
 
+  /**
+   * Set (or clear) the free-text note on a category. Trims; a no-op
+   * when the trimmed note is unchanged so a blur that changed nothing
+   * does not spam the undo stack. One undo entry per real change.
+   * @param {id} categoryId
+   * @param {string} text
+   * @returns {boolean} true if the note changed
+   */
+  setCategoryNote(categoryId, text) {
+    if (!this.profile) return false;
+    var c = findCategoryImpl(this.profile, categoryId);
+    if (!c) return false;
+    var clean = String(text == null ? "" : text).trim();
+    if ((c.note || "") === clean) return false;
+    this._recordUndo("Edit note");
+    c.note = clean;
+    this._bumpLists();
+    this._save();
+    return true;
+  },
+
   /* ---- Derivations / lookups ---- */
   /** @param {id} id @returns {object|null} */
   findCategory(id) { return this.profile ? findCategoryImpl(this.profile, id) : null; },

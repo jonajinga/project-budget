@@ -210,9 +210,9 @@ function budgetView() {
       });
     },
 
-    /* Inline-edit modal state — covers create / rename / delete and
-       goal-edit for both groups and categories. The budget page is
-       the canonical surface for all category management. */
+    /* Inline-edit modal state — create / rename / delete for groups
+       and categories. Goal editing and row-path move-money moved into
+       the inspector (phase 3). */
     newGroupOpen: false,
     newGroupName: "",
     newCatOpen: false,
@@ -227,9 +227,7 @@ function budgetView() {
     renameKind: "",      /* 'group' | 'category' */
     renameTargetId: null,
     renameName: "",
-    /* Goal modal state — goalCatId + goalForm drive the goal-edit
-       form rendered inside the budget page. */
-    goalCatId: null,
+    /* Goal form state — lives in the inspector, keyed on sel. */
     goalForm: { type: "monthlyFixed", target: "", byDate: "" },
     /* Activity drill-down modal — opens when the user clicks any
        Outflow number. activityScope tells us whether to show a single
@@ -249,10 +247,91 @@ function budgetView() {
        column header strip, leaving only the toolbar + Total Budget
        summary so the user can scan the bottom line at a glance. */
     budgetCollapsed: false,
-    /* Move-money modal — reallocate Assigned dollars between
-       categories or payment pools in the active month. */
-    moveMoneyOpen: false,
+    /* Move-money form — lives in the inspector (phase 3); the modal
+       it once drove is gone. */
     moveMoneyForm: { fromId: "", toId: "", amount: "", month: "" },
+
+    /* ---- Inspector (phase 3) ------------------------------------
+       sel = { catId, month } | null. Docked as a persistent pane at
+       >=1024px (collapsible - an open pane caps the month columns at
+       2, because pane + 3 columns physically cannot share 1280px);
+       a bottom sheet below 1024. */
+    sel: null,
+    inspectorDocked: false,
+    inspectorOpen: true,
+    noteDraft: "",
+    renameEditing: false,
+    renameDraft: "",
+    selectCategory(c, month) {
+      var id = c && c.id ? c.id : c;
+      if (!id) return;
+      this.sel = { catId: id, month: month || this.$store.budget.currentMonth };
+      if (this.inspectorDocked && !this.inspectorOpen) this.setInspectorOpen(true);
+      this._loadInspectorState();
+    },
+    clearSel() { this.sel = null; },
+    setInspectorOpen(open) {
+      this.inspectorOpen = !!open;
+      try { localStorage.setItem("projectbudget:budget-inspector-open", open ? "1" : "0"); } catch (_e) {}
+    },
+    selCategory() {
+      void this.$store.budget._listVersion;
+      return this.sel ? this.$store.budget.findCategory(this.sel.catId) : null;
+    },
+    selRow() {
+      void this.$store.budget._listVersion;
+      return this.sel ? this.$store.budget.categoryRow(this.sel.catId, this.sel.month) : null;
+    },
+    _loadInspectorState() {
+      if (!this.sel) return;
+      var s = this.$store.budget;
+      var cat = s.findCategory(this.sel.catId);
+      this.noteDraft = (cat && cat.note) || "";
+      this.renameDraft = (cat && cat.name) || "";
+      this.renameEditing = false;
+      var g = s.findGoal(this.sel.catId);
+      this.goalForm = g
+        ? { type: g.type, target: ((g.target || 0) / 100).toFixed(2), byDate: g.byDate || "" }
+        : { type: "monthlyFixed", target: "", byDate: "" };
+      this.moveMoneyForm = { fromId: this.sel.catId, toId: "", amount: "", month: this.sel.month };
+    },
+    commitNote() {
+      if (!this.sel) return;
+      if (this.$store.budget.setCategoryNote(this.sel.catId, this.noteDraft)) {
+        this.$store.budget.pushToast("Note saved.");
+      }
+    },
+    commitInspectorRename() {
+      if (!this.sel || !this.renameEditing) return;
+      var n = (this.renameDraft || "").trim();
+      this.renameEditing = false;
+      if (!n || n === (this.selCategory() || {}).name) return;
+      this.$store.budget.renameCategory(this.sel.catId, n);
+      this.$store.budget.pushToast("Category renamed.");
+    },
+    /* The 5 newest transactions for the selected category + month. */
+    inspectorTxns() {
+      void this.$store.budget._listVersion;
+      var p = this.$store.budget.profile;
+      if (!p || !this.sel) return [];
+      var catId = this.sel.catId;
+      var month = this.sel.month;
+      var out = [];
+      (p.transactions || []).forEach(function (t) {
+        if ((t.date || "").slice(0, 7) !== month) return;
+        if (t.transferTxnId) return;
+        if (t.splits && t.splits.length) {
+          t.splits.forEach(function (sp, i) {
+            if (sp.categoryId !== catId) return;
+            out.push({ id: t.id, splitKey: "s" + i, date: t.date, payeeId: t.payeeId, amount: sp.amount });
+          });
+        } else if (t.categoryId === catId) {
+          out.push(t);
+        }
+      });
+      out.sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); });
+      return out.slice(0, 5);
+    },
 
     /* ---- Multi-month columns (phase 2) --------------------------
        The anchor is ALWAYS $store.budget.currentMonth (the leftmost
@@ -268,7 +347,12 @@ function budgetView() {
       try { localStorage.setItem("projectbudget:budget-month-count", String(n)); } catch (_e) {}
     },
     effectiveMonthCount() {
-      return Math.min(this.monthCount, this.viewportMaxMonths);
+      var max = this.viewportMaxMonths;
+      /* An open docked inspector (21rem) + three month columns cannot
+         share 1280px - the grid's minimums alone overflow. Close the
+         pane to unlock the third column. */
+      if (this.inspectorDocked && this.inspectorOpen && max > 2) max = 2;
+      return Math.min(this.monthCount, max);
     },
     _nextMonthOf(iso) {
       var p = (iso || "").split("-").map(Number);
@@ -323,10 +407,18 @@ function budgetView() {
         var stored = parseInt(localStorage.getItem("projectbudget:budget-month-count"), 10);
         if (stored >= 1 && stored <= 3) this.monthCount = stored;
       } catch (_e) {}
+      try {
+        this.inspectorOpen = localStorage.getItem("projectbudget:budget-inspector-open") !== "0";
+      } catch (_e) {}
       var mq2 = window.matchMedia("(min-width: 900px)");
       var mq3 = window.matchMedia("(min-width: 1280px)");
+      /* Dock threshold 1180, not 1024: sidebar (260) + pane (336)
+         leave ~370px of table at 1024 - unusable. Below 1180 the
+         inspector presents as the bottom sheet instead. */
+      var mqDock = window.matchMedia("(min-width: 1180px)");
       var setMax = function () {
         self.viewportMaxMonths = mq3.matches ? 3 : (mq2.matches ? 2 : 1);
+        self.inspectorDocked = mqDock.matches;
       };
       var measureSticky = function () {
         var h = document.querySelector(".site-header");
@@ -335,10 +427,12 @@ function budgetView() {
       if (window.__pbBudgetViewCleanup) window.__pbBudgetViewCleanup();
       mq2.addEventListener("change", setMax);
       mq3.addEventListener("change", setMax);
+      mqDock.addEventListener("change", setMax);
       window.addEventListener("resize", measureSticky);
       window.__pbBudgetViewCleanup = function () {
         mq2.removeEventListener("change", setMax);
         mq3.removeEventListener("change", setMax);
+        mqDock.removeEventListener("change", setMax);
         window.removeEventListener("resize", measureSticky);
       };
       setMax();
@@ -543,13 +637,6 @@ function budgetView() {
       var m = this.moveMoneyForm.month || this.$store.budget.currentMonth;
       return this.$store.budget.assignedFor(catId, m) || 0;
     },
-    openMoveMoney(c, month) {
-      this.moveMoneyForm = {
-        fromId: c ? c.id : "", toId: "", amount: "",
-        month: month || this.$store.budget.currentMonth,
-      };
-      this.moveMoneyOpen = true;
-    },
     submitMoveMoney() {
       var f = this.moveMoneyForm;
       if (!f.fromId || !f.toId || f.fromId === f.toId) return;
@@ -564,8 +651,8 @@ function budgetView() {
         this.$store.budget.pushToast(
           "Moved " + this.formatCents(cents) + " · " + fromName + " → " + toName + "."
         );
-        this.moveMoneyOpen = false;
-        this.moveMoneyForm = { fromId: "", toId: "", amount: "", month: "" };
+        this.moveMoneyForm.toId = "";
+        this.moveMoneyForm.amount = "";
       }
     },
     applyAutoAssign() {
@@ -755,64 +842,34 @@ function budgetView() {
       }
       return "";
     },
-    openGoal(c) {
-      if (!c) return;
-      this.goalCatId = c.id;
-      var g = this.$store.budget.findGoal(c.id);
-      if (g) {
-        this.goalForm = {
-          type: g.type,
-          target: ((g.target || 0) / 100).toFixed(2),
-          byDate: g.byDate || "",
-        };
-      } else {
-        this.goalForm = { type: "monthlyFixed", target: "", byDate: "" };
-      }
-    },
     saveGoal() {
-      if (!this.goalCatId) return;
+      if (!this.sel) return;
+      var target = this.parseDollars(this.goalForm.target);
+      if (target <= 0) return;
       this.$store.budget.addGoal({
-        categoryId: this.goalCatId,
+        categoryId: this.sel.catId,
         type: this.goalForm.type,
-        target: this.parseDollars(this.goalForm.target),
+        target: target,
         byDate: this.goalForm.byDate || null,
       });
       this.$store.budget.pushToast("Goal saved.");
-      this.goalCatId = null;
     },
     removeGoal() {
-      if (!this.goalCatId) return;
-      this.$store.budget.removeGoal(this.goalCatId);
+      if (!this.sel) return;
+      this.$store.budget.removeGoal(this.sel.catId);
       this.$store.budget.pushToast("Goal removed.");
-      this.goalCatId = null;
+      this.goalForm = { type: "monthlyFixed", target: "", byDate: "" };
     },
 
     /* ---- Goal status helpers (data for the status panel) ---- */
-    goalCurrentTarget() {
-      var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
-      return g ? (g.target || 0) : 0;
-    },
-    /* Same goalNeeded-derived measure as the row badge and bar. */
-    goalPctForModal() {
-      var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
-      if (!g || !g.target) return 0;
-      var needed = this.$store.budget.goalNeeded(this.goalCatId) || 0;
-      var pct = (1 - needed / g.target) * 100;
-      if (!isFinite(pct) || pct < 0) pct = 0;
-      return Math.round(Math.min(100, pct));
-    },
-    goalStatusTooltip() {
-      var pct = this.goalPctForModal();
-      var needed = this.$store.budget.goalNeeded(this.goalCatId) || 0;
-      if (needed <= 0) return pct + "% funded · target met for this month";
-      return pct + "% funded · " + this.formatCents(needed) + " still needed";
-    },
     goalNarrative() {
-      var g = this.goalCatId && this.$store.budget.findGoal(this.goalCatId);
+      if (!this.sel) return "";
+      var s = this.$store.budget;
+      var g = s.findGoal(this.sel.catId);
       if (!g) return "";
-      var need = this.$store.budget.goalNeeded(this.goalCatId) || 0;
-      var pct = this.goalPctForModal();
-      var name = this.$store.budget.categoryName(this.goalCatId);
+      var need = s.goalNeeded(this.sel.catId, this.sel.month) || 0;
+      var pct = this.goalPercent(this.sel.catId, this.sel.month);
+      var name = s.categoryName(this.sel.catId);
       if (need <= 0) return "Goal fully funded for this month. Nothing more needed.";
       if (pct === 0) return "No dollars assigned yet — assign " + this.formatCents(need) + " to reach the target.";
       return "You're " + pct + "% there. " + this.formatCents(need) + " more would reach the target for " + name + ".";
@@ -823,7 +880,8 @@ function budgetView() {
          endpoints - the same count domain/goals.js divides by. It was
          computed from new Date(), so the hint disagreed with the goal
          math whenever the user was viewing any month but the real one. */
-      var from = (this.$store.budget.currentMonth || "").split("-").map(Number);
+      var fromMonth = (this.sel && this.sel.month) || this.$store.budget.currentMonth || "";
+      var from = fromMonth.split("-").map(Number);
       var to = this.goalForm.byDate.split("-").map(Number);
       if (!from[0] || !to[0]) return "";
       var monthsLeft = (to[0] - from[0]) * 12 + ((to[1] || 1) - from[1]) + 1;
@@ -993,17 +1051,17 @@ function budgetView() {
        row previously mixed two measures (badge from goalNeeded, bar
        from assigned/target) and could read "Funded" over an 80% bar
        for refill goals. */
-    goalPercent(catId) {
+    goalPercent(catId, month) {
       void this.$store.budget._listVersion;
       var g = this.$store.budget.findGoal(catId);
       if (!g || !g.target) return 0;
-      var needed = this.$store.budget.goalNeeded(catId) || 0;
+      var needed = this.$store.budget.goalNeeded(catId, month) || 0;
       var pct = (1 - needed / g.target) * 100;
       if (!isFinite(pct) || pct < 0) pct = 0;
       return Math.round(Math.min(100, pct));
     },
-    goalBarClass(catId) {
-      var pct = this.goalPercent(catId);
+    goalBarClass(catId, month) {
+      var pct = this.goalPercent(catId, month);
       if (pct >= 100) return "goal-bar--funded";
       if (pct >= 50)  return "goal-bar--accent";
       return "goal-bar--muted";

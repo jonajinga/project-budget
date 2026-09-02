@@ -558,6 +558,22 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   flex-wrap: wrap;
   min-width: 0;
 }
+/* The name is now a BUTTON (it opens the inspector). Strip button
+   chrome so the row reads unchanged; the padding/negative-margin pair
+   grows the hit area to the 24px WCAG 2.5.8 floor without growing the
+   row (same trick as the kebab trigger's ::before). */
+.budget__cat-name--btn {
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 0;
+  margin: -4px 0;
+}
+.budget__cat-name--btn:hover { color: var(--accent); text-decoration: underline; }
+.budget__cat-name--btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .budget__cat-name {
   /* flex: 1 lets the name grow to fill available width AFTER the
      fixed-width siblings (checkbox, handle, chevron, badges). The

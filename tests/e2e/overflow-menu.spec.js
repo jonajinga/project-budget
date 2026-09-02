@@ -5,9 +5,10 @@ import { gotoApp } from "./helpers.js";
  *
  * It did not. The list was `position: absolute; top: calc(100% + 4px)`, so it
  * always hung downward from the trigger regardless of whether there was room.
- * The budget row menu is nine items -- about 360px -- so opening one from a
- * row in the lower half of a phone screen put most of it past the bottom
- * edge, unreachable.
+ * The budget row menu was nine items -- about 360px -- when this bug shipped
+ * (six since the revamp moved Move money / Set goal / Rename into the
+ * inspector), so opening one from a row in the lower half of a phone screen
+ * put most of it past the bottom edge, unreachable.
  *
  * The trap this test is built to avoid: opening a menu from a row that has
  * just been scrolled to the MIDDLE of the viewport, where there is plenty of

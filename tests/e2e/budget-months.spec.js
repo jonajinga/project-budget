@@ -8,11 +8,20 @@ import { gotoApp } from "./helpers.js";
 
 const wide = (viewport) => viewport && viewport.width >= 1280;
 
+/* Phase 3 docked an inspector pane at >=1024 (open by default); an
+   open pane caps the columns at 2, so the 3-column tests close it
+   through the real toggle first. */
+async function closeInspector(page) {
+  const toggle = page.getByRole("button", { name: "Toggle inspector pane" });
+  if ((await toggle.getAttribute("aria-pressed")) === "true") await toggle.click();
+}
+
 test("picking 3 months renders three labelled columns with independent inputs", async ({ seeded, viewport }) => {
   test.skip(!wide(viewport), "3 columns need >=1280");
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
+  await closeInspector(page);
   await page.getByRole("button", { name: "Show 3 months" }).click();
   await expect(page.locator(".budget__month-head")).toHaveCount(3);
   const labels = await page.locator(".budget__month-head").allTextContents();
@@ -75,6 +84,7 @@ test("the URL still carries only the anchor month", async ({ seeded, viewport })
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
+  await closeInspector(page);
   await page.getByRole("button", { name: "Show 3 months" }).click();
   await page.waitForTimeout(200);
   expect(new URL(page.url()).search).toBe("?m=2026-03");

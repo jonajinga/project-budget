@@ -121,3 +121,44 @@ describe("categoriesSlice", () => {
     expect(h.isIncomeGroup(g)).toBe(true);
   });
 });
+
+/* ---- Phase 3 (budget revamp): per-category notes ------------------- */
+
+describe("setCategoryNote", () => {
+  it("survives the load path (migrate + normalizeShape keep the field)", async () => {
+    const { migrate } = await import("../src/assets/js/store/schema.js");
+    var h = makeHost([accountsSlice, categoriesSlice]);
+    h.addCategoryGroup("Food");
+    var cat = h.addCategory({ name: "Groceries", groupId: h.profile.categoryGroups[0].id });
+    h.setCategoryNote(cat.id, "keep me");
+    var reloaded = migrate(JSON.parse(JSON.stringify(h.profile)));
+    expect(reloaded.categories.find(function (c) { return c.id === cat.id; }).note).toBe("keep me");
+  });
+
+
+  it("stores the note under ONE undo entry and trims it", () => {
+    var h = makeHost([accountsSlice, categoriesSlice]);
+    h.addCategoryGroup("Food");
+    var cat = h.addCategory({ name: "Groceries", groupId: h.profile.categoryGroups[0].id });
+    var undos = 0;
+    h._recordUndo = function () { undos += 1; };
+    h.setCategoryNote(cat.id, "  Costco run twice a month  ");
+    expect(h.findCategory(cat.id).note).toBe("Costco run twice a month");
+    expect(undos).toBe(1);
+    /* Clearing the note stores an empty string, not a stale value. */
+    h.setCategoryNote(cat.id, "");
+    expect(h.findCategory(cat.id).note).toBe("");
+    expect(undos).toBe(2);
+  });
+
+  it("is a no-op when the note is unchanged (no undo spam from blur)", () => {
+    var h = makeHost([accountsSlice, categoriesSlice]);
+    h.addCategoryGroup("Food");
+    var cat = h.addCategory({ name: "Groceries", groupId: h.profile.categoryGroups[0].id });
+    h.setCategoryNote(cat.id, "same");
+    var undos = 0;
+    h._recordUndo = function () { undos += 1; };
+    h.setCategoryNote(cat.id, "same");
+    expect(undos).toBe(0);
+  });
+});

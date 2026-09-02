@@ -1,0 +1,146 @@
+/* ── Budget inspector (revamp phase 3) ────────────────────────────────
+   Docked right-hand pane >=1024px inside .budget-layout; bottom sheet
+   on the shared modal chrome below that (.modal--sheet). */
+
+/* Two-column shell: grid + pane. Below 1180 it is a plain block and
+   the pane renders as a sheet instead (sidebar + pane leave ~370px of
+   table at 1024 - measured, unusable). */
+.budget-layout { min-width: 0; }
+@media (min-width: 1180px) {
+  .budget-layout--open {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 21rem;
+    gap: var(--space-sm);
+    align-items: start;
+  }
+}
+
+.budget-inspector {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: var(--space-sm);
+  position: sticky;
+  top: calc(var(--budget-sticky-top, 0px) + var(--space-2xs));
+  max-height: calc(100vh - var(--budget-sticky-top, 0px) - var(--space-sm));
+  overflow-y: auto;
+  font-size: var(--fs-sm);
+}
+.budget-inspector__head { margin-bottom: var(--space-xs); }
+.budget-inspector__title {
+  font-size: var(--fs-lg);
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.budget-inspector__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xs);
+}
+.budget-inspector__title-row .budget-inspector__title { flex: 1 1 auto; }
+.budget-inspector__hint {
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  margin: var(--space-3xs) 0 0;
+}
+.budget-inspector__section {
+  border-top: 1px solid var(--border-soft);
+  padding-top: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+.budget-inspector__break {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+.budget-inspector__break > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2xs);
+}
+.budget-inspector__break dt { color: var(--fg-muted); }
+.budget-inspector__break dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.budget-inspector__break-total {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 2px;
+  margin-top: 2px;
+}
+.budget-inspector__break-total dd { font-weight: 700; }
+.budget-inspector__note { resize: vertical; }
+.budget-inspector__txns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.budget-inspector__txns li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-xs);
+}
+.budget-inspector__txns li:last-child { border-bottom: 0; }
+.budget-inspector__txn-date {
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+.budget-inspector__txn-payee {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.budget-inspector__txns .num { flex: 0 0 auto; }
+.form-actions--tight { margin-top: var(--space-2xs); gap: var(--space-2xs); }
+
+/* The shared .form-actions goes sticky inside scroll containers
+   (forms.css) - inside the pane and sheet that overlays the field
+   above it. Static here. */
+.budget-inspector .form-actions,
+.modal--sheet .form-actions { position: static; }
+.modal--sheet .budget-inspector__body { padding-bottom: var(--space-md); }
+
+/* Bottom sheet: same modal chrome, pinned to the bottom edge. */
+.modal--sheet {
+  align-self: flex-end;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  max-height: 82vh;
+  overflow-y: auto;
+}
+/* The backdrop centers its modal; the sheet needs bottom alignment. */
+.modal-backdrop:has(.modal--sheet) { align-items: flex-end; padding: 0; }
+
+/* With the pane open, the full-width column recipes starve the name
+   column: non-fr minmax tracks grow to their MAX before fr gets
+   anything, so 3 x 9rem value columns in a 598px section left the
+   name 40px (measured; the name button then overlapped the Assigned
+   input). Give the name a hard 9rem floor and cap values at 7rem
+   while the pane is open. */
+@media (min-width: 1180px) {
+  .budget-layout--open .budget__group-header,
+  .budget-layout--open .budget__row {
+    grid-template-columns: minmax(9rem, 1fr) repeat(3, minmax(5.5rem, 7rem)) auto;
+  }
+  .budget-layout--open .budget__total-row {
+    grid-template-columns: minmax(9rem, 1fr) repeat(3, minmax(5.5rem, 7rem));
+  }
+  /* Multi-month recipe inside the open layout. */
+  .budget-layout--open .budget--m2 .budget__group-header,
+  .budget-layout--open .budget--m2 .budget__row {
+    grid-template-columns: minmax(8rem, 1fr) repeat(6, minmax(4.5rem, 6rem)) auto;
+  }
+}
+
+/* Toggle button chrome (in the budget toolbar). */
+.budget__inspector-toggle.is-active { color: var(--accent); }
