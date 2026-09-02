@@ -169,6 +169,11 @@ describe("verified semantics survive the index", () => {
     txn(p, { date: "2025-01-09", accountId: "card1", amount: -5000, categoryId: null });
     /* Payment INTO the card (positive transfer). */
     txn(p, { date: "2025-01-20", accountId: "card1", amount: 4000, transferTxnId: "tx-pair" });
+    /* A txn categorized DIRECTLY to the payment category (from a plain
+       checking account) must be IGNORED: activity() only derives
+       payment-category activity from the card, and a verifier found
+       nothing locking that exclusion in. */
+    txn(p, { date: "2025-01-12", accountId: "a1", amount: -2500, categoryId: "pay1" });
     const index = buildMonthIndex(p);
     expect(index.act["2025-01"]["pay1"]).toBe(12000 - 4000);
     expect(index.act["2025-01"]["pay1"]).toBe(activity(p, "pay1", "2025-01"));

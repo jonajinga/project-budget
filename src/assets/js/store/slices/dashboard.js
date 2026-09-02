@@ -4,7 +4,7 @@
    forces re-evaluation when something downstream changes. */
 
 import { isPaymentCategory } from "../../domain/categories.js";
-import { categoryRow, assigned as budgetAssigned } from "../../domain/budget.js";
+import { assigned as budgetAssigned } from "../../domain/budget.js";
 import { occurrencesIn } from "../../domain/scheduled.js";
 
 export const dashboardSlice = {
@@ -19,15 +19,14 @@ export const dashboardSlice = {
     if (!this.profile) return { count: 0, totalDeficit: 0 };
     var m = month || this.currentMonth;
     var self = this;
-    /* Memoized — overspentCount walks every category and computes
-       categoryRow (which walks all transactions) per category. At
-       40+ categories × 1k+ txns that's a major hot path. The
-       dashboard's KPI tile + alert + insight all read it. */
+    /* Memoized, and reading through the slice's table-backed
+       categoryRow (the month index) rather than the raw per-category
+       transaction scan it used before phase 1 of the budget revamp. */
     return this._memo("overspentCount:" + m, function () {
       var count = 0, deficit = 0;
       self.profile.categories.forEach(function (c) {
         if (isPaymentCategory(self.profile, c.id)) return;
-        var row = categoryRow(self.profile, c.id, m);
+        var row = self.categoryRow(c.id, m);
         if (row.available < 0) {
           count += 1;
           deficit += Math.abs(row.available);
