@@ -13,7 +13,7 @@
      card payments rather than from direct transactions on that category.
 */
 
-import { paymentCardId, paymentMap } from "./categories.js";
+import { paymentCardId } from "./categories.js";
 
 /**
  * ISO YYYY-MM string for the given date (defaults to now).
@@ -327,7 +327,12 @@ export function buildMonthIndex(profile) {
   var assignedTotal = {};
   var monthSet = new Set();
 
-  var pm = paymentMap(profile); /* cardAccountId -> payment category id */
+  /* Read the payment map WITHOUT paymentMap() - that helper lazily
+     WRITES profile.settings.creditCardPaymentMap when missing (the
+     bundled sample lacks it), and this function runs inside render
+     effects, where a reactive profile write kills effects
+     nondeterministically. A domain read must not mutate the profile. */
+  var pm = (profile.settings && profile.settings.creditCardPaymentMap) || {};
   var payCatSet = new Set(Object.values(pm));
 
   function bump(m, catId, cents) {

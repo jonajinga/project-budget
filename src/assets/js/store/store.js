@@ -92,6 +92,9 @@ import { budgetSlice } from "./slices/budget.js";
 import { transactionsSlice } from "./slices/transactions.js";
 import { rulesSlice } from "./slices/rules.js";
 
+/* Non-reactive memo cache, keyed by store instance (see _memo). */
+const _memoCaches = new WeakMap();
+
 export function createStore() {
   var base = {
     profiles: [],
@@ -141,11 +144,9 @@ export function createStore() {
        bindings re-evaluate on next tick. */
     _listVersion: 0,
     _bumpLists() {
+      /* Invalidates the _memo cache implicitly: it is keyed on
+         _listVersion (see _memo below). */
       this._listVersion += 1;
-      /* Invalidate the store-level memoization cache. Callers
-         pre-bumped will compute fresh values on next read. */
-      this._memoStore = null;
-      this._memoStoreVersion = -1;
     },
 
     /* Store-level memoization for expensive derivations (accountBalance,
@@ -154,17 +155,27 @@ export function createStore() {
        _bumpLists() drops the cache, so cached values are always fresh.
        Use for any pure function of `this.profile` that's called from
        multiple bindings per render (dashboard reads accountBalance for
-       every account; reports walk all transactions). */
-    _memoStore: null,
-    _memoStoreVersion: -1,
+       every account; reports walk all transactions).
+
+       The cache lives in a module-scoped WeakMap, NOT on the store:
+       the store is an Alpine reactive proxy, so a cache stored on it
+       fires has/get/set proxy traps on every memo hit and registers
+       cache keys as dependencies of whatever render effect happens to
+       be running. New-key writes during a later render then invalidate
+       effects that merely MISSED that key earlier — under enough keys
+       this killed the dashboard's effects nondeterministically (frozen
+       tab strip, store writes never reaching the screen). Reading
+       this._listVersion below is the ONE reactive read, and the only
+       one wanted. */
     _memo(key, compute) {
-      if (this._memoStoreVersion !== this._listVersion || !this._memoStore) {
-        this._memoStore = Object.create(null);
-        this._memoStoreVersion = this._listVersion;
+      var cache = _memoCaches.get(this);
+      if (!cache || cache.version !== this._listVersion) {
+        cache = { version: this._listVersion, map: Object.create(null) };
+        _memoCaches.set(this, cache);
       }
-      if (key in this._memoStore) return this._memoStore[key];
+      if (key in cache.map) return cache.map[key];
       var v = compute();
-      this._memoStore[key] = v;
+      cache.map[key] = v;
       return v;
     },
 
@@ -363,7 +374,13 @@ export function createStore() {
     storageBackend: "localStorage",
     storageMigration: null,    /* result of the one-time LS -> Dexie scan */
 
+    _bootStarted: false,
     init() {
+      /* Idempotence guard - see app.js: Alpine auto-inits registered
+         stores, and a second boot chain (whatever its receiver) must
+         never race the first. */
+      if (this._bootStarted) return;
+      this._bootStarted = true;
       this.loading = true;
       this.loadError = null;
       /* Safety: never let the loading overlay trap the UI. If init

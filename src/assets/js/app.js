@@ -5,8 +5,15 @@ import { createStore } from "./store/store.js";
 document.addEventListener("alpine:init", function () {
   if (!window.Alpine) return;
   var store = createStore();
+  /* Alpine.store() auto-calls init() on the registered store, through
+     the REACTIVE proxy. The explicit store.init() that used to follow
+     booted a second time on the RAW object - two racing async boot
+     chains, and the loser's _load() replaced this.profile with writes
+     that were invisible to reactivity (raw-object writes fire no
+     effects). Which chain lost was module-timing luck; when the raw
+     one lost, the dashboard seed vanished and the page froze on stale
+     state. One registration, one boot. init() is also guarded now. */
   window.Alpine.store("budget", store);
-  store.init();
 });
 
 /* ---- Tippy.js wiring -------------------------------------------------- */

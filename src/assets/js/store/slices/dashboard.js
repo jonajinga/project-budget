@@ -19,21 +19,22 @@ export const dashboardSlice = {
     if (!this.profile) return { count: 0, totalDeficit: 0 };
     var m = month || this.currentMonth;
     var self = this;
-    /* Memoized, and reading through the slice's table-backed
-       categoryRow (the month index) rather than the raw per-category
-       transaction scan it used before phase 1 of the budget revamp. */
-    return this._memo("overspentCount:" + m, function () {
-      var count = 0, deficit = 0;
-      self.profile.categories.forEach(function (c) {
-        if (isPaymentCategory(self.profile, c.id)) return;
-        var row = self.categoryRow(c.id, m);
-        if (row.available < 0) {
-          count += 1;
-          deficit += Math.abs(row.available);
-        }
-      });
-      return { count: count, totalDeficit: deficit };
+    /* Reads through the table-backed categoryRow (the month index) -
+       one memoized table build serves all 36 lookups, so this needs
+       no memo wrapper of its own. It briefly had one wrapped AROUND
+       the table reads; that memo-inside-memo variant broke dashboard
+       rendering (the tab strip froze after boot and store writes
+       stopped reaching the screen), so keep this single-level. */
+    var count = 0, deficit = 0;
+    this.profile.categories.forEach(function (c) {
+      if (isPaymentCategory(self.profile, c.id)) return;
+      var row = self.categoryRow(c.id, m);
+      if (row.available < 0) {
+        count += 1;
+        deficit += Math.abs(row.available);
+      }
     });
+    return { count: count, totalDeficit: deficit };
   },
 
   /**
