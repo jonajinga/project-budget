@@ -94,6 +94,29 @@ export const budgetSlice = {
     return sum;
   },
   /**
+   * The three components behind readyToAssign, for the inspector's
+   * month overview: cumulative inflow-to-budget, cumulative assigned,
+   * and prior-month overspending lost. inflow - assigned - lost ===
+   * readyToAssign(month) by construction.
+   * @param {string} [month]
+   * @returns {{inflow:number, assigned:number, lost:number, rta:number}}
+   */
+  rtaBreakdown(month) {
+    if (!this.profile) return { inflow: 0, assigned: 0, lost: 0, rta: 0 };
+    var m = month || this.currentMonth;
+    var idx = this._monthIndex();
+    var inflow = 0;
+    var assignedCum = 0;
+    idx.months.forEach(function (mm) {
+      if (mm > m) return;
+      inflow += idx.inflow[mm] || 0;
+      assignedCum += idx.assignedTotal[mm] || 0;
+    });
+    var rta = this.readyToAssign(m);
+    return { inflow: inflow, assigned: assignedCum, lost: inflow - assignedCum - rta, rta: rta };
+  },
+
+  /**
    * @param {id} categoryId
    * @param {string} [month]
    * @returns {number} cents assigned to the category in the month

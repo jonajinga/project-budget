@@ -162,3 +162,35 @@ describe("setCategoryNote", () => {
     expect(undos).toBe(0);
   });
 });
+
+/* ---- Phase 4 (budget revamp): hide / unhide ------------------------ */
+
+describe("setCategoryHidden", () => {
+  it("hides, excludes from budgetable ids, unhides, one undo entry each", () => {
+    var h = makeHost([accountsSlice, categoriesSlice]);
+    h.addCategoryGroup("Food");
+    var cat = h.addCategory({ name: "Groceries", groupId: h.profile.categoryGroups[0].id });
+    var undos = 0;
+    h._recordUndo = function () { undos += 1; };
+    expect(h.setCategoryHidden(cat.id, true)).toBe(true);
+    expect(h.findCategory(cat.id).hidden).toBe(true);
+    expect(undos).toBe(1);
+    expect(h.setCategoryHidden(cat.id, true), "no-op when already hidden").toBe(false);
+    expect(undos).toBe(1);
+    expect(h.setCategoryHidden(cat.id, false)).toBe(true);
+    expect(h.findCategory(cat.id).hidden).toBe(false);
+    expect(undos).toBe(2);
+  });
+
+  it("hiddenCategories lists them with their group names", () => {
+    var h = makeHost([accountsSlice, categoriesSlice]);
+    h.addCategoryGroup("Food");
+    var cat = h.addCategory({ name: "Groceries", groupId: h.profile.categoryGroups[0].id });
+    expect(h.hiddenCategories()).toEqual([]);
+    h.setCategoryHidden(cat.id, true);
+    var hid = h.hiddenCategories();
+    expect(hid.length).toBe(1);
+    expect(hid[0].id).toBe(cat.id);
+    expect(hid[0].groupName).toBe("Food");
+  });
+});

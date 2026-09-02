@@ -12,23 +12,55 @@
 
 {% macro inspectorBody() %}
   <div class="budget-inspector__body">
-    {# ---- Nothing selected: light month overview (phase 4 fills this
-       with the RTA breakdown + overspending fixes). ---- #}
+    {# ---- Month overview (nothing selected): where Ready-to-Assign
+       stops being an inert number. The breakdown surfaces the rule
+       that previously lived only in a source comment (prior-month
+       overspending reduces RTA), and every overspent category gets a
+       one-click cover from the deepest-pocketed visible category. #}
     <template x-if="!sel">
       <div class="budget-inspector__overview">
-        <p class="eyebrow">Inspector</p>
+        <p class="eyebrow">Month overview</p>
         <h2 class="budget-inspector__title" x-text="monthHeaderLabel()"></h2>
+
+        <section class="budget-inspector__section" aria-label="Ready to assign breakdown">
+          <dl class="budget-inspector__break">
+            <div><dt data-tip="Uncategorized income received through the end of this month.">Inflow to budget</dt>
+              <dd data-rta="inflow" x-text="formatCents(rtaBreak().inflow)"></dd></div>
+            <div><dt data-tip="Everything assigned to categories, this month and before.">Assigned so far</dt>
+              <dd data-rta="assigned" x-text="'-' + formatCents(rtaBreak().assigned)"></dd></div>
+            <div><dt data-tip="Overspending in PRIOR months does not follow the category - it comes out of Ready to Assign here.">Overspending lost</dt>
+              <dd data-rta="lost" :class="rtaBreak().lost > 0 ? 'amount--outflow' : ''"
+                  x-text="'-' + formatCents(rtaBreak().lost)"></dd></div>
+            <div class="budget-inspector__break-total"><dt>Ready to assign</dt>
+              <dd data-rta="rta" :class="rtaBreak().rta < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(rtaBreak().rta)"></dd></div>
+          </dl>
+        </section>
+
+        <section class="budget-inspector__section" aria-label="Overspent categories"
+                 x-show="overspentCategories($store.budget.currentMonth).length" x-cloak>
+          <p class="field__label">Overspent this month</p>
+          <ul class="budget-inspector__overspent">
+            <template x-for="o in overspentCategories($store.budget.currentMonth)" :key="'ov-' + o.id">
+              <li :data-overspent-id="o.id">
+                <span class="budget-inspector__txn-payee" x-text="o.name"></span>
+                <span class="num amount--outflow" x-text="'-' + formatCents(o.deficit)"></span>
+                <button type="button" class="btn btn--secondary btn--sm"
+                        :disabled="!coverDonor(o.id, $store.budget.currentMonth)"
+                        :data-tip="coverDonor(o.id, $store.budget.currentMonth)
+                          ? 'Move ' + formatCents(o.deficit) + ' from ' + coverDonor(o.id, $store.budget.currentMonth).name + ' (the category with the most available).'
+                          : 'No visible category has money available.'"
+                        @click="coverOverspent(o.id, $store.budget.currentMonth)"
+                        x-text="'Cover from ' + (coverDonor(o.id, $store.budget.currentMonth)?.name || '...')"></button>
+              </li>
+            </template>
+          </ul>
+        </section>
+
         <p class="budget-inspector__hint">
           Select a category name or an Available pill to see its
           breakdown, notes, goal, and recent activity here.
         </p>
-        <dl class="budget-inspector__break">
-          <div><dt>Ready to assign</dt>
-            <dd :class="rtaCents() < 0 ? 'amount--outflow' : ''"
-                x-text="formatCents(rtaCents())"></dd></div>
-          <div><dt>Assigned this month</dt>
-            <dd x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></dd></div>
-        </dl>
       </div>
     </template>
 
@@ -76,6 +108,40 @@
               <dd data-break="available" :class="(selRow()?.available || 0) < 0 ? 'amount--outflow' : 'amount--inflow'"
                   x-text="formatCents(selRow()?.available || 0)"></dd></div>
           </dl>
+        </section>
+
+        {# One-click quick fills - the four strategies that used to cost
+           4-5 clicks through the auto-assign modal, applied to THIS
+           category and month via applyAssignments (one undo entry). #}
+        <section class="budget-inspector__section" aria-label="Quick budget">
+          <p class="field__label">Quick budget</p>
+          <div class="budget-inspector__fills">
+            <button type="button" class="btn btn--secondary btn--sm"
+                    x-show="$store.budget.findGoal(sel.catId)" x-cloak
+                    :disabled="quickFillValue('goal') <= 0"
+                    :data-tip="quickFillValue('goal') > 0 ? 'Add what the goal still needs this month.' : 'The goal is already funded this month.'"
+                    @click="applyQuickFill('goal', 'Fund goal')">
+              Underfunded (goal) <span class="num" x-text="'+' + formatCents(quickFillValue('goal'))"></span>
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm"
+                    :disabled="quickFillValue('last-assigned') <= 0"
+                    data-tip="Copy what you assigned last month."
+                    @click="applyQuickFill('last-assigned', 'Last month\'s assigned')">
+              Last month's assigned <span class="num" x-text="formatCents(quickFillValue('last-assigned'))"></span>
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm"
+                    :disabled="quickFillValue('last-spent') <= 0"
+                    data-tip="Assign what this category actually spent last month."
+                    @click="applyQuickFill('last-spent', 'Last month\'s spending')">
+              Last month's spending <span class="num" x-text="formatCents(quickFillValue('last-spent'))"></span>
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm"
+                    :disabled="quickFillValue('avg-3') <= 0"
+                    data-tip="Assign the average of the last three months of spending."
+                    @click="applyQuickFill('avg-3', '3-month average')">
+              Average of last 3 months <span class="num" x-text="formatCents(quickFillValue('avg-3'))"></span>
+            </button>
+          </div>
         </section>
 
         {# Notes - per-category, persistent (commit on blur only). #}
@@ -197,6 +263,12 @@
                :href="'/app/register/?category=' + sel.catId">Open in register</a>
           </div>
         </section>
+
+        <section class="budget-inspector__section">
+          <button type="button" class="btn btn--ghost btn--sm"
+                  data-tip="Remove this category from the grid. Its money, activity and goal are kept; unhide it any time from the list below the grid."
+                  @click="hideSelected()">Hide category</button>
+        </section>
       </div>
     </template>
   </div>
@@ -214,11 +286,11 @@
 
 {# Bottom sheet (<1024): the app's modal chrome gives the focus trap
    and restore for free (main.js MutationObserver). #}
-<template x-if="!inspectorDocked && sel">
+<template x-if="!inspectorDocked && (sel || overviewOpen)">
   <div class="modal-backdrop" @click.self="clearSel()"
        @keydown.escape.window="clearSel()">
     <div class="modal modal--sheet" role="dialog" aria-modal="true"
-         :aria-label="'Inspect ' + (selCategory()?.name || 'category')">
+         :aria-label="sel ? ('Inspect ' + (selCategory()?.name || 'category')) : 'Month overview'">
       <button class="modal__close" type="button" @click="clearSel()" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>

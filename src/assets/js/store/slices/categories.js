@@ -218,6 +218,43 @@ export const categoriesSlice = {
     return true;
   },
 
+  /**
+   * Hide or unhide a category. Hidden categories leave the grid but
+   * keep their money, activity, and goals; hiding is reversible from
+   * the "Hidden categories" disclosure. No-op when unchanged.
+   * @param {id} categoryId
+   * @param {boolean} hidden
+   * @returns {boolean} true if the flag changed
+   */
+  setCategoryHidden(categoryId, hidden) {
+    if (!this.profile) return false;
+    var c = findCategoryImpl(this.profile, categoryId);
+    if (!c) return false;
+    var next = !!hidden;
+    if (!!c.hidden === next) return false;
+    this._recordUndo(next ? "Hide category" : "Unhide category");
+    c.hidden = next;
+    this._bumpLists();
+    this._save();
+    return true;
+  },
+  /**
+   * Hidden categories with their group names, for the disclosure
+   * below the budget grid. Reads _listVersion for reactivity.
+   * @returns {object[]} [{id, name, groupName}]
+   */
+  hiddenCategories() {
+    void this._listVersion;
+    if (!this.profile) return [];
+    var self = this;
+    return (this.profile.categories || [])
+      .filter(function (c) { return !!c.hidden; })
+      .map(function (c) {
+        var g = c.groupId ? findCategoryGroupImpl(self.profile, c.groupId) : null;
+        return { id: c.id, name: c.name, groupName: g ? g.name : "" };
+      });
+  },
+
   /* ---- Derivations / lookups ---- */
   /** @param {id} id @returns {object|null} */
   findCategory(id) { return this.profile ? findCategoryImpl(this.profile, id) : null; },

@@ -163,3 +163,24 @@ describe("quick-assign helpers", () => {
     expect(ctx.host.quickAvg(ctx.dining.id, "2024-03", 3)).toBe(0);
   });
 });
+
+describe("rtaBreakdown", () => {
+  it("components equal readyToAssign: inflow - assigned - lost", () => {
+    var ctx = build();
+    ctx.host.profile.transactions.push({
+      id: "t-inflow", date: "2024-01-05", amount: 100000,
+      accountId: "a1", categoryId: null, transferTxnId: null,
+    });
+    ctx.host.assign(ctx.groceries.id, "2024-01", 10000);
+    ctx.host.profile.transactions.push({
+      id: "t-spend", date: "2024-01-10", amount: -30000,
+      accountId: "a1", categoryId: ctx.groceries.id, transferTxnId: null,
+    });
+    ctx.host._bumpLists();
+    var b = ctx.host.rtaBreakdown("2024-02");
+    expect(b.inflow).toBe(100000);
+    expect(b.assigned).toBe(10000);
+    expect(b.lost).toBe(20000);
+    expect(b.inflow - b.assigned - b.lost).toBe(ctx.host.readyToAssign("2024-02"));
+  });
+});

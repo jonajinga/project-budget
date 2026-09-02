@@ -269,7 +269,7 @@ function budgetView() {
       if (this.inspectorDocked && !this.inspectorOpen) this.setInspectorOpen(true);
       this._loadInspectorState();
     },
-    clearSel() { this.sel = null; },
+    clearSel() { this.sel = null; this.overviewOpen = false; },
     setInspectorOpen(open) {
       this.inspectorOpen = !!open;
       try { localStorage.setItem("projectbudget:budget-inspector-open", open ? "1" : "0"); } catch (_e) {}
@@ -331,6 +331,103 @@ function budgetView() {
       });
       out.sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); });
       return out.slice(0, 5);
+    },
+
+    /* ---- Quick fills + month overview + hide (phase 4) ---------- */
+    overviewOpen: false,
+    hiddenOpen: false,
+    openOverview() {
+      this.sel = null;
+      if (this.inspectorDocked) this.setInspectorOpen(true);
+      else this.overviewOpen = true;
+    },
+    closeInspectorSurface() {
+      this.sel = null;
+      this.overviewOpen = false;
+    },
+    rtaBreak() {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.rtaBreakdown(this.$store.budget.currentMonth);
+    },
+    /* The four one-click fills for the SELECTED category + month.
+       Kind maps to the store quick helpers; every write goes through
+       applyAssignments (one undo entry, one save). */
+    quickFillValue(kind) {
+      if (!this.sel) return 0;
+      var s = this.$store.budget;
+      var id = this.sel.catId;
+      var m = this.sel.month;
+      if (kind === "goal") return s.findGoal(id) ? (s.quickGoalTarget(id, m) || 0) : 0;
+      if (kind === "last-assigned") return s.quickLastMonthAssigned(id, m) || 0;
+      if (kind === "last-spent") return s.quickLastMonthSpent(id, m) || 0;
+      if (kind === "avg-3") return s.quickAvg(id, m, 3) || 0;
+      return 0;
+    },
+    applyQuickFill(kind, label) {
+      if (!this.sel) return;
+      var v = this.quickFillValue(kind);
+      if (v <= 0) return;
+      var s = this.$store.budget;
+      var map = {};
+      /* The goal fill ADDS what is still needed; the others REPLACE. */
+      map[this.sel.catId] = kind === "goal"
+        ? (s.assignedFor(this.sel.catId, this.sel.month) || 0) + v
+        : v;
+      s.applyAssignments(map, this.sel.month, label);
+      s.pushToast(label + ": " + this.formatCents(map[this.sel.catId]) + " assigned.");
+    },
+    /* Overspent (available < 0) non-payment categories for a month. */
+    overspentCategories(month) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var p = s.profile;
+      if (!p) return [];
+      var m = month || s.currentMonth;
+      var out = [];
+      (p.categories || []).forEach(function (c) {
+        if (c.hidden || s.isPaymentCategory(c.id)) return;
+        var row = s.categoryRow(c.id, m);
+        if (row.available < 0) out.push({ id: c.id, name: c.name, deficit: -row.available });
+      });
+      out.sort(function (a, b) { return b.deficit - a.deficit; });
+      return out;
+    },
+    /* Suggested donor: the visible, non-payment, non-income category
+       with the most Available this month. */
+    coverDonor(excludeId, month) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var p = s.profile;
+      if (!p) return null;
+      var m = month || s.currentMonth;
+      var best = null;
+      (p.categories || []).forEach(function (c) {
+        if (c.id === excludeId || c.hidden) return;
+        if (s.isPaymentCategory(c.id) || s.isIncomeCategory(c.id)) return;
+        var avail = s.categoryRow(c.id, m).available;
+        if (avail > 0 && (!best || avail > best.available)) best = { id: c.id, name: c.name, available: avail };
+      });
+      return best;
+    },
+    coverOverspent(catId, month) {
+      var s = this.$store.budget;
+      var m = month || s.currentMonth;
+      var deficit = -s.categoryRow(catId, m).available;
+      if (deficit <= 0) return;
+      var donor = this.coverDonor(catId, m);
+      if (!donor) { s.pushToast("No category has money available to cover from.", "danger"); return; }
+      if (s.moveMoney(donor.id, catId, deficit, m)) {
+        s.pushToast("Covered " + this.formatCents(deficit) + " from " + donor.name + ".");
+      }
+    },
+    hideSelected() {
+      if (!this.sel) return;
+      var s = this.$store.budget;
+      var name = s.categoryName(this.sel.catId);
+      if (s.setCategoryHidden(this.sel.catId, true)) {
+        s.pushToast(name + " hidden. Its money stays counted; unhide it from the list below the grid.");
+        this.closeInspectorSurface();
+      }
     },
 
     /* ---- Multi-month columns (phase 2) --------------------------

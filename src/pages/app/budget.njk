@@ -70,14 +70,17 @@ eleventyExcludeFromCollections: true
            accent-filled) and Assigned (the supporting context, neutral
            outline). Same component, same shape, different emphasis,
            so the eye reads them as one block. #}
-        <span class="budget-stat budget-stat--accent"
+        {# The RTA stat is now the door to the month overview - where
+           its breakdown lives and overspending gets fixed. It used to
+           be an inert span with only a tooltip to explain itself. #}
+        <button type="button" class="budget-stat budget-stat--accent budget-stat--btn"
               :class="rtaCents() < 0 ? 'budget-stat--danger' : (rtaCents() === 0 ? 'budget-stat--muted' : '')"
-              :data-tip="rtaCents() < 0 ? 'You assigned more than you have. Remove some assignments or wait for inflow.' : (rtaCents() === 0 ? 'Every dollar is assigned.' : 'Inflow not yet given a job.')"
-              role="status"
-              :aria-label="'Ready to assign: ' + formatCents(rtaCents())">
+              :data-tip="(rtaCents() < 0 ? 'You assigned more than you have. ' : (rtaCents() === 0 ? 'Every dollar is assigned. ' : 'Inflow not yet given a job. ')) + 'Click for the breakdown and overspending fixes.'"
+              @click="openOverview()"
+              :aria-label="'Ready to assign: ' + formatCents(rtaCents()) + '. Open the month overview.'">
           <span class="budget-stat__label">Ready to assign</span>
           <strong class="budget-stat__value" x-text="formatCents(rtaCents())"></strong>
-        </span>
+        </button>
         <span class="budget-stat"
               data-tip="Dollars committed to categories this month so far."
               :aria-label="'Assigned this month: ' + formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))">
@@ -480,6 +483,32 @@ eleventyExcludeFromCollections: true
           </span>
         </div>
       </template>
+    </div>
+    {# Hidden categories - the way back. Hiding used to be a one-way
+       door: categoryGroupsView filters hidden and no surface listed
+       them again. #}
+    <div class="budget__hidden" x-show="$store.budget.hiddenCategories().length" x-cloak>
+      <button type="button" class="budget__hidden-toggle"
+              @click="hiddenOpen = !hiddenOpen"
+              :aria-expanded="hiddenOpen.toString()"
+              :aria-label="'Hidden categories (' + $store.budget.hiddenCategories().length + ')'">
+        <span class="group-toggle__chevron" :class="hiddenOpen ? '' : 'is-collapsed'" aria-hidden="true">&#9662;</span>
+        Hidden categories (<span x-text="$store.budget.hiddenCategories().length"></span>)
+      </button>
+      <ul class="budget__hidden-list" x-show="hiddenOpen" x-cloak>
+        <template x-for="hc in $store.budget.hiddenCategories()" :key="'hid-' + hc.id">
+          <li>
+            <span class="budget__hidden-name">
+              <span x-text="hc.name"></span>
+              <span class="budget__hidden-group" x-show="hc.groupName" x-text="hc.groupName"></span>
+            </span>
+            <span class="num" x-text="formatCents(categoryAvailable(hc.id))"></span>
+            <button type="button" class="btn btn--secondary btn--sm"
+                    data-tip="Bring this category back into the grid."
+                    @click="$store.budget.setCategoryHidden(hc.id, false); $store.budget.pushToast(hc.name + ' unhidden.')">Unhide</button>
+          </li>
+        </template>
+      </ul>
     </div>
   </section>
   {% include "partials/budget-inspector.njk" %}
