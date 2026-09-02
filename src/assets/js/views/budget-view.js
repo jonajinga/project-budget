@@ -294,6 +294,7 @@ function budgetView() {
         ? { type: g.type, target: ((g.target || 0) / 100).toFixed(2), byDate: g.byDate || "" }
         : { type: "monthlyFixed", target: "", byDate: "" };
       this.moveMoneyForm = { fromId: this.sel.catId, toId: "", amount: "", month: this.sel.month };
+      this._loadCutForm();
     },
     commitNote() {
       if (!this.sel) return;
@@ -420,6 +421,51 @@ function budgetView() {
         s.pushToast("Covered " + this.formatCents(deficit) + " from " + donor.name + ".");
       }
     },
+    /* ---- Reduction planning (phase 6) ---- */
+    cutForm: { mode: "percent", value: "", goalLabel: "", targetMonth: "" },
+    _loadCutForm() {
+      var cut = this.sel ? this.$store.budget.cutForCategory(this.sel.catId) : null;
+      this.cutForm = cut
+        ? { mode: cut.mode,
+            value: cut.mode === "percent" ? String(cut.value / 100) : ((cut.value || 0) / 100).toFixed(2),
+            goalLabel: cut.goalLabel || "",
+            targetMonth: cut.targetMonth || "" }
+        : { mode: "percent", value: "", goalLabel: "", targetMonth: "" };
+    },
+    saveCut() {
+      if (!this.sel) return;
+      var s = this.$store.budget;
+      var raw = this.cutForm.value;
+      var value = this.cutForm.mode === "percent"
+        ? Math.round((parseFloat(raw) || 0) * 100)   /* 25 -> 2500 bp */
+        : this.parseDollars(raw);
+      if (value <= 0) return;
+      s.addCut({
+        categoryId: this.sel.catId,
+        mode: this.cutForm.mode,
+        value: value,
+        goalLabel: this.cutForm.goalLabel,
+        targetMonth: this.cutForm.targetMonth || null,
+      });
+      s.pushToast("Cut planned for " + s.categoryName(this.sel.catId) + ".");
+    },
+    removeCutSelected() {
+      if (!this.sel) return;
+      var s = this.$store.budget;
+      var cut = s.cutForCategory(this.sel.catId);
+      if (cut && s.removeCut(cut.id)) {
+        s.pushToast("Cut removed.");
+        this._loadCutForm();
+      }
+    },
+    cutBadgeText(catId) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var cut = s.cutForCategory(catId);
+      if (!cut) return "";
+      return "-" + this.formatCents(s.cutTargetFor(cut.id)) + "/mo";
+    },
+
     hideSelected() {
       if (!this.sel) return;
       var s = this.$store.budget;

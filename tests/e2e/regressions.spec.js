@@ -41,7 +41,7 @@ test("profile collection fields are always arrays", async ({ seeded }) => {
   await gotoApp(page, "/app/budget/");
   const shape = await page.evaluate(() => {
     const p = window.Alpine.store("budget").profile;
-    const fields = ["accounts", "categories", "transactions", "goals", "budgetTemplates", "savedViews", "snapshots"];
+    const fields = ["accounts", "categories", "transactions", "goals", "budgetTemplates", "savedViews", "snapshots", "reductions"];
     return fields.filter((f) => !Array.isArray(p[f]));
   });
   expect(shape, "these profile fields must be arrays").toEqual([]);

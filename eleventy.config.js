@@ -23,6 +23,7 @@ const CSS_PARTIAL_ORDER = [
   "register.css",
   "budget.css",
   "budget-inspector.css",
+  "budget-cuts.css",
   "reports.css",
   "docs.css",
   "forms.css",

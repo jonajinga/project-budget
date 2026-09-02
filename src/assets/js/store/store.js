@@ -82,6 +82,7 @@ import { dashboardSlice } from "./slices/dashboard.js";
 import { dashboardsSlice } from "./slices/dashboards.js";
 import { importExportSlice } from "./slices/import-export.js";
 import { goalsSlice } from "./slices/goals.js";
+import { cutsSlice } from "./slices/cuts.js";
 import { reconcileSlice } from "./slices/reconcile.js";
 import { scheduledSlice } from "./slices/scheduled.js";
 import { payeesSlice } from "./slices/payees.js";
@@ -861,6 +862,7 @@ export function createStore() {
     scheduledSlice,
     reconcileSlice,
     goalsSlice,
+    cutsSlice,
     importExportSlice,
     reportsSlice,
     dashboardSlice,

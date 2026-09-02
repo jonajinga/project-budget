@@ -57,6 +57,41 @@
           </ul>
         </section>
 
+        <section class="budget-inspector__section" aria-label="Planned cuts impact"
+                 x-show="$store.budget.listCuts().length" x-cloak>
+          <p class="field__label">Planned cuts</p>
+          <dl class="budget-inspector__break">
+            <div><dt>Planned savings</dt>
+              <dd data-cuts="planned" class="amount--inflow"
+                  x-text="'+' + formatCents($store.budget.cutsSummaryFor($store.budget.currentMonth).monthlyPlanned) + '/mo'"></dd></div>
+            <div><dt>Realized this month</dt>
+              <dd data-cuts="realized"
+                  x-text="formatCents($store.budget.cutsSummaryFor($store.budget.currentMonth).monthlyRealized)"></dd></div>
+            <div><dt>Over a year</dt>
+              <dd data-cuts="annual" x-text="formatCents($store.budget.cutsSummaryFor($store.budget.currentMonth).annualPlanned)"></dd></div>
+            <div><dt data-tip="Planned monthly savings as a share of your average monthly inflow (last 3 months).">Share of income</dt>
+              <dd x-text="$store.budget.cutsSummaryFor($store.budget.currentMonth).pctOfAvgInflow + '%'"></dd></div>
+            <div><dt data-tip="Each achieved month leaves this much more in Ready to Assign than the baseline trajectory.">Ready to assign</dt>
+              <dd x-text="'+' + formatCents($store.budget.cutsSummaryFor($store.budget.currentMonth).projectedRtaDelta) + '/mo'"></dd></div>
+            <div x-show="$store.budget.ageOfMoneyStat() != null" x-cloak>
+              <dt data-tip="How old the dollars you spend are (YNAB's metric) - and where the cuts would push it.">Age of money</dt>
+              <dd data-cuts="aom"
+                  x-text="$store.budget.ageOfMoneyStat() + ' days'
+                    + ($store.budget.projectedAgeOfMoneyStat($store.budget.currentMonth) > $store.budget.ageOfMoneyStat()
+                       ? ' -> ' + $store.budget.projectedAgeOfMoneyStat($store.budget.currentMonth) + ' days'
+                       : '')"></dd></div>
+          </dl>
+          <ul class="budget-inspector__cutlist">
+            <template x-for="cut in $store.budget.listCuts()" :key="'cut-' + cut.id">
+              <li>
+                <span class="budget-inspector__txn-payee"
+                      x-text="$store.budget.categoryName(cut.categoryId) + (cut.goalLabel ? ' · ' + cut.goalLabel : '')"></span>
+                <span class="num" x-text="($store.budget.cutProgressFor(cut.id, $store.budget.currentMonth)?.pct || 0) + '%'"></span>
+              </li>
+            </template>
+          </ul>
+        </section>
+
         <p class="budget-inspector__hint">
           Select a category name or an Available pill to see its
           breakdown, notes, goal, and recent activity here.
@@ -262,6 +297,69 @@
             <a class="btn btn--ghost btn--sm"
                :href="'/app/register/?category=' + sel.catId">Open in register</a>
           </div>
+        </section>
+
+        {# Reduction planning - our own take on budgeting: mark this
+           line item with a $/% monthly cut against its frozen 3-month
+           baseline, optionally toward a named goal, and watch the
+           month overview total the impact. #}
+        <section class="budget-inspector__section" aria-label="Planned cut">
+          <p class="field__label">Planned cut</p>
+          <div class="budget-inspector__cut-status"
+               x-show="$store.budget.cutForCategory(sel.catId)" x-cloak>
+            <template x-if="$store.budget.cutForCategory(sel.catId)">
+              <div>
+                <div class="goal-bar" :style="'--pct:' + ($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0)"
+                     :class="($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0) >= 100 ? 'goal-bar--funded' : 'goal-bar--accent'"
+                     role="progressbar" aria-label="Cut progress this month"
+                     :aria-valuenow="$store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0"
+                     aria-valuemin="0" aria-valuemax="100">
+                  <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
+                  <span class="goal-bar__cap" x-text="($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0) + '%'"></span>
+                </div>
+                <p class="budget-inspector__hint"
+                   x-text="(function (s, self) {
+                     var cut = s.cutForCategory(self.sel.catId);
+                     var pr = s.cutProgressFor(cut.id, self.sel.month);
+                     if (!pr) return '';
+                     return 'Baseline ' + self.formatCents(pr.baseline) + '/mo. Saved ' + self.formatCents(pr.saved)
+                          + ' of the ' + self.formatCents(pr.target) + ' planned this month'
+                          + (cut.goalLabel ? ' toward ' + cut.goalLabel : '') + '.';
+                   })($store.budget, $data)"></p>
+              </div>
+            </template>
+          </div>
+          <form @submit.prevent="saveCut()">
+            <div class="form-row">
+              <div class="field">
+                <label class="field__label" for="insp-cut-mode">Cut by</label>
+                <select class="select" id="insp-cut-mode" x-model="cutForm.mode">
+                  <option value="percent">% of baseline</option>
+                  <option value="amount">$ per month</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="insp-cut-value" x-text="cutForm.mode === 'percent' ? 'Percent' : 'Amount'"></label>
+                <input class="input" id="insp-cut-value" type="text" inputmode="decimal"
+                       x-model="cutForm.value" :placeholder="cutForm.mode === 'percent' ? '25' : '50.00'">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="insp-cut-goal">Goal (optional)</label>
+              <input class="input" id="insp-cut-goal" type="text" x-model="cutForm.goalLabel"
+                     placeholder="e.g. Vacation fund">
+            </div>
+            <div class="field">
+              <label class="field__label" for="insp-cut-month">Reach it by (optional)</label>
+              <input class="input" id="insp-cut-month" type="month" x-model="cutForm.targetMonth">
+            </div>
+            <div class="form-actions form-actions--tight">
+              <button class="btn btn--secondary btn--sm" type="submit">Save cut</button>
+              <button class="btn btn--ghost btn--sm" type="button"
+                      x-show="$store.budget.cutForCategory(sel.catId)" x-cloak
+                      @click="removeCutSelected()">Remove cut</button>
+            </div>
+          </form>
         </section>
 
         <section class="budget-inspector__section">

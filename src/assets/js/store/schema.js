@@ -53,6 +53,9 @@ export function newProfile(name) {
     budgets: {},
     goals: [],
     dashboards: [],
+    /* Reduction planning (budget revamp phase 6): per-category cut
+       targets. See newReduction(). */
+    reductions: [],
     settings: {},
   };
 }
@@ -153,6 +156,32 @@ export function newBudgetMonth(month) {
   return { month: month, assigned: {}, notes: {} };
 }
 
+/**
+ * A reduction plan ("planned cut"): reduce a category's spending by a
+ * $ amount or a % of its FROZEN baseline (mean outflow of the 3 months
+ * before startMonth) every month, optionally toward a named goal.
+ * @param {object} opts {categoryId, mode: "amount"|"percent",
+ *   value (cents, or basis points: 1000 = 10%), startMonth,
+ *   goalLabel?, targetMonth?}
+ */
+export function newReduction(opts) {
+  var now = new Date().toISOString();
+  return {
+    id: newId(),
+    categoryId: opts.categoryId,
+    mode: opts.mode === "percent" ? "percent" : "amount",
+    value: Math.max(0, Math.round(Number(opts.value) || 0)),
+    baselineKind: "avg3",
+    startMonth: opts.startMonth,
+    goalLabel: (opts.goalLabel || "").trim(),
+    targetMonth: opts.targetMonth || null,
+    createdAt: now,
+    updatedAt: now,
+    version: 1,
+    deletedAt: null,
+  };
+}
+
 export function newGoal(opts) {
   return {
     id: newId(),
@@ -184,6 +213,7 @@ var ARRAY_FIELDS = [
      only the read path is common to all of them. This entry is what
      guarantees the field is an array when that read happens. */
   "dashboards",
+  "reductions",
 ];
 
 /* Runs on every load, independent of schemaVersion, so a profile already

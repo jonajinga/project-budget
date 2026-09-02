@@ -323,6 +323,11 @@ eleventyExcludeFromCollections: true
                               @click="selectCategory(c)"
                               :data-tip="'Open ' + c.name + ' in the inspector: breakdown, notes, goal, recent activity.'"
                               x-text="c.name"></button>
+                      <span class="cut-badge"
+                            x-show="$store.budget.cutForCategory(c.id)"
+                            x-cloak
+                            :data-tip="'Planned cut: ' + cutBadgeText(c.id) + ' against the 3-month baseline. Details in the inspector.'"
+                            x-text="cutBadgeText(c.id)"></span>
                       <span class="goal-badge"
                             x-show="$store.budget.findGoal(c.id)"
                             x-cloak
