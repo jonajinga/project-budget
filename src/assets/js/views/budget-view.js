@@ -816,10 +816,6 @@ function budgetView() {
         },
       ];
     },
-    autoAssignAffectedCount() {
-      if (!this.autoAssignChoice) return 0;
-      return Object.keys(this._autoAssignPlan(this.autoAssignChoice).cats).length;
-    },
     /* Strategy-specific footer blurb. Each one names what's actually
        happening ("fund goals", "copy last month", etc.) instead of
        the generic "Will set Assigned for N categories". Total is
@@ -1227,13 +1223,6 @@ function budgetView() {
       return this.$store.budget.categoryRow(catId, month).available;
     },
 
-    availableClass(catId) {
-      var v = this.categoryAvailable(catId);
-      if (v > 0) return "budget__available--green";
-      if (v === 0) return "budget__available--zero";
-      return "budget__available--red";
-    },
-
     /* Pill color for the Available column:
        - red    : overspent (v < 0)
        - zero   : muted gray (v === 0)
@@ -1251,17 +1240,6 @@ function budgetView() {
       }
       return "available-pill--blue";
     },
-    /* Same color rules but driven by a sum across multiple categories
-       (a group's total). Skips the per-cat goal check — at group
-       level there's no single goal to evaluate; positive sums get
-       blue, negative red, zero muted. */
-    groupAvailablePillClass(cats) {
-      var v = this.groupTotalAvailable(cats);
-      if (v < 0) return "available-pill--red";
-      if (v === 0) return "available-pill--zero";
-      return "available-pill--blue";
-    },
-
     /* Touching _listVersion forces these aggregations to re-evaluate
        on any store mutation, even when the dependency chain crosses
        a function boundary that Alpine's proxy traversal might not

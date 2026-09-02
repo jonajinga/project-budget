@@ -25,20 +25,6 @@
     flex-wrap: wrap;
   }
 }
-.budget__month {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  font-family: var(--font-display);
-  font-size: var(--fs-xl);
-}
-.budget__month-button {
-  width: 44px; height: 44px;
-  min-height: 44px; min-width: 44px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  font-size: 1.1rem;
-}
 
 .budget__group {
   border-bottom: 1px solid var(--border-soft);
@@ -164,8 +150,7 @@
      height. Cap its width so it reads as a field rather than a banner, and
      keep it on the 44px touch floor -- it is a number entry people tap
      repeatedly, and this is not the place to shave pixels. */
-  .budget__assigned input,
-  .budget__assigned .budget__assign-input {
+  .budget__assigned input {
     width: 100%;
     max-width: 100%;
     text-align: right;
@@ -445,7 +430,12 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m3 .budget__row .available-pill {
     padding-left: 0.4rem;
     padding-right: 0.4rem;
+    /* The single-month pill carries min-width: 7rem from its >=600px
+       rule - wider than a 3-up track, so it overflowed under the
+       kebab column no matter the font. Let the track size it. */
+    min-width: 0;
   }
+  .budget--m3 .budget__row .available-pill { font-size: var(--fs-xs); }
   .budget--m2 .budget__category,
   .budget--m2 .budget__assigned,
   .budget--m2 .budget__activity,
@@ -464,7 +454,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     grid-template-areas: none;
     /* Same name-column floor; value columns cap lower at 3-up so the
        name keeps breathing room inside ~1000px of content width. */
-    grid-template-columns: minmax(9rem, 1.2fr) repeat(9, minmax(4.25rem, 6.5rem)) auto;
+    grid-template-columns: minmax(9rem, 1.2fr) repeat(9, minmax(4.6rem, 6.5rem)) auto;
     column-gap: var(--space-2xs);
   }
   .budget--m3 .budget__category,
@@ -632,12 +622,10 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   flex: 1 1 auto;
   min-width: 4ch;
 }
-.budget__group-actions { flex: 0 0 auto; max-width: 100%; flex-wrap: wrap; }
 @media (max-width: 599px) {
   /* Action clusters wrap to their own row on mobile instead of
      stealing space from the category/group title. Names get their
      natural width, actions sit on a second row below. */
-  .budget__group-actions,
   .budget__row-actions {
     flex-basis: 100%;
     flex-wrap: wrap;
@@ -685,30 +673,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     text-overflow: ellipsis;
   }
 }
-/* Same fade-in pattern for the group header's inline actions.
-   nowrap + flex-shrink: 0 keeps the cluster pinned next to the
-   title even on narrow viewports (otherwise the cluster wraps
-   below the title, breaking the visual hierarchy). */
-.budget__group-actions {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  flex-shrink: 0;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity var(--t-fast);
-}
-.budget__group:hover .budget__group-actions,
-.budget__group:focus-within .budget__group-actions { opacity: 1; }
-.budget__group-actions .btn--icon {
-  width: 32px; min-width: 32px;
-  height: 32px; min-height: 32px;
-  position: relative;
-}
-.budget__group-actions .btn--icon::before {
-  content: ""; position: absolute; inset: -6px;
-}
 @media (hover: none) {
-  .budget__group-actions { opacity: 1; }
 }
 /* Right-edge of the input text must line up with the right-edge of the
    group total spans in the same column. Zero horizontal padding +
@@ -1032,13 +997,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   align-items: center;
   gap: var(--space-2xs);
   flex-wrap: wrap;
-}
-.budget__total-readout {
-  margin: 0;
-  color: var(--fg-muted);
-  font-size: var(--fs-xs);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /* ---- Available pill -----------------------------------------------
