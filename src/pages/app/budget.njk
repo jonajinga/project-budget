@@ -125,6 +125,23 @@ eleventyExcludeFromCollections: true
                     @click="open = false; saveCurrentView()">Save current view</button>
           </li>
         {% endcall %}
+        {# 1/2/3 parallel month columns (Actual Budget's model). Only
+           offered when the viewport can hold more than one; the picker
+           itself never appears on phones. #}
+        <div class="budget__months-picker" role="group" aria-label="Visible months"
+             x-show="viewportMaxMonths > 1" x-cloak>
+          <template x-for="n in [1, 2, 3]" :key="'mc-' + n">
+            <button type="button" class="budget__months-btn"
+                    :class="monthCount === n ? 'is-active' : ''"
+                    :disabled="n > viewportMaxMonths"
+                    :aria-pressed="(monthCount === n).toString()"
+                    :aria-label="'Show ' + n + ' month' + (n === 1 ? '' : 's')"
+                    :data-tip="n > viewportMaxMonths
+                      ? 'Widen the window to fit ' + n + ' months.'
+                      : (n === 1 ? 'Show a single month.' : 'Show ' + n + ' months side by side.')"
+                    @click="setMonthCount(n)" x-text="n"></button>
+          </template>
+        </div>
         <button type="button" class="btn btn--icon budget__collapse-toggle"
                 @click="budgetCollapsed = !budgetCollapsed"
                 :aria-label="budgetCollapsed ? 'Expand budget grid' : 'Collapse budget grid'"
@@ -149,17 +166,41 @@ eleventyExcludeFromCollections: true
        "newGroupOpen = true; newGroupName = ''"
      ) }}
 
-  <section class="budget" x-show="hasCategories" x-cloak>
+  <section class="budget" x-show="hasCategories" x-cloak :class="monthColClass()">
     <div x-show="!budgetCollapsed" x-cloak>
-      {# Desktop-only column header — at mobile each cat row carries
-         its own micro-labels above the pills, so the header strip is
-         redundant. Hidden via the budget__column-header class below. #}
-      <div class="budget__group-header budget__column-header">
-        <span>Category</span>
-        <span class="num" data-tip="Dollars you committed to this category this month.">Assigned</span>
-        <span class="num" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
-        <span class="num" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
-        <span aria-hidden="true"></span>
+      {# Sticky header block: an optional month strip (only when more
+         than one month is visible) + the column header. Sticks below
+         the site header; the offset is measured because the header's
+         height varies with safe-area insets. #}
+      <div class="budget__headers" :style="'--budget-sticky-top:' + stickyTop() + 'px'">
+        <div class="budget__group-header budget__month-header"
+             x-show="effectiveMonthCount() > 1" x-cloak>
+          <span class="budget__category" aria-hidden="true"></span>
+          <template x-for="vm in visibleMonths()" :key="'mh-' + vm">
+            <div class="budget__month-head">
+              <strong x-text="monthShortLabel(vm)"></strong>
+              <span class="budget__month-head-rta"
+                    :class="rtaCents(vm) < 0 ? 'amount--outflow' : ''"
+                    :data-tip="'Ready to assign in ' + monthShortLabel(vm) + '.'"
+                    x-text="'RTA ' + fmtGrid(rtaCents(vm))"></span>
+            </div>
+          </template>
+          <span class="budget__row-actions" aria-hidden="true"></span>
+        </div>
+        {# Desktop-only column header — at mobile each cat row carries
+           its own micro-labels above the pills, so the header strip is
+           redundant. Hidden via the budget__column-header class below. #}
+        <div class="budget__group-header budget__column-header">
+          <span class="budget__category">Category</span>
+          <template x-for="vm in visibleMonths()" :key="'ch-' + vm">
+            <div style="display: contents;">
+              <span class="num budget__assigned" data-tip="Dollars you committed to this category this month.">Assigned</span>
+              <span class="num budget__activity" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
+              <span class="num budget__available" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
+            </div>
+          </template>
+          <span class="budget__row-actions" aria-hidden="true"></span>
+        </div>
       </div>
 
     <div>
@@ -167,7 +208,7 @@ eleventyExcludeFromCollections: true
         <div class="budget__group cat-group">
           <div class="budget__group-header budget__group-header--row" style="background: var(--bg-elevated);"
                :data-group-id="group.group ? group.group.id : ''">
-            <div class="cluster" style="gap: var(--space-2xs); min-width: 0;">
+            <div class="cluster budget__category" style="gap: var(--space-2xs); min-width: 0;">
               <input type="checkbox" class="budget__bulk-check"
                      x-show="group.categories.length"
                      :checked="groupAllSelected(group)"
@@ -188,17 +229,21 @@ eleventyExcludeFromCollections: true
                than echoing the per-cat pill row. Outflow keeps its
                button affordance but loses the pill border at the
                group level (.budget__group-header override below). #}
-            <span class="num budget__group-total" x-text="formatCents(groupTotalAssigned(group.categories))"></span>
-            <span class="num budget__group-total">
-              <button type="button" class="budget__activity-btn budget__activity-btn--group"
-                      :disabled="groupTotalActivity(group.categories) === 0"
-                      @click="openActivity({ kind: 'group', id: group.group?.id || '__ungrouped', name: group.group ? group.group.name : 'Other categories', categoryIds: group.categories.map(c => c.id) })"
-                      :data-tip="groupTotalActivity(group.categories) === 0 ? '' : ('Click to see every transaction across ' + (group.group ? group.group.name : 'Other categories') + ' this month.')"
-                      x-text="formatCents(groupTotalActivity(group.categories))"></button>
-            </span>
-            <span class="num budget__group-total"
-                  :class="groupTotalAvailable(group.categories) < 0 ? 'budget__group-total--neg' : ''"
-                  x-text="formatCents(groupTotalAvailable(group.categories))"></span>
+            <template x-for="vm in visibleMonths()" :key="'gt-' + vm">
+              <div style="display: contents;">
+                <span class="num budget__group-total budget__assigned" x-text="fmtGrid(groupTotalAssigned(group.categories, vm))"></span>
+                <span class="num budget__group-total budget__activity">
+                  <button type="button" class="budget__activity-btn budget__activity-btn--group"
+                          :disabled="groupTotalActivity(group.categories, vm) === 0"
+                          @click="openActivity({ kind: 'group', id: group.group?.id || '__ungrouped', name: group.group ? group.group.name : 'Other categories', categoryIds: group.categories.map(c => c.id), month: vm })"
+                          :data-tip="groupTotalActivity(group.categories, vm) === 0 ? '' : ('Click to see every transaction across ' + (group.group ? group.group.name : 'Other categories') + ' in ' + monthShortLabel(vm) + '.')"
+                          x-text="fmtGrid(groupTotalActivity(group.categories, vm))"></button>
+                </span>
+                <span class="num budget__group-total budget__available"
+                      :class="groupTotalAvailable(group.categories, vm) < 0 ? 'budget__group-total--neg' : ''"
+                      x-text="fmtGrid(groupTotalAvailable(group.categories, vm))"></span>
+              </div>
+            </template>
             {# Group kebab anchored to the far right edge so it lines up
                with the per-category kebab below. All six group-level
                actions live here. #}
@@ -280,51 +325,59 @@ eleventyExcludeFromCollections: true
                             x-text="goalPercent(c.id) >= 100 ? '✓ 100%' : (goalPercent(c.id) + '%')"></span>
                     </div>
                   </div>
-                  <div class="budget__assigned" data-label="Assigned">
-                    {# select() on focus: the cell always holds a value, so a
-                       click used to drop a caret mid-number and the user had
-                       to clear it before typing. Selecting means the first
-                       keystroke replaces the amount, which is what typing
-                       into a filled budget cell is nearly always for.
-                       Arrow keys or a second click still place a caret. #}
-                    <template x-if="!assignReadOnly(c)">
-                      <input type="text" inputmode="decimal"
-                             data-touch="compact"
-                             :aria-label="'Assigned for ' + c.name"
-                             :value="formatAssigned($store.budget.assignedFor(c.id))"
-                             data-tip="Type an amount, or an expression like 100+25."
-                             @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id)); $event.target.select()"
-                             @blur="commitAssign(c.id, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id));"
-                             @keydown.enter="$event.target.blur()">
-                    </template>
-                    {# Income categories are funded by their transactions and
-                       payment pools by Move money — auto-assign and the bulk
-                       helpers already skip both, so an editable cell here was
-                       a promise the rest of the page refused to honor. #}
-                    <template x-if="assignReadOnly(c)">
-                      <span class="budget__assigned-locked num"
-                            :data-tip="$store.budget.isPaymentCategory(c.id)
-                              ? 'Payment pools are funded with Move money, not direct assignment.'
-                              : 'Income categories receive money from transactions. Assign it from Ready to Assign instead.'"
-                            x-text="formatAssigned($store.budget.assignedFor(c.id))"></span>
-                    </template>
-                  </div>
-                  <div class="budget__activity" data-label="Outflow">
-                    <button type="button" class="budget__activity-btn"
-                            :disabled="$store.budget.activityFor(c.id) === 0"
-                            @click="openActivity({ kind: 'category', id: c.id, name: c.name })"
-                            :data-tip="$store.budget.activityFor(c.id) === 0 ? '' : ('Click to see every transaction in ' + c.name + ' this month.')"
-                            x-text="formatCents($store.budget.activityFor(c.id))"></button>
-                  </div>
-                  <div class="budget__available" data-label="Available">
-                    <button type="button"
-                            class="available-pill available-pill--btn"
-                            :class="availablePillClass(c.id)"
-                            @click="openMoveMoney(c)"
-                            :aria-label="'Move money to or from ' + c.name + ' (available: ' + formatCents(categoryAvailable(c.id)) + ')'"
-                            data-tip="Click to move money to or from this category."
-                            x-text="formatCents(categoryAvailable(c.id))"></button>
-                  </div>
+                  {# One (Assigned / Outflow / Available) cell triplet per
+                     visible month. The wrapper is display:contents so the
+                     cells stay direct grid items: single-month keeps the
+                     named-area layout, multi-month auto-places in DOM
+                     order. Every cell carries data-month. #}
+                  <template x-for="vm in visibleMonths()" :key="'c-' + c.id + '-' + vm">
+                    <div style="display: contents;">
+                      <div class="budget__assigned" data-label="Assigned" :data-month="vm">
+                        {# select() on focus: the cell always holds a value, so
+                           the first keystroke replaces the amount. Arrow keys
+                           or a second click still place a caret. #}
+                        <template x-if="!assignReadOnly(c)">
+                          <input type="text" inputmode="decimal"
+                                 data-touch="compact"
+                                 :data-month="vm"
+                                 :aria-label="'Assigned for ' + c.name + ', ' + monthShortLabel(vm)"
+                                 :value="formatAssigned($store.budget.assignedFor(c.id, vm))"
+                                 data-tip="Type an amount, or an expression like 100+25."
+                                 @focus="$event.target.value = formatPlain($store.budget.assignedFor(c.id, vm)); $event.target.select()"
+                                 @blur="commitAssign(c.id, vm, $event.target.value); $event.target.value = formatAssigned($store.budget.assignedFor(c.id, vm));"
+                                 @keydown.enter="$event.target.blur()">
+                        </template>
+                        {# Income categories are funded by their transactions
+                           and payment pools by Move money — auto-assign and
+                           the bulk helpers already skip both, so an editable
+                           cell here was a promise the rest of the page
+                           refused to honor. #}
+                        <template x-if="assignReadOnly(c)">
+                          <span class="budget__assigned-locked num"
+                                :data-tip="$store.budget.isPaymentCategory(c.id)
+                                  ? 'Payment pools are funded with Move money, not direct assignment.'
+                                  : 'Income categories receive money from transactions. Assign it from Ready to Assign instead.'"
+                                x-text="formatAssigned($store.budget.assignedFor(c.id, vm))"></span>
+                        </template>
+                      </div>
+                      <div class="budget__activity" data-label="Outflow" :data-month="vm">
+                        <button type="button" class="budget__activity-btn"
+                                :disabled="$store.budget.activityFor(c.id, vm) === 0"
+                                @click="openActivity({ kind: 'category', id: c.id, name: c.name, month: vm })"
+                                :data-tip="$store.budget.activityFor(c.id, vm) === 0 ? '' : ('Click to see every transaction in ' + c.name + ' in ' + monthShortLabel(vm) + '.')"
+                                x-text="fmtGrid($store.budget.activityFor(c.id, vm))"></button>
+                      </div>
+                      <div class="budget__available" data-label="Available" :data-month="vm">
+                        <button type="button"
+                                class="available-pill available-pill--btn"
+                                :class="availablePillClass(c.id, vm)"
+                                @click="openMoveMoney(c, vm)"
+                                :aria-label="'Move money to or from ' + c.name + ' for ' + monthShortLabel(vm) + ' (available: ' + formatCents(categoryAvailable(c.id, vm)) + ')'"
+                                data-tip="Click to move money to or from this category."
+                                x-text="fmtGrid(categoryAvailable(c.id, vm))"></button>
+                      </div>
+                    </div>
+                  </template>
                   {# Row kebab anchored to the far right edge (its own
                      grid column) so it lines up across every row and
                      never crowds the category name. #}
@@ -388,31 +441,35 @@ eleventyExcludeFromCollections: true
     </div> {# /budgetCollapsed wrapper #}
 
     {# Total budget — bottom summary row matching the columns above. #}
-    <div class="budget__group-header budget__total-row" aria-label="Totals for this month">
-      <div class="budget__total-label">
+    <div class="budget__group-header budget__total-row" aria-label="Totals for the visible months">
+      <div class="budget__total-label budget__category">
         <span class="budget__total-eyebrow">Month total</span>
-        <strong x-text="monthHeaderLabel()"></strong>
+        <strong x-text="effectiveMonthCount() > 1 ? (monthShortLabel($store.budget.currentMonth) + ' +' + (effectiveMonthCount() - 1)) : monthHeaderLabel()"></strong>
       </div>
-      <span class="num">
-        <span class="budget__total-mini-label">Assigned</span>
-        <span class="budget__total-value"
-              x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></span>
-      </span>
-      <span class="num">
-        <span class="budget__total-mini-label">Outflow</span>
-        <button type="button" class="budget__activity-btn budget__total-value"
-                :disabled="monthlyOutflowTotal() === 0"
-                @click="openActivity({ kind: 'all', id: '__all', name: 'All categories' })"
-                :data-tip="monthlyOutflowTotal() === 0 ? '' : 'Click to see every transaction this month.'"
-                :class="monthlyOutflowTotal() < 0 ? 'amount--outflow' : ''"
-                x-text="formatCents(monthlyOutflowTotal())"></button>
-      </span>
-      <span class="num">
-        <span class="budget__total-mini-label">Available</span>
-        <span class="budget__total-value"
-              :class="monthlyAvailableTotal() < 0 ? 'amount--outflow' : 'amount--inflow'"
-              x-text="formatCents(monthlyAvailableTotal())"></span>
-      </span>
+      <template x-for="vm in visibleMonths()" :key="'tt-' + vm">
+        <div style="display: contents;">
+          <span class="num budget__assigned">
+            <span class="budget__total-mini-label" x-text="effectiveMonthCount() > 1 ? monthShortLabel(vm) + ' assigned' : 'Assigned'"></span>
+            <span class="budget__total-value"
+                  x-text="fmtGrid($store.budget.totalAssignedInMonth(vm))"></span>
+          </span>
+          <span class="num budget__activity">
+            <span class="budget__total-mini-label">Outflow</span>
+            <button type="button" class="budget__activity-btn budget__total-value"
+                    :disabled="monthlyOutflowTotal(vm) === 0"
+                    @click="openActivity({ kind: 'all', id: '__all', name: 'All categories', month: vm })"
+                    :data-tip="monthlyOutflowTotal(vm) === 0 ? '' : ('Click to see every transaction in ' + monthShortLabel(vm) + '.')"
+                    :class="monthlyOutflowTotal(vm) < 0 ? 'amount--outflow' : ''"
+                    x-text="fmtGrid(monthlyOutflowTotal(vm))"></button>
+          </span>
+          <span class="num budget__available">
+            <span class="budget__total-mini-label">Available</span>
+            <span class="budget__total-value"
+                  :class="monthlyAvailableTotal(vm) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="fmtGrid(monthlyAvailableTotal(vm))"></span>
+          </span>
+        </div>
+      </template>
     </div>
   </section>
 
@@ -581,7 +638,7 @@ eleventyExcludeFromCollections: true
         <header class="auto-assign__header">
           <p class="eyebrow">Move money</p>
           <h2 class="modal__title" id="bd-mv-title" style="margin: 0;">
-            Reallocate Assigned in <span x-text="monthHeaderLabel()"></span>
+            Reallocate Assigned in <span x-text="monthHeaderLabel(moveMoneyForm.month)"></span>
           </h2>
           <p class="auto-assign__lead">
             Decrement one category's Assigned and increment another by the same amount. Total Assigned for the month stays the same. Works for payment pools too.
@@ -819,7 +876,7 @@ eleventyExcludeFromCollections: true
         <h2 class="modal__title" id="bd-act-title">
           <span x-text="activityScope.name"></span>
           <span style="color: var(--fg-muted); font-weight: 400; font-size: var(--fs-md);"
-                x-text="' · ' + monthHeaderLabel()"></span>
+                x-text="' · ' + monthHeaderLabel(activityScope.month)"></span>
         </h2>
         <p style="color: var(--fg-muted); margin: 0 0 var(--space-sm);"
            x-text="activityTxns().length + ' transaction' + (activityTxns().length === 1 ? '' : 's')"></p>

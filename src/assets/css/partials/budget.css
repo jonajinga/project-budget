@@ -70,20 +70,17 @@
 .budget__activity   { grid-area: outflow; }
 .budget__available  { grid-area: available; }
 .budget__row-actions { grid-area: actions; }
-/* The group-header's totals spans get areas via nth-child since
-   they don't carry semantic class names. The 5th child is the
-   kebab block (added in the markup above the row). */
-.budget__group-header > :nth-child(1) { grid-area: cat; }
-.budget__group-header > :nth-child(2) { grid-area: assigned; }
-.budget__group-header > :nth-child(3) { grid-area: outflow; }
-.budget__group-header > :nth-child(4) { grid-area: available; }
-.budget__group-header > :nth-child(5) { grid-area: actions; }
+/* Header rows, group headers and the total row all carry the same
+   cell classes as the data rows (budget__category / __assigned /
+   __activity / __available / __row-actions), so the area mapping
+   above covers everything. The old nth-child mapping broke the
+   moment a row gained a child - multi-month columns add several. */
 /* Tiny mobile-only labels above each pill so users know which
    number is which without the column header above. Hidden on
    desktop (the column header bar does the job there). */
-.budget__assigned::before,
-.budget__activity::before,
-.budget__available::before {
+.budget__row .budget__assigned::before,
+.budget__row .budget__activity::before,
+.budget__row .budget__available::before {
   content: attr(data-label);
   display: block;
   font-size: var(--fs-2xs);
@@ -100,9 +97,9 @@
    keeps them so users know which number is Assigned vs Outflow
    vs Available without a column header above. */
 @media (min-width: 600px) {
-  .budget__assigned::before,
-  .budget__activity::before,
-  .budget__available::before { display: none; }
+  .budget__row .budget__assigned::before,
+  .budget__row .budget__activity::before,
+  .budget__row .budget__available::before { display: none; }
 }
 /* ── Phone layout (below 768px) ───────────────────────────────────────
    The stacked layout above put each of Assigned / Outflow / Available in
@@ -151,9 +148,9 @@
      on screen, position alone does not say which is which -- and the pill,
      the input and the plain number are different enough shapes that a reader
      cannot infer an order from them. */
-  .budget__assigned::before,
-  .budget__activity::before,
-  .budget__available::before {
+  .budget__row .budget__assigned::before,
+  .budget__row .budget__activity::before,
+  .budget__row .budget__available::before {
     display: block;
     padding-right: 0;
     text-align: right;
@@ -161,7 +158,7 @@
   /* All three labels right-aligned, because all three VALUES are: the input
      is full-width with text-align right, so a left-aligned label sat at the
      opposite end of its own column from the number it names. */
-  .budget__assigned::before { text-align: right; padding-right: 0.4rem; }
+  .budget__row .budget__assigned::before { text-align: right; padding-right: 0.4rem; }
 
   /* The assign field is the only control in the row, so it sets the row's
      height. Cap its width so it reads as a field rather than a banner, and
@@ -422,6 +419,128 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     grid-template-columns: minmax(0, 1fr) 10rem 10rem 10rem auto;
   }
 }
+
+/* ── Parallel month columns (budget revamp phase 2) ─────────────────
+   .budget--m2 / --m3 are set by the view from the EFFECTIVE month
+   count (user preference clamped by viewport), so --m2 only ever
+   exists at >=900px and --m3 at >=1280px. The named-area layout can't
+   express a variable column count, so multi-month rows drop areas and
+   auto-place: category, then (assigned/outflow/available) per month
+   in DOM order, kebab last. Every cell needs grid-area: auto or the
+   stale area names would create implicit tracks. */
+@media (min-width: 900px) {
+  .budget--m2 .budget__group-header,
+  .budget--m2 .budget__row {
+    grid-template-areas: none;
+    /* The name column gets a REAL minimum: minmax(0,1fr) let six
+       greedy value columns crush it to ~40px (names truncated to two
+       letters, group headers wrapping onto themselves). */
+    grid-template-columns: minmax(9rem, 1.4fr) repeat(6, minmax(4.75rem, 8rem)) auto;
+    column-gap: var(--space-2xs);
+  }
+  /* Tighter pill chrome in multi-month mode - the generous single
+     column padding pushes "$260,300" past a ~80px track in the
+     1024-1180 window and the last column clips at the container. */
+  .budget--m2 .budget__row .available-pill,
+  .budget--m3 .budget__row .available-pill {
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+  }
+  .budget--m2 .budget__category,
+  .budget--m2 .budget__assigned,
+  .budget--m2 .budget__activity,
+  .budget--m2 .budget__available,
+  .budget--m2 .budget__row-actions { grid-area: auto; }
+  /* A hairline before each month's first cell marks the month
+     boundary once the columns repeat. */
+  .budget--m2 .budget__row .budget__assigned,
+  .budget--m2 .budget__group-header .budget__assigned {
+    border-left: 1px solid var(--border-soft);
+  }
+}
+@media (min-width: 1280px) {
+  .budget--m3 .budget__group-header,
+  .budget--m3 .budget__row {
+    grid-template-areas: none;
+    /* Same name-column floor; value columns cap lower at 3-up so the
+       name keeps breathing room inside ~1000px of content width. */
+    grid-template-columns: minmax(9rem, 1.2fr) repeat(9, minmax(4.25rem, 6.5rem)) auto;
+    column-gap: var(--space-2xs);
+  }
+  .budget--m3 .budget__category,
+  .budget--m3 .budget__assigned,
+  .budget--m3 .budget__activity,
+  .budget--m3 .budget__available,
+  .budget--m3 .budget__row-actions { grid-area: auto; }
+  .budget--m3 .budget__row .budget__assigned,
+  .budget--m3 .budget__group-header .budget__assigned {
+    border-left: 1px solid var(--border-soft);
+  }
+}
+
+/* Month header strip - only rendered when >1 month is visible. Each
+   head spans its month's three value columns. */
+.budget__month-header { display: none; }
+@media (min-width: 900px) {
+  .budget--m2 .budget__month-header,
+  .budget--m3 .budget__month-header {
+    display: grid;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .budget__month-head {
+    grid-column: span 3;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+    font-size: var(--fs-sm);
+    padding-right: 0.65rem;
+    border-left: 1px solid var(--border-soft);
+  }
+  .budget__month-head-rta {
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Sticky header block (month strip + column header). Offset below
+   the sticky site header; measured by the view because the header
+   height varies with safe-area insets. Phones keep the natural flow
+   (the column header is display:none there anyway). */
+@media (min-width: 600px) {
+  .budget__headers {
+    position: sticky;
+    top: var(--budget-sticky-top, 0px);
+    z-index: 5;
+    background: var(--bg);
+  }
+}
+
+/* 1/2/3 month-count picker - segmented buttons in the toolbar. */
+.budget__months-picker {
+  display: inline-flex;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.budget__months-btn {
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0.2rem 0.55rem;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.budget__months-btn + .budget__months-btn { border-left: 1px solid var(--border-soft); }
+.budget__months-btn:hover:not(:disabled) { background: var(--bg-alt); color: var(--fg); }
+.budget__months-btn.is-active { background: var(--accent); color: var(--fg-on-accent); }
+.budget__months-btn:disabled { opacity: 0.4; cursor: default; }
+.budget__months-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .budget__category {
   font-weight: 500;
   display: flex;

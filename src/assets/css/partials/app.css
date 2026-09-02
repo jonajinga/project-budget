@@ -5,7 +5,12 @@
    scroll containers. */
 .app-page { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
 .app-page > * { min-width: 0; max-width: 100%; }
-.app-main { min-width: 0; overflow-x: hidden; }
+/* overflow-x: clip, not hidden - hidden makes .app-main the nearest
+   "scrolling ancestor" for position: sticky, and since .app-main never
+   scrolls vertically (the window does), sticky children silently never
+   stick. clip clips the same overflow without creating that context
+   (same reasoning as the html rule in base.css). */
+.app-main { min-width: 0; overflow-x: clip; }
 
 /* Initial-load overlay — covers the whole viewport while the
    store is restoring data on first paint. Self-hides on

@@ -252,7 +252,47 @@ function budgetView() {
     /* Move-money modal — reallocate Assigned dollars between
        categories or payment pools in the active month. */
     moveMoneyOpen: false,
-    moveMoneyForm: { fromId: "", toId: "", amount: "" },
+    moveMoneyForm: { fromId: "", toId: "", amount: "", month: "" },
+
+    /* ---- Multi-month columns (phase 2) --------------------------
+       The anchor is ALWAYS $store.budget.currentMonth (the leftmost
+       column); extra columns run forward. monthCount is the user's
+       preference; the viewport clamps it (below 900px: 1, 900-1279:
+       2, >=1280: 3) so phones never render parallel columns. */
+    monthCount: 1,
+    viewportMaxMonths: 1,
+    _stickyTop: 0,
+    setMonthCount(n) {
+      n = Math.max(1, Math.min(3, n | 0));
+      this.monthCount = n;
+      try { localStorage.setItem("projectbudget:budget-month-count", String(n)); } catch (_e) {}
+    },
+    effectiveMonthCount() {
+      return Math.min(this.monthCount, this.viewportMaxMonths);
+    },
+    _nextMonthOf(iso) {
+      var p = (iso || "").split("-").map(Number);
+      var y = p[0], m = p[1] + 1;
+      if (m > 12) { y += 1; m = 1; }
+      return y + "-" + String(m).padStart(2, "0");
+    },
+    visibleMonths() {
+      var out = [this.$store.budget.currentMonth];
+      var n = this.effectiveMonthCount();
+      while (out.length < n) out.push(this._nextMonthOf(out[out.length - 1]));
+      return out;
+    },
+    monthColClass() {
+      var n = this.effectiveMonthCount();
+      return n === 3 ? "budget--m3" : n === 2 ? "budget--m2" : "";
+    },
+    monthShortLabel(m) {
+      var p = (m || "").split("-").map(Number);
+      if (!p[0]) return m;
+      var d = new Date(p[0], p[1] - 1, 1);
+      return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    },
+    stickyTop() { return this._stickyTop; },
 
     /* URL state sync — currentMonth lives on the budget store rather
        than this factory, so writes happen via Alpine.effect (not
@@ -275,6 +315,35 @@ function budgetView() {
 
     init() {
       var self = this;
+      /* Multi-month preference + viewport clamp. The matchMedia
+         listeners are window-global, so the previous visit's pair is
+         removed first — the router swaps this view in and out and
+         Alpine has no destroy hook here. */
+      try {
+        var stored = parseInt(localStorage.getItem("projectbudget:budget-month-count"), 10);
+        if (stored >= 1 && stored <= 3) this.monthCount = stored;
+      } catch (_e) {}
+      var mq2 = window.matchMedia("(min-width: 900px)");
+      var mq3 = window.matchMedia("(min-width: 1280px)");
+      var setMax = function () {
+        self.viewportMaxMonths = mq3.matches ? 3 : (mq2.matches ? 2 : 1);
+      };
+      var measureSticky = function () {
+        var h = document.querySelector(".site-header");
+        self._stickyTop = h ? h.offsetHeight : 0;
+      };
+      if (window.__pbBudgetViewCleanup) window.__pbBudgetViewCleanup();
+      mq2.addEventListener("change", setMax);
+      mq3.addEventListener("change", setMax);
+      window.addEventListener("resize", measureSticky);
+      window.__pbBudgetViewCleanup = function () {
+        mq2.removeEventListener("change", setMax);
+        mq3.removeEventListener("change", setMax);
+        window.removeEventListener("resize", measureSticky);
+      };
+      setMax();
+      measureSticky();
+
       /* Honor incoming `?m=YYYY-MM` from a recalled saved view. The
          store may not be ready yet — poll until it is, then apply. */
       var requestedMonth = null;
@@ -298,6 +367,12 @@ function budgetView() {
           window.Alpine.effect(function () {
             void s.currentMonth;
             self._syncUrl();
+          });
+          /* Keep the store's table horizon at the LAST visible column
+             so one memoized budget table serves every column. */
+          window.Alpine.effect(function () {
+            var months = self.visibleMonths();
+            s._budgetHorizon = months[months.length - 1];
           });
         }
       };
@@ -449,6 +524,7 @@ function budgetView() {
       var store = this.$store.budget;
       if (!store.profile) return [];
       var self = this;
+      var m = this.moveMoneyForm.month || store.currentMonth;
       var view = store.categoryGroupsView() || [];
       var out = [];
       view.forEach(function (b) {
@@ -456,7 +532,7 @@ function budgetView() {
           out.push({
             id: c.id,
             label: (b.group ? b.group.name + " / " : "") + c.name,
-            available: self.categoryAvailable(c.id),
+            available: self.categoryAvailable(c.id, m),
           });
         });
       });
@@ -464,10 +540,14 @@ function budgetView() {
     },
     _assignedFor(catId) {
       if (!catId) return 0;
-      return this.$store.budget.assignedFor(catId, this.$store.budget.currentMonth) || 0;
+      var m = this.moveMoneyForm.month || this.$store.budget.currentMonth;
+      return this.$store.budget.assignedFor(catId, m) || 0;
     },
-    openMoveMoney(c) {
-      this.moveMoneyForm = { fromId: c ? c.id : "", toId: "", amount: "" };
+    openMoveMoney(c, month) {
+      this.moveMoneyForm = {
+        fromId: c ? c.id : "", toId: "", amount: "",
+        month: month || this.$store.budget.currentMonth,
+      };
       this.moveMoneyOpen = true;
     },
     submitMoveMoney() {
@@ -476,7 +556,7 @@ function budgetView() {
       var cents = this.parseDollars(f.amount);
       if (cents <= 0) return;
       var ok = this.$store.budget.moveMoney(
-        f.fromId, f.toId, cents, this.$store.budget.currentMonth
+        f.fromId, f.toId, cents, f.month || this.$store.budget.currentMonth
       );
       if (ok) {
         var fromName = this.$store.budget.categoryName(f.fromId);
@@ -485,7 +565,7 @@ function budgetView() {
           "Moved " + this.formatCents(cents) + " · " + fromName + " → " + toName + "."
         );
         this.moveMoneyOpen = false;
-        this.moveMoneyForm = { fromId: "", toId: "", amount: "" };
+        this.moveMoneyForm = { fromId: "", toId: "", amount: "", month: "" };
       }
     },
     applyAutoAssign() {
@@ -524,13 +604,14 @@ function budgetView() {
     openActivity(scope) {
       if (!scope) return;
       this.activityScope = Object.assign(
-        { kind: "category", id: null, name: "", categoryIds: null },
+        { kind: "category", id: null, name: "", categoryIds: null,
+          month: this.$store.budget.currentMonth },
         scope
       );
       this.activityOpen = true;
     },
-    monthHeaderLabel() {
-      var m = this.$store.budget.currentMonth || "";
+    monthHeaderLabel(month) {
+      var m = month || this.$store.budget.currentMonth || "";
       var parts = m.split("-").map(Number);
       if (parts.length < 2) return m;
       var d = new Date(parts[0], parts[1] - 1, 1);
@@ -543,8 +624,8 @@ function budgetView() {
       void this.$store.budget._listVersion;
       var p = this.$store.budget.profile;
       if (!p) return [];
-      var month = this.$store.budget.currentMonth;
       var scope = this.activityScope || {};
+      var month = scope.month || this.$store.budget.currentMonth;
       var wantedIds = null;
       if (scope.kind === "category") wantedIds = [scope.id];
       else if (scope.kind === "group") wantedIds = (scope.categoryIds || []);
@@ -769,12 +850,25 @@ function budgetView() {
       return !!(this.$store.budget.profile && this.$store.budget.profile.categories.length);
     },
 
-    rtaCents() {
-      return this.$store.budget.readyToAssign(this.$store.budget.currentMonth);
+    rtaCents(month) {
+      return this.$store.budget.readyToAssign(month || this.$store.budget.currentMonth);
     },
 
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
+    /* Grid display formatter. With 2-3 month columns on screen the
+       cent-precision strings physically do not fit their tracks
+       ("$444,488.86" needs ~85px against ~80px columns and the
+       numbers collide), so multi-month mode displays whole dollars.
+       Exact cents remain on input focus (formatPlain), in tooltips,
+       aria-labels, the modals, and the single-month view. */
+    fmtGrid(c) {
+      if (this.effectiveMonthCount() <= 1) return this.formatCents(c);
+      return Math.round((c || 0) / 100).toLocaleString("en-US", {
+        style: "currency", currency: "USD", maximumFractionDigits: 0,
+      });
     },
 
     /* Blurred display value — full currency formatting so row Assigned
@@ -782,7 +876,7 @@ function budgetView() {
        (both formatted as $X,XXX.XX). On focus we swap to formatPlain
        so the user types bare digits without fighting the $ / comma. */
     formatAssigned(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+      return this.fmtGrid(c);
     },
 
     /* Focused edit value — bare digits + decimal, no $, no commas.
@@ -805,14 +899,14 @@ function budgetView() {
     calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
 
 
-    commitAssign(catId, raw) {
+    commitAssign(catId, month, raw) {
       var cents = this.parseDollars(raw);
-      this.$store.budget.assign(catId, this.$store.budget.currentMonth, cents);
+      this.$store.budget.assign(catId, month || this.$store.budget.currentMonth, cents);
     },
 
-    categoryAvailable(catId) {
+    categoryAvailable(catId, month) {
       void this.$store.budget._listVersion;
-      return this.$store.budget.categoryRow(catId).available;
+      return this.$store.budget.categoryRow(catId, month).available;
     },
 
     availableClass(catId) {
@@ -828,13 +922,13 @@ function budgetView() {
        - green  : funded toward a goal (goal exists and met)
        - blue   : positive but no goal threshold (default funded)
     */
-    availablePillClass(catId) {
-      var v = this.categoryAvailable(catId);
+    availablePillClass(catId, month) {
+      var v = this.categoryAvailable(catId, month);
       if (v < 0) return "available-pill--red";
       if (v === 0) return "available-pill--zero";
       var goal = this.$store.budget.findGoal(catId);
       if (goal) {
-        var status = this.$store.budget.goalStatus(catId);
+        var status = this.$store.budget.goalStatus(catId, month);
         if (status === "funded" || status === "over") return "available-pill--green";
       }
       return "available-pill--blue";
@@ -854,38 +948,38 @@ function budgetView() {
        on any store mutation, even when the dependency chain crosses
        a function boundary that Alpine's proxy traversal might not
        catch (categoryRow -> assigned across multiple months). */
-    groupTotalAssigned(cats) {
+    groupTotalAssigned(cats, month) {
       void this.$store.budget._listVersion;
       var self = this;
-      return cats.reduce(function (sum, c) { return sum + self.$store.budget.assignedFor(c.id); }, 0);
+      return cats.reduce(function (sum, c) { return sum + self.$store.budget.assignedFor(c.id, month); }, 0);
     },
 
-    groupTotalActivity(cats) {
+    groupTotalActivity(cats, month) {
       void this.$store.budget._listVersion;
       var self = this;
-      return cats.reduce(function (sum, c) { return sum + self.$store.budget.activityFor(c.id); }, 0);
+      return cats.reduce(function (sum, c) { return sum + self.$store.budget.activityFor(c.id, month); }, 0);
     },
 
-    groupTotalAvailable(cats) {
+    groupTotalAvailable(cats, month) {
       void this.$store.budget._listVersion;
       var self = this;
-      return cats.reduce(function (sum, c) { return sum + self.$store.budget.categoryRow(c.id).available; }, 0);
+      return cats.reduce(function (sum, c) { return sum + self.$store.budget.categoryRow(c.id, month).available; }, 0);
     },
 
     /* Month-wide totals for the bottom summary row. */
-    monthlyOutflowTotal() {
+    monthlyOutflowTotal(month) {
       void this.$store.budget._listVersion;
       var p = this.$store.budget.profile;
       if (!p) return 0;
       var self = this;
-      return p.categories.reduce(function (sum, c) { return sum + self.$store.budget.activityFor(c.id); }, 0);
+      return p.categories.reduce(function (sum, c) { return sum + self.$store.budget.activityFor(c.id, month); }, 0);
     },
-    monthlyAvailableTotal() {
+    monthlyAvailableTotal(month) {
       void this.$store.budget._listVersion;
       var p = this.$store.budget.profile;
       if (!p) return 0;
       var self = this;
-      return p.categories.reduce(function (sum, c) { return sum + self.$store.budget.categoryRow(c.id).available; }, 0);
+      return p.categories.reduce(function (sum, c) { return sum + self.$store.budget.categoryRow(c.id, month).available; }, 0);
     },
 
     goalLabel(catId) {
