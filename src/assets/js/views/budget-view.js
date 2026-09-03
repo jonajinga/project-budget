@@ -522,6 +522,52 @@ function budgetView() {
         this._loadCutForm();
       }
     },
+    /* ---- Group-level trackers ----
+       A group's goal ring is its member goals weighted by target, so a
+       $1,500 grocery goal counts more than a $30 one. A group's cut ring
+       is dollars saved over dollars planned across its member cuts. */
+    groupGoal(group) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var self = this;
+      var weight = 0, sum = 0, count = 0, met = 0;
+      (group.categories || []).forEach(function (c) {
+        var g = s.findGoal(c.id);
+        if (!g) return;
+        var w = Math.max(1, g.target || 0);
+        var pct = self.goalPercent(c.id);
+        count += 1;
+        if (pct >= 100) met += 1;
+        weight += w;
+        sum += pct * w;
+      });
+      var pct = weight ? Math.round(sum / weight) : 0;
+      var name = group.group ? group.group.name : "Other categories";
+      return {
+        count: count, met: met, pct: pct,
+        tip: count ? (name + ": " + met + " of " + count + " goal" + (count === 1 ? "" : "s") + " funded, " + pct + "% overall.") : "",
+      };
+    },
+    groupCut(group) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var saved = 0, target = 0, count = 0;
+      (group.categories || []).forEach(function (c) {
+        var cut = s.cutForCategory(c.id);
+        if (!cut) return;
+        var prog = s.cutProgressFor(cut.id, s.currentMonth) || {};
+        count += 1;
+        saved += prog.saved || 0;
+        target += prog.target || 0;
+      });
+      var pct = target ? Math.min(100, Math.round((saved / target) * 100)) : 0;
+      var name = group.group ? group.group.name : "Other categories";
+      return {
+        count: count, pct: pct,
+        tip: count ? (name + ": " + this.formatCents(saved) + " of " + this.formatCents(target) + " planned cuts realized this month (" + pct + "%).") : "",
+      };
+    },
+
     /* ---- Progress rings (goals and cuts) ---- */
     /* r=10 => circumference 62.83; the dash offset hides the unfilled arc. */
     ringOffset(pct) {
@@ -537,6 +583,7 @@ function budgetView() {
       var base = kind === "cut" ? "ring--cut" : "ring--goal";
       if (p >= 100) return base + " is-met";
       if (p >= 50) return base + " is-half";
+      if (p <= 0) return base + " is-empty";
       return base;
     },
     cutPercent(catId, month) {

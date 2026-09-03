@@ -275,6 +275,36 @@ eleventyExcludeFromCollections: true
                       :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
                       :disabled="!group.group">
                 <span class="group-toggle__chevron" :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+                {# Group-level trackers: every member goal rolled into one
+                   ring (weighted by target), every member cut into another
+                   (dollars saved over dollars planned). Same slot as the
+                   category rows, so the marks form one column. #}
+                <span class="budget__cat-ind budget__cat-ind--group" @click.stop>
+                  <span class="ring ring--goal ring--span"
+                        x-show="groupGoal(group).count" x-cloak
+                        :class="ringClass(groupGoal(group).pct, 'goal')"
+                        :data-tip="groupGoal(group).tip"
+                        role="img" :aria-label="groupGoal(group).tip">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle class="ring__track" cx="12" cy="12" r="10.5"/>
+                      <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(groupGoal(group).pct) }"/>
+                      <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
+                      <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(groupGoal(group).pct)"></text>
+                    </svg>
+                  </span>
+                  <span class="ring ring--cut ring--span"
+                        x-show="groupCut(group).count" x-cloak
+                        :class="ringClass(groupCut(group).pct, 'cut')"
+                        :data-tip="groupCut(group).tip"
+                        role="img" :aria-label="groupCut(group).tip">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle class="ring__track" cx="12" cy="12" r="10.5"/>
+                      <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(groupCut(group).pct) }"/>
+                      <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
+                      <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(groupCut(group).pct)"></text>
+                    </svg>
+                  </span>
+                </span>
                 <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
               </button>
             </div>
@@ -365,15 +395,36 @@ eleventyExcludeFromCollections: true
                              @change="toggleCatSelected(c.id)"
                              :aria-label="'Select ' + c.name + ' for bulk actions'"
                              :data-tip="'Select this category for bulk Clear assigned / Clear available.'">
-                      <button type="button" class="budget__cat-name budget__cat-name--btn"
-                              @click="selectCategory(c)"
-                              :data-tip="'Open ' + c.name + ' in the inspector: breakdown, notes, goal, recent activity.'"
-                              x-text="c.name"></button>
-                      {# Indicators sit at the END of the name column, out of
-                         the name's way: a note (category-level only), a
-                         planned cut. Each is an icon with the detail in its
-                         tooltip; the words live in the inspector. #}
+                      {# Marks come first, in a fixed-width slot, so every
+                         name starts at the same x whether or not the row
+                         has a goal, a cut, or a note. Order: goal, cut, note. #}
                       <span class="budget__cat-ind">
+                        <button type="button" class="ring ring--goal"
+                                x-show="$store.budget.findGoal(c.id)" x-cloak
+                                :class="ringClass(goalPercent(c.id), 'goal')"
+                                :data-tip="goalBarTooltip(c.id)"
+                                :aria-label="'Goal for ' + c.name + ': ' + goalPercent(c.id) + '% funded. ' + goalLabel(c.id)"
+                                @click="selectCategory(c)">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="ring__track" cx="12" cy="12" r="10.5"/>
+                            <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(goalPercent(c.id)) }"/>
+                            <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
+                            <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(goalPercent(c.id))"></text>
+                          </svg>
+                        </button>
+                        <button type="button" class="ring ring--cut"
+                                x-show="$store.budget.cutForCategory(c.id)" x-cloak
+                                :class="ringClass(cutPercent(c.id), 'cut')"
+                                :data-tip="cutTooltip(c.id)"
+                                :aria-label="'Planned cut on ' + c.name + ': ' + cutPercent(c.id) + '% of this month\'s target saved. ' + cutBadgeText(c.id)"
+                                @click="selectCategory(c)">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="ring__track" cx="12" cy="12" r="10.5"/>
+                            <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(cutPercent(c.id)) }"/>
+                            <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
+                            <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(cutPercent(c.id))"></text>
+                          </svg>
+                        </button>
                         <button type="button" class="note-ind"
                                 x-show="hasNotes(c)" x-cloak
                                 :data-tip="notesTip(c)"
@@ -381,39 +432,11 @@ eleventyExcludeFromCollections: true
                                 @click="openNotes(c)">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
                         </button>
-                        {# Goal progress ring: percentage inside, a check when
-                           met. One mark instead of bar + badge + caption. #}
-                        <button type="button" class="ring"
-                                x-show="$store.budget.findGoal(c.id)" x-cloak
-                                :class="ringClass(goalPercent(c.id), 'goal')"
-                                :style="{ '--pct': goalPercent(c.id) }"
-                                :data-tip="goalBarTooltip(c.id)"
-                                :aria-label="'Goal for ' + c.name + ': ' + goalPercent(c.id) + '% funded. ' + goalLabel(c.id)"
-                                @click="selectCategory(c)">
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle class="ring__track" cx="12" cy="12" r="10"/>
-                            <circle class="ring__fill" cx="12" cy="12" r="10" :style="{ 'stroke-dashoffset': ringOffset(goalPercent(c.id)) }"/>
-                            <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
-                            <text class="ring__text" x="12" y="12" x-text="ringText(goalPercent(c.id))"></text>
-                          </svg>
-                        </button>
-                        {# Planned-cut ring: how much of this month's target
-                           reduction has been realized. #}
-                        <button type="button" class="ring ring--cut"
-                                x-show="$store.budget.cutForCategory(c.id)" x-cloak
-                                :class="ringClass(cutPercent(c.id), 'cut')"
-                                :style="{ '--pct': cutPercent(c.id) }"
-                                :data-tip="cutTooltip(c.id)"
-                                :aria-label="'Planned cut on ' + c.name + ': ' + cutPercent(c.id) + '% of this month\'s target saved. ' + cutBadgeText(c.id)"
-                                @click="selectCategory(c)">
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle class="ring__track" cx="12" cy="12" r="10"/>
-                            <circle class="ring__fill" cx="12" cy="12" r="10" :style="{ 'stroke-dashoffset': ringOffset(cutPercent(c.id)) }"/>
-                            <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
-                            <text class="ring__text" x="12" y="12" x-text="ringText(cutPercent(c.id))"></text>
-                          </svg>
-                        </button>
                       </span>
+                      <button type="button" class="budget__cat-name budget__cat-name--btn"
+                              @click="selectCategory(c)"
+                              :data-tip="'Open ' + c.name + ' in the inspector: breakdown, notes, goal, recent activity.'"
+                              x-text="c.name"></button>
                     </div>
                   </div>
                   {# One (Assigned / Outflow / Available) cell triplet per

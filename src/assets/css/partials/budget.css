@@ -262,6 +262,7 @@
 .budget {
   --budget-check-col: calc(16px + var(--space-2xs));
   --budget-tree-indent: calc(4px + 20px + var(--space-2xs));
+  --budget-mark-slot: 24px;
 }
 @media (min-width: 600px) {
   /* The indent lives on the row's padding and the checkbox is pinned to
@@ -300,13 +301,17 @@
     flex: 0 1 auto;
     min-width: 0;
   }
-  /* Indicators hug the end of the name: small icons only, never text,
-     so they read as marks on the name rather than competing with it. */
+  /* The mark slot sits between the checkbox (or the group's chevron)
+     and the name. Fixed minimum width = one ring, so names line up in
+     a column whether a row has zero marks or one; a row with a goal AND
+     a cut AND a note widens the slot and pushes only its own name. */
   .budget__cat-ind {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
+    min-width: var(--budget-mark-slot);
+    margin-right: var(--space-2xs);
   }
   .budget .budget__category-row .cut-badge,
   .budget .budget__category-row .note-ind { flex: 0 0 auto; }
@@ -320,23 +325,26 @@
   --ring-fill: var(--accent);
   --ring-track: var(--border-soft);
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  margin: -2px 0;
+  margin: -3px 0;
   border: 0;
   background: transparent;
   cursor: pointer;
   position: relative;
   display: inline-flex;
+  font: inherit;
+  color: inherit;
 }
+.ring--span { cursor: default; }
 .ring::before { content: ""; position: absolute; inset: -6px; }
-.ring svg { width: 22px; height: 22px; display: block; }
-.ring__track { fill: none; stroke: var(--ring-track); stroke-width: 2.5; }
+.ring svg { width: 24px; height: 24px; display: block; overflow: visible; }
+.ring__track { fill: none; stroke: var(--ring-track); stroke-width: 2; }
 .ring__fill {
   fill: none;
   stroke: var(--ring-fill);
-  stroke-width: 2.5;
+  stroke-width: 2;
   stroke-linecap: round;
   stroke-dasharray: 62.83;
   stroke-dashoffset: 62.83;
@@ -344,15 +352,20 @@
   transform-origin: 12px 12px;
   transition: stroke-dashoffset var(--t-base);
 }
+/* Centred by text-anchor plus a dy baseline shift set in the markup:
+   dominant-baseline is honoured inconsistently across browsers and left
+   the number riding high in the ring. */
 .ring__text {
-  font-size: 7.5px;
+  font-family: var(--font-ui, system-ui, sans-serif);
+  font-size: 8px;
   font-weight: 700;
-  fill: var(--fg-muted);
+  fill: var(--fg);
   text-anchor: middle;
-  dominant-baseline: central;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
 }
+/* A zero-length arc with round caps still paints a dot; hide it. */
+.ring.is-empty .ring__fill { display: none; }
 .ring__check { fill: none; stroke: var(--ring-fill); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; display: none; }
 .ring.is-met .ring__check { display: block; }
 .ring.is-met .ring__text { display: none; }
@@ -1065,6 +1078,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   min-width: 0;
   text-align: left;
 }
+.budget__cat-ind--group { flex: 0 0 auto; }
 .budget__group-header .group-toggle strong {
   min-width: 0;
   font-size: var(--fs-md);
