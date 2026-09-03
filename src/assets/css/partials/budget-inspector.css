@@ -134,11 +134,11 @@
      to five columns and their cells wrapped into an uneditable
      overlap. Multi-month layouts bring their own floors and scroll
      sideways instead. */
-  .budget-layout--open .budget:not(.budget--m2):not(.budget--m3) .budget__group-header,
-  .budget-layout--open .budget:not(.budget--m2):not(.budget--m3) .budget__row {
+  .budget-layout--open .budget:not(.budget--m2):not(.budget--m3):not(.budget--m4):not(.budget--m5):not(.budget--m6) .budget__group-header,
+  .budget-layout--open .budget:not(.budget--m2):not(.budget--m3):not(.budget--m4):not(.budget--m5):not(.budget--m6) .budget__row {
     grid-template-columns: minmax(9rem, 1fr) repeat(3, minmax(5.5rem, 7rem)) auto;
   }
-  .budget-layout--open .budget:not(.budget--m2):not(.budget--m3) .budget__total-row {
+  .budget-layout--open .budget:not(.budget--m2):not(.budget--m3):not(.budget--m4):not(.budget--m5):not(.budget--m6) .budget__total-row {
     grid-template-columns: minmax(9rem, 1fr) repeat(3, minmax(5.5rem, 7rem));
   }
 }
@@ -156,6 +156,14 @@
   margin: 0 0 var(--space-3xs);
 }
 .budget-inspector__mcard .budget-inspector__overspent { margin-top: var(--space-3xs); }
+.budget-inspector__selgroup + .budget-inspector__selgroup { margin-top: var(--space-2xs); }
+.budget-inspector__selmonth {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
 .budget-inspector__goal-status { margin-bottom: var(--space-2xs); }
 .budget-inspector__fills {
   display: grid;

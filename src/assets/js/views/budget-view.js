@@ -346,6 +346,20 @@ function budgetView() {
       this.sel = null;
       this.overviewOpen = false;
     },
+    /* Combined totals across the checkbox selection, per month - the
+       inspector shows these as a selection card. */
+    selectionTotals(month) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var m = month || s.currentMonth;
+      var t = { assigned: 0, activity: 0, available: 0 };
+      this.selectedCatIds.forEach(function (id) {
+        t.assigned += s.assignedFor(id, m) || 0;
+        t.activity += s.activityFor(id, m) || 0;
+        t.available += (s.categoryRow(id, m) || {}).available || 0;
+      });
+      return t;
+    },
     rtaBreak(month) {
       void this.$store.budget._listVersion;
       return this.$store.budget.rtaBreakdown(month || this.$store.budget.currentMonth);
@@ -602,7 +616,7 @@ function budgetView() {
     viewportMaxMonths: 1,
     _stickyTop: 0,
     setMonthCount(n) {
-      n = Math.max(1, Math.min(3, n | 0));
+      n = Math.max(1, Math.min(6, n | 0));
       this.monthCount = n;
       try { localStorage.setItem("projectbudget:budget-month-count", String(n)); } catch (_e) {}
     },
@@ -626,8 +640,13 @@ function budgetView() {
       return out;
     },
     monthColClass() {
-      var n = this.effectiveMonthCount();
-      return n === 3 ? "budget--m3" : n === 2 ? "budget--m2" : "";
+      /* LITERAL class names on purpose: PurgeCSS extracts tokens from
+         source text, and a "budget--m" + n concatenation made it strip
+         every multi-month rule from the build. */
+      var BY_COUNT = ["", "", "budget--m2", "budget--m3", "budget--m4", "budget--m5", "budget--m6"];
+      var cls = BY_COUNT[this.effectiveMonthCount()] || "";
+      if (this.budgetCollapsed) cls += (cls ? " " : "") + "budget--collapsed";
+      return cls;
     },
     monthShortLabel(m) {
       var p = (m || "").split("-").map(Number);
@@ -664,7 +683,7 @@ function budgetView() {
          Alpine has no destroy hook here. */
       try {
         var stored = parseInt(localStorage.getItem("projectbudget:budget-month-count"), 10);
-        if (stored >= 1 && stored <= 3) this.monthCount = stored;
+        if (stored >= 1 && stored <= 6) this.monthCount = stored;
       } catch (_e) {}
       try {
         this.inspectorOpen = localStorage.getItem("projectbudget:budget-inspector-open") !== "0";
@@ -676,9 +695,9 @@ function budgetView() {
          inspector presents as the bottom sheet instead. */
       var mqDock = window.matchMedia("(min-width: 1180px)");
       var setMax = function () {
-        /* Any desktop-ish width can show all three (the grid scrolls
-           if it must); phones stay single-month. */
-        self.viewportMaxMonths = mq2.matches ? 3 : 1;
+        /* Any desktop-ish width can show up to six months (the grid
+           scrolls if it must); phones stay single-month. */
+        self.viewportMaxMonths = mq2.matches ? 6 : 1;
         self.inspectorDocked = mqDock.matches;
       };
       var measureSticky = function () {

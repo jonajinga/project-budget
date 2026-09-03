@@ -133,7 +133,7 @@ eleventyExcludeFromCollections: true
            itself never appears on phones. #}
         <div class="budget__months-picker" role="group" aria-label="Visible months"
              x-show="viewportMaxMonths > 1" x-cloak>
-          <template x-for="n in [1, 2, 3]" :key="'mc-' + n">
+          <template x-for="n in [1, 2, 3, 4, 5, 6]" :key="'mc-' + n">
             <button type="button" class="budget__months-btn"
                     :class="monthCount === n ? 'is-active' : ''"
                     :disabled="n > viewportMaxMonths"

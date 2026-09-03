@@ -405,77 +405,114 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   }
 }
 
-/* ── Parallel month columns (budget revamp phase 2) ─────────────────
-   .budget--m2 / --m3 are set by the view from the EFFECTIVE month
-   count (user preference clamped by viewport), so --m2 only ever
-   exists at >=900px and --m3 at >=1280px. The named-area layout can't
-   express a variable column count, so multi-month rows drop areas and
+/* ── Parallel month columns (budget revamp phase 2, widened to six
+   in the revamp follow-ups) ──────────────────────────────────────────
+   .budget--m2 .. --m6 are set by the view from the EFFECTIVE month
+   count (phones clamp to 1). The named-area layout can't express a
+   variable column count, so multi-month rows drop areas and
    auto-place: category, then (assigned/outflow/available) per month
-   in DOM order, kebab last. Every cell needs grid-area: auto or the
-   stale area names would create implicit tracks. */
+   in DOM order, kebab last. When the columns outgrow the viewport the
+   SECTION scrolls horizontally and rows keep a floor width - cells
+   never shrink into overlap, every month stays editable. The kebab
+   menus are position: fixed, so they escape the scroll container.
+   From four months up the type steps down one size. */
 @media (min-width: 900px) {
-  /* When the columns outgrow the viewport (inspector open, narrow
-     window, resized sidebar) the SECTION scrolls horizontally and the
-     rows keep a floor width - cells never shrink into overlap, and
-     every month stays clickable and editable. The kebab menus are
-     position: fixed, so they escape the scroll container. */
-  .budget--m2,
-  .budget--m3 { overflow-x: auto; }
+  .budget--m2, .budget--m3, .budget--m4, .budget--m5, .budget--m6 { overflow-x: auto; }
   .budget--m2 .budget__group-header,
-  .budget--m2 .budget__row { min-width: 46rem; }
   .budget--m3 .budget__group-header,
-  .budget--m3 .budget__row { min-width: 62rem; }
-  .budget--m2 .budget__group-header,
-  .budget--m2 .budget__row {
+  .budget--m4 .budget__group-header,
+  .budget--m5 .budget__group-header,
+  .budget--m6 .budget__group-header,
+  .budget--m2 .budget__row,
+  .budget--m3 .budget__row,
+  .budget--m4 .budget__row,
+  .budget--m5 .budget__row,
+  .budget--m6 .budget__row {
     grid-template-areas: none;
-    /* The name column gets a REAL minimum: minmax(0,1fr) let six
-       greedy value columns crush it to ~40px (names truncated to two
-       letters, group headers wrapping onto themselves). */
-    grid-template-columns: minmax(9rem, 1.4fr) repeat(6, minmax(4.75rem, 8rem)) auto;
     column-gap: var(--space-2xs);
   }
-  /* Tighter pill chrome in multi-month mode - the generous single
-     column padding pushes "$260,300" past a ~80px track in the
-     1024-1180 window and the last column clips at the container. */
+  .budget--m2 .budget__category,
+  .budget--m3 .budget__category,
+  .budget--m4 .budget__category,
+  .budget--m5 .budget__category,
+  .budget--m6 .budget__category,
+  .budget--m2 .budget__assigned,
+  .budget--m3 .budget__assigned,
+  .budget--m4 .budget__assigned,
+  .budget--m5 .budget__assigned,
+  .budget--m6 .budget__assigned,
+  .budget--m2 .budget__activity,
+  .budget--m3 .budget__activity,
+  .budget--m4 .budget__activity,
+  .budget--m5 .budget__activity,
+  .budget--m6 .budget__activity,
+  .budget--m2 .budget__available,
+  .budget--m3 .budget__available,
+  .budget--m4 .budget__available,
+  .budget--m5 .budget__available,
+  .budget--m6 .budget__available,
+  .budget--m2 .budget__row-actions,
+  .budget--m3 .budget__row-actions,
+  .budget--m4 .budget__row-actions,
+  .budget--m5 .budget__row-actions,
+  .budget--m6 .budget__row-actions { grid-area: auto; }
+  /* A hairline before each month's first cell marks the boundary. */
+  .budget--m2 .budget__row .budget__assigned,
+  .budget--m3 .budget__row .budget__assigned,
+  .budget--m4 .budget__row .budget__assigned,
+  .budget--m5 .budget__row .budget__assigned,
+  .budget--m6 .budget__row .budget__assigned,
+  .budget--m2 .budget__group-header .budget__assigned,
+  .budget--m3 .budget__group-header .budget__assigned,
+  .budget--m4 .budget__group-header .budget__assigned,
+  .budget--m5 .budget__group-header .budget__assigned,
+  .budget--m6 .budget__group-header .budget__assigned {
+    border-left: 1px solid var(--border-soft);
+  }
+  /* Tighter pill chrome: the single-month pill's min-width (7rem)
+     and generous padding exceed a multi-month track. */
   .budget--m2 .budget__row .available-pill,
-  .budget--m3 .budget__row .available-pill {
+  .budget--m3 .budget__row .available-pill,
+  .budget--m4 .budget__row .available-pill,
+  .budget--m5 .budget__row .available-pill,
+  .budget--m6 .budget__row .available-pill {
     padding-left: 0.4rem;
     padding-right: 0.4rem;
-    /* The single-month pill carries min-width: 7rem from its >=600px
-       rule - wider than a 3-up track, so it overflowed under the
-       kebab column no matter the font. Let the track size it. */
     min-width: 0;
+    font-size: var(--fs-xs);
   }
-  .budget--m3 .budget__row .available-pill { font-size: var(--fs-xs); }
-  .budget--m2 .budget__category,
-  .budget--m2 .budget__assigned,
-  .budget--m2 .budget__activity,
-  .budget--m2 .budget__available,
-  .budget--m2 .budget__row-actions { grid-area: auto; }
-  /* A hairline before each month's first cell marks the month
-     boundary once the columns repeat. */
-  .budget--m2 .budget__row .budget__assigned,
-  .budget--m2 .budget__group-header .budget__assigned {
-    border-left: 1px solid var(--border-soft);
+
+  /* Per-count column recipes + row floors (name keeps a real minimum;
+     minmax(0,1fr) lets greedy value columns crush it to ~40px). */
+  .budget--m2 .budget__group-header,
+  .budget--m2 .budget__row {
+    grid-template-columns: minmax(9rem, 1.4fr) repeat(6, minmax(4.75rem, 8rem)) auto;
+    min-width: 46rem;
   }
-}
-@media (min-width: 900px) {
   .budget--m3 .budget__group-header,
   .budget--m3 .budget__row {
-    grid-template-areas: none;
-    /* Same name-column floor; value columns cap lower at 3-up so the
-       name keeps breathing room inside ~1000px of content width. */
     grid-template-columns: minmax(9rem, 1.2fr) repeat(9, minmax(4.6rem, 6.5rem)) auto;
-    column-gap: var(--space-2xs);
+    min-width: 62rem;
   }
-  .budget--m3 .budget__category,
-  .budget--m3 .budget__assigned,
-  .budget--m3 .budget__activity,
-  .budget--m3 .budget__available,
-  .budget--m3 .budget__row-actions { grid-area: auto; }
-  .budget--m3 .budget__row .budget__assigned,
-  .budget--m3 .budget__group-header .budget__assigned {
-    border-left: 1px solid var(--border-soft);
+  .budget--m4 .budget__group-header,
+  .budget--m4 .budget__row {
+    grid-template-columns: minmax(8rem, 1.1fr) repeat(12, minmax(4.4rem, 6rem)) auto;
+    min-width: 70rem;
+  }
+  .budget--m5 .budget__group-header,
+  .budget--m5 .budget__row {
+    grid-template-columns: minmax(8rem, 1.1fr) repeat(15, minmax(4.3rem, 5.75rem)) auto;
+    min-width: 84rem;
+  }
+  .budget--m6 .budget__group-header,
+  .budget--m6 .budget__row {
+    grid-template-columns: minmax(8rem, 1.1fr) repeat(18, minmax(4.2rem, 5.5rem)) auto;
+    min-width: 98rem;
+  }
+  .budget--m4 .budget__group-header, .budget--m4 .budget__row,
+  .budget--m5 .budget__group-header, .budget--m5 .budget__row,
+  .budget--m6 .budget__group-header, .budget--m6 .budget__row {
+    font-size: var(--fs-xs);
   }
 }
 
@@ -484,7 +521,10 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 .budget__month-header { display: none; }
 @media (min-width: 900px) {
   .budget--m2 .budget__month-header,
-  .budget--m3 .budget__month-header {
+  .budget--m3 .budget__month-header,
+  .budget--m4 .budget__month-header,
+  .budget--m5 .budget__month-header,
+  .budget--m6 .budget__month-header {
     display: grid;
     background: var(--bg-elevated);
     border-bottom: 1px solid var(--border-soft);
@@ -504,6 +544,40 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     color: var(--fg-muted);
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Collapsed grid: only the HUD and the Month total remain, so the
+   total row becomes a compact stacked summary - the month label
+   column, then one line of Assigned / Outflow / Available per month -
+   instead of a mile-wide scrolling strip. */
+.budget.budget--collapsed { overflow-x: visible; }
+.budget.budget--collapsed .budget__total-row {
+  grid-template-areas: none;
+  grid-template-columns: repeat(3, minmax(8rem, max-content));
+  justify-content: start;
+  row-gap: var(--space-2xs);
+  min-width: 0;
+}
+/* The label takes its own full row so each month's three cells align
+   in clean columns below it (with the label in the flow, month cells
+   drifted one slot per row). */
+.budget.budget--collapsed .budget__total-row .budget__total-label { grid-column: 1 / -1; }
+.budget.budget--collapsed .budget__total-row .budget__assigned,
+.budget.budget--collapsed .budget__total-row .budget__activity,
+.budget.budget--collapsed .budget__total-row .budget__available { border-left: 0; }
+
+/* Group-header identity cluster: checkbox, chevron and name stay on
+   ONE line (the shared .cluster utility wraps, which stacked the
+   checkbox above the group name and read as misalignment). */
+.budget__group-header > .budget__category.cluster {
+  /* The base .budget__category is a COLUMN flex (name stacked over
+     the goal bar in data rows); the group header's identity cluster
+     inherited that when it gained the class, stacking the checkbox
+     above the group name. Row direction, one line. */
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
 }
 
 /* Sticky header block (month strip + column header). Offset below

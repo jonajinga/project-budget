@@ -25,6 +25,38 @@
               ? monthShortLabel(visibleMonths()[0]) + ' - ' + monthShortLabel(visibleMonths()[visibleMonths().length - 1])
               : monthHeaderLabel()"></h2>
 
+        {# Checkbox selection: ticking rows previously changed nothing
+           here while the hint below claimed nothing was selected. The
+           selection gets its own card - combined totals per visible
+           month plus the bulk actions. #}
+        <section class="budget-inspector__section" aria-label="Selected categories"
+                 x-show="selectedCatIds.length" x-cloak>
+          <p class="budget-inspector__mcard-label">
+            <span x-text="selectedCatIds.length"></span>
+            <span x-text="selectedCatIds.length === 1 ? ' category selected' : ' categories selected'"></span>
+          </p>
+          <template x-for="vm in visibleMonths()" :key="'selt-' + vm">
+            <dl class="budget-inspector__break budget-inspector__selgroup">
+              <div x-show="effectiveMonthCount() > 1">
+                <dt class="budget-inspector__selmonth" x-text="monthShortLabel(vm)"></dt><dd></dd>
+              </div>
+              <div><dt>Assigned</dt>
+                <dd x-text="formatCents(selectionTotals(vm).assigned)"></dd></div>
+              <div><dt>Outflow</dt>
+                <dd :class="selectionTotals(vm).activity < 0 ? 'amount--outflow' : ''"
+                    x-text="formatCents(selectionTotals(vm).activity)"></dd></div>
+              <div class="budget-inspector__break-total"><dt>Available</dt>
+                <dd :class="selectionTotals(vm).available < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(selectionTotals(vm).available)"></dd></div>
+            </dl>
+          </template>
+          <div class="form-actions form-actions--tight">
+            <button type="button" class="btn btn--secondary btn--sm" @click="bulkAutoAssign()">Auto-assign</button>
+            <button type="button" class="btn btn--ghost btn--sm" @click="bulkClearAssigned('selection')">Clear assigned</button>
+            <button type="button" class="btn btn--ghost btn--sm" @click="clearSelection()">Deselect</button>
+          </div>
+        </section>
+
         {# One overview card PER VISIBLE MONTH - with 2-3 columns on
            screen, each column's Ready-to-Assign story and overspending
            fixes live here, month by month. Single-month renders
@@ -104,9 +136,10 @@
           </ul>
         </section>
 
-        <p class="budget-inspector__hint">
-          Select a category name or an Available pill to see its
-          breakdown, notes, goal, and recent activity here.
+        <p class="budget-inspector__hint" x-show="!selectedCatIds.length">
+          Click a category name or an Available pill for its breakdown,
+          notes, goal and recent activity - or tick checkboxes to see
+          the selection totalled here.
         </p>
       </div>
     </template>
