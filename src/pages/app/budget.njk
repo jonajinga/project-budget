@@ -69,20 +69,16 @@ eleventyExcludeFromCollections: true
        now lives on each month card, which is the one place a person
        looks when deciding what to do with a month. Only the month-count
        picker stays up here, because it changes how many cards there are. #}
-    <div class="budget__months-picker" role="group" aria-label="Visible months"
-         x-show="viewportMaxMonths > 1" x-cloak>
-      <template x-for="n in [1, 2, 3, 4, 5, 6]" :key="'mc-' + n">
-        <button type="button" class="budget__months-btn"
-                :class="monthCount === n ? 'is-active' : ''"
-                :disabled="n > viewportMaxMonths"
-                :aria-pressed="(monthCount === n).toString()"
-                :aria-label="'Show ' + n + ' month' + (n === 1 ? '' : 's')"
-                :data-tip="n > viewportMaxMonths
-                  ? 'Multi-month needs a wider window.'
-                  : (n === 1 ? 'Show a single month.' : 'Show ' + n + ' months side by side - the grid scrolls sideways if it needs more room.')"
-                @click="setMonthCount(n)" x-text="n"></button>
-      </template>
-    </div>
+    <label class="budget__months" x-show="viewportMaxMonths > 1" x-cloak
+           data-tip="How many months to show side by side. The grid scrolls sideways if it needs more room.">
+      <span class="visually-hidden">Months shown</span>
+      <select class="budget__months-select" :value="monthCount" @change="setMonthCount(parseInt($event.target.value, 10))" aria-label="Months shown">
+        <template x-for="n in [1, 2, 3, 4, 5, 6]" :key="'mc-' + n">
+          <option :value="n" :disabled="n > viewportMaxMonths" :selected="monthCount === n"
+                  x-text="n + (n === 1 ? ' month' : ' months')"></option>
+        </template>
+      </select>
+    </label>
   </div>
 
   {# With no categories every section on this page is x-show-gated off, so
@@ -110,16 +106,17 @@ eleventyExcludeFromCollections: true
         <template x-for="vm in visibleMonths()" :key="'mh-' + vm">
           <div class="budget__month-head" :class="vm === thisMonthValue() ? 'is-current' : ''">
             <div class="budget__month-head-top">
-              <button type="button" class="btn btn--primary btn--sm budget__month-auto"
+              <span class="budget__month-head-spacer" aria-hidden="true"></span>
+              <h2 class="budget__month-head-name" x-text="monthCardLabel(vm)"></h2>
+              <div class="budget__month-head-tools">
+              <button type="button" class="btn btn--icon budget__month-auto"
                       @click="openAutoAssign({ kind: 'all', name: 'All categories', ids: null, month: vm })"
-                      :data-tip="'Fill in the Assigned column for every category in ' + monthCardLabel(vm) + ' - from goal needs, last month\'s plan, or recent averages.'"
+                      :data-tip="'Auto-assign ' + monthCardLabel(vm) + ': fill every category from goal needs, last month, or recent averages.'"
                       :aria-label="'Auto-assign ' + monthCardLabel(vm)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align: -2px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
                 </svg>
-                <span class="budget__month-auto-label">Auto-assign</span>
               </button>
-              <h2 class="budget__month-head-name" x-text="monthCardLabel(vm)"></h2>
               {% call overflow(label="Month actions") %}
                 <li role="none">
                   <button type="button" role="menuitem" class="overflow-menu__item"
@@ -188,6 +185,7 @@ eleventyExcludeFromCollections: true
                           @click="open = false; saveCurrentView()">Save current view</button>
                 </li>
               {% endcall %}
+              </div>
             </div>
             <dl class="budget__month-lines" :aria-label="'How Ready to Work for ' + monthCardLabel(vm) + ' adds up'">
               <div>

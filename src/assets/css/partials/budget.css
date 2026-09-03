@@ -1,7 +1,7 @@
 .budget {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  border-radius: 0 0 var(--radius) var(--radius);
+  border-top: 0;
 }
 .budget__toolbar {
   display: flex;
@@ -653,14 +653,29 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     border-top: 3px solid transparent;
   }
   .budget__month-head.is-current { border-top-color: var(--accent); }
+  /* Name dead-centre: the tools on the right and an equal-width spacer on
+     the left, so the title never drifts as the tool cluster changes. */
   .budget__month-head-top {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: var(--space-2xs);
   }
-  .budget__month-auto { grid-column: 1; justify-self: start; white-space: nowrap; }
+  .budget__month-head-spacer { grid-column: 1; }
   .budget__month-head-name { grid-column: 2; }
+  .budget__month-head-tools {
+    grid-column: 3;
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .budget__month-head-tools .btn--icon {
+    width: 28px; min-width: 28px; height: 28px; min-height: 28px; position: relative;
+    color: var(--fg-muted);
+  }
+  .budget__month-head-tools .btn--icon::before { content: ""; position: absolute; inset: -8px; }
+  .budget__month-head-tools .btn--icon:hover { color: var(--accent); background: var(--bg-elevated); }
   .budget__month-head-name {
     margin: 0;
     text-align: center;
@@ -672,11 +687,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .budget__month-head-top .overflow-menu { grid-column: 3; justify-self: end; }
-  .budget__month-head-top .overflow-menu .btn--icon {
-    width: 28px; min-width: 28px; height: 28px; min-height: 28px; position: relative;
-  }
-  .budget__month-head-top .overflow-menu .btn--icon::before { content: ""; position: absolute; inset: -8px; }
+
   /* The lines: number on the left, label on the right, like a ledger. */
   .budget__month-lines {
     margin: 0;
@@ -753,13 +764,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m4 .budget__month-header,
   .budget--m5 .budget__month-header,
   .budget--m6 .budget__month-header { column-gap: var(--space-2xs); }
-  /* Narrow cards: icon-only Auto-assign. */
-  .budget--m3 .budget__month-auto-label,
-  .budget--m4 .budget__month-auto-label,
-  .budget--m5 .budget__month-auto-label,
-  .budget--m6 .budget__month-auto-label { display: none; }
-  .budget--m3 .budget__month-auto, .budget--m4 .budget__month-auto,
-  .budget--m5 .budget__month-auto, .budget--m6 .budget__month-auto { padding-left: 0.45rem; padding-right: 0.45rem; }
+
   .budget--m4 .budget__month-head-name,
   .budget--m5 .budget__month-head-name,
   .budget--m6 .budget__month-head-name { font-size: var(--fs-md); }
@@ -840,29 +845,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   }
 }
 
-/* 1/2/3 month-count picker - segmented buttons in the toolbar. */
-.budget__months-picker {
-  display: inline-flex;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.budget__months-btn {
-  min-width: 30px;
-  min-height: 30px;
-  padding: 0.2rem 0.55rem;
-  border: 0;
-  background: transparent;
-  color: var(--fg-muted);
+/* Months-shown control: one small select at the strip's right end. */
+.budget__months { flex: 0 0 auto; display: inline-flex; align-items: center; padding-right: var(--space-2xs); }
+.budget__months-select {
+  font: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
+  color: var(--fg-muted);
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.25rem 1.6rem 0.25rem 0.7rem;
+  min-height: 32px;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 6l4 4 4-4' stroke='%23888' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 12px;
 }
-.budget__months-btn + .budget__months-btn { border-left: 1px solid var(--border-soft); }
-.budget__months-btn:hover:not(:disabled) { background: var(--bg-alt); color: var(--fg); }
-.budget__months-btn.is-active { background: var(--accent); color: var(--fg-on-accent); }
-.budget__months-btn:disabled { opacity: 0.4; cursor: default; }
-.budget__months-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.budget__months-select:hover { color: var(--fg); border-color: var(--border-strong, var(--border)); }
+.budget__months-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .budget__category {
   font-weight: 500;
   display: flex;
@@ -1151,7 +1155,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   display: flex;
   align-items: stretch;
   gap: var(--space-2xs);
-  padding: var(--space-2xs);
+  padding: var(--space-3xs) var(--space-2xs);
   background: var(--bg-elevated);
   flex: 1 1 auto;
   min-width: 0;
@@ -1288,17 +1292,27 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 /* The budget page is one surface: the HUD (month strip + month-count
    picker) sits directly on top of the grid with no gap, no double
    border, and a divider between them. */
-.app-page--budget { gap: var(--space-sm); }
-.app-page--budget .budget-layout { margin-top: calc(-1 * var(--space-sm)); }
+/* Full bleed: the month strip sits flush under the app header and the
+   grid runs edge to edge beneath it. One surface, no card-in-a-card. */
+.app-page--budget {
+  gap: 0;
+  margin: calc(-1 * var(--app-main-pad-y, var(--space-lg))) calc(-1 * var(--container-pad)) 0;
+}
+.app-page--budget > * { max-width: none; }
+.app-page--budget .budget {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+}
 .budget__hud {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
   padding-right: var(--space-2xs);
   background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
-  border-bottom: 0;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-soft);
+  border-radius: 0;
   /* No overflow: hidden — would clip the toolbar kebab's popover
      menu (which is absolutely positioned outside the toolbar row).
      The HUD's --radius is 0 anyway so there's nothing to clip. */
