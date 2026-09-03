@@ -15,6 +15,19 @@
 
 import { paymentCardId } from "./categories.js";
 
+/* Set of account ids whose transactions take part in budget math. Tracking
+   accounts (investments, home value, loans) contribute to net worth only:
+   a 401(k) balance update must never read as income to the budget, and a
+   market dip must never read as overspending. Accounts without the field
+   (older data) count as on-budget, matching newAccount()'s default. */
+function onBudgetIds(profile) {
+  var set = new Set();
+  (profile.accounts || []).forEach(function (a) {
+    if (a.onBudget !== false) set.add(a.id);
+  });
+  return set;
+}
+
 /**
  * ISO YYYY-MM string for the given date (defaults to now).
  * @param {Date} [d]
@@ -138,9 +151,11 @@ export function activity(profile, categoryId, month) {
 
   /* Normal category — sum signed amounts. Splits contribute their slice. */
   var sum = 0;
+  var onBudget = onBudgetIds(profile);
   profile.transactions.forEach(function (t) {
     if (t.date.slice(0, 7) !== month) return;
     if (t.transferTxnId) return;
+    if (!onBudget.has(t.accountId)) return;
     if (t.splits) {
       t.splits.forEach(function (s) { if (s.categoryId === categoryId) sum += (s.amount || 0); });
     } else if (t.categoryId === categoryId) {
@@ -213,9 +228,11 @@ export function categoryRow(profile, categoryId, month) {
 export function totalInflowToBudget(profile, month) {
   var endISO = monthEnd(month);
   var sum = 0;
+  var onBudget = onBudgetIds(profile);
   profile.transactions.forEach(function (t) {
     if (t.date > endISO) return;
     if (t.transferTxnId) return;
+    if (!onBudget.has(t.accountId)) return;
     if (t.splits) return;
     if (t.categoryId) return;        /* user categorized = not unassigned income */
     if (t.amount > 0) sum += t.amount;
@@ -334,6 +351,7 @@ export function buildMonthIndex(profile) {
      nondeterministically. A domain read must not mutate the profile. */
   var pm = (profile.settings && profile.settings.creditCardPaymentMap) || {};
   var payCatSet = new Set(Object.values(pm));
+  var onBudget = onBudgetIds(profile);
 
   function bump(m, catId, cents) {
     var bucket = act[m] || (act[m] = {});
@@ -344,6 +362,9 @@ export function buildMonthIndex(profile) {
     if (!t.date) return;
     var m = t.date.slice(0, 7);
     monthSet.add(m);
+    /* Off-budget accounts only mark the month as existing; their rows
+       feed net worth, not activity or inflow (see activity() above). */
+    if (!onBudget.has(t.accountId)) return;
 
     /* Payment-category derivation, mirroring activity()'s card branch:
        positive transfers on the card are payments (subtract); negative

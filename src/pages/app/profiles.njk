@@ -75,6 +75,52 @@ eleventyExcludeFromCollections: true
     </form>
   </section>
 
+  {# The sample budget is always one click away from here: open it, bring it
+     back from trash, or load a fresh copy from the bundle. Deleting it only
+     ever hides it until the next time someone wants it. #}
+  <section class="card" style="margin-top: var(--space-md);" x-data="{ busy: false }">
+    <h2 class="card__title">Sample budget</h2>
+    <p class="card__body" style="color: var(--fg-muted);">
+      The Castillo household: two parents, four kids (14, 12, 7, and 5), five years of transactions, and eighteen months of plans.
+      Every account type, goal type, and report has something in it. It never overwrites your own profiles.
+    </p>
+    <div class="cluster" style="gap: var(--space-sm); flex-wrap: wrap;">
+      <template x-if="$store.budget.sampleProfileEntry()">
+        <div class="cluster" style="gap: var(--space-sm);">
+          <button class="btn btn--primary btn--sm" type="button"
+                  :disabled="busy"
+                  @click="busy = true; $store.budget.openSampleProfile().finally(() => busy = false)"
+                  data-tip="Switch to the sample profile.">
+            <span x-text="$store.budget.sampleProfileEntry().id === $store.budget.active ? 'Sample budget is open' : 'Open the sample budget'"></span>
+          </button>
+          <button class="btn btn--ghost btn--sm" type="button"
+                  :disabled="busy"
+                  @click="window.PBDialog.confirm({ title: 'Reset the sample budget?', message: 'Your edits to the sample are moved to trash for 7 days and a fresh copy is loaded.', confirmLabel: 'Reset' }).then((ok) => { if (!ok) return; busy = true; $store.budget.resetSampleProfile().finally(() => busy = false); })"
+                  data-tip="Throw away edits to the sample and load the original.">Reset to original</button>
+        </div>
+      </template>
+      <template x-if="!$store.budget.sampleProfileEntry() && $store.budget.sampleInTrash()">
+        <div class="cluster" style="gap: var(--space-sm);">
+          <button class="btn btn--primary btn--sm" type="button"
+                  @click="$store.budget.restoreTrashedProfile($store.budget.sampleInTrash().id)"
+                  data-tip="Bring back the deleted sample, edits included.">Restore the sample budget</button>
+          <button class="btn btn--ghost btn--sm" type="button"
+                  :disabled="busy"
+                  @click="busy = true; $store.budget.openSampleProfile().finally(() => busy = false)"
+                  data-tip="Load a fresh copy instead.">Load a fresh copy</button>
+        </div>
+      </template>
+      <template x-if="!$store.budget.sampleProfileEntry() && !$store.budget.sampleInTrash()">
+        <button class="btn btn--primary btn--sm" type="button"
+                :disabled="busy"
+                @click="busy = true; $store.budget.openSampleProfile().finally(() => busy = false)"
+                data-tip="Load the sample household as a new profile.">
+          <span x-text="busy ? 'Loading sample...' : 'Load the sample budget'"></span>
+        </button>
+      </template>
+    </div>
+  </section>
+
   <section class="card" style="margin-top: var(--space-md);">
     <h2 class="card__title">Existing profiles</h2>
 

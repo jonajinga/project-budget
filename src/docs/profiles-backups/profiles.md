@@ -22,3 +22,7 @@ Every profile is one localStorage key (`projectbudget:profile:<id>`). The active
 - **Duplicate** — a deep copy with a new id. Useful for cloning before an experiment.
 - **Delete** — soft delete. The profile moves to `projectbudget:trash:<id>` for 7 days before it's purged.
 - **Switch** — swap the active profile. The store reloads and the UI refreshes.
+
+## The sample budget
+
+The [Profiles](/app/profiles/) page always carries a *Sample budget* card. It opens the bundled sample household (the Castillos: two parents, four kids, five years of history and eighteen months of plans), loads a fresh copy if none exists, or restores the one you deleted. Deleting the sample works like deleting any profile: it sits in trash for 7 days, and either way a new copy is one click away. Dates in the sample slide forward when it loads, so the current month is always the current month.

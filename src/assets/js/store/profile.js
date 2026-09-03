@@ -14,7 +14,12 @@ function nowISO() { return new Date().toISOString(); }
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 
 function indexEntry(p) {
-  return { id: p.id, name: p.name, lastOpenedAt: p.updatedAt || p.createdAt, schemaVersion: p.schemaVersion };
+  return {
+    id: p.id, name: p.name, lastOpenedAt: p.updatedAt || p.createdAt, schemaVersion: p.schemaVersion,
+    /* Lets the Profiles page find the bundled sample without loading
+       every profile bundle. */
+    isSample: !!(p.settings && p.settings.isSample),
+  };
 }
 
 export function listProfiles() {
@@ -131,6 +136,7 @@ export function listTrash() {
         name: rec.profile.name,
         deletedAt: rec.deletedAt,
         daysLeft: Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000))),
+        isSample: !!(rec.profile.settings && rec.profile.settings.isSample),
         accounts: (rec.profile.accounts || []).length,
         transactions: (rec.profile.transactions || []).length,
       });

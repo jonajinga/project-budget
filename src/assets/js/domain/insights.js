@@ -13,9 +13,14 @@ function dayValue(iso) { return Date.parse(iso.slice(0, 10) + "T00:00:00Z"); }
  * @returns {number|null} whole days, or null with no outflows yet
  */
 export function ageOfMoney(profile, asOfDate) {
+  /* Only on-budget accounts hold spendable dollars; a 401(k) balance
+     update is neither an inflow to spend nor an outflow that spent. */
+  var onBudget = new Set((profile.accounts || [])
+    .filter(function (a) { return a.onBudget !== false; })
+    .map(function (a) { return a.id; }));
   var txns = (profile.transactions || [])
     .filter(function (t) {
-      return t.date && t.date.slice(0, 10) <= asOfDate && !t.transferTxnId && !t.splits;
+      return t.date && t.date.slice(0, 10) <= asOfDate && !t.transferTxnId && !t.splits && onBudget.has(t.accountId);
     })
     .slice()
     .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
@@ -61,9 +66,13 @@ export function projectedAgeOfMoney(profile, monthlySavedCents, asOfDate) {
   var current = ageOfMoney(profile, asOfDate);
   if (current == null) return null;
   var cutoff = new Date(dayValue(asOfDate) - 89 * DAY_MS).toISOString().slice(0, 10);
+  var onBudget = new Set((profile.accounts || [])
+    .filter(function (a) { return a.onBudget !== false; })
+    .map(function (a) { return a.id; }));
   var out = 0;
   (profile.transactions || []).forEach(function (t) {
     if (!t.date || t.transferTxnId) return;
+    if (!onBudget.has(t.accountId)) return;
     var d = t.date.slice(0, 10);
     if (d < cutoff || d > asOfDate) return;
     if (t.amount < 0) out += -t.amount;

@@ -5,7 +5,7 @@ category: "getting-started"
 order: 3
 ---
 
-A profile is one complete budget — its own accounts, categories, transactions, goals, and history. On a fresh visit the app loads a read-only sample profile so you can poke around. Your first real step is creating your own.
+A profile is one complete budget — its own accounts, categories, transactions, goals, and history. On a fresh visit the app offers a sample profile so you can poke around; you can also load it any time from the [Profiles](/app/profiles/) page. Your first real step is creating your own.
 
 ## Create the profile
 

@@ -17,7 +17,7 @@ Project Budget runs entirely in your browser. There is no account to create, no 
 
 ## A typical first session
 
-1. Create a profile from the [Profiles](/app/profiles/) page (or accept the sample profile that loads on first visit).
+1. Create a profile from the [Profiles](/app/profiles/) page (or load the sample profile from the same page).
 2. On [Accounts](/app/accounts/), add a checking account with its current balance, a savings account, and any credit card.
 3. On [Budget](/app/budget/), use the group / category menus (⋮) to add groups (for example *Immediate Obligations*, *True Expenses*, *Quality of Life*) and categories inside them.
 4. Enter your most recent paycheck on the [Register](/app/register/) — leave it uncategorized to make it Ready to Work.

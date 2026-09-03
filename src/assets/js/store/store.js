@@ -25,6 +25,7 @@ import {
    snapshotIfStale still triggered from the init / profile-switch
    paths here so daily backups always fire on app open. */
 import { snapshotIfStale } from "./backup.js";
+import { shiftSampleToToday } from "./sample-dates.js";
 import * as dexie from "./db.js";
 
 /* JSON round-trip clone: strips Alpine reactive Proxies so the result
@@ -501,9 +502,10 @@ export function createStore() {
       /* Versioned flag key — bump the suffix whenever the bundled
          sample is meaningfully changed so previously-seeded users
          get the new dataset on next visit (they keep all their own
-         profiles; we just add the new sample alongside). The v2
-         bump in 2026-05 ships the 6-person 1,399-txn household. */
-      var flagKey = "projectbudget:sample-loaded-v2";
+         profiles; we just add the new sample alongside). v3 (2026-09)
+         ships the Castillo household: five years of history and
+         eighteen months of plans. */
+      var flagKey = "projectbudget:sample-loaded-v3";
       /* The flag exists to stop the OLD automatic loader re-seeding on every
          visit. An explicit request from the welcome wizard must ignore it --
          otherwise "load the sample" silently does nothing the second time. */
@@ -522,9 +524,12 @@ export function createStore() {
         fresh.name = "Sample household";
         fresh.settings = fresh.settings || {};
         fresh.settings.isSample = true;
+        /* The bundle is anchored to the day it was generated; slide every
+           date forward so "this month" is really this month. */
+        shiftSampleToToday(fresh);
         _writeJSON(_profileKey(fresh.id), fresh);
         var index = _readJSON(_profilesIndexKey()) || [];
-        index.push({ id: fresh.id, name: fresh.name, lastOpenedAt: fresh.updatedAt, schemaVersion: fresh.schemaVersion });
+        index.push({ id: fresh.id, name: fresh.name, lastOpenedAt: fresh.updatedAt, schemaVersion: fresh.schemaVersion, isSample: true });
         _writeJSON(_profilesIndexKey(), index);
         this.refreshProfiles();
         this._load(fresh.id);
@@ -533,6 +538,45 @@ export function createStore() {
       } catch (_e) {
         /* Offline or sample not deployed — quietly skip. */
       }
+    },
+
+    /* ---- Sample budget on the Profiles page ----
+       The sample is always reachable from /app/profiles/: open it when it
+       exists, restore it from trash when it was deleted this week, or load
+       a fresh copy from the bundle otherwise. */
+    sampleProfileEntry() {
+      void this._listVersion;
+      var list = this.profiles || [];
+      return list.find(function (e) { return e.isSample; })
+        /* Indexes written before the flag existed: fall back to the name
+           the loader always gives the sample. */
+        || list.find(function (e) { return e.name === "Sample household"; })
+        || null;
+    },
+    sampleInTrash() {
+      void this._listVersion;
+      return listTrash().find(function (e) { return e.isSample || e.name === "Sample household"; }) || null;
+    },
+    /* Open the existing sample, or load a fresh copy. Returns a promise. */
+    async openSampleProfile() {
+      var entry = this.sampleProfileEntry();
+      if (entry) {
+        if (this.active !== entry.id) this.switchTo(entry.id);
+        return entry;
+      }
+      var p = await this.loadSampleProfile({ explicit: true });
+      if (p) this.pushToast("Sample budget loaded.");
+      else this.pushToast("Could not load the sample budget. Check your connection and try again.", "warn");
+      return p;
+    },
+    /* Replace the current sample with a pristine copy. The old one goes to
+       trash for 7 days like any other deletion. */
+    async resetSampleProfile() {
+      var entry = this.sampleProfileEntry();
+      if (entry) this.deleteProfile(entry.id, entry.name);
+      var p = await this.loadSampleProfile({ explicit: true });
+      if (p) this.pushToast("Sample budget reset to the original.");
+      return p;
     },
 
     /* Convenience for the sample banner CTA. */
