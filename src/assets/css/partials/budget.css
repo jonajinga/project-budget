@@ -984,6 +984,43 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   background: var(--bg);
 }
 
+/* ── The narrow band: 600 to 899px (a small window, a tablet) ─────────
+   The desktop recipe let the three value columns grow to 9rem each and
+   the name column keep the full checkbox + tree indent + mark slot, so
+   at 640px the name got ~30px ("Cr...", "Mort..."). Here the value
+   columns are capped lower, pills lose their generous padding, the
+   tree indent shrinks with a smaller chevron, and the name gets the
+   rest. */
+@media (min-width: 600px) and (max-width: 899px) {
+  .budget {
+    --budget-tree-indent: 18px;
+  }
+  .budget__group-header,
+  .budget__row {
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(4.6rem, 6.25rem)) 28px;
+    column-gap: 4px;
+    padding-left: var(--space-2xs);
+    padding-right: var(--space-2xs);
+  }
+  .budget__group-header .group-toggle { padding-left: 0; gap: 4px; }
+  .budget__group-header .group-toggle__chevron { width: 14px; }
+  .budget__group-header strong { font-size: var(--fs-base); }
+  .budget__group-total { font-size: var(--fs-base); padding-right: 0.4rem; }
+  .budget__activity-btn.budget__activity-btn--group { font-size: var(--fs-base); }
+  .budget .budget__row .available-pill,
+  .budget .budget__row .budget__activity-btn {
+    min-width: 0;
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+    font-size: var(--fs-xs);
+  }
+  .budget__assigned input,
+  .budget__assigned-locked { padding-right: 0.45rem; font-size: var(--fs-xs); }
+  .budget__column-header .budget__category {
+    padding-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
+  }
+}
+
 /* Months-shown control: one small select at the strip's right end. */
 .budget__months { flex: 0 0 auto; display: inline-flex; align-items: center; padding-right: var(--space-2xs); }
 .budget__months-select {

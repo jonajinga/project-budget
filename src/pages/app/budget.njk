@@ -96,12 +96,16 @@ eleventyExcludeFromCollections: true
        :class="inspectorDocked && inspectorOpen ? 'budget-layout--open' : ''">
   <section class="budget" x-show="hasCategories" x-cloak :class="monthColClass()"
            :style="gridVh() ? ('--budget-vh:' + gridVh() + 'px') : ''">
+    {# Sticky header block: month cards, then the column header. Sticks
+       to the top of the grid's own scroll area, in every month count. #}
+    <div class="budget__headers">
       {# Month cards - one per visible month, in the same grid as the
          rows so each spans its own value columns. Actual Budget's month
          header, in this app's vocabulary: the name, a month-scoped menu,
          the four lines that produce Ready to Work, and the number itself.
-         Sits OUTSIDE the sticky header block: a card this tall pinned to
-         the top would eat the screen; only the column header sticks. #}
+         Lives INSIDE the sticky header block with the column header, so
+         Ready to Work never scrolls away; collapse the cards (chevron)
+         to keep the pinned block short. #}
       <div class="budget__group-header budget__month-header" role="group" aria-label="Month summaries">
         <span class="budget__category budget__month-spacer" aria-hidden="true"></span>
         <template x-for="vm in visibleMonths()" :key="'mh-' + vm">
@@ -242,20 +246,8 @@ eleventyExcludeFromCollections: true
           </div>
         </template>
       </div>
-
-    <div x-show="!budgetCollapsed" x-cloak>
-      {# Sticky header block: an optional month strip (only when more
-         than one month is visible) + the column header. Sticks below
-         the site header; the offset is measured because the header's
-         height varies with safe-area insets. #}
-      {# Sticky header block: the column header. Sticks below the site
-         header; the offset is measured because the header's height
-         varies with safe-area insets. #}
-      <div class="budget__headers" :style="'--budget-sticky-top:' + stickyTop() + 'px'">
-        {# Desktop-only column header — at mobile each cat row carries
-           its own micro-labels above the pills, so the header strip is
-           redundant. Hidden via the budget__column-header class below. #}
-        <div class="budget__group-header budget__column-header">
+        {# Column header. Hidden with the grid when it is collapsed. #}
+        <div class="budget__group-header budget__column-header" x-show="!budgetCollapsed">
           <span class="budget__category">Category</span>
           <template x-for="vm in visibleMonths()" :key="'ch-' + vm">
             <div style="display: contents;">
@@ -266,8 +258,9 @@ eleventyExcludeFromCollections: true
             </div>
           </template>
         </div>
-      </div>
+    </div>
 
+    <div x-show="!budgetCollapsed" x-cloak>
     <div>
       <template x-for="group in $store.budget.categoryGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
         <div class="budget__group cat-group">
