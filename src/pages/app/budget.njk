@@ -286,20 +286,20 @@ eleventyExcludeFromCollections: true
                         :data-tip="groupGoal(group).tip"
                         role="img" :aria-label="groupGoal(group).tip">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <circle class="ring__track" cx="12" cy="12" r="10.5"/>
-                      <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(groupGoal(group).pct) }"/>
+                      <circle class="ring__track" cx="12" cy="12" r="11"/>
+                      <circle class="ring__fill" cx="12" cy="12" r="11" :style="{ 'stroke-dashoffset': ringOffset(groupGoal(group).pct) }"/>
                       <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
                       <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(groupGoal(group).pct)"></text>
                     </svg>
                   </span>
                   <span class="ring ring--cut ring--span"
                         x-show="groupCut(group).count" x-cloak
-                        :class="ringClass(groupCut(group).pct, 'cut')"
+                        :class="ringClass(groupCut(group).pct, 'cut') + (groupGoal(group).count ? ' ring--mini' : '')"
                         :data-tip="groupCut(group).tip"
                         role="img" :aria-label="groupCut(group).tip">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <circle class="ring__track" cx="12" cy="12" r="10.5"/>
-                      <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(groupCut(group).pct) }"/>
+                      <circle class="ring__track" cx="12" cy="12" r="11"/>
+                      <circle class="ring__fill" cx="12" cy="12" r="11" :style="{ 'stroke-dashoffset': ringOffset(groupCut(group).pct) }"/>
                       <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
                       <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(groupCut(group).pct)"></text>
                     </svg>
@@ -406,21 +406,21 @@ eleventyExcludeFromCollections: true
                                 :aria-label="'Goal for ' + c.name + ': ' + goalPercent(c.id) + '% funded. ' + goalLabel(c.id)"
                                 @click="selectCategory(c)">
                           <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle class="ring__track" cx="12" cy="12" r="10.5"/>
-                            <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(goalPercent(c.id)) }"/>
+                            <circle class="ring__track" cx="12" cy="12" r="11"/>
+                            <circle class="ring__fill" cx="12" cy="12" r="11" :style="{ 'stroke-dashoffset': ringOffset(goalPercent(c.id)) }"/>
                             <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
                             <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(goalPercent(c.id))"></text>
                           </svg>
                         </button>
                         <button type="button" class="ring ring--cut"
                                 x-show="$store.budget.cutForCategory(c.id)" x-cloak
-                                :class="ringClass(cutPercent(c.id), 'cut')"
+                                :class="ringClass(cutPercent(c.id), 'cut') + ($store.budget.findGoal(c.id) ? ' ring--mini' : '')"
                                 :data-tip="cutTooltip(c.id)"
                                 :aria-label="'Planned cut on ' + c.name + ': ' + cutPercent(c.id) + '% of this month\'s target saved. ' + cutBadgeText(c.id)"
                                 @click="selectCategory(c)">
                           <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle class="ring__track" cx="12" cy="12" r="10.5"/>
-                            <circle class="ring__fill" cx="12" cy="12" r="10.5" :style="{ 'stroke-dashoffset': ringOffset(cutPercent(c.id)) }"/>
+                            <circle class="ring__track" cx="12" cy="12" r="11"/>
+                            <circle class="ring__fill" cx="12" cy="12" r="11" :style="{ 'stroke-dashoffset': ringOffset(cutPercent(c.id)) }"/>
                             <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
                             <text class="ring__text" x="12" y="12" dy="0.36em" x-text="ringText(cutPercent(c.id))"></text>
                           </svg>

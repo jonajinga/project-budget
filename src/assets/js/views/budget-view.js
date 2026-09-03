@@ -569,10 +569,10 @@ function budgetView() {
     },
 
     /* ---- Progress rings (goals and cuts) ---- */
-    /* r=10 => circumference 62.83; the dash offset hides the unfilled arc. */
+    /* r=11 => circumference 69.12; the dash offset hides the unfilled arc. */
     ringOffset(pct) {
       var p = Math.max(0, Math.min(100, Number(pct) || 0));
-      return (62.83 * (1 - p / 100)).toFixed(2);
+      return (69.12 * (1 - p / 100)).toFixed(2);
     },
     ringText(pct) {
       var p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));

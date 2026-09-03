@@ -262,7 +262,7 @@
 .budget {
   --budget-check-col: calc(16px + var(--space-2xs));
   --budget-tree-indent: calc(4px + 20px + var(--space-2xs));
-  --budget-mark-slot: 24px;
+  --budget-mark-slot: 54px;
 }
 @media (min-width: 600px) {
   /* The indent lives on the row's padding and the checkbox is pinned to
@@ -305,14 +305,38 @@
      and the name. Fixed minimum width = one ring, so names line up in
      a column whether a row has zero marks or one; a row with a goal AND
      a cut AND a note widens the slot and pushes only its own name. */
+  /* Two fixed positions: the ring, then the note icon. The slot is the
+     same width on every row, so a name never moves because its row
+     happens to carry a mark. A second ring (a cut beside a goal) does
+     not take a third position: it shrinks to a badge on the first
+     ring's corner (.ring--mini). */
   .budget__cat-ind {
     flex: 0 0 auto;
-    display: inline-flex;
+    position: relative;
+    display: grid;
+    grid-template-columns: 25px 25px;
+    column-gap: 4px;
     align-items: center;
-    gap: 3px;
+    width: var(--budget-mark-slot);
     min-width: var(--budget-mark-slot);
     margin-right: var(--space-2xs);
   }
+  .budget__cat-ind > .ring:not(.ring--mini) { grid-column: 1; }
+  /* The note mark is drawn as the same circle as a ring, with the note
+     glyph where the percentage would be, so the two marks look like a
+     set instead of a ring next to a stray icon. */
+  .budget__cat-ind > .note-ind {
+    grid-column: 2;
+    width: 25px;
+    height: 25px;
+    padding: 0;
+    margin: -3px 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2.1px var(--border-soft);
+    color: var(--fg-muted);
+  }
+  .budget__cat-ind > .note-ind svg { width: 13px; height: 13px; }
+  .budget__cat-ind > .note-ind:hover { color: var(--accent); box-shadow: inset 0 0 0 2.1px var(--accent); }
   .budget .budget__category-row .cut-badge,
   .budget .budget__category-row .note-ind { flex: 0 0 auto; }
 }
@@ -325,8 +349,8 @@
   --ring-fill: var(--accent);
   --ring-track: var(--border-soft);
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   padding: 0;
   margin: -3px 0;
   border: 0;
@@ -338,16 +362,33 @@
   color: inherit;
 }
 .ring--span { cursor: default; }
+/* The corner badge form: a cut ring riding on a goal ring. */
+.ring--mini {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  margin: 0;
+  margin-top: 2px;
+  width: 12px;
+  height: 12px;
+  z-index: 1;
+}
+.ring--mini svg { width: 12px; height: 12px; }
+.ring--mini .ring__track { stroke-width: 3.5; stroke: var(--bg-elevated); }
+.ring--mini .ring__fill { stroke-width: 3.5; }
+.ring--mini .ring__text { display: none; }
+.ring--mini .ring__check { stroke-width: 4; }
+.ring--mini::before { inset: -4px; }
 .ring::before { content: ""; position: absolute; inset: -6px; }
-.ring svg { width: 24px; height: 24px; display: block; overflow: visible; }
+.ring svg { width: 25px; height: 25px; display: block; overflow: visible; }
 .ring__track { fill: none; stroke: var(--ring-track); stroke-width: 2.1; }
 .ring__fill {
   fill: none;
   stroke: var(--ring-fill);
   stroke-width: 2.1;
   stroke-linecap: round;
-  stroke-dasharray: 62.83;
-  stroke-dashoffset: 62.83;
+  stroke-dasharray: 69.12;
+  stroke-dashoffset: 69.12;
   transform: rotate(-90deg);
   transform-origin: 12px 12px;
   transition: stroke-dashoffset var(--t-base);
@@ -663,28 +704,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      minmax(0,1fr) lets greedy value columns crush it to ~40px). */
   .budget--m2 .budget__group-header,
   .budget--m2 .budget__row {
-    grid-template-columns: minmax(12rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
-    min-width: 54rem;
+    grid-template-columns: minmax(15rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
+    min-width: 57rem;
   }
   .budget--m3 .budget__group-header,
   .budget--m3 .budget__row {
-    grid-template-columns: minmax(12rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
-    min-width: 72rem;
+    grid-template-columns: minmax(14rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
+    min-width: 74rem;
   }
   .budget--m4 .budget__group-header,
   .budget--m4 .budget__row {
-    grid-template-columns: minmax(11rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
-    min-width: 82rem;
+    grid-template-columns: minmax(13rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
+    min-width: 84rem;
   }
   .budget--m5 .budget__group-header,
   .budget--m5 .budget__row {
-    grid-template-columns: minmax(11rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
-    min-width: 97rem;
+    grid-template-columns: minmax(13rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
+    min-width: 99rem;
   }
   .budget--m6 .budget__group-header,
   .budget--m6 .budget__row {
-    grid-template-columns: minmax(11rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
-    min-width: 111rem;
+    grid-template-columns: minmax(13rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
+    min-width: 113rem;
   }
   .budget--m4 .budget__group-header, .budget--m4 .budget__row,
   .budget--m5 .budget__group-header, .budget--m5 .budget__row,
