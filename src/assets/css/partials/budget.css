@@ -414,6 +414,17 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    in DOM order, kebab last. Every cell needs grid-area: auto or the
    stale area names would create implicit tracks. */
 @media (min-width: 900px) {
+  /* When the columns outgrow the viewport (inspector open, narrow
+     window, resized sidebar) the SECTION scrolls horizontally and the
+     rows keep a floor width - cells never shrink into overlap, and
+     every month stays clickable and editable. The kebab menus are
+     position: fixed, so they escape the scroll container. */
+  .budget--m2,
+  .budget--m3 { overflow-x: auto; }
+  .budget--m2 .budget__group-header,
+  .budget--m2 .budget__row { min-width: 46rem; }
+  .budget--m3 .budget__group-header,
+  .budget--m3 .budget__row { min-width: 62rem; }
   .budget--m2 .budget__group-header,
   .budget--m2 .budget__row {
     grid-template-areas: none;
@@ -448,7 +459,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     border-left: 1px solid var(--border-soft);
   }
 }
-@media (min-width: 1280px) {
+@media (min-width: 900px) {
   .budget--m3 .budget__group-header,
   .budget--m3 .budget__row {
     grid-template-areas: none;

@@ -607,12 +607,11 @@ function budgetView() {
       try { localStorage.setItem("projectbudget:budget-month-count", String(n)); } catch (_e) {}
     },
     effectiveMonthCount() {
-      var max = this.viewportMaxMonths;
-      /* An open docked inspector (21rem) + three month columns cannot
-         share 1280px - the grid's minimums alone overflow. Close the
-         pane to unlock the third column. */
-      if (this.inspectorDocked && this.inspectorOpen && max > 2) max = 2;
-      return Math.min(this.monthCount, max);
+      /* No cap beyond the phone clamp: like YNAB and Actual, every
+         selected month renders and edits. When the columns outgrow
+         the available width the grid scrolls horizontally inside its
+         own container instead of shrinking cells into overlap. */
+      return Math.min(this.monthCount, this.viewportMaxMonths);
     },
     _nextMonthOf(iso) {
       var p = (iso || "").split("-").map(Number);
@@ -677,7 +676,9 @@ function budgetView() {
          inspector presents as the bottom sheet instead. */
       var mqDock = window.matchMedia("(min-width: 1180px)");
       var setMax = function () {
-        self.viewportMaxMonths = mq3.matches ? 3 : (mq2.matches ? 2 : 1);
+        /* Any desktop-ish width can show all three (the grid scrolls
+           if it must); phones stay single-month. */
+        self.viewportMaxMonths = mq2.matches ? 3 : 1;
         self.inspectorDocked = mqDock.matches;
       };
       var measureSticky = function () {

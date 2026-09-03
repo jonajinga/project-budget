@@ -136,14 +136,12 @@ eleventyExcludeFromCollections: true
           <template x-for="n in [1, 2, 3]" :key="'mc-' + n">
             <button type="button" class="budget__months-btn"
                     :class="monthCount === n ? 'is-active' : ''"
-                    :disabled="n > viewportMaxMonths || (inspectorDocked && inspectorOpen && n > 2)"
+                    :disabled="n > viewportMaxMonths"
                     :aria-pressed="(monthCount === n).toString()"
                     :aria-label="'Show ' + n + ' month' + (n === 1 ? '' : 's')"
                     :data-tip="n > viewportMaxMonths
-                      ? 'Widen the window to fit ' + n + ' months.'
-                      : (inspectorDocked && inspectorOpen && n > 2)
-                      ? 'Close the inspector to fit ' + n + ' months.'
-                      : (n === 1 ? 'Show a single month.' : 'Show ' + n + ' months side by side.')"
+                      ? 'Multi-month needs a wider window.'
+                      : (n === 1 ? 'Show a single month.' : 'Show ' + n + ' months side by side - the grid scrolls sideways if it needs more room.')"
                     @click="setMonthCount(n)" x-text="n"></button>
           </template>
         </div>
