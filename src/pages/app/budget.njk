@@ -213,9 +213,9 @@ eleventyExcludeFromCollections: true
               <span class="num budget__assigned" data-tip="Dollars you committed to this category this month.">Assigned</span>
               <span class="num budget__activity" data-tip="Outflows from this category this month. Inflows show as positive.">Outflow</span>
               <span class="num budget__available" data-tip="Carry-in + assigned + outflow. Pill color: green = funded, blue = positive remainder, red = overspent.">Available</span>
+              <span class="budget__row-actions" aria-hidden="true"></span>
             </div>
           </template>
-          <span class="budget__row-actions" aria-hidden="true"></span>
         </div>
       </div>
 
@@ -258,6 +258,7 @@ eleventyExcludeFromCollections: true
                 <span class="num budget__group-total budget__available"
                       :class="groupTotalAvailable(group.categories, vm) < 0 ? 'budget__group-total--neg' : ''"
                       x-text="fmtGrid(groupTotalAvailable(group.categories, vm))"></span>
+                <span class="budget__row-actions budget__row-actions--filler" aria-hidden="true"></span>
               </div>
             </template>
             {# Group kebab anchored to the far right edge so it lines up
@@ -412,48 +413,48 @@ eleventyExcludeFromCollections: true
                                 data-tip="Open in the inspector - move money, notes, goal, activity."
                                 x-text="fmtGrid(categoryAvailable(c.id, vm))"></button>
                       </div>
+                      {# Month-scoped kebab - one per month column, so
+                         every visible month edits from its own menu. #}
+                      <div class="budget__row-actions" :data-month="vm">
+                        <template x-if="!$store.budget.isPaymentCategory(c.id)">
+                          {% call overflow(label="Category actions") %}
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item"
+                                      @click="open = false; selectCategory(c, vm)"
+                                      x-text="'Inspect ' + monthShortLabel(vm) + '…'">Inspect…</button>
+                            </li>
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item"
+                                      @click="open = false; openAutoAssign({ kind: 'category', name: c.name, id: c.id, month: vm })">Auto-assign…</button>
+                            </li>
+                            <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item"
+                                      @click="open = false; catClearAssigned(c, vm)">Clear assigned</button>
+                            </li>
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item"
+                                      @click="open = false; catClearAvailable(c, vm)">Clear available</button>
+                            </li>
+                            <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item"
+                                      @click="open = false; keyboardMoveCat(c, group, -1)">Move up</button>
+                            </li>
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item"
+                                      @click="open = false; keyboardMoveCat(c, group, 1)">Move down</button>
+                            </li>
+                            <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                                      @click="open = false; deleteCategoryRow(c)">Delete category</button>
+                            </li>
+                          {% endcall %}
+                        </template>
+                      </div>
                     </div>
                   </template>
-                  {# Row kebab anchored to the far right edge (its own
-                     grid column) so it lines up across every row and
-                     never crowds the category name. #}
-                  <div class="budget__row-actions">
-                    <template x-if="!$store.budget.isPaymentCategory(c.id)">
-                      {% call overflow(label="Category actions") %}
-                        <li role="none">
-                          <button type="button" role="menuitem" class="overflow-menu__item"
-                                  @click="open = false; selectCategory(c)">Inspect…</button>
-                        </li>
-                        <li role="none">
-                          <button type="button" role="menuitem" class="overflow-menu__item"
-                                  @click="open = false; openAutoAssign({ kind: 'category', name: c.name, id: c.id })">Auto-assign</button>
-                        </li>
-                        <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-                        <li role="none">
-                          <button type="button" role="menuitem" class="overflow-menu__item"
-                                  @click="open = false; keyboardMoveCat(c, group, -1)">Move up</button>
-                        </li>
-                        <li role="none">
-                          <button type="button" role="menuitem" class="overflow-menu__item"
-                                  @click="open = false; keyboardMoveCat(c, group, 1)">Move down</button>
-                        </li>
-                        <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-                        <li role="none">
-                          <button type="button" role="menuitem" class="overflow-menu__item"
-                                  @click="open = false; catClearAssigned(c)">Clear assigned</button>
-                        </li>
-                        <li role="none">
-                          <button type="button" role="menuitem" class="overflow-menu__item"
-                                  @click="open = false; catClearAvailable(c)">Clear available</button>
-                        </li>
-                        <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-                        <li role="none">
-                          <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
-                                  @click="open = false; deleteCategoryRow(c)">Delete category</button>
-                        </li>
-                      {% endcall %}
-                    </template>
-                  </div>
                 </div>
               </template>
             </div>
@@ -521,6 +522,7 @@ eleventyExcludeFromCollections: true
                   :class="monthlyAvailableTotal(vm) < 0 ? 'amount--outflow' : 'amount--inflow'"
                   x-text="fmtGrid(monthlyAvailableTotal(vm))"></span>
           </span>
+          <span class="budget__row-actions" aria-hidden="true"></span>
         </div>
       </template>
     </div>

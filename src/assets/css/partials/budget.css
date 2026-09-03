@@ -456,6 +456,14 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m4 .budget__row-actions,
   .budget--m5 .budget__row-actions,
   .budget--m6 .budget__row-actions { grid-area: auto; }
+  /* Per-month kebab cell: compact, centered trigger. */
+  .budget--m2 .budget__row .budget__row-actions, .budget--m3 .budget__row .budget__row-actions,
+  .budget--m4 .budget__row .budget__row-actions, .budget--m5 .budget__row .budget__row-actions,
+  .budget--m6 .budget__row .budget__row-actions {
+    display: flex;
+    justify-content: center;
+  }
+
   /* A hairline before each month's first cell marks the boundary. */
   .budget--m2 .budget__row .budget__assigned,
   .budget--m3 .budget__row .budget__assigned,
@@ -475,7 +483,12 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m3 .budget__row .available-pill,
   .budget--m4 .budget__row .available-pill,
   .budget--m5 .budget__row .available-pill,
-  .budget--m6 .budget__row .available-pill {
+  .budget--m6 .budget__row .available-pill,
+  .budget--m2 .budget__row .budget__activity-btn,
+  .budget--m3 .budget__row .budget__activity-btn,
+  .budget--m4 .budget__row .budget__activity-btn,
+  .budget--m5 .budget__row .budget__activity-btn,
+  .budget--m6 .budget__row .budget__activity-btn {
     padding-left: 0.4rem;
     padding-right: 0.4rem;
     min-width: 0;
@@ -486,28 +499,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      minmax(0,1fr) lets greedy value columns crush it to ~40px). */
   .budget--m2 .budget__group-header,
   .budget--m2 .budget__row {
-    grid-template-columns: minmax(9rem, 1.4fr) repeat(6, minmax(4.75rem, 8rem)) auto;
-    min-width: 46rem;
+    grid-template-columns: minmax(9rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
+    min-width: 51rem;
   }
   .budget--m3 .budget__group-header,
   .budget--m3 .budget__row {
-    grid-template-columns: minmax(9rem, 1.2fr) repeat(9, minmax(4.6rem, 6.5rem)) auto;
-    min-width: 62rem;
+    grid-template-columns: minmax(9rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
+    min-width: 69rem;
   }
   .budget--m4 .budget__group-header,
   .budget--m4 .budget__row {
-    grid-template-columns: minmax(8rem, 1.1fr) repeat(12, minmax(4.4rem, 6rem)) auto;
-    min-width: 70rem;
+    grid-template-columns: minmax(8rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
+    min-width: 79rem;
   }
   .budget--m5 .budget__group-header,
   .budget--m5 .budget__row {
-    grid-template-columns: minmax(8rem, 1.1fr) repeat(15, minmax(4.3rem, 5.75rem)) auto;
-    min-width: 84rem;
+    grid-template-columns: minmax(8rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
+    min-width: 94rem;
   }
   .budget--m6 .budget__group-header,
   .budget--m6 .budget__row {
-    grid-template-columns: minmax(8rem, 1.1fr) repeat(18, minmax(4.2rem, 5.5rem)) auto;
-    min-width: 98rem;
+    grid-template-columns: minmax(8rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
+    min-width: 108rem;
   }
   .budget--m4 .budget__group-header, .budget--m4 .budget__row,
   .budget--m5 .budget__group-header, .budget--m5 .budget__row,
@@ -530,7 +543,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     border-bottom: 1px solid var(--border-soft);
   }
   .budget__month-head {
-    grid-column: span 3;
+    grid-column: span 4;
     display: flex;
     align-items: baseline;
     justify-content: flex-end;

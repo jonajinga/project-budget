@@ -169,8 +169,9 @@ function budgetView() {
     },
     /* Per-category Clear helpers — single-cat path with the same
        confirm UX as the bulk version, no selection side effects. */
-    async catClearAssigned(c) {
+    async catClearAssigned(c, month) {
       var s = this.$store.budget;
+      var m = month || s.currentMonth;
       var label = "'" + (c.name || "this category") + "'";
       if (window.PBDialog) {
         var ok = await window.PBDialog.confirm({
@@ -180,11 +181,12 @@ function budgetView() {
         });
         if (!ok) return;
       }
-      s.clearAssignedForCategories([c.id], s.currentMonth, "Clear assigned · " + label);
+      s.clearAssignedForCategories([c.id], m, "Clear assigned · " + label);
       s.pushToast("Cleared assigned for " + (c.name || "category") + ".", "ok");
     },
-    async catClearAvailable(c) {
+    async catClearAvailable(c, month) {
       var s = this.$store.budget;
+      var m = month || s.currentMonth;
       var label = "'" + (c.name || "this category") + "'";
       if (window.PBDialog) {
         var ok = await window.PBDialog.confirm({
@@ -194,7 +196,7 @@ function budgetView() {
         });
         if (!ok) return;
       }
-      s.clearAvailableForCategories([c.id], s.currentMonth, "Clear available · " + label);
+      s.clearAvailableForCategories([c.id], m, "Clear available · " + label);
       s.pushToast("Cleared available for " + (c.name || "category") + ".", "ok");
     },
     /* Auto-assign from the bulk-actions bar — re-uses the existing
@@ -762,7 +764,8 @@ function budgetView() {
     _autoAssignPlan(strategy) {
       var store = this.$store.budget;
       if (!store.profile) return { cats: {}, total: 0 };
-      var month = store.currentMonth;
+      var scope0 = this.autoAssignScope || {};
+      var month = scope0.month || store.currentMonth;
       var cats = {};
       var total = 0;
       var scope = this.autoAssignScope || { kind: "all" };
@@ -937,8 +940,8 @@ function budgetView() {
       var ids = Object.keys(plan.cats);
       if (!ids.length) { this.autoAssignOpen = false; return; }
       var self = this;
-      var month = this.$store.budget.currentMonth;
       var scope = this.autoAssignScope || { kind: "all", name: "All categories" };
+      var month = scope.month || this.$store.budget.currentMonth;
       var scopeLabel = scope.kind === "category" ? "the " + scope.name + " category"
                      : scope.kind === "group"    ? scope.name
                      : "every category";
@@ -946,7 +949,7 @@ function budgetView() {
         title: "Apply auto-assign?",
         message: "This will overwrite the Assigned column for " + ids.length +
                  " categor" + (ids.length === 1 ? "y" : "ies") +
-                 " in " + scopeLabel + " for " + this.monthHeaderLabel() +
+                 " in " + scopeLabel + " for " + this.monthHeaderLabel(month) +
                  " with the chosen strategy. Your existing assignments are replaced.",
         confirmLabel: "Apply auto-assign",
       }).then(function (ok) {
