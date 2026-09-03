@@ -45,8 +45,13 @@ function budgetView() {
     /* ---- Budget templates UI ---- */
     templatesOpen: false,
     templateNewName: "",
-    openTemplates() {
+    /* The month a template saves from / applies to. The month card's
+       menu opens the modal for ITS month; the toolbar opens it for the
+       current one. */
+    templateMonth: "",
+    openTemplates(month) {
       this.templateNewName = "";
+      this.templateMonth = month || this.$store.budget.currentMonth;
       this.templatesOpen = true;
       var self = this;
       this.$nextTick(function () {
@@ -57,14 +62,14 @@ function budgetView() {
     saveTemplate() {
       var name = (this.templateNewName || "").trim();
       if (!name) return;
-      this.$store.budget.saveBudgetTemplate(name, this.$store.budget.currentMonth);
+      this.$store.budget.saveBudgetTemplate(name, this.templateMonth || this.$store.budget.currentMonth);
       this.templateNewName = "";
     },
     applyTemplate(id) {
       var self = this;
-      var m = this.$store.budget.currentMonth;
+      var m = this.templateMonth || this.$store.budget.currentMonth;
       window.PBDialog.confirm({
-        title: "Apply template to " + m + "?",
+        title: "Apply template to " + this.monthHeaderLabel(m) + "?",
         message: "Existing assignments for any categories in this template will be overwritten. Cmd/Ctrl+Z undoes.",
         confirmLabel: "Apply template",
       }).then(function (ok) {
@@ -705,6 +710,71 @@ function budgetView() {
       var cls = BY_COUNT[this.effectiveMonthCount()] || "";
       if (this.budgetCollapsed) cls += (cls ? " " : "") + "budget--collapsed";
       return cls;
+    },
+    /* ---- Month cards ---------------------------------------------- */
+    /* "September 2026", or just "September" when short is true and the
+       month is in the current calendar year (the year is noise on a
+       card that sits under a year-scoped month strip). */
+    monthCardLabel(m, short) {
+      var p = (m || "").split("-").map(Number);
+      if (!p[0]) return m;
+      var d = new Date(p[0], p[1] - 1, 1);
+      if (short) return d.toLocaleDateString("en-US", { month: "short" }) + (p[0] === new Date().getFullYear() ? "" : " " + p[0]);
+      return d.toLocaleDateString("en-US", { month: "long" }) + (p[0] === new Date().getFullYear() ? "" : " " + p[0]);
+    },
+    prevMonthOf(m) {
+      var p = (m || "").split("-").map(Number);
+      if (!p[0]) return m;
+      var d = new Date(p[0], p[1] - 2, 1);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    },
+    monthLines(m) {
+      void this.$store.budget._listVersion;
+      return this.$store.budget.monthSummary(m);
+    },
+    /* Whole-month fills from the card's menu. Every one writes through
+       applyAssignments so it is a single undo step and a single save;
+       the strategies are the store's own quick-fill helpers. */
+    async monthAction(kind, month, n) {
+      var s = this.$store.budget;
+      var m = month || s.currentMonth;
+      var ids = s.allBudgetableCategoryIds();
+      var label = this.monthCardLabel(m);
+      if (kind === "zero") {
+        var okZero = await window.PBDialog.confirm({
+          title: "Set every assigned amount in " + label + " to zero?",
+          message: "Every category's Assigned for " + label + " becomes $0. Available balances carry in from the month before as usual. Cmd/Ctrl+Z undoes.",
+          confirmLabel: "Set to zero",
+        });
+        if (!okZero) return;
+        var cleared = s.clearAssignedForCategories(ids, m, "Set " + label + " to zero");
+        s.pushToast("Cleared assigned for " + cleared + " categor" + (cleared === 1 ? "y" : "ies") + " in " + label + ".");
+        return;
+      }
+      var plan = {};
+      var title = "";
+      var undo = "";
+      ids.forEach(function (id) {
+        var v = 0;
+        if (kind === "copyLast") v = s.quickLastMonthAssigned(id, m);
+        else if (kind === "average") v = s.quickAvg(id, m, n || 3);
+        else if (kind === "goals") v = s.findGoal(id) ? s.goalNeeded(id, m) + s.assignedFor(id, m) : s.assignedFor(id, m);
+        plan[id] = v;
+      });
+      if (kind === "copyLast") { title = "Copy " + this.monthCardLabel(this.prevMonthOf(m)) + "'s assigned into " + label + "?"; undo = "Copy last month's assigned"; }
+      else if (kind === "average") { title = "Set " + label + " to the " + (n || 3) + "-month average spending?"; undo = (n || 3) + "-month average"; }
+      else if (kind === "goals") { title = "Fund every goal in " + label + "?"; undo = "Fund every goal"; }
+      else return;
+      var ok = await window.PBDialog.confirm({
+        title: title,
+        message: "This overwrites the Assigned column for every category in " + label +
+                 (kind === "goals" ? " with whatever its goal still needs (categories without a goal keep their amount)." : ".") +
+                 " Cmd/Ctrl+Z undoes.",
+        confirmLabel: kind === "copyLast" ? "Copy" : "Apply",
+      });
+      if (!ok) return;
+      var count = s.applyAssignments(plan, m, undo + " (" + label + ")");
+      s.pushToast("Assigned " + count + " categor" + (count === 1 ? "y" : "ies") + " in " + label + ".");
     },
     monthShortLabel(m) {
       var p = (m || "").split("-").map(Number);

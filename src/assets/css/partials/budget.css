@@ -617,49 +617,136 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   }
 }
 
-/* Month header strip - only rendered when >1 month is visible. Each
-   head spans its month's three value columns. */
+/* Month cards -- one per visible month, above the column header.
+   Modelled on Actual Budget's month header: the month name with a
+   month-scoped menu, the arithmetic behind the month in small lines,
+   and Ready to Work as the headline. The row is the same grid as the
+   data rows, so each card spans exactly its month's value columns. */
 .budget__month-header { display: none; }
+@media (min-width: 600px) {
+  .budget__month-header {
+    display: grid;
+    background: transparent;
+    border-top: 0;
+    border-bottom: 0;
+    padding-top: 0;
+    padding-bottom: var(--space-2xs);
+    align-items: stretch;
+  }
+  .budget__month-spacer { grid-area: cat; }
+  .budget__month-head {
+    grid-column: 2 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2xs);
+    min-width: 0;
+    padding: var(--space-2xs) var(--space-sm) var(--space-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-input);
+  }
+  .budget__month-head.is-current { border-color: var(--accent); }
+  .budget__month-head-top {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    align-items: center;
+  }
+  .budget__month-head-name {
+    grid-column: 2;
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .budget__month-head-top .overflow-menu { grid-column: 3; justify-self: end; }
+  .budget__month-head-top .overflow-menu .btn--icon {
+    width: 28px; min-width: 28px; height: 28px; min-height: 28px; position: relative;
+  }
+  .budget__month-head-top .overflow-menu .btn--icon::before { content: ""; position: absolute; inset: -8px; }
+  /* The lines: number on the left, label on the right, like a ledger. */
+  .budget__month-lines {
+    margin: 0;
+    display: grid;
+    grid-template-columns: max-content minmax(0, max-content);
+    column-gap: var(--space-2xs);
+    row-gap: 1px;
+    justify-content: center;
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+  }
+  .budget__month-lines > div { display: contents; }
+  .budget__month-lines dd {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .budget__month-lines dd.is-neg { color: var(--danger, #b04444); }
+  .budget__month-lines dt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .budget__month-head-rtw {
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--border-soft);
+    padding: var(--space-2xs) 0 0;
+    margin: var(--space-3xs) 0 0;
+    font: inherit;
+    color: var(--fg-muted);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    text-align: center;
+  }
+  .budget__month-head-rtw .budget__month-head-rtw-label { font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .budget__month-head-rtw .num {
+    font-family: var(--font-display);
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+  }
+  .budget__month-head-rtw.amount--outflow .num { color: var(--danger, #b04444); }
+  .budget__month-head-rtw.is-zero .num { color: var(--fg-muted); }
+  .budget__month-head-rtw:hover .num { text-decoration: underline; text-underline-offset: 3px; }
+  .budget__month-head-rtw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .budget__month-ahead {
+    margin: 0;
+    text-align: center;
+    font-size: var(--fs-2xs);
+    color: var(--fg-subtle);
+  }
+}
 @media (min-width: 900px) {
+  .budget--m2 .budget__month-head,
+  .budget--m3 .budget__month-head,
+  .budget--m4 .budget__month-head,
+  .budget--m5 .budget__month-head,
+  .budget--m6 .budget__month-head { grid-column: span 4; }
   .budget--m2 .budget__month-header,
   .budget--m3 .budget__month-header,
   .budget--m4 .budget__month-header,
   .budget--m5 .budget__month-header,
-  .budget--m6 .budget__month-header {
-    display: grid;
-    background: var(--bg-elevated);
-    border-bottom: 1px solid var(--border-soft);
-  }
-  .budget__month-head {
-    grid-column: span 4;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 1px;
-    font-size: var(--fs-sm);
-    padding: var(--space-3xs) 0.65rem;
-    border-left: 1px solid var(--border-soft);
-  }
-  .budget__month-head-name { font-size: var(--fs-md); }
-  .budget__month-head-rtw {
-    background: transparent;
-    border: 0;
-    padding: 2px 0;
-    margin: -2px 0;
-    font: inherit;
-    font-size: var(--fs-xs);
-    color: var(--fg-muted);
-    font-variant-numeric: tabular-nums;
-    cursor: pointer;
-    display: inline-flex;
-    gap: var(--space-3xs);
-    align-items: baseline;
-  }
-  .budget__month-head-rtw .num { font-weight: 700; color: var(--accent); }
-  .budget__month-head-rtw.amount--outflow .num { color: var(--danger, #b04444); }
-  .budget__month-head-rtw:hover { text-decoration: underline; color: var(--fg); }
-  .budget__month-head-rtw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .budget--m6 .budget__month-header { column-gap: var(--space-2xs); }
+  .budget--m4 .budget__month-head-name,
+  .budget--m5 .budget__month-head-name,
+  .budget--m6 .budget__month-head-name { font-size: var(--fs-md); }
+  .budget--m4 .budget__month-head-rtw .num,
+  .budget--m5 .budget__month-head-rtw .num,
+  .budget--m6 .budget__month-head-rtw .num { font-size: var(--fs-lg); }
+  /* The cards row is the tallest thing in the grid; keep the per-month
+     hairline off it (the cards have their own border). */
+  .budget--m2 .budget__month-head, .budget--m3 .budget__month-head,
+  .budget--m4 .budget__month-head, .budget--m5 .budget__month-head,
+  .budget--m6 .budget__month-head { border-left: 1px solid var(--border-soft); }
 }
 
 /* Collapsed grid: only the HUD and the Month total remain, so the

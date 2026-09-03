@@ -117,6 +117,34 @@ export const budgetSlice = {
   },
 
   /**
+   * The month card's arithmetic: how this month's Ready to Work came to
+   * be, one line per term. By construction (see buildBudgetTable):
+   *   rta(m) = rta(m-1) + inflow(m) - assigned(m) - lost(m-1)
+   * so `lost` is derived from the other four rather than read from the
+   * table, and the lines always sum to the headline. `ahead` is what is
+   * already assigned in later months -- informational, because this
+   * app's Ready to Work is per month and does not subtract it.
+   * @param {string} [month]
+   * @returns {{carried:number, inflow:number, assigned:number, lost:number, rta:number, ahead:number}}
+   */
+  monthSummary(month) {
+    if (!this.profile) return { carried: 0, inflow: 0, assigned: 0, lost: 0, rta: 0, ahead: 0 };
+    var m = month || this.currentMonth;
+    var self = this;
+    return this._memo("monthSummary:" + m, function () {
+      var idx = self._monthIndex();
+      var rta = self.readyToAssign(m);
+      var carried = self.readyToAssign(prevMonth(m));
+      var inflow = idx.inflow[m] || 0;
+      var assignedHere = idx.assignedTotal[m] || 0;
+      var lost = carried + inflow - assignedHere - rta;
+      var ahead = 0;
+      idx.months.forEach(function (mm) { if (mm > m) ahead += idx.assignedTotal[mm] || 0; });
+      return { carried: carried, inflow: inflow, assigned: assignedHere, lost: lost, rta: rta, ahead: ahead };
+    });
+  },
+
+  /**
    * @param {id} categoryId
    * @param {string} [month]
    * @returns {number} cents assigned to the category in the month

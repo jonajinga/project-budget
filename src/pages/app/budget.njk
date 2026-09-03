@@ -188,24 +188,97 @@ eleventyExcludeFromCollections: true
          than one month is visible) + the column header. Sticks below
          the site header; the offset is measured because the header's
          height varies with safe-area insets. #}
-      <div class="budget__headers" :style="'--budget-sticky-top:' + stickyTop() + 'px'">
-        <div class="budget__group-header budget__month-header"
-             x-show="effectiveMonthCount() > 1" x-cloak>
-          <span class="budget__category" aria-hidden="true"></span>
-          <template x-for="vm in visibleMonths()" :key="'mh-' + vm">
-            <div class="budget__month-head">
-              <strong class="budget__month-head-name" x-text="monthShortLabel(vm)"></strong>
-              <button type="button" class="budget__month-head-rtw"
-                      :class="rtaCents(vm) < 0 ? 'amount--outflow' : ''"
-                      :data-tip="'Ready to Work in ' + monthShortLabel(vm) + ' - click for the breakdown and actions.'"
-                      :aria-label="'Ready to Work in ' + monthShortLabel(vm) + ': ' + formatCents(rtaCents(vm)) + '. Open the month overview.'"
-                      @click="openOverview()">
-                Ready to Work <span class="num" x-text="fmtGrid(rtaCents(vm))"></span>
-              </button>
+      {# Month cards - one per visible month, in the same grid as the
+         rows so each spans its own value columns. Actual Budget's month
+         header, in this app's vocabulary: the name, a month-scoped menu,
+         the four lines that produce Ready to Work, and the number itself.
+         Sits OUTSIDE the sticky header block: a card this tall pinned to
+         the top would eat the screen; only the column header sticks. #}
+      <div class="budget__group-header budget__month-header" role="group" aria-label="Month summaries">
+        <span class="budget__category budget__month-spacer" aria-hidden="true"></span>
+        <template x-for="vm in visibleMonths()" :key="'mh-' + vm">
+          <div class="budget__month-head" :class="vm === thisMonthValue() ? 'is-current' : ''">
+            <div class="budget__month-head-top">
+              <h2 class="budget__month-head-name" x-text="monthCardLabel(vm)"></h2>
+              {% call overflow(label="Month actions") %}
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; monthAction('copyLast', vm)">Copy last month's assigned</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; monthAction('zero', vm)">Set assigned to zero</button>
+                </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; monthAction('average', vm, 3)">Set to 3-month average spending</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; monthAction('average', vm, 6)">Set to 6-month average spending</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; monthAction('average', vm, 12)">Set to 12-month average spending</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; monthAction('goals', vm)">Fund every goal</button>
+                </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; openAutoAssign({ kind: 'all', name: 'All categories', ids: null, month: vm })">Auto-assign...</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; openTemplates(vm)">Templates...</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; openOverview()">Month overview</button>
+                </li>
+              {% endcall %}
             </div>
-          </template>
-          <span class="budget__row-actions" aria-hidden="true"></span>
-        </div>
+            <dl class="budget__month-lines" :aria-label="'How Ready to Work for ' + monthCardLabel(vm) + ' adds up'">
+              <div>
+                <dd x-text="fmtGrid(monthLines(vm).carried)"></dd>
+                <dt x-text="'Left over from ' + monthCardLabel(prevMonthOf(vm), true)"></dt>
+              </div>
+              <div>
+                <dd x-text="fmtGrid(monthLines(vm).inflow)"></dd>
+                <dt x-text="'Inflow in ' + monthCardLabel(vm, true)"></dt>
+              </div>
+              <div>
+                <dd :class="monthLines(vm).lost > 0 ? 'is-neg' : ''" x-text="fmtGrid(-monthLines(vm).lost)"></dd>
+                <dt x-text="'Overspent in ' + monthCardLabel(prevMonthOf(vm), true)"></dt>
+              </div>
+              <div>
+                <dd x-text="fmtGrid(-monthLines(vm).assigned)"></dd>
+                <dt x-text="'Assigned in ' + monthCardLabel(vm, true)"></dt>
+              </div>
+            </dl>
+            <button type="button" class="budget__month-head-rtw"
+                    :class="rtaCents(vm) < 0 ? 'amount--outflow' : (rtaCents(vm) === 0 ? 'is-zero' : '')"
+                    :data-tip="'Ready to Work in ' + monthCardLabel(vm) + ' - click for the breakdown and overspending fixes.'"
+                    :aria-label="'Ready to Work in ' + monthCardLabel(vm) + ': ' + formatCents(rtaCents(vm)) + '. Open the month overview.'"
+                    @click="openOverview()">
+              <span class="budget__month-head-rtw-label">Ready to Work</span>
+              <span class="num" x-text="fmtGrid(rtaCents(vm))"></span>
+            </button>
+            <p class="budget__month-ahead" x-show="monthLines(vm).ahead > 0" x-cloak
+               :data-tip="'Already assigned in months after ' + monthCardLabel(vm, true) + '. Ready to Work is per month here, so this is not subtracted above.'">
+              Assigned ahead: <span x-text="fmtGrid(monthLines(vm).ahead)"></span>
+            </p>
+          </div>
+        </template>
+      </div>
+
+      {# Sticky header block: the column header. Sticks below the site
+         header; the offset is measured because the header's height
+         varies with safe-area insets. #}
+      <div class="budget__headers" :style="'--budget-sticky-top:' + stickyTop() + 'px'">
         {# Desktop-only column header — at mobile each cat row carries
            its own micro-labels above the pills, so the header strip is
            redundant. Hidden via the budget__column-header class below. #}
@@ -732,7 +805,7 @@ eleventyExcludeFromCollections: true
         </div>
         <p class="field__hint">
           Captures every non-zero assignment in
-          <strong x-text="$store.budget.currentMonth"></strong>.
+          <strong x-text="monthHeaderLabel(templateMonth)"></strong>.
         </p>
       </div>
 
@@ -751,7 +824,7 @@ eleventyExcludeFromCollections: true
             <div class="cluster" style="gap: var(--space-2xs); flex-shrink: 0;">
               <button class="btn btn--primary btn--sm" type="button"
                       @click="applyTemplate(tpl.id)"
-                      :data-tip="'Overwrite assignments in ' + $store.budget.currentMonth + ' with this template.'">Apply</button>
+                      :data-tip="'Overwrite assignments in ' + monthHeaderLabel(templateMonth) + ' with this template.'">Apply</button>
               <button class="btn btn--ghost btn--sm" type="button"
                       @click="deleteTemplate(tpl.id, tpl.name)"
                       data-tip="Delete this template.">Delete</button>
