@@ -668,28 +668,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      minmax(0,1fr) lets greedy value columns crush it to ~40px). */
   .budget--m2 .budget__group-header,
   .budget--m2 .budget__row {
-    grid-template-columns: minmax(15rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
-    min-width: 57rem;
+    grid-template-columns: minmax(18rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
+    min-width: 60rem;
   }
   .budget--m3 .budget__group-header,
   .budget--m3 .budget__row {
-    grid-template-columns: minmax(14rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
-    min-width: 74rem;
+    grid-template-columns: minmax(17rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
+    min-width: 77rem;
   }
   .budget--m4 .budget__group-header,
   .budget--m4 .budget__row {
-    grid-template-columns: minmax(14rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
-    min-width: 85rem;
+    grid-template-columns: minmax(16rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
+    min-width: 87rem;
   }
   .budget--m5 .budget__group-header,
   .budget--m5 .budget__row {
-    grid-template-columns: minmax(14rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
-    min-width: 100rem;
+    grid-template-columns: minmax(16rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
+    min-width: 102rem;
   }
   .budget--m6 .budget__group-header,
   .budget--m6 .budget__row {
-    grid-template-columns: minmax(14rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
-    min-width: 114rem;
+    grid-template-columns: minmax(16rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
+    min-width: 116rem;
   }
   .budget--m4 .budget__group-header, .budget--m4 .budget__row,
   .budget--m5 .budget__group-header, .budget--m5 .budget__row,
@@ -752,7 +752,9 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     overflow: visible;
     text-overflow: clip;
   }
-  .budget__month-head.is-collapsed { flex-wrap: wrap; }
+  .budget__month-head.is-collapsed { flex-wrap: nowrap; }
+  .budget__month-head.is-collapsed .budget__month-head-rtw { min-width: 0; flex: 1 1 auto; white-space: nowrap; }
+  .budget__month-head.is-collapsed .budget__month-head-rtw .num { overflow: hidden; text-overflow: ellipsis; }
   .budget__month-head.is-collapsed .budget__month-head-rtw {
     flex: 1 1 auto;
     flex-direction: row;
@@ -888,6 +890,15 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m4 .budget__month-head-name,
   .budget--m5 .budget__month-head-name,
   .budget--m6 .budget__month-head-name { font-size: var(--fs-md); }
+  /* Collapsed cards in a multi-month grid: the label goes, the number
+     stays, so name + number + tools fit on one line in a narrow card. */
+  .budget--m2 .is-collapsed .budget__month-head-rtw-label,
+  .budget--m3 .is-collapsed .budget__month-head-rtw-label,
+  .budget--m4 .is-collapsed .budget__month-head-rtw-label,
+  .budget--m5 .is-collapsed .budget__month-head-rtw-label,
+  .budget--m6 .is-collapsed .budget__month-head-rtw-label { display: none; }
+  .budget--m2 .is-collapsed, .budget--m3 .is-collapsed, .budget--m4 .is-collapsed,
+  .budget--m5 .is-collapsed, .budget--m6 .is-collapsed { gap: var(--space-2xs); padding-left: var(--space-2xs); padding-right: var(--space-2xs); }
   .budget--m4 .budget__month-head-rtw .num,
   .budget--m5 .budget__month-head-rtw .num,
   .budget--m6 .budget__month-head-rtw .num { font-size: var(--fs-lg); }
@@ -945,12 +956,15 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   /* The base .budget__category is a COLUMN flex (name stacked over
      the goal bar in data rows); the group header's identity cluster
      inherited that when it gained the class, stacking the checkbox
-     above the group name. Row direction, one line. */
+     above the group name. Row direction, one line. The checkbox aligns
+     to the toggle's FIRST line (not the centre of toggle + bars), so
+     it stays level with the chevron when tracker bars sit underneath. */
   flex-direction: row;
   flex-wrap: nowrap;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
 }
+.budget__group-header > .budget__category.cluster > .budget__bulk-check { margin-top: 8px; }
 
 /* Sticky header block (month strip + column header). Offset below
    the sticky site header; measured by the view because the header
@@ -1413,21 +1427,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 /* The budget page is one surface: the HUD (month strip + month-count
    picker) sits directly on top of the grid with no gap, no double
    border, and a divider between them. */
-/* The budget page runs its type scale at 80%: a data screen, where a
-   row is a row and the eye is scanning columns, not reading prose. The
-   tokens are redefined in this scope so every fs-* consumer on the page
-   follows; fixed-px marks (rings, icons) are already sized for the grid. */
-.app-page--budget {
-  --fs-2xs:  0.55rem;
-  --fs-xs:   0.6rem;
-  --fs-sm:   0.65rem;
-  --fs-base: 0.7rem;
-  --fs-md:   0.75rem;
-  --fs-lg:   0.85rem;
-  --fs-xl:   0.95rem;
-  --fs-2xl:  1.1rem;
-  font-size: var(--fs-base);
-}
 /* Full bleed: the month strip sits flush under the app header and the
    grid runs edge to edge beneath it. One surface, no card-in-a-card. */
 .app-page--budget {
