@@ -346,16 +346,18 @@ eleventyExcludeFromCollections: true
                               @click="openNotes(c)">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
                       </button>
-                      <span class="goal-badge"
-                            x-show="$store.budget.findGoal(c.id)"
-                            x-cloak
-                            :class="'goal-badge--' + ($store.budget.goalStatus(c.id) || 'needed')"
-                            :title="'Goal needs ' + formatCents($store.budget.goalNeeded(c.id)) + ' this month'"
-                            x-text="goalLabel(c.id)"></span>
                     </div>
-                    <div class="goal-bar"
+                    {# Goal status + progress share ONE line under the name.
+                       The badge used to sit in the name row, where a narrow
+                       multi-month column made it fight the name for width. #}
+                    <div class="budget__goal-line"
                          x-show="$store.budget.findGoal(c.id)"
-                         x-cloak
+                         x-cloak>
+                    <span class="goal-badge"
+                          :class="'goal-badge--' + ($store.budget.goalStatus(c.id) || 'needed')"
+                          :title="'Goal needs ' + formatCents($store.budget.goalNeeded(c.id)) + ' this month'"
+                          x-text="goalLabel(c.id)"></span>
+                    <div class="goal-bar"
                          :class="goalBarClass(c.id)"
                          {# OBJECT form, not string: a string :style
                             rewrites the whole style attribute and its
@@ -374,6 +376,7 @@ eleventyExcludeFromCollections: true
                       <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
                       <span class="goal-bar__cap"
                             x-text="goalPercent(c.id) >= 100 ? '✓ 100%' : (goalPercent(c.id) + '%')"></span>
+                    </div>
                     </div>
                   </div>
                   {# One (Assigned / Outflow / Available) cell triplet per

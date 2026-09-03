@@ -278,7 +278,7 @@
     top: 2px;
     top: calc((1lh - 16px) / 2);
   }
-  .budget__group .budget__row .goal-bar {
+  .budget__group .budget__row .budget__goal-line {
     margin-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
   }
   .budget__column-header .budget__category {
@@ -292,22 +292,44 @@
   /* Specificity note: the base .budget__category-row / .budget__cat-name
      rules sit later in this file, so these carry the .budget prefix to
      win the cascade rather than relying on source order. */
-  /* Flex wraps on each item's hypothetical size, and a name's is its
-     full text width -- so a long name used to wrap under its own
-     checkbox. Capping max-width at the room left after the checkbox
-     (the row's padding) keeps the name on line one no matter how long
-     it is (it clamps to two lines inside itself);
-     badges then hug the name when there is room and drop to a second
-     line when there is not, instead of squeezing the name to a letter. */
-  .budget .budget__category-row { flex-wrap: wrap; }
+  /* The name row never wraps: checkbox, name, note icon, cut badge stay
+     on one line and the name shrinks (clamping to two lines inside
+     itself) rather than dropping under its checkbox. The goal badge
+     moved out of this row entirely (see .budget__goal-line), so nothing
+     here can squeeze the name down to a letter. */
+  .budget .budget__category-row { flex-wrap: nowrap; }
   .budget .budget__group .budget__category-row .budget__cat-name {
     flex: 0 1 auto;
     min-width: 0;
-    max-width: 100%;
   }
   .budget .budget__category-row .cut-badge,
-  .budget .budget__category-row .note-ind,
-  .budget .budget__category-row .goal-badge { flex: 0 0 auto; }
+  .budget .budget__category-row .note-ind { flex: 0 0 auto; }
+}
+/* Goal status and progress on one line under the name. */
+.budget__goal-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-top: 0.2rem;
+  min-width: 0;
+}
+.budget__goal-line .goal-badge { margin-left: 0; flex: 0 0 auto; }
+/* The track keeps a readable minimum so a narrow multi-month column
+   shows a bar, not a dot; the cap text (100%) never wraps. */
+.budget__goal-line .goal-bar { margin-top: 0; flex: 1 1 4.5rem; min-width: 4.5rem; }
+.budget__goal-line .goal-bar__cap { white-space: nowrap; }
+
+/* Names that need two lines break at spaces, never mid-word.
+   overflow-wrap: anywhere let the flex algorithm shrink a name to a
+   sliver and break it wherever ("Freedom Vi..."); break-word keeps a
+   word whole unless it is longer than the whole column. The two-line
+   clamp stays as the last resort. */
+.budget .budget__cat-name,
+.budget .budget__cat-name--btn,
+.budget .group-toggle strong {
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-height: 1.25;
 }
 
 /* Selected-row tint — accent left rail + subtle background so the
@@ -565,28 +587,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      minmax(0,1fr) lets greedy value columns crush it to ~40px). */
   .budget--m2 .budget__group-header,
   .budget--m2 .budget__row {
-    grid-template-columns: minmax(9rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
-    min-width: 51rem;
+    grid-template-columns: minmax(12rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
+    min-width: 54rem;
   }
   .budget--m3 .budget__group-header,
   .budget--m3 .budget__row {
-    grid-template-columns: minmax(9rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
-    min-width: 69rem;
+    grid-template-columns: minmax(12rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
+    min-width: 72rem;
   }
   .budget--m4 .budget__group-header,
   .budget--m4 .budget__row {
-    grid-template-columns: minmax(8rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
-    min-width: 79rem;
+    grid-template-columns: minmax(11rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
+    min-width: 82rem;
   }
   .budget--m5 .budget__group-header,
   .budget--m5 .budget__row {
-    grid-template-columns: minmax(8rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
-    min-width: 94rem;
+    grid-template-columns: minmax(11rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
+    min-width: 97rem;
   }
   .budget--m6 .budget__group-header,
   .budget--m6 .budget__row {
-    grid-template-columns: minmax(8rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
-    min-width: 108rem;
+    grid-template-columns: minmax(11rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
+    min-width: 111rem;
   }
   .budget--m4 .budget__group-header, .budget--m4 .budget__row,
   .budget--m5 .budget__group-header, .budget--m5 .budget__row,
