@@ -261,12 +261,21 @@ eleventyExcludeFromCollections: true
                 <span class="num budget__group-total budget__available"
                       :class="groupTotalAvailable(group.categories, vm) < 0 ? 'budget__group-total--neg' : ''"
                       x-text="fmtGrid(groupTotalAvailable(group.categories, vm))"></span>
-                <span class="budget__row-actions budget__row-actions--filler" aria-hidden="true"></span>
+                {# Fillers hold the per-month kebab slot for every month
+                   but the last; the group kebab below takes the last
+                   slot itself, so it sits in the same column as the
+                   category kebabs instead of one column further right
+                   (which also squeezed the group's numbers out of line
+                   with the rows beneath). Single-month mode maps every
+                   row-actions element onto the one `actions` area, so
+                   the missing filler changes nothing there. #}
+                <span class="budget__row-actions budget__row-actions--filler" aria-hidden="true"
+                      x-show="vm !== visibleMonths()[visibleMonths().length - 1]"></span>
               </div>
             </template>
-            {# Group kebab anchored to the far right edge so it lines up
-               with the per-category kebab below. All six group-level
-               actions live here. #}
+            {# Group kebab: last per-month slot in multi-month, the
+               `actions` area in single-month. All group-level actions
+               live here. #}
             <div class="budget__row-actions" x-show="group.group" x-cloak>
               {% call overflow(label="Group actions") %}
                 <li role="none">

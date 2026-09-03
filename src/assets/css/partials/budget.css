@@ -249,12 +249,65 @@
   text-underline-offset: 3px;
 }
 
-/* Cat rows nest under the group header — slight left indent so the
-   parent-child relationship reads visually. Apply via the
-   .budget__row inside a group, leaving the column header itself
-   un-indented. */
-.budget__group .budget__row .budget__category {
-  padding-left: var(--space-sm);
+/* Tree alignment. Every checkbox -- group and category -- sits in one
+   column at the row's left edge. The category NAME is what indents: by
+   exactly the width the group row spends on its chevron (toggle padding
+   + 20px glyph + gap), so category names start under the group name and
+   the header's "Category" label starts there too. The old version padded
+   the whole category cell instead, which pushed the child checkboxes
+   right of the parent's while leaving child names left of the parent's:
+   the tree read backwards. Goal bars take the same indent so they hang
+   under the name, not under the checkbox. */
+.budget {
+  --budget-check-col: calc(16px + var(--space-2xs));
+  --budget-tree-indent: calc(4px + 20px + var(--space-2xs));
+}
+@media (min-width: 600px) {
+  /* The indent lives on the row's padding and the checkbox is pinned to
+     the row's left edge, so anything that wraps to a second line (a
+     badge, a note icon) lands under the NAME. Indenting only the name
+     dropped wrapped badges under the checkbox instead. The checkbox
+     centres on the first line of text; lh is the line-height unit. */
+  .budget .budget__group .budget__row .budget__category-row {
+    position: relative;
+    padding-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
+  }
+  .budget .budget__group .budget__row .budget__category-row .budget__bulk-check {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    top: calc((1lh - 16px) / 2);
+  }
+  .budget__group .budget__row .goal-bar {
+    margin-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
+  }
+  .budget__column-header .budget__category {
+    padding-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
+  }
+  /* One line per name row: checkbox, name, badges. The row used to
+     wrap, so a long name in a narrow multi-month column dropped under
+     its own checkbox. The name shrinks (and clamps to two lines
+     inside itself) instead; badges hug the name rather than floating
+     to the far edge of the column. */
+  /* Specificity note: the base .budget__category-row / .budget__cat-name
+     rules sit later in this file, so these carry the .budget prefix to
+     win the cascade rather than relying on source order. */
+  /* Flex wraps on each item's hypothetical size, and a name's is its
+     full text width -- so a long name used to wrap under its own
+     checkbox. Capping max-width at the room left after the checkbox
+     (the row's padding) keeps the name on line one no matter how long
+     it is (it clamps to two lines inside itself);
+     badges then hug the name when there is room and drop to a second
+     line when there is not, instead of squeezing the name to a letter. */
+  .budget .budget__category-row { flex-wrap: wrap; }
+  .budget .budget__group .budget__category-row .budget__cat-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .budget .budget__category-row .cut-badge,
+  .budget .budget__category-row .note-ind,
+  .budget .budget__category-row .goal-badge { flex: 0 0 auto; }
 }
 
 /* Selected-row tint — accent left rail + subtle background so the
@@ -387,7 +440,10 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 @media (min-width: 600px) {
   .budget__group-header,
   .budget__row {
-    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(5.5rem, 9rem)) auto;
+    /* The kebab column is a FIXED 28px, not auto. Payment-pool rows have
+       no kebab, and with auto their column collapsed to nothing and every
+       number in the row slid 28px to the right of its neighbours. */
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(5.5rem, 9rem)) 28px;
     grid-template-areas: "cat assigned outflow available actions";
     column-gap: var(--space-2xs);
     row-gap: 0;
@@ -401,7 +457,7 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 @media (min-width: 1180px) {
   .budget__group-header,
   .budget__row {
-    grid-template-columns: minmax(0, 1fr) 10rem 10rem 10rem auto;
+    grid-template-columns: minmax(0, 1fr) 10rem 10rem 10rem 28px;
   }
 }
 
