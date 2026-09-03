@@ -397,12 +397,14 @@
    the number riding high in the ring. */
 .ring__text {
   font-family: var(--font-ui, system-ui, sans-serif);
-  font-size: 8px;
+  /* 7px leaves ~4px of air either side of "95%" inside an 11-radius
+     ring; 8px left under 3px, and the digits touched the stroke. */
+  font-size: 7px;
   font-weight: 700;
   fill: var(--fg);
   text-anchor: middle;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
 }
 /* A zero-length arc with round caps still paints a dot; hide it. */
 .ring.is-empty .ring__fill { display: none; }
