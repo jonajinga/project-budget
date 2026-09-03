@@ -4808,13 +4808,19 @@ body.pb-dragging { overflow: visible !important; }
    Floats bottom-centre while categories are ticked. One row on desktop:
    count (with select-all menu), live totals, then the actions. On
    phones the totals drop under the count and the action row scrolls. */
+/* Centred with auto margins, NOT translateX(-50%): a transform on this
+   element would make it the containing block for the fixed-position
+   menus inside it, and they would open against the toolbar instead of
+   the viewport (below the screen, cut off). */
 .selbar {
   position: fixed;
-  left: 50%;
+  left: 12px;
+  right: 12px;
   bottom: calc(20px + env(safe-area-inset-bottom, 0));
-  transform: translateX(-50%);
   z-index: 120;
+  width: fit-content;
   max-width: calc(100vw - 24px);
+  margin: 0 auto;
 }
 .selbar__inner {
   display: flex;
@@ -4871,7 +4877,7 @@ body.pb-dragging { overflow: visible !important; }
 .selbar__pop-hint { margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--fg-muted); line-height: 1.4; }
 .overflow-menu__head { padding: 6px 12px 2px; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-subtle); }
 @media (max-width: 767px) {
-  .selbar { left: 8px; right: 8px; transform: none; max-width: none; bottom: calc(72px + env(safe-area-inset-bottom, 0)); }
+  .selbar { left: 8px; right: 8px; width: auto; max-width: none; bottom: calc(72px + env(safe-area-inset-bottom, 0)); }
   .selbar__inner { flex-wrap: wrap; gap: 6px; border-radius: 12px; }
   .selbar__totals { border-right: 0; padding-right: 0; flex: 1 1 auto; justify-content: flex-end; }
   .selbar__actions { flex-basis: 100%; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
