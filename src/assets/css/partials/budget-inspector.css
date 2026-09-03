@@ -146,6 +146,16 @@
 /* Phase 4: quick fills, overspent list, and the verifier-flagged
    previously-unstyled wrappers. */
 .budget-inspector__overview { min-width: 0; }
+/* Per-month overview cards (multi-month mode). */
+.budget-inspector__mcard-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin: 0 0 var(--space-3xs);
+}
+.budget-inspector__mcard .budget-inspector__overspent { margin-top: var(--space-3xs); }
 .budget-inspector__goal-status { margin-bottom: var(--space-2xs); }
 .budget-inspector__fills {
   display: grid;

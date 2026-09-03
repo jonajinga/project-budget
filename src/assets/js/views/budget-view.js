@@ -346,9 +346,9 @@ function budgetView() {
       this.sel = null;
       this.overviewOpen = false;
     },
-    rtaBreak() {
+    rtaBreak(month) {
       void this.$store.budget._listVersion;
-      return this.$store.budget.rtaBreakdown(this.$store.budget.currentMonth);
+      return this.$store.budget.rtaBreakdown(month || this.$store.budget.currentMonth);
     },
     /* The four one-click fills for the SELECTED category + month.
        Kind maps to the store quick helpers; every write goes through

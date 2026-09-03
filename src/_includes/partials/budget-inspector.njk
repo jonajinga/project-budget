@@ -20,42 +20,54 @@
     <template x-if="!sel">
       <div class="budget-inspector__overview">
         <p class="eyebrow">Month overview</p>
-        <h2 class="budget-inspector__title" x-text="monthHeaderLabel()"></h2>
+        <h2 class="budget-inspector__title"
+            x-text="effectiveMonthCount() > 1
+              ? monthShortLabel(visibleMonths()[0]) + ' - ' + monthShortLabel(visibleMonths()[visibleMonths().length - 1])
+              : monthHeaderLabel()"></h2>
 
-        <section class="budget-inspector__section" aria-label="Ready to assign breakdown">
-          <dl class="budget-inspector__break">
-            <div><dt data-tip="Uncategorized income received through the end of this month.">Inflow to budget</dt>
-              <dd data-rta="inflow" x-text="formatCents(rtaBreak().inflow)"></dd></div>
-            <div><dt data-tip="Everything assigned to categories, this month and before.">Assigned so far</dt>
-              <dd data-rta="assigned" x-text="'-' + formatCents(rtaBreak().assigned)"></dd></div>
-            <div><dt data-tip="Overspending in PRIOR months does not follow the category - it comes out of Ready to Assign here.">Overspending lost</dt>
-              <dd data-rta="lost" :class="rtaBreak().lost > 0 ? 'amount--outflow' : ''"
-                  x-text="'-' + formatCents(rtaBreak().lost)"></dd></div>
-            <div class="budget-inspector__break-total"><dt>Ready to assign</dt>
-              <dd data-rta="rta" :class="rtaBreak().rta < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="formatCents(rtaBreak().rta)"></dd></div>
-          </dl>
-        </section>
+        {# One overview card PER VISIBLE MONTH - with 2-3 columns on
+           screen, each column's Ready-to-Assign story and overspending
+           fixes live here, month by month. Single-month renders
+           exactly one card, as before. #}
+        <template x-for="vm in visibleMonths()" :key="'ovm-' + vm">
+          <section class="budget-inspector__section budget-inspector__mcard"
+                   :aria-label="'Overview for ' + monthShortLabel(vm)">
+            <p class="budget-inspector__mcard-label"
+               x-show="effectiveMonthCount() > 1" x-cloak
+               x-text="monthShortLabel(vm)"></p>
+            <dl class="budget-inspector__break">
+              <div><dt data-tip="Uncategorized income received through the end of this month.">Inflow to budget</dt>
+                <dd data-rta="inflow" x-text="formatCents(rtaBreak(vm).inflow)"></dd></div>
+              <div><dt data-tip="Everything assigned to categories, this month and before.">Assigned so far</dt>
+                <dd data-rta="assigned" x-text="'-' + formatCents(rtaBreak(vm).assigned)"></dd></div>
+              <div><dt data-tip="Overspending in PRIOR months does not follow the category - it comes out of Ready to Assign here.">Overspending lost</dt>
+                <dd data-rta="lost" :class="rtaBreak(vm).lost > 0 ? 'amount--outflow' : ''"
+                    x-text="'-' + formatCents(rtaBreak(vm).lost)"></dd></div>
+              <div class="budget-inspector__break-total"><dt>Ready to assign</dt>
+                <dd data-rta="rta" :class="rtaBreak(vm).rta < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(rtaBreak(vm).rta)"></dd></div>
+            </dl>
 
-        <section class="budget-inspector__section" aria-label="Overspent categories"
-                 x-show="overspentCategories($store.budget.currentMonth).length" x-cloak>
-          <p class="field__label">Overspent this month</p>
-          <ul class="budget-inspector__overspent">
-            <template x-for="o in overspentCategories($store.budget.currentMonth)" :key="'ov-' + o.id">
-              <li :data-overspent-id="o.id">
-                <span class="budget-inspector__txn-payee" x-text="o.name"></span>
-                <span class="num amount--outflow" x-text="'-' + formatCents(o.deficit)"></span>
-                <button type="button" class="btn btn--secondary btn--sm"
-                        :disabled="!coverDonor(o.id, $store.budget.currentMonth)"
-                        :data-tip="coverDonor(o.id, $store.budget.currentMonth)
-                          ? 'Move ' + formatCents(o.deficit) + ' from ' + coverDonor(o.id, $store.budget.currentMonth).name + ' (the category with the most available).'
-                          : 'No visible category has money available.'"
-                        @click="coverOverspent(o.id, $store.budget.currentMonth)"
-                        x-text="'Cover from ' + (coverDonor(o.id, $store.budget.currentMonth)?.name || '...')"></button>
-              </li>
-            </template>
-          </ul>
-        </section>
+            <div x-show="overspentCategories(vm).length" x-cloak>
+              <p class="field__label">Overspent</p>
+              <ul class="budget-inspector__overspent">
+                <template x-for="o in overspentCategories(vm)" :key="'ov-' + vm + '-' + o.id">
+                  <li :data-overspent-id="o.id">
+                    <span class="budget-inspector__txn-payee" x-text="o.name"></span>
+                    <span class="num amount--outflow" x-text="'-' + formatCents(o.deficit)"></span>
+                    <button type="button" class="btn btn--secondary btn--sm"
+                            :disabled="!coverDonor(o.id, vm)"
+                            :data-tip="coverDonor(o.id, vm)
+                              ? 'Move ' + formatCents(o.deficit) + ' from ' + coverDonor(o.id, vm).name + ' (the category with the most available).'
+                              : 'No visible category has money available.'"
+                            @click="coverOverspent(o.id, vm)"
+                            x-text="'Cover from ' + (coverDonor(o.id, vm)?.name || '...')"></button>
+                  </li>
+                </template>
+              </ul>
+            </div>
+          </section>
+        </template>
 
         <section class="budget-inspector__section" aria-label="Planned cuts impact"
                  x-show="$store.budget.listCuts().length" x-cloak>
