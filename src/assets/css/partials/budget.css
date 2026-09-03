@@ -363,7 +363,7 @@
    when both sit beside one name. */
 .ring--cut { --ring-fill: var(--warn, #8a5a00); }
 .ring--cut .ring__track { stroke-dasharray: 2 2.2; }
-.ring--cut.is-met { --ring-fill: var(--ok); }
+.ring--cut.is-met { --ring-fill: var(--warn, #8a5a00); }
 .ring:hover .ring__track { stroke: var(--border-strong, var(--border)); }
 .ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 50%; }
 @media (prefers-reduced-motion: reduce) { .ring__fill { transition: none; } }
