@@ -94,7 +94,8 @@ eleventyExcludeFromCollections: true
 
   <div class="budget-layout"
        :class="inspectorDocked && inspectorOpen ? 'budget-layout--open' : ''">
-  <section class="budget" x-show="hasCategories" x-cloak :class="monthColClass()">
+  <section class="budget" x-show="hasCategories" x-cloak :class="monthColClass()"
+           :style="gridVh() ? ('--budget-vh:' + gridVh() + 'px') : ''">
       {# Month cards - one per visible month, in the same grid as the
          rows so each spans its own value columns. Actual Budget's month
          header, in this app's vocabulary: the name, a month-scoped menu,

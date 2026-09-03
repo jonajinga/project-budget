@@ -1,7 +1,14 @@
+/* The grid is its own scroll area, Actual Budget style: it takes the
+   viewport height left below its top edge and scrolls inside, so the
+   column header sticks to ITS top in every month count and rides along
+   with the columns when the wide grid scrolls sideways. */
 .budget {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   border-top: 0;
+  overflow: auto;
+  max-height: var(--budget-vh, none);
+  overscroll-behavior: contain;
 }
 .budget__toolbar {
   display: flex;
@@ -167,9 +174,31 @@
    it now arrives with the table at 600px rather than at 900. Below that the
    per-row micro-labels do the job, because a header bar scrolled off the top
    of a phone screen labels nothing. */
-.budget__column-header { display: none; }
-@media (min-width: 600px) {
-  .budget__column-header { display: grid; }
+.budget__column-header { display: grid; }
+/* Phones: the header is the three value columns (no Category label),
+   which line up over the numbers on every row's second line. It sticks,
+   so the per-row micro-labels are gone -- three words repeated on
+   every row was most of what a phone screen showed. */
+@media (max-width: 599px) {
+  .budget__column-header {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 28px;
+    grid-template-areas: "assigned outflow available actions";
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: var(--fs-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-subtle);
+  }
+  .budget__column-header .budget__category { display: none; }
+  /* Assigned is an input pill on the left of its column; the other two
+     are right-aligned pills. The labels sit where the pills' edges do. */
+  .budget__column-header .budget__assigned { text-align: left; padding-left: 0.6rem; }
+  .budget__column-header .budget__activity,
+  .budget__column-header .budget__available { text-align: right; padding-right: 0.6rem; }
+  .budget .budget__row .budget__assigned::before,
+  .budget .budget__row .budget__activity::before,
+  .budget .budget__row .budget__available::before { display: none; }
 }
 .budget__row { border-top: 1px solid var(--border-soft); }
 
@@ -576,7 +605,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    menus are position: fixed, so they escape the scroll container.
    From four months up the type steps down one size. */
 @media (min-width: 900px) {
-  .budget--m2, .budget--m3, .budget--m4, .budget--m5, .budget--m6 { overflow-x: auto; }
   .budget--m2 .budget__group-header,
   .budget--m3 .budget__group-header,
   .budget--m4 .budget__group-header,
@@ -615,15 +643,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m4 .budget__row-actions,
   .budget--m5 .budget__row-actions,
   .budget--m6 .budget__row-actions { grid-area: auto; }
-  /* The multi-month section is a horizontal scroll container, which
-     makes it the sticky ancestor: the headers pinned 65px down INSIDE
-     it and left a permanent blank band. Static here; single-month
-     keeps its viewport-sticky headers. */
-  .budget--m2 .budget__headers, .budget--m3 .budget__headers,
-  .budget--m4 .budget__headers, .budget--m5 .budget__headers,
-  .budget--m6 .budget__headers {
-    position: static;
-  }
 
   /* Per-month kebab cell: compact, centered trigger. */
   .budget--m2 .budget__row .budget__row-actions, .budget--m3 .budget__row .budget__row-actions,
@@ -733,30 +752,29 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     border-top: 3px solid transparent;
   }
   .budget__month-head.is-current { border-top-color: var(--accent); }
-  /* Collapsed: one line - name, Ready to Work, tools. */
+  /* Collapsed: two lines. Month name with the tools on the first,
+     Ready to Work alone on the second. */
   .budget__month-head.is-collapsed {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-sm);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
     padding-top: var(--space-2xs);
     padding-bottom: var(--space-2xs);
   }
   .budget__month-head.is-collapsed .budget__month-head-top {
-    display: contents;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
   }
   .budget__month-head.is-collapsed .budget__month-head-spacer { display: none; }
+  .budget__month-head.is-collapsed .budget__month-head-tools { grid-column: 2; }
   .budget__month-head.is-collapsed .budget__month-head-name {
-    flex: 0 0 auto;
+    grid-column: 1;
     text-align: left;
     font-size: var(--fs-md);
     overflow: visible;
     text-overflow: clip;
   }
-  .budget__month-head.is-collapsed { flex-wrap: nowrap; }
-  .budget__month-head.is-collapsed .budget__month-head-rtw { min-width: 0; flex: 1 1 auto; white-space: nowrap; }
-  .budget__month-head.is-collapsed .budget__month-head-rtw .num { overflow: hidden; text-overflow: ellipsis; }
   .budget__month-head.is-collapsed .budget__month-head-rtw {
-    flex: 1 1 auto;
     flex-direction: row;
     justify-content: flex-start;
     align-items: baseline;
@@ -766,10 +784,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     margin: 0;
   }
   .budget__month-head.is-collapsed .budget__month-head-rtw .num { font-size: var(--fs-lg); }
-  /* Collapsed order: name, Ready to Work, tools at the far right. */
-  .budget__month-head.is-collapsed .budget__month-head-name { order: 1; }
-  .budget__month-head.is-collapsed .budget__month-head-rtw { order: 2; }
-  .budget__month-head.is-collapsed .budget__month-head-tools { order: 3; flex: 0 0 auto; margin-left: auto; }
   /* Name dead-centre: the tools on the right and an equal-width spacer on
      the left, so the title never drifts as the tool cluster changes. */
   /* Tools get their full width first; the name is centred by the two
@@ -890,15 +904,8 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m4 .budget__month-head-name,
   .budget--m5 .budget__month-head-name,
   .budget--m6 .budget__month-head-name { font-size: var(--fs-md); }
-  /* Collapsed cards in a multi-month grid: the label goes, the number
-     stays, so name + number + tools fit on one line in a narrow card. */
-  .budget--m2 .is-collapsed .budget__month-head-rtw-label,
-  .budget--m3 .is-collapsed .budget__month-head-rtw-label,
-  .budget--m4 .is-collapsed .budget__month-head-rtw-label,
-  .budget--m5 .is-collapsed .budget__month-head-rtw-label,
-  .budget--m6 .is-collapsed .budget__month-head-rtw-label { display: none; }
   .budget--m2 .is-collapsed, .budget--m3 .is-collapsed, .budget--m4 .is-collapsed,
-  .budget--m5 .is-collapsed, .budget--m6 .is-collapsed { gap: var(--space-2xs); padding-left: var(--space-2xs); padding-right: var(--space-2xs); }
+  .budget--m5 .is-collapsed, .budget--m6 .is-collapsed { padding-left: var(--space-2xs); padding-right: var(--space-2xs); }
   .budget--m4 .budget__month-head-rtw .num,
   .budget--m5 .budget__month-head-rtw .num,
   .budget--m6 .budget__month-head-rtw .num { font-size: var(--fs-lg); }
@@ -970,13 +977,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    the sticky site header; measured by the view because the header
    height varies with safe-area insets. Phones keep the natural flow
    (the column header is display:none there anyway). */
-@media (min-width: 600px) {
-  .budget__headers {
-    position: sticky;
-    top: var(--budget-sticky-top, 0px);
-    z-index: 5;
-    background: var(--bg);
-  }
+.budget__headers {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
 }
 
 /* Months-shown control: one small select at the strip's right end. */
@@ -1684,6 +1689,11 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 }
 /* Per-column micro label sits ABOVE the value, right-aligned to
    match the value's right edge. */
+@media (min-width: 600px) {
+  /* The sticky column header names the columns; repeating the words on
+     the totals row said them a third time. */
+  .budget__total-mini-label { display: none; }
+}
 .budget__total-mini-label {
   font-family: var(--font-ui);
   font-size: 0.6875rem;

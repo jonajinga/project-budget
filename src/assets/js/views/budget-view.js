@@ -922,6 +922,8 @@ function budgetView() {
       return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
     },
     stickyTop() { return this._stickyTop; },
+    _gridVh: 0,
+    gridVh() { return this._gridVh; },
 
     /* URL state sync — currentMonth lives on the budget store rather
        than this factory, so writes happen via Alpine.effect (not
@@ -971,6 +973,14 @@ function budgetView() {
       var measureSticky = function () {
         var h = document.querySelector(".site-header");
         self._stickyTop = h ? h.offsetHeight : 0;
+        /* The grid is its own scroll area (see .budget in CSS): it gets
+           the viewport height left below its own top edge, so the column
+           header can stick inside it in every month count. */
+        var sec = document.querySelector(".budget");
+        if (sec) {
+          var top = sec.getBoundingClientRect().top + window.scrollY;
+          self._gridVh = Math.max(240, Math.round(window.innerHeight - top));
+        }
       };
       if (window.__pbBudgetViewCleanup) window.__pbBudgetViewCleanup();
       mq2.addEventListener("change", setMax);
@@ -985,6 +995,10 @@ function budgetView() {
       };
       setMax();
       measureSticky();
+      /* Once more after first paint: the section's top depends on the
+         HUD and any banner above it, which are not laid out yet here. */
+      setTimeout(measureSticky, 60);
+      setTimeout(measureSticky, 600);
 
       /* Honor incoming `?m=YYYY-MM` from a recalled saved view. The
          store may not be ready yet — poll until it is, then apply. */
