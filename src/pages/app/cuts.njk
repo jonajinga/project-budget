@@ -1,0 +1,213 @@
+---
+layout: layouts/app.njk
+title: "Cuts"
+description: "Plan spending cuts, track whether they hold, and see what they add up to."
+permalink: /app/cuts/
+eleventyExcludeFromCollections: true
+---
+{% from "partials/overflow-menu.njk" import overflow %}
+<div class="app-page" x-data="cutsView()" x-init="init()">
+  <header class="app-page__header">
+    <div>
+      <h1 class="app-page__title">Cuts</h1>
+      <p class="app-page__lead">A cut is a promise to spend less in one category than you used to. Each one is measured against what that category averaged in the three months before it started, so the numbers below are real savings, not wishes.</p>
+    </div>
+    <div class="cluster" style="gap: var(--space-2xs);">
+      <button class="btn btn--primary btn--sm" type="button" @click="openAdd()">Plan a cut</button>
+      <a class="btn btn--ghost btn--sm" href="/app/budget/">Budget</a>
+    </div>
+  </header>
+
+  <template x-if="!hasCuts()">
+    <section class="hist__card hist__empty">
+      <h2>No cuts planned yet</h2>
+      <p>Pick a category you would like to spend less in, decide by how much, and this page will show every month whether it held and what it has added up to.</p>
+      <button class="btn btn--primary" type="button" style="margin-top: var(--space-sm);" @click="openAdd()">Plan your first cut</button>
+    </section>
+  </template>
+
+  <template x-if="hasCuts()">
+    <div>
+      <div class="kpi-strip hist__kpis">
+        <div class="kpi">
+          <span class="kpi__label">Planned per month</span>
+          <span class="kpi__value" x-text="fmt(totals().planned)"></span>
+          <span class="kpi__delta" x-text="portfolio().cuts.length + (portfolio().cuts.length === 1 ? ' cut' : ' cuts') + ' active'"></span>
+        </div>
+        <div class="kpi" :class="totals().realized >= totals().planned ? 'kpi--ok' : (totals().realized > 0 ? 'kpi--warn' : 'kpi--danger')">
+          <span class="kpi__label">Saved this month</span>
+          <span class="kpi__value" x-text="fmt(totals().realized)"></span>
+          <span class="kpi__delta" x-text="totals().planned ? Math.round(totals().realized / totals().planned * 100) + '% of plan' : ''"></span>
+        </div>
+        <div class="kpi kpi--ok">
+          <span class="kpi__label">Saved since start</span>
+          <span class="kpi__value" x-text="fmt(totals().cumSaved)"></span>
+          <span class="kpi__delta" x-text="'Plan said ' + fmt(totals().cumPlanned)"></span>
+        </div>
+        <div class="kpi">
+          <span class="kpi__label">A full year of this</span>
+          <span class="kpi__value" x-text="fmt(totals().annual)"></span>
+          <span class="kpi__delta" x-text="inflowShare() == null ? '' : inflowShare().toFixed(1) + '% of your average income'"></span>
+        </div>
+        <div class="kpi kpi--muted">
+          <span class="kpi__label">Age of money</span>
+          <span class="kpi__value" x-text="ageNow() == null ? '-' : ageNow() + ' days'"></span>
+          <span class="kpi__delta" x-text="ageNow() == null || ageProjected() == null ? '' : (ageProjected() > ageNow() ? 'About ' + ageProjected() + ' days if every cut holds for a year' : 'These cuts are too small to move it yet')"></span>
+        </div>
+      </div>
+
+      <div class="hist__grid" style="margin-top: var(--space-md);">
+        <section class="hist__card">
+          <div class="hist__card-head">
+            <h2 class="hist__card-title">Saved so far</h2>
+            <span class="hist__range" role="group" aria-label="Months shown">
+              <button type="button" :class="range === 6 ? 'is-active' : ''" @click="range = 6">6m</button>
+              <button type="button" :class="range === 12 ? 'is-active' : ''" @click="range = 12">12m</button>
+              <button type="button" :class="range === 24 ? 'is-active' : ''" @click="range = 24">24m</button>
+              <button type="button" :class="range === 0 ? 'is-active' : ''" @click="range = 0">All</button>
+            </span>
+          </div>
+          <div x-html="cumulativeChart()"></div>
+          <div class="hist__legend"><span class="is-ok">Actually saved, running total</span><span class="is-muted">What the plan promised</span></div>
+        </section>
+        <section class="hist__card">
+          <div class="hist__card-head">
+            <h2 class="hist__card-title">Month by month</h2>
+            <span class="hist__card-meta">Bars are what you saved, the line is the plan</span>
+          </div>
+          <div x-html="monthlyChart()"></div>
+          <div class="hist__legend"><span>Saved that month</span><span class="is-line">Planned</span></div>
+        </section>
+      </div>
+
+      <section class="hist__card hist__card--wide" style="margin-top: var(--space-md);">
+        <div class="hist__card-head">
+          <h2 class="hist__card-title">Every cut</h2>
+          <span class="hist__card-meta" x-text="'Measured for ' + monthLabel($store.budget.currentMonth)"></span>
+        </div>
+        <div class="hist__table-wrap">
+          <table class="hist__table hist__table--stack">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Cut</th>
+                <th>Before, then allowed</th>
+                <th>This month</th>
+                <th>Kept</th>
+                <th>Since start</th>
+                <th>Toward</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="c in portfolio().cuts" :key="c.cut.id">
+                <tr>
+                  <td>
+                    <a class="hist__link" :href="categoryHref(c)" x-text="c.name"></a>
+                    <div class="hist__card-meta" x-text="c.groupName + ', since ' + monthLabel(c.cut.startMonth, true)"></div>
+                  </td>
+                  <td data-label="Cut" x-text="cutLabel(c)"></td>
+                  <td data-label="Before, then allowed">
+                    <div x-text="fmt(c.series.baseline) + ' to ' + fmt(Math.max(0, c.series.baseline - c.series.target))"></div>
+                    <div class="hist__card-meta" x-text="'saves ' + fmt(c.series.target) + ' a month'"></div>
+                  </td>
+                  <td data-label="This month">
+                    <div x-text="fmt(c.now.actual) + ' spent, ' + fmt(c.now.saved) + ' saved'"></div>
+                    <div class="hist__bar" style="margin-left: auto;" :class="pctOfTarget(c) >= 100 ? 'hist__bar--ok' : 'hist__bar--warn'"><span :style="'width:' + pctOfTarget(c) + '%'"></span></div>
+                  </td>
+                  <td data-label="Kept"><span class="hist__pill" :class="statusPill(c).cls" x-text="statusPill(c).text"></span>
+                    <div class="hist__card-meta" x-text="c.series.monthsMet + ' of ' + c.series.monthsActive + ' months, streak ' + c.series.streak"></div></td>
+                  <td data-label="Since start">
+                    <div x-text="fmt(c.series.cumSaved)"></div>
+                    <div class="hist__card-meta" x-text="'plan said ' + fmt(c.series.cumPlanned)"></div>
+                  </td>
+                  <td data-label="Toward">
+                    <div x-text="c.cut.goalLabel || (c.cut.targetMonth ? 'A date' : '-')"></div>
+                    <div class="hist__card-meta" x-show="c.cut.targetMonth" x-text="fmt(c.series.projectedByTarget) + ' by ' + monthLabel(c.cut.targetMonth, true)"></div>
+                  </td>
+                  <td class="hist__table-actions">
+                    {% call overflow(label="Cut actions") %}
+                      <li role="none"><a role="menuitem" class="overflow-menu__item" :href="categoryHref(c)">Category history</a></li>
+                      <li role="none"><button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; openEdit(c)">Edit cut</button></li>
+                      <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                      <li role="none"><button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger" @click="open = false; remove(c)">Remove cut</button></li>
+                    {% endcall %}
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="hist__grid" style="margin-top: var(--space-md);">
+        <template x-for="c in portfolio().cuts" :key="'chart-' + c.cut.id">
+          <section class="hist__card">
+            <div class="hist__card-head">
+              <h2 class="hist__card-title"><a class="hist__link" :href="categoryHref(c)" x-text="c.name"></a></h2>
+              <span class="hist__card-meta" x-text="cutLabel(c) + ' since ' + monthLabel(c.cut.startMonth)"></span>
+            </div>
+            <div x-html="cutChart(c)"></div>
+            <div class="hist__legend"><span>Spent (red when over the target)</span><span class="is-line">Allowed after the cut</span></div>
+            <dl style="margin: var(--space-xs) 0 0;">
+              <div class="hist__stat"><dt>Best month</dt><dd x-text="c.series.rows.length ? fmt(Math.max.apply(null, c.series.rows.map(r => r.saved))) + ' saved' : '-'"></dd></div>
+              <div class="hist__stat"><dt>Months met</dt><dd x-text="c.series.monthsMet + ' of ' + c.series.monthsActive"></dd></div>
+              <div class="hist__stat" x-show="c.cut.targetMonth"><dt x-text="'By ' + monthLabel(c.cut.targetMonth)"></dt><dd x-text="fmt(c.series.projectedByTarget) + ' at this pace, ' + fmt(c.series.plannedByTarget) + ' if every month holds'"></dd></div>
+            </dl>
+          </section>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  {# Plan or edit a cut #}
+  <div class="modal-backdrop" x-show="editOpen" x-cloak @keydown.escape.window="editOpen = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cut-dlg-title" @click.outside="editOpen = false">
+      <button class="modal__close" type="button" @click="editOpen = false" aria-label="Close">&times;</button>
+      <h2 class="modal__title" id="cut-dlg-title" x-text="editId ? 'Edit cut' : 'Plan a cut'"></h2>
+      <form class="form-stack" @submit.prevent="submit()">
+        <div class="field">
+          <label class="field__label" for="cut-cat">Category</label>
+          <select class="input" id="cut-cat" x-model="form.categoryId" :disabled="!!editId">
+            <option value="">Choose a category</option>
+            <template x-for="o in categoryOptions()" :key="o.id"><option :value="o.id" x-text="o.label"></option></template>
+          </select>
+          <p class="field__hint" x-show="form.categoryId" x-text="'Averaged ' + fmt(baselinePreview()) + ' a month over the last three months.'"></p>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label class="field__label" for="cut-mode">Cut by</label>
+            <select class="input" id="cut-mode" x-model="form.mode">
+              <option value="percent">A percent</option>
+              <option value="amount">A dollar amount</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cut-value" x-text="form.mode === 'percent' ? 'Percent' : 'Dollars per month'"></label>
+            <input class="input" id="cut-value" type="number" min="0" :max="form.mode === 'percent' ? 100 : null" step="any" x-model="form.value">
+          </div>
+        </div>
+        <p class="field__hint" x-show="form.categoryId && Number(form.value) > 0" x-text="'That is ' + fmt(targetPreview()) + ' a month, ' + fmt(targetPreview() * 12) + ' a year.'"></p>
+        <div class="form-row">
+          <div class="field">
+            <label class="field__label" for="cut-start">Starts</label>
+            <input class="input" id="cut-start" type="month" x-model="form.startMonth">
+          </div>
+          <div class="field">
+            <label class="field__label" for="cut-target">Saving until (optional)</label>
+            <input class="input" id="cut-target" type="month" x-model="form.targetMonth">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cut-goal">What it is for (optional)</label>
+          <input class="input" id="cut-goal" type="text" x-model="form.goalLabel" placeholder="Disney trip, new tires, emergency fund">
+        </div>
+        <p class="form-error" x-show="formError" x-text="formError" style="color: var(--danger);"></p>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit" x-text="editId ? 'Save changes' : 'Start the cut'"></button>
+          <button class="btn btn--ghost" type="button" @click="editOpen = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

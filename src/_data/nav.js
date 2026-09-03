@@ -45,6 +45,8 @@ export default {
       section: "Insights",
       key: "insights",
       items: [
+        { label: "Cuts", url: "/app/cuts/",
+          icon: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>' },
         { label: "Reports", url: "/app/reports/",
           icon: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/>' },
         { label: "Saved views", url: "/app/templates/",

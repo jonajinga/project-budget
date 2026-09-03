@@ -341,6 +341,9 @@ eleventyExcludeFromCollections: true
                live here. #}
             <div class="budget__row-actions" x-show="group.group" x-cloak>
               {% call overflow(label="Group actions") %}
+                <li role="none"><a role="menuitem" class="overflow-menu__item"
+                        :href="'/app/category/?group=' + encodeURIComponent(group.group.id)">History and charts</a></li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
                 <li role="none">
                   <button type="button" role="menuitem" class="overflow-menu__item"
                           @click="open = false; openAutoAssign({ kind: 'group', name: group.group.name, ids: group.categories.map(c => c.id) })">Auto-assign group</button>

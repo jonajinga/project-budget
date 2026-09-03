@@ -125,6 +125,15 @@
   {% if page.url == "/app/calendar/" %}
     <script src="/assets/js/views/calendar-view.js?v={{ build.hash }}" defer></script>
   {% endif %}
+  {% if page.url == "/app/cuts/" or page.url == "/app/category/" %}
+    <script src="/assets/js/ui/mini-charts.js?v={{ build.hash }}" defer></script>
+  {% endif %}
+  {% if page.url == "/app/cuts/" %}
+    <script src="/assets/js/views/cuts-view.js?v={{ build.hash }}" defer></script>
+  {% endif %}
+  {% if page.url == "/app/category/" %}
+    <script src="/assets/js/views/category-view.js?v={{ build.hash }}" defer></script>
+  {% endif %}
   {# Same rule: overflowMenu() is an x-data factory, used by the kebab macro
      on nearly every screen, so it has to exist before Alpine boots. Loading
      it with the other ui/ helpers below Alpine looked harmless and threw

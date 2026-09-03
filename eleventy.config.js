@@ -24,6 +24,7 @@ const CSS_PARTIAL_ORDER = [
   "budget.css",
   "budget-inspector.css",
   "budget-cuts.css",
+  "history.css",
   "reports.css",
   "docs.css",
   "forms.css",
@@ -373,6 +374,7 @@ export default function (eleventyConfig) {
             /^sidebar/, /^header/, /^month-/, /^year-/, /^acct-/,
             /^cat-/, /^month-strip/, /^sample-/, /^pool-/,
             /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/,
+            /^hist__/, /^mini-chart/, /^cuts__/,
           ],
           greedy: [
             /^data-theme/, /^data-touch/, /^data-tip/,

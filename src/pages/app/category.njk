@@ -1,0 +1,225 @@
+---
+layout: layouts/app.njk
+title: "Category history"
+description: "Everything one category or group has done, month by month."
+permalink: /app/category/
+eleventyExcludeFromCollections: true
+---
+<div class="app-page" x-data="categoryView()" x-init="init()">
+  <template x-if="!$store.budget.loading && !found()">
+    <section class="hist__card hist__empty">
+      <h2>That category is not in this budget</h2>
+      <p>It may have been deleted, or the link belongs to another profile.</p>
+      <a class="btn btn--primary" href="/app/budget/" style="margin-top: var(--space-sm);">Back to the budget</a>
+    </section>
+  </template>
+
+  <template x-if="found()">
+    <div>
+      <header class="app-page__header">
+        <div>
+          <p class="hist__card-meta" style="margin: 0 0 2px;">
+            <template x-if="groupHref()"><a class="hist__link" :href="groupHref()" x-text="eyebrow()"></a></template>
+            <template x-if="!groupHref()"><span x-text="eyebrow()"></span></template>
+          </p>
+          <h1 class="app-page__title" x-text="title()"></h1>
+          <p class="app-page__lead" x-show="note()" x-text="note()"></p>
+        </div>
+        <div class="cluster" style="gap: var(--space-2xs);">
+          <span class="hist__range" role="group" aria-label="Months shown">
+            <button type="button" :class="range === 6 ? 'is-active' : ''" @click="setRange(6)">6m</button>
+            <button type="button" :class="range === 12 ? 'is-active' : ''" @click="setRange(12)">1y</button>
+            <button type="button" :class="range === 24 ? 'is-active' : ''" @click="setRange(24)">2y</button>
+            <button type="button" :class="range === 60 ? 'is-active' : ''" @click="setRange(60)">5y</button>
+          </span>
+          <a class="btn btn--ghost btn--sm" :href="budgetHref()">Budget</a>
+          <a class="btn btn--ghost btn--sm" :href="registerHref()">Register</a>
+        </div>
+      </header>
+
+      <div class="kpi-strip hist__kpis">
+        <div class="kpi" :class="availableClass()">
+          <span class="kpi__label">Available now</span>
+          <span class="kpi__value" x-text="fmt(now().available)"></span>
+          <span class="kpi__delta" x-text="now().available < 0 ? 'Overspent, needs covering' : 'Ready to spend'"></span>
+        </div>
+        <div class="kpi">
+          <span class="kpi__label">Assigned this month</span>
+          <span class="kpi__value" x-text="fmt(now().assigned)"></span>
+          <span class="kpi__delta" x-text="monthLabel($store.budget.currentMonth)"></span>
+        </div>
+        <div class="kpi" :class="isIncome() ? 'kpi--ok' : 'kpi--danger'">
+          <span class="kpi__label" x-text="flowWord() + ' this month'"></span>
+          <span class="kpi__value" x-text="fmt(now()[flowKey()])"></span>
+          <span class="kpi__delta" x-text="stats().avg3 ? Math.round(now()[flowKey()] / stats().avg3 * 100) + '% of the 3-month average' : ''"></span>
+        </div>
+        <div class="kpi">
+          <span class="kpi__label">Average per month</span>
+          <span class="kpi__value" x-text="fmt(stats().avgAll)"></span>
+          <span class="kpi__delta" x-text="'Over ' + stats().months + ' months'"></span>
+        </div>
+        <div class="kpi kpi--muted">
+          <span class="kpi__label">Trend</span>
+          <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="stats().trendPct == null ? '-' : (stats().trendPct > 0 ? '+' : '') + stats().trendPct + '%'"></span>
+          <span class="kpi__delta" :class="trend().cls" x-text="trend().text"></span>
+        </div>
+      </div>
+
+      <div class="hist__grid" style="margin-top: var(--space-md);">
+        <section class="hist__card hist__card--wide">
+          <div class="hist__card-head">
+            <h2 class="hist__card-title" x-text="flowWord() + ' each month'"></h2>
+            <span class="hist__card-meta" x-text="'Total ' + fmt(stats().total) + ', assigned ' + fmt(stats().assignedTotal)"></span>
+          </div>
+          <div x-html="flowChart()"></div>
+          <div class="hist__legend"><span x-text="flowWord() + (isIncome() ? '' : ' (red when the month ended overspent)')"></span><span class="is-line">Assigned</span></div>
+        </section>
+
+        <section class="hist__card">
+          <div class="hist__card-head">
+            <h2 class="hist__card-title">Available at month end</h2>
+          </div>
+          <div x-html="availableChart()"></div>
+        </section>
+
+        <section class="hist__card">
+          <div class="hist__card-head"><h2 class="hist__card-title">By the numbers</h2></div>
+          <dl style="margin: 0;">
+            <div class="hist__stat"><dt>Last 3 months, average</dt><dd x-text="fmt(stats().avg3)"></dd></div>
+            <div class="hist__stat"><dt>Last 6 months, average</dt><dd x-text="fmt(stats().avg6)"></dd></div>
+            <div class="hist__stat"><dt>Last 12 months, average</dt><dd x-text="fmt(stats().avg12)"></dd></div>
+            <div class="hist__stat"><dt>Biggest month</dt><dd x-text="stats().maxMonth ? fmt(stats().maxOutflow) + ' in ' + monthLabel(stats().maxMonth, true) : '-'"></dd></div>
+            <div class="hist__stat"><dt>Months with activity</dt><dd x-text="stats().activeMonths + ' of ' + stats().months"></dd></div>
+            <div class="hist__stat" x-show="!isIncome()"><dt>Months ended overspent</dt><dd x-text="stats().overspentMonths"></dd></div>
+            <div class="hist__stat" x-show="!isIncome()"><dt>Assigned minus spent</dt><dd x-text="(stats().assignedVsSpent >= 0 ? '+' : '') + fmt(stats().assignedVsSpent)"></dd></div>
+          </dl>
+        </section>
+
+        <template x-if="goal()">
+          <section class="hist__card">
+            <div class="hist__card-head">
+              <h2 class="hist__card-title">Goal</h2>
+              <span class="hist__pill" :class="goalPillClass(goalStatusNow())" x-text="goalStatusNow()"></span>
+            </div>
+            <dl style="margin: 0;">
+              <div class="hist__stat"><dt>Type</dt><dd x-text="goalTypeLabel(goal())"></dd></div>
+              <div class="hist__stat"><dt>Target</dt><dd x-text="fmt(goal().target || 0)"></dd></div>
+              <div class="hist__stat" x-show="goal().byDate"><dt>By</dt><dd x-text="goal().byDate"></dd></div>
+              <div class="hist__stat"><dt>Still needed this month</dt><dd x-text="fmt(goalNeededNow())"></dd></div>
+              <div class="hist__stat"><dt>Months fully funded</dt><dd x-text="goalFundedCount() + ' of ' + goalHistory().length"></dd></div>
+            </dl>
+            <div class="cluster" style="gap: 4px; flex-wrap: wrap; margin-top: var(--space-xs);">
+              <template x-for="r in goalHistory()" :key="r.month">
+                <span class="hist__pill" :class="goalPillClass(r.status)" :title="monthLabel(r.month) + ': ' + r.status" x-text="monthLabel(r.month, true)"></span>
+              </template>
+            </div>
+          </section>
+        </template>
+
+        <template x-if="cut()">
+          <section class="hist__card">
+            <div class="hist__card-head">
+              <h2 class="hist__card-title">Planned cut</h2>
+              <a class="hist__link" :href="cutsHref()">All cuts</a>
+            </div>
+            <p class="hist__card-meta" style="margin: 0 0 var(--space-2xs);" x-text="cutLabel() + ', since ' + monthLabel(cut().startMonth) + (cut().goalLabel ? ', toward ' + cut().goalLabel : '')"></p>
+            <div x-html="cutChart()"></div>
+            <div class="hist__legend"><span>Saved that month</span><span class="is-line">Target</span></div>
+            <dl style="margin: var(--space-xs) 0 0;">
+              <div class="hist__stat"><dt>Was spending</dt><dd x-text="fmt(cutSeries().baseline) + ' a month'"></dd></div>
+              <div class="hist__stat"><dt>Target saving</dt><dd x-text="fmt(cutSeries().target) + ' a month'"></dd></div>
+              <div class="hist__stat"><dt>This month</dt><dd x-text="cutNow() ? fmt(cutNow().saved) + ' saved' : '-'"></dd></div>
+              <div class="hist__stat"><dt>Since it started</dt><dd x-text="fmt(cutSeries().cumSaved) + ' of ' + fmt(cutSeries().cumPlanned)"></dd></div>
+              <div class="hist__stat"><dt>Months met</dt><dd x-text="cutSeries().monthsMet + ' of ' + cutSeries().monthsActive + ', streak ' + cutSeries().streak"></dd></div>
+            </dl>
+          </section>
+        </template>
+
+        <template x-if="kind === 'group'">
+          <section class="hist__card hist__card--wide">
+            <div class="hist__card-head">
+              <h2 class="hist__card-title">Categories in this group</h2>
+              <span class="hist__card-meta" x-text="'Share of ' + flowWord().toLowerCase() + ' over ' + range + ' months'"></span>
+            </div>
+            <div class="hist__table-wrap">
+              <table class="hist__table">
+                <thead><tr><th>Category</th><th style="text-align:left;">Share</th><th>Average</th><th>This month</th><th>Assigned</th><th>Available</th></tr></thead>
+                <tbody>
+                  <template x-for="r in breakdown()" :key="r.id">
+                    <tr>
+                      <td><a class="hist__link" :href="memberHref(r.id)" x-text="r.name"></a> <span class="hist__card-meta" x-show="r.hidden">hidden</span></td>
+                      <td style="text-align:left;"><span class="hist__breakdown-bar" :style="'width:' + Math.round(r.share / maxShare() * 120) + 'px'"></span><span x-text="r.share + '%'"></span></td>
+                      <td x-text="fmt(r.avg)"></td>
+                      <td x-text="fmt(r.now)"></td>
+                      <td x-text="fmt(r.assigned)"></td>
+                      <td :style="r.available < 0 ? 'color: var(--danger);' : ''" x-text="fmt(r.available)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </template>
+
+        <section class="hist__card">
+          <div class="hist__card-head"><h2 class="hist__card-title">Where it goes</h2><span class="hist__card-meta">Top payees in this window</span></div>
+          <template x-if="!topPayees().length"><p class="mini-chart__empty">No transactions in this window.</p></template>
+          <table class="hist__table" x-show="topPayees().length">
+            <tbody>
+              <template x-for="p in topPayees()" :key="p.name">
+                <tr><td x-text="p.name"></td><td style="text-align:left; width: 40%;"><span class="hist__breakdown-bar" :style="'width:' + Math.round(p.share) + '%'"></span></td><td x-text="p.share + '%'"></td><td x-text="fmt(p.total)"></td></tr>
+              </template>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="hist__card">
+          <div class="hist__card-head"><h2 class="hist__card-title">Month by month</h2></div>
+          <div class="hist__table-wrap" style="max-height: 360px; overflow-y: auto;">
+            <table class="hist__table">
+              <thead><tr><th>Month</th><th>Assigned</th><th x-text="flowWord()"></th><th>Available</th></tr></thead>
+              <tbody>
+                <template x-for="r in series().slice().reverse()" :key="r.month">
+                  <tr :class="r.month === $store.budget.currentMonth ? 'is-current' : ''">
+                    <td x-text="monthLabel(r.month)"></td>
+                    <td x-text="fmt(r.assigned)"></td>
+                    <td x-text="fmt(r[flowKey()])"></td>
+                    <td :style="r.available < 0 ? 'color: var(--danger);' : ''" x-text="fmt(r.available)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="hist__card hist__card--wide">
+          <div class="hist__card-head">
+            <h2 class="hist__card-title">Recent transactions</h2>
+            <span class="hist__card-meta" x-text="transactions().length + ' total'"></span>
+          </div>
+          <template x-if="!transactions().length"><p class="mini-chart__empty">Nothing recorded here yet.</p></template>
+          <div class="hist__table-wrap" x-show="transactions().length">
+            <table class="hist__table">
+              <thead><tr><th>Date</th><th style="text-align:left;">Payee</th><th style="text-align:left;">Account</th><th style="text-align:left;" x-show="kind === 'group'">Category</th><th style="text-align:left;">Memo</th><th>Amount</th></tr></thead>
+              <tbody>
+                <template x-for="t in recentTransactions()" :key="t.id">
+                  <tr>
+                    <td x-text="t.date"></td>
+                    <td style="text-align:left;" x-text="t.payee || '-'"></td>
+                    <td style="text-align:left;" x-text="accountName(t.accountId)"></td>
+                    <td style="text-align:left;" x-show="kind === 'group'" x-text="catName(t.categoryId)"></td>
+                    <td style="text-align:left; white-space: normal;" x-text="t.memo"></td>
+                    <td :style="t.amount < 0 ? '' : 'color: var(--ok);'" x-text="fmt(t.amount)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="form-actions" x-show="transactions().length > txnLimit" style="margin-top: var(--space-xs);">
+            <button class="btn btn--ghost btn--sm" type="button" @click="txnLimit += 25">Show more</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </template>
+</div>

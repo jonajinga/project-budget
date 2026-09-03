@@ -81,6 +81,7 @@ import { GOAL_TYPES } from "../domain/goals.js";
 import { reportsSlice } from "./slices/reports.js";
 import { dashboardSlice } from "./slices/dashboard.js";
 import { dashboardsSlice } from "./slices/dashboards.js";
+import { historySlice } from "./slices/history.js";
 import { importExportSlice } from "./slices/import-export.js";
 import { goalsSlice } from "./slices/goals.js";
 import { cutsSlice } from "./slices/cuts.js";
@@ -910,6 +911,7 @@ export function createStore() {
     importExportSlice,
     reportsSlice,
     dashboardSlice,
-    dashboardsSlice
+    dashboardsSlice,
+    historySlice
   );
 }
