@@ -32,11 +32,29 @@
      so the install doesn't block first paint. #}
   <script>
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function () {
-        navigator.serviceWorker.register("/sw.js").catch(function (err) {
-          console.warn("SW registration failed:", err);
+      /* Never on a dev server. The worker serves /app/* stale-while-
+         revalidate, and the dev server rebuilds on every save, so a
+         browser on localhost was always one build behind: a change was
+         invisible until the SECOND reload, and every stylesheet fix
+         looked like it had not landed. On localhost, tear down any
+         worker and its caches so an existing install stops interfering. */
+      var isDev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      if (isDev) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) { r.unregister(); });
+        }).catch(function () {});
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (keys) {
+            keys.forEach(function (k) { if (k.indexOf("pb-") === 0) caches.delete(k); });
+          }).catch(function () {});
+        }
+      } else {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function (err) {
+            console.warn("SW registration failed:", err);
+          });
         });
-      });
+      }
     }
   </script>
 
