@@ -352,27 +352,14 @@ function budgetView() {
     /* ---- Notes: category-wide + per-month ------------------------ */
     notesCat: null,
     noteForm: { category: "", months: {} },
+    /* The name-column note indicator is the CATEGORY note only. Month
+       notes live in their own month's column (see the Assigned cell). */
     hasNotes(c) {
       void this.$store.budget._listVersion;
-      var s = this.$store.budget;
-      if ((s.findCategory(c.id) || {}).note) return true;
-      var months = this.visibleMonths();
-      for (var i = 0; i < months.length; i++) {
-        if (s.monthNote(c.id, months[i])) return true;
-      }
-      return false;
+      return !!((this.$store.budget.findCategory(c.id) || {}).note);
     },
     notesTip(c) {
-      var s = this.$store.budget;
-      var parts = [];
-      var catNote = (s.findCategory(c.id) || {}).note;
-      if (catNote) parts.push(catNote);
-      var self = this;
-      this.visibleMonths().forEach(function (m) {
-        var n = s.monthNote(c.id, m);
-        if (n) parts.push(self.monthShortLabel(m) + ": " + n);
-      });
-      var tip = parts.join(" · ");
+      var tip = (this.$store.budget.findCategory(c.id) || {}).note || "";
       return tip.length > 220 ? tip.slice(0, 217) + "..." : tip;
     },
     openNotes(c) {
@@ -534,6 +521,41 @@ function budgetView() {
         s.pushToast("Cut removed.");
         this._loadCutForm();
       }
+    },
+    /* ---- Progress rings (goals and cuts) ---- */
+    /* r=10 => circumference 62.83; the dash offset hides the unfilled arc. */
+    ringOffset(pct) {
+      var p = Math.max(0, Math.min(100, Number(pct) || 0));
+      return (62.83 * (1 - p / 100)).toFixed(2);
+    },
+    ringText(pct) {
+      var p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+      return p >= 100 ? "" : p + "%";
+    },
+    ringClass(pct, kind) {
+      var p = Number(pct) || 0;
+      var base = kind === "cut" ? "ring--cut" : "ring--goal";
+      if (p >= 100) return base + " is-met";
+      if (p >= 50) return base + " is-half";
+      return base;
+    },
+    cutPercent(catId, month) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      var cut = s.cutForCategory(catId);
+      if (!cut) return 0;
+      var prog = s.cutProgressFor(cut.id, month || s.currentMonth);
+      return prog ? prog.pct : 0;
+    },
+    cutTooltip(catId) {
+      var s = this.$store.budget;
+      var cut = s.cutForCategory(catId);
+      if (!cut) return "";
+      var prog = s.cutProgressFor(cut.id, s.currentMonth) || {};
+      var goal = cut.goalLabel ? " toward " + cut.goalLabel : "";
+      return "Planned cut " + this.cutBadgeText(catId) + goal + ": " +
+        this.formatCents(prog.saved || 0) + " of " + this.formatCents(prog.target || 0) +
+        " saved this month (" + (prog.pct || 0) + "%).";
     },
     cutBadgeText(catId) {
       void this.$store.budget._listVersion;

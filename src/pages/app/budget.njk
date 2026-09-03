@@ -109,6 +109,17 @@ eleventyExcludeFromCollections: true
               <span class="budget__month-head-spacer" aria-hidden="true"></span>
               <h2 class="budget__month-head-name" x-text="monthCardLabel(vm)"></h2>
               <div class="budget__month-head-tools">
+              <button type="button" class="btn btn--icon budget__inspector-toggle"
+                      x-show="inspectorDocked" x-cloak
+                      :class="inspectorOpen ? 'is-active' : ''"
+                      @click="setInspectorOpen(!inspectorOpen)"
+                      :aria-pressed="inspectorOpen.toString()"
+                      aria-label="Toggle inspector pane"
+                      :data-tip="inspectorOpen ? 'Hide the inspector pane.' : 'Show the inspector pane: month overview, overspending fixes, category details.'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/>
+                </svg>
+              </button>
               <button type="button" class="btn btn--icon budget__month-auto"
                       @click="openAutoAssign({ kind: 'all', name: 'All categories', ids: null, month: vm })"
                       :data-tip="'Auto-assign ' + monthCardLabel(vm) + ': fill every category from goal needs, last month, or recent averages.'"
@@ -358,49 +369,51 @@ eleventyExcludeFromCollections: true
                               @click="selectCategory(c)"
                               :data-tip="'Open ' + c.name + ' in the inspector: breakdown, notes, goal, recent activity.'"
                               x-text="c.name"></button>
-                      <span class="cut-badge"
-                            x-show="$store.budget.cutForCategory(c.id)"
-                            x-cloak
-                            :data-tip="'Planned cut: ' + cutBadgeText(c.id) + ' against the 3-month baseline. Details in the inspector.'"
-                            x-text="cutBadgeText(c.id)"></span>
-                      <button type="button" class="note-ind"
-                              x-show="hasNotes(c)" x-cloak
-                              :data-tip="notesTip(c)"
-                              :aria-label="'Notes for ' + c.name"
-                              @click="openNotes(c)">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
-                      </button>
-                    </div>
-                    {# Goal status + progress share ONE line under the name.
-                       The badge used to sit in the name row, where a narrow
-                       multi-month column made it fight the name for width. #}
-                    <div class="budget__goal-line"
-                         x-show="$store.budget.findGoal(c.id)"
-                         x-cloak>
-                    <span class="goal-badge"
-                          :class="'goal-badge--' + ($store.budget.goalStatus(c.id) || 'needed')"
-                          :title="'Goal needs ' + formatCents($store.budget.goalNeeded(c.id)) + ' this month'"
-                          x-text="goalLabel(c.id)"></span>
-                    <div class="goal-bar"
-                         :class="goalBarClass(c.id)"
-                         {# OBJECT form, not string: a string :style
-                            rewrites the whole style attribute and its
-                            effect re-runs on every bump (goalPercent
-                            touches _listVersion) while x-show's does
-                            not - so it erased x-show's display:none and
-                            every goalless row grew a phantom bar after
-                            any mutation. Object form merges. #}
-                         :style="{ '--pct': goalPercent(c.id) }"
-                         :data-tip="goalBarTooltip(c.id)"
-                         role="progressbar"
-                         :aria-label="'Goal progress for ' + c.name"
-                         :aria-valuenow="goalPercent(c.id)"
-                         :aria-valuetext="goalPercent(c.id) + '% of goal for ' + c.name"
-                         aria-valuemin="0" aria-valuemax="100">
-                      <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
-                      <span class="goal-bar__cap"
-                            x-text="goalPercent(c.id) >= 100 ? '✓ 100%' : (goalPercent(c.id) + '%')"></span>
-                    </div>
+                      {# Indicators sit at the END of the name column, out of
+                         the name's way: a note (category-level only), a
+                         planned cut. Each is an icon with the detail in its
+                         tooltip; the words live in the inspector. #}
+                      <span class="budget__cat-ind">
+                        <button type="button" class="note-ind"
+                                x-show="hasNotes(c)" x-cloak
+                                :data-tip="notesTip(c)"
+                                :aria-label="'Note on ' + c.name + ': ' + notesTip(c)"
+                                @click="openNotes(c)">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
+                        </button>
+                        {# Goal progress ring: percentage inside, a check when
+                           met. One mark instead of bar + badge + caption. #}
+                        <button type="button" class="ring"
+                                x-show="$store.budget.findGoal(c.id)" x-cloak
+                                :class="ringClass(goalPercent(c.id), 'goal')"
+                                :style="{ '--pct': goalPercent(c.id) }"
+                                :data-tip="goalBarTooltip(c.id)"
+                                :aria-label="'Goal for ' + c.name + ': ' + goalPercent(c.id) + '% funded. ' + goalLabel(c.id)"
+                                @click="selectCategory(c)">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="ring__track" cx="12" cy="12" r="10"/>
+                            <circle class="ring__fill" cx="12" cy="12" r="10" :style="{ 'stroke-dashoffset': ringOffset(goalPercent(c.id)) }"/>
+                            <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
+                            <text class="ring__text" x="12" y="12" x-text="ringText(goalPercent(c.id))"></text>
+                          </svg>
+                        </button>
+                        {# Planned-cut ring: how much of this month's target
+                           reduction has been realized. #}
+                        <button type="button" class="ring ring--cut"
+                                x-show="$store.budget.cutForCategory(c.id)" x-cloak
+                                :class="ringClass(cutPercent(c.id), 'cut')"
+                                :style="{ '--pct': cutPercent(c.id) }"
+                                :data-tip="cutTooltip(c.id)"
+                                :aria-label="'Planned cut on ' + c.name + ': ' + cutPercent(c.id) + '% of this month\'s target saved. ' + cutBadgeText(c.id)"
+                                @click="selectCategory(c)">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="ring__track" cx="12" cy="12" r="10"/>
+                            <circle class="ring__fill" cx="12" cy="12" r="10" :style="{ 'stroke-dashoffset': ringOffset(cutPercent(c.id)) }"/>
+                            <path class="ring__check" d="M7.5 12.5l3 3 6-6"/>
+                            <text class="ring__text" x="12" y="12" x-text="ringText(cutPercent(c.id))"></text>
+                          </svg>
+                        </button>
+                      </span>
                     </div>
                   </div>
                   {# One (Assigned / Outflow / Available) cell triplet per
@@ -415,6 +428,16 @@ eleventyExcludeFromCollections: true
                            @focus="setFocusCell(c.id, vm)"
                            @keydown="onCellKeydown(c, vm, $event)"
                            :aria-label="c.name + ', ' + monthShortLabel(vm) + ': assigned ' + formatCents($store.budget.assignedFor(c.id, vm)) + '. Press Enter to edit.'">
+                        {# This month's note, and only this month's: it lives
+                           in the month's own column, not in a running list
+                           on the name. #}
+                        <button type="button" class="note-ind note-ind--month" tabindex="-1"
+                                x-show="$store.budget.monthNote(c.id, vm)" x-cloak
+                                :data-tip="monthCardLabel(vm, true) + ': ' + $store.budget.monthNote(c.id, vm)"
+                                :aria-label="'Note for ' + c.name + ' in ' + monthCardLabel(vm) + ': ' + $store.budget.monthNote(c.id, vm)"
+                                @click.stop="openNotes(c)">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
+                        </button>
                         {# select() on focus: the cell always holds a value, so
                            the first keystroke replaces the amount. Arrow keys
                            or a second click still place a caret. #}

@@ -279,9 +279,6 @@
     top: 2px;
     top: calc((1lh - 16px) / 2);
   }
-  .budget__group .budget__row .budget__goal-line {
-    margin-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
-  }
   .budget__column-header .budget__category {
     padding-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
   }
@@ -303,35 +300,100 @@
     flex: 0 1 auto;
     min-width: 0;
   }
+  /* Indicators hug the end of the name: small icons only, never text,
+     so they read as marks on the name rather than competing with it. */
+  .budget__cat-ind {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
   .budget .budget__category-row .cut-badge,
   .budget .budget__category-row .note-ind { flex: 0 0 auto; }
 }
-/* Goal status and progress on one line under the name. */
-.budget__goal-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  margin-top: 0.2rem;
-  min-width: 0;
+/* Progress rings. One 22px mark beside the name: a ring that fills as
+   a goal is funded (or a planned cut is realized), the percentage in
+   the middle, and a check once it is met. Replaces bar + badge + "100%"
+   caption, which took a second line and crowded the name. */
+.ring {
+  --pct: 0;
+  --ring-fill: var(--accent);
+  --ring-track: var(--border-soft);
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: -2px 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
 }
-.budget__goal-line .goal-badge { margin-left: 0; flex: 0 0 auto; }
-/* The track keeps a readable minimum so a narrow multi-month column
-   shows a bar, not a dot; the cap text (100%) never wraps. */
-.budget__goal-line .goal-bar { margin-top: 0; flex: 1 1 4.5rem; min-width: 4.5rem; }
-.budget__goal-line .goal-bar__cap { white-space: nowrap; }
+.ring::before { content: ""; position: absolute; inset: -6px; }
+.ring svg { width: 22px; height: 22px; display: block; }
+.ring__track { fill: none; stroke: var(--ring-track); stroke-width: 2.5; }
+.ring__fill {
+  fill: none;
+  stroke: var(--ring-fill);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 62.83;
+  stroke-dashoffset: 62.83;
+  transform: rotate(-90deg);
+  transform-origin: 12px 12px;
+  transition: stroke-dashoffset var(--t-base);
+}
+.ring__text {
+  font-size: 7.5px;
+  font-weight: 700;
+  fill: var(--fg-muted);
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.ring__check { fill: none; stroke: var(--ring-fill); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; display: none; }
+.ring.is-met .ring__check { display: block; }
+.ring.is-met .ring__text { display: none; }
+.ring--goal { --ring-fill: var(--fg-subtle); }
+.ring--goal.is-half { --ring-fill: var(--accent); }
+.ring--goal.is-met { --ring-fill: var(--ok); }
+/* A cut ring's track is dashed so it never reads as a second goal ring
+   when both sit beside one name. */
+.ring--cut { --ring-fill: var(--warn, #8a5a00); }
+.ring--cut .ring__track { stroke-dasharray: 2 2.2; }
+.ring--cut.is-met { --ring-fill: var(--ok); }
+.ring:hover .ring__track { stroke: var(--border-strong, var(--border)); }
+.ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 50%; }
+@media (prefers-reduced-motion: reduce) { .ring__fill { transition: none; } }
+/* Month-note indicator inside the DATA row's Assigned cell, before the
+   input. Scoped to .budget__row: header and group-total cells share
+   the class and must keep their right-aligned text. */
+.budget__row .budget__assigned { display: flex; align-items: center; }
+.budget__row .budget__assigned > input,
+.budget__row .budget__assigned > .budget__assigned-locked { flex: 1 1 auto; min-width: 0; }
+.note-ind--month { padding: 4px; margin: -4px 0; flex: 0 0 auto; }
+.budget__month-head-tools .budget__inspector-toggle.is-active { color: var(--accent); }
 
-/* Names that need two lines break at spaces, never mid-word.
-   overflow-wrap: anywhere let the flex algorithm shrink a name to a
-   sliver and break it wherever ("Freedom Vi..."); break-word keeps a
-   word whole unless it is longer than the whole column. The two-line
-   clamp stays as the last resort. */
+/* Names are ONE line, always. A name longer than its column ends in
+   an ellipsis; the full name is one click away (inspector, tooltip).
+   Rows stay a uniform height, which is what makes a grid scannable. */
 .budget .budget__cat-name,
 .budget .budget__cat-name--btn,
-.budget .group-toggle strong {
-  overflow-wrap: break-word;
+.budget .budget__group-header .group-toggle strong {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  overflow-wrap: normal;
   word-break: normal;
-  line-height: 1.25;
+  line-height: 1.3;
 }
+.budget .group-toggle { min-width: 0; max-width: 100%; }
 
 /* Selected-row tint — accent left rail + subtle background so the
    user can see at a glance what's in the bulk selection. */

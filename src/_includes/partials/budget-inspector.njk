@@ -67,17 +67,25 @@
             <p class="budget-inspector__mcard-label"
                x-show="effectiveMonthCount() > 1" x-cloak
                x-text="monthShortLabel(vm)"></p>
+            {# The same four lines as the month card, per month - not the
+               since-the-beginning-of-time totals the old breakdown showed,
+               which read as nonsense after a few years of history. #}
             <dl class="budget-inspector__break">
-              <div><dt data-tip="Uncategorized income received through the end of this month.">Inflow to budget</dt>
-                <dd data-rta="inflow" x-text="formatCents(rtaBreak(vm).inflow)"></dd></div>
-              <div><dt data-tip="Everything assigned to categories, this month and before.">Assigned so far</dt>
-                <dd data-rta="assigned" x-text="'-' + formatCents(rtaBreak(vm).assigned)"></dd></div>
-              <div><dt data-tip="Overspending in PRIOR months does not follow the category - it comes out of Ready to Work here.">Overspending lost</dt>
-                <dd data-rta="lost" :class="rtaBreak(vm).lost > 0 ? 'amount--outflow' : ''"
-                    x-text="'-' + formatCents(rtaBreak(vm).lost)"></dd></div>
+              <div><dt data-tip="Ready to Work at the end of the previous month.">Left over from <span x-text="monthCardLabel(prevMonthOf(vm), true)"></span></dt>
+                <dd data-rta="carried" x-text="formatCents(monthLines(vm).carried)"></dd></div>
+              <div><dt data-tip="Uncategorized income received this month.">Inflow in <span x-text="monthCardLabel(vm, true)"></span></dt>
+                <dd data-rta="inflow" x-text="'+' + formatCents(monthLines(vm).inflow)"></dd></div>
+              <div><dt data-tip="Overspending in the previous month does not follow the category - it comes out of Ready to Work here.">Overspent in <span x-text="monthCardLabel(prevMonthOf(vm), true)"></span></dt>
+                <dd data-rta="lost" :class="monthLines(vm).lost > 0 ? 'amount--outflow' : ''"
+                    x-text="'-' + formatCents(monthLines(vm).lost)"></dd></div>
+              <div><dt data-tip="Everything assigned to categories this month.">Assigned in <span x-text="monthCardLabel(vm, true)"></span></dt>
+                <dd data-rta="assigned" x-text="'-' + formatCents(monthLines(vm).assigned)"></dd></div>
               <div class="budget-inspector__break-total"><dt>Ready to Work</dt>
-                <dd data-rta="rta" :class="rtaBreak(vm).rta < 0 ? 'amount--outflow' : 'amount--inflow'"
-                    x-text="formatCents(rtaBreak(vm).rta)"></dd></div>
+                <dd data-rta="rta" :class="monthLines(vm).rta < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(monthLines(vm).rta)"></dd></div>
+              <div x-show="monthLines(vm).ahead > 0" x-cloak>
+                <dt data-tip="Already assigned in later months. Ready to Work is per month here, so it is not subtracted above.">Assigned ahead</dt>
+                <dd x-text="formatCents(monthLines(vm).ahead)"></dd></div>
             </dl>
 
             <div x-show="overspentCategories(vm).length" x-cloak>
