@@ -4713,7 +4713,10 @@ body.pb-dragging { overflow: visible !important; }
     /* FIXED value tracks. An <input> has an intrinsic width near 20ch,
        so an auto track let the Assigned field swallow the whole row and
        the name column collapsed to nothing at 330px. */
-    grid-template-columns: minmax(0, 1fr) 3.8rem 3.6rem 3.8rem 24px;
+    /* Assigned stays fixed (it holds the input); Outflow and Available
+       hold buttons and may widen to fit a big number, taking the room
+       from the name rather than clipping the pill. */
+    grid-template-columns: minmax(0, 1fr) 3.8rem minmax(3.4rem, max-content) minmax(3.8rem, max-content) 24px;
     grid-template-areas: "cat assigned outflow available actions";
     row-gap: 0;
     column-gap: 3px;
@@ -4721,7 +4724,7 @@ body.pb-dragging { overflow: visible !important; }
     align-items: center;
   }
   .budget .budget__column-header {
-    grid-template-columns: minmax(0, 1fr) 3.8rem 3.6rem 3.8rem 24px;
+    grid-template-columns: minmax(0, 1fr) 3.8rem minmax(3.4rem, max-content) minmax(3.8rem, max-content) 24px;
     grid-template-areas: "cat assigned outflow available actions";
     padding: 5px 6px 5px 6px;
   }
@@ -4773,4 +4776,9 @@ body.pb-dragging { overflow: visible !important; }
   .budget .budget__row-actions .btn--icon { width: 24px; min-width: 24px; height: 24px; min-height: 24px; }
   .budget .budget__row-actions .btn--icon svg { width: 16px; height: 16px; }
   .budget .goal-bar--thin { max-width: none; margin-top: 2px; }
+  /* Both tracker rows start at the same x: the category bar clears the
+     14px checkbox + 8px gap; the group bar sits inside the title block,
+     which already starts after that same checkbox + gap. */
+  .budget .budget__group .budget__row .goal-bar--thin { margin-left: 22px; }
+  .budget .goal-bar--group { margin-left: 0; }
 }
