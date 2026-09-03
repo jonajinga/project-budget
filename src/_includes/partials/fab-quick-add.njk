@@ -1,11 +1,17 @@
-{# The tab bar's centre button opens THIS modal rather than duplicating the
-   form: one add path, one keyboard shortcut, nothing to keep in sync. Below
-   768px the trigger below is hidden (tab-bar.css) and the tab bar is the
-   only entry point; above it, the FAB is unchanged. #}
+{# Quick-add transaction. One add path for the whole app: the floating
+   button above 768px, the tab bar's centre button below it, the N key,
+   and the command palette all open THIS.
+
+   Amount first: the number is what a person knows when they reach for
+   this; everything else has a sensible default (last-used account,
+   today, the payee's usual category) and can be left alone. Three
+   modes - outflow, inflow, transfer - because a transfer is not a
+   payee-and-category transaction and pretending otherwise produced
+   phantom income. #}
 <div class="fab-quick-add" x-data="quickAddFab()" x-init="init()"
-     @open-quick-add.window="open = true">
+     @open-quick-add.window="openModal()">
   <button type="button" class="fab-quick-add__btn"
-          @click="open = true"
+          @click="openModal()"
           x-show="$store.budget.profile"
           x-cloak
           data-touch="compact"
@@ -18,105 +24,172 @@
   </button>
 
   <div class="modal-backdrop" x-show="open" x-cloak @keydown.escape.window="open = false">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fab-quick-add-title"
+    <div class="modal qa" role="dialog" aria-modal="true" aria-labelledby="fab-quick-add-title"
          @click.outside="open = false">
       <button class="modal__close" type="button" @click="open = false" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
       </button>
-      <h2 class="modal__title" id="fab-quick-add-title">Add transaction</h2>
-      <form @submit.prevent="submit()">
-        {# Outflow / Inflow toggle — the canonical sign indicator
-           across every add-transaction surface. Mobile keypads can't
-           type a minus sign; this toggle is how the user marks
-           direction. Also filters the category dropdown to match. #}
-        <div class="txn-type-toggle" role="group" aria-label="Transaction type" style="margin-bottom: var(--space-sm);">
-          <button type="button" class="txn-type-toggle__opt"
-                  :class="form.type === 'outflow' ? 'is-active' : ''"
-                  :aria-pressed="(form.type === 'outflow').toString()"
-                  @click="form.type = 'outflow'; form.categoryId = ''">
-            <span aria-hidden="true">−</span> Outflow
+      <h2 class="modal__title qa__title" id="fab-quick-add-title">Add transaction</h2>
+
+      <form @submit.prevent="submit(false)" novalidate>
+        {# Mode: what kind of movement this is. #}
+        <div class="qa__modes" role="group" aria-label="Transaction type">
+          <button type="button" class="qa__mode" :class="form.type === 'outflow' ? 'is-active' : ''"
+                  :aria-pressed="(form.type === 'outflow').toString()" @click="setType('outflow')">
+            <span class="qa__mode-sign" aria-hidden="true">&minus;</span> Outflow
           </button>
-          <button type="button" class="txn-type-toggle__opt"
-                  :class="form.type === 'inflow' ? 'is-active' : ''"
-                  :aria-pressed="(form.type === 'inflow').toString()"
-                  @click="form.type = 'inflow'; form.categoryId = ''">
-            <span aria-hidden="true">+</span> Inflow
+          <button type="button" class="qa__mode" :class="form.type === 'inflow' ? 'is-active' : ''"
+                  :aria-pressed="(form.type === 'inflow').toString()" @click="setType('inflow')">
+            <span class="qa__mode-sign" aria-hidden="true">+</span> Inflow
+          </button>
+          <button type="button" class="qa__mode" :class="form.type === 'transfer' ? 'is-active' : ''"
+                  :aria-pressed="(form.type === 'transfer').toString()" @click="setType('transfer')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            Transfer
           </button>
         </div>
-        <div class="form-stack">
-          <div class="field">
+
+        {# The amount, large. Always positive; the mode sets the sign. #}
+        <div class="qa__amount" :class="'qa__amount--' + form.type + (errors.amount ? ' is-invalid' : '')">
+          <label class="visually-hidden" for="qa-amount">Amount</label>
+          <span class="qa__amount-sign" aria-hidden="true"
+                x-text="form.type === 'outflow' ? '−' : (form.type === 'inflow' ? '+' : '')"></span>
+          <span class="qa__amount-cur" aria-hidden="true">$</span>
+          <input class="qa__amount-input" id="qa-amount" type="text" x-model="form.amount"
+                 placeholder="0.00" inputmode="decimal" autocomplete="off" enterkeyhint="done"
+                 @input="errors.amount = ''"
+                 aria-describedby="qa-amount-hint">
+        <p class="visually-hidden" id="qa-amount-hint">A positive number; the type sets the sign. Expressions like 12.50 + 8.99 work.</p>
+        </div>
+        <p class="qa__calc" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
+        <p class="qa__error" x-show="errors.amount" x-cloak x-text="errors.amount"></p>
+
+        {# Outflow / inflow: payee, category, account, date. #}
+        <div class="qa__fields" x-show="form.type !== 'transfer'">
+          <div class="field qa__field qa__field--wide" style="position: relative;">
+            <label class="field__label" for="qa-payee">Payee</label>
+            <input class="input" id="qa-payee" type="text" x-model="form.payeeName"
+                   @input="refreshSuggestions()" @focus="refreshSuggestions()"
+                   @blur="setTimeout(() => payeeSuggestions = [], 150)"
+                   autocomplete="off" :placeholder="form.type === 'inflow' ? 'Who paid you' : 'Where the money went'"
+                   data-tip="Picking a known payee fills in its usual category.">
+            <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
+              <template x-for="p in payeeSuggestions" :key="p.id">
+                <li><button type="button" @mousedown.prevent="pickPayee(p)">
+                  <span x-text="p.name"></span>
+                  <span class="payee-suggest__meta" x-show="p.lastCategoryId" x-text="$store.budget.categoryName(p.lastCategoryId)"></span>
+                </button></li>
+              </template>
+            </ul>
+            {# Recent payees as one-tap chips while the field is empty. #}
+            <div class="qa__chips" x-show="!form.payeeName && recentPayees().length" x-cloak role="group" aria-label="Recent payees">
+              <template x-for="p in recentPayees()" :key="'rp-' + p.id">
+                <button type="button" class="qa__chip" @click="pickPayee(p)" x-text="p.name"></button>
+              </template>
+            </div>
+          </div>
+
+          <div class="field qa__field qa__field--wide">
+            <label class="field__label" for="qa-category">
+              Category
+              <span class="qa__label-note" x-show="categoryAuto" x-cloak>from this payee</span>
+            </label>
+            <select class="select" id="qa-category" x-model="form.categoryId" @change="categoryAuto = false"
+                    data-tip="The envelope this draws from. Leave it for later if you are not sure.">
+              <option value="">Uncategorized (decide later)</option>
+              <template x-for="g in categoryGroupsForType(form.type)" :key="'qg-' + g.id">
+                <optgroup :label="g.name">
+                  <template x-for="c in g.categories" :key="'qc-' + c.id">
+                    <option :value="c.id" x-text="c.name"></option>
+                  </template>
+                </optgroup>
+              </template>
+            </select>
+            <p class="field__hint" x-show="form.type === 'inflow' && !categoryGroupsForType('inflow').length" x-cloak>
+              Inflows with no category go to Ready to Work, which is usually what you want for a paycheck.
+            </p>
+          </div>
+
+          <div class="field qa__field">
             <label class="field__label" for="qa-account">Account</label>
             <select class="select" id="qa-account" x-model="form.accountId" required
-                    data-tip="Which account this transaction posts to. Choose the account where the money moved (e.g. Checking for a debit-card swipe).">
+                    :class="errors.account ? 'is-invalid' : ''" @change="errors.account = ''"
+                    data-tip="Where the money moved. Remembered for next time.">
               <option value="">Select account</option>
               <template x-for="a in openAccounts()" :key="a.id">
                 <option :value="a.id" x-text="a.name"></option>
               </template>
             </select>
+            <p class="qa__error" x-show="errors.account" x-cloak x-text="errors.account"></p>
           </div>
-          <div class="field">
+
+          <div class="field qa__field">
             <label class="field__label" for="qa-date">Date</label>
-            <input class="input" id="qa-date" type="date" x-model="form.date" required
-                   data-tip="When the transaction actually occurred. Defaults to today.">
+            <div class="qa__date">
+              <input class="input" id="qa-date" type="date" x-model="form.date" required>
+              <span class="qa__date-chips">
+                <button type="button" class="qa__chip" :class="isToday(form.date) ? 'is-active' : ''" @click="form.date = todayISO()">Today</button>
+                <button type="button" class="qa__chip" :class="isYesterday(form.date) ? 'is-active' : ''" @click="form.date = daysAgoISO(1)">Yesterday</button>
+              </span>
+            </div>
           </div>
-          <div class="field" style="position: relative;">
-            <label class="field__label" for="qa-payee">Payee</label>
-            <input class="input" id="qa-payee" type="text" x-model="form.payeeName"
-                   @input="refreshSuggestions()" @focus="refreshSuggestions()"
-                   @blur="setTimeout(() => payeeSuggestions = [], 150)"
-                   autocomplete="off" placeholder="Trader Joe's, Acme Industries, …"
-                   data-tip="Who you paid (or who paid you). Auto-suggests as you type; picking a known payee pre-fills its usual category.">
-            <ul class="payee-suggest" x-show="payeeSuggestions.length" x-cloak>
-              <template x-for="p in payeeSuggestions" :key="p.id">
-                <li>
-                  <button type="button" @mousedown.prevent="pickPayee(p)"
-                          x-text="p.name + ' (' + p.useCount + ')'"></button>
-                </li>
-              </template>
-            </ul>
-          </div>
-          <div class="field">
-            <label class="field__label" for="qa-amount">Amount</label>
-            <input class="input" id="qa-amount" type="text" x-model="form.amount"
-                   placeholder="12.34 · or 12+8.99" inputmode="decimal" required
-                   data-tip="Enter a positive number — the Outflow / Inflow toggle above sets the sign. Calculator: type expressions like 12.50 + 8.99.">
-            <p class="field__hint calc-preview" x-show="calcPreview(form.amount)" x-cloak x-text="calcPreview(form.amount)"></p>
-          </div>
-          <div class="field">
-            <label class="field__label" for="qa-category">Category</label>
-            <select class="select" id="qa-category" x-model="form.categoryId"
-                    data-tip="Envelope budget category this transaction draws from. Leave uncategorized to assign later from the register.">
-              <option value="">(uncategorized)</option>
-              <template x-for="c in selectableCategoriesForType(form.type)" :key="c.id">
-                <option :value="c.id" x-text="c.name"></option>
+        </div>
+
+        {# Transfer: from, to, date. #}
+        <div class="qa__fields" x-show="form.type === 'transfer'" x-cloak>
+          <div class="field qa__field">
+            <label class="field__label" for="qa-from">From</label>
+            <select class="select" id="qa-from" x-model="form.accountId" :class="errors.account ? 'is-invalid' : ''" @change="errors.account = ''">
+              <option value="">Select account</option>
+              <template x-for="a in openAccounts()" :key="'f-' + a.id">
+                <option :value="a.id" x-text="a.name + '  (' + formatCents($store.budget.accountBalance(a.id)) + ')'"></option>
               </template>
             </select>
-            <p class="field__hint"
-               x-show="form.type === 'inflow' && !selectableCategoriesForType('inflow').length" x-cloak>
-              No income categories yet — create one in a group marked as "Income".
-            </p>
           </div>
-          <div class="field">
-            <label class="field__label" for="qa-memo">Memo (optional)</label>
-            <input class="input" id="qa-memo" type="text" x-model="form.memo"
-                   data-tip="Short note for your future self — what the transaction was for, who you split it with, etc.">
+          <div class="field qa__field">
+            <label class="field__label" for="qa-to">To</label>
+            <select class="select" id="qa-to" x-model="form.toAccountId" :class="errors.to ? 'is-invalid' : ''" @change="errors.to = ''">
+              <option value="">Select account</option>
+              <template x-for="a in openAccounts()" :key="'t-' + a.id">
+                <option :value="a.id" :disabled="a.id === form.accountId" x-text="a.name + '  (' + formatCents($store.budget.accountBalance(a.id)) + ')'"></option>
+              </template>
+            </select>
+            <p class="qa__error" x-show="errors.to" x-cloak x-text="errors.to"></p>
           </div>
-          <span class="cluster" style="gap: var(--space-2xs); color: var(--fg-muted); align-items: center;">
-            <button type="button"
-                    class="cleared-toggle"
-                    :aria-pressed="form.cleared.toString()"
-                    @click="form.cleared = !form.cleared"
-                    :data-tip="form.cleared ? 'Marked as cleared. Click to uncheck.' : 'Mark as cleared (posted at bank).'">
-              <span x-show="form.cleared">&#10003;</span>
-            </button>
-            <span>Cleared</span>
-          </span>
+          <div class="field qa__field qa__field--wide">
+            <label class="field__label" for="qa-date-t">Date</label>
+            <div class="qa__date">
+              <input class="input" id="qa-date-t" type="date" x-model="form.date" required>
+              <span class="qa__date-chips">
+                <button type="button" class="qa__chip" :class="isToday(form.date) ? 'is-active' : ''" @click="form.date = todayISO()">Today</button>
+                <button type="button" class="qa__chip" :class="isYesterday(form.date) ? 'is-active' : ''" @click="form.date = daysAgoISO(1)">Yesterday</button>
+              </span>
+            </div>
+          </div>
+          <p class="field__hint qa__field--wide" x-show="transferHint()" x-cloak x-text="transferHint()"></p>
         </div>
-        <div class="form-actions">
+
+        {# The quiet row: memo and cleared. #}
+        <div class="qa__extras">
+          <div class="field qa__field qa__field--grow">
+            <label class="visually-hidden" for="qa-memo">Memo</label>
+            <input class="input" id="qa-memo" type="text" x-model="form.memo" placeholder="Memo (optional)">
+          </div>
+          <label class="qa__switch">
+            <input type="checkbox" x-model="form.cleared">
+            <span class="qa__switch-track" aria-hidden="true"><span class="qa__switch-thumb"></span></span>
+            <span class="qa__switch-label">Cleared</span>
+          </label>
+        </div>
+
+        <div class="qa__actions">
           <button class="btn btn--primary" type="submit"
-                  data-tip="Add this transaction to the register.">Add transaction</button>
-          <button class="btn btn--ghost" type="button" @click="open = false"
-                  data-tip="Discard the form and close.">Cancel</button>
+                  x-text="form.type === 'transfer' ? 'Move money' : 'Add transaction'"></button>
+          <button class="btn btn--secondary" type="button" @click="submit(true)"
+                  x-show="form.type !== 'transfer'"
+                  data-tip="Save this one and keep the form open for the next (same account, date and type).">Add &amp; next</button>
+          <button class="btn btn--ghost" type="button" @click="open = false">Cancel</button>
+          <span class="qa__kbd" aria-hidden="true">Enter adds &middot; Esc closes</span>
         </div>
       </form>
     </div>
@@ -125,47 +198,86 @@
 
 <script>
 function quickAddFab() {
+  var LAST_ACCOUNT_KEY = "projectbudget:quick-add-account";
+  function todayISO() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function daysAgoISO(n) {
+    var d = new Date(); d.setDate(d.getDate() - n);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
   return {
     open: false,
-    /* `amount` is always positive; `type` drives the sign at submit
-       time so mobile users never need to type a minus. Default
-       outflow because that's the common case. */
-    form: { accountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false, date: "", type: "outflow" },
+    form: { accountId: "", toAccountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false, date: "", type: "outflow" },
+    errors: { amount: "", account: "", to: "" },
     payeeSuggestions: [],
+    categoryAuto: false,
+    todayISO: todayISO,
+    daysAgoISO: daysAgoISO,
+    isToday(d) { return d === todayISO(); },
+    isYesterday(d) { return d === daysAgoISO(1); },
 
     init() {
-      this.form.date = new Date().toISOString().slice(0, 10);
+      this.form.date = todayISO();
       var self = this;
-      /* Command-palette + future external triggers can open the FAB. */
-      document.addEventListener("pb:quick-add-open", function () {
-        self.open = true;
-        self.$nextTick(function () {
-          var input = document.getElementById("qa-amount");
-          if (input) input.focus();
-        });
-      });
+      document.addEventListener("pb:quick-add-open", function () { self.openModal(); });
     },
-
+    openModal() {
+      this.form.date = this.form.date || todayISO();
+      /* Last-used account, else the account with the most transactions. */
+      if (!this.form.accountId) {
+        var remembered = null;
+        try { remembered = localStorage.getItem(LAST_ACCOUNT_KEY); } catch (_e) {}
+        var accts = this.openAccounts();
+        var pick = accts.find(function (a) { return a.id === remembered; }) || this.busiestAccount(accts);
+        if (pick) this.form.accountId = pick.id;
+      }
+      this.errors = { amount: "", account: "", to: "" };
+      this.open = true;
+      this.$nextTick(function () { var el = document.getElementById("qa-amount"); if (el) { el.focus(); el.select(); } });
+    },
+    setType(t) {
+      this.form.type = t;
+      this.form.categoryId = "";
+      this.categoryAuto = false;
+      this.$nextTick(function () { var el = document.getElementById("qa-amount"); if (el) el.focus(); });
+    },
+    busiestAccount(accts) {
+      var p = this.$store.budget.profile;
+      if (!p || !accts.length) return null;
+      var count = {};
+      (p.transactions || []).forEach(function (t) { count[t.accountId] = (count[t.accountId] || 0) + 1; });
+      return accts.slice().sort(function (a, b) { return (count[b.id] || 0) - (count[a.id] || 0); })[0];
+    },
     openAccounts() {
       var p = this.$store.budget.profile;
       if (!p) return [];
       return p.accounts.filter(function (a) { return !a.closedAt; })
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
     },
-    selectableCategories() {
+    /* Categories grouped by their budget group, filtered by type:
+       outflows see expense groups, inflows see income groups. Payment
+       pools are never offered (they are derived). */
+    categoryGroupsForType(type) {
       var s = this.$store.budget;
       if (!s.profile) return [];
-      return s.categoriesFlat().filter(function (c) { return !s.isPaymentCategory(c.id); });
-    },
-    /* Filter by transaction type: outflow shows expense-group cats,
-       inflow shows income-group cats. Mirrors the register form. */
-    selectableCategoriesForType(type) {
-      var s = this.$store.budget;
-      return this.selectableCategories().filter(function (c) {
-        var isIncome = s.isIncomeCategory(c.id);
-        if (type === "inflow") return isIncome;
-        return !isIncome;
+      var out = [];
+      (s.categoryGroupsView() || []).forEach(function (b) {
+        var isIncome = s.isIncomeGroup(b.group);
+        if (type === "inflow" ? !isIncome : isIncome) return;
+        var cats = (b.categories || []).filter(function (c) { return !s.isPaymentCategory(c.id); });
+        if (!cats.length) return;
+        out.push({ id: b.group ? b.group.id : "__none", name: b.group ? b.group.name : "Other categories", categories: cats });
       });
+      return out;
+    },
+    recentPayees() {
+      var s = this.$store.budget;
+      if (!s.profile) return [];
+      return (s.profile.payees || []).slice()
+        .sort(function (a, b) { return (b.useCount || 0) - (a.useCount || 0); })
+        .slice(0, 5);
     },
     refreshSuggestions() {
       this.payeeSuggestions = this.$store.budget.suggestPayees(this.form.payeeName, 6);
@@ -174,51 +286,70 @@ function quickAddFab() {
       }.bind(this));
       if (match && match.lastCategoryId && !this.form.categoryId) {
         this.form.categoryId = match.lastCategoryId;
+        this.categoryAuto = true;
       }
     },
     pickPayee(p) {
       this.form.payeeName = p.name;
-      if (p.lastCategoryId && !this.form.categoryId) this.form.categoryId = p.lastCategoryId;
+      if (p.lastCategoryId && !this.form.categoryId) { this.form.categoryId = p.lastCategoryId; this.categoryAuto = true; }
       this.payeeSuggestions = [];
+      var el = document.getElementById("qa-amount");
+      if (el && !this.form.amount) el.focus();
     },
+    transferHint() {
+      if (this.form.type !== "transfer" || !this.form.accountId || !this.form.toAccountId) return "";
+      var s = this.$store.budget;
+      var from = s.findAccount(this.form.accountId), to = s.findAccount(this.form.toAccountId);
+      if (!from || !to) return "";
+      if (to.type === "credit") return "Paying down " + to.name + ": its payment pool drops by the amount.";
+      if (!from.onBudget && to.onBudget) return "Money coming on-budget: it lands in Ready to Work.";
+      if (from.onBudget && !to.onBudget) return "Money leaving the budget for " + to.name + ".";
+      return "Between two on-budget accounts: no category is touched.";
+    },
+    formatCents(c) { return this.$store.budget.formatCents ? this.$store.budget.formatCents(c) : (window.PBFormat ? window.PBFormat.cents(c) : (c / 100).toFixed(2)); },
     parseDollars(s) {
       if (s == null || s === "") return 0;
-      if (window.PBCalc) {
-        var v = window.PBCalc.parseAmountCents(s);
-        if (isFinite(v)) return v;
-      }
+      if (window.PBCalc) { var v = window.PBCalc.parseAmountCents(s); if (isFinite(v)) return v; }
       var clean = String(s).replace(/[$,\s]/g, "").trim();
       if (/^\(.*\)$/.test(clean)) clean = "-" + clean.slice(1, -1);
       var n = Number(clean);
       return isFinite(n) ? Math.round(n * 100) : 0;
     },
     calcPreview(s) { return (window.PBCalc ? window.PBCalc.formatExpressionPreview(s) : ""); },
-    submit() {
-      if (!this.form.accountId) return;
-      /* Toggle wins on sign; raw input is normalised to absolute
-         first so a stray minus sign doesn't double-flip the result. */
-      var raw = this.parseDollars(this.form.amount);
-      var signed = Math.abs(raw) * (this.form.type === "inflow" ? 1 : -1);
-      this.$store.budget.addTransaction({
-        accountId: this.form.accountId,
-        date: this.form.date,
-        payeeName: this.form.payeeName,
-        categoryId: this.form.categoryId || null,
-        amount: signed,
-        memo: this.form.memo,
-        cleared: this.form.cleared,
-      });
-      this.$store.budget.pushToast("Transaction added.");
-      var keepAccount = this.form.accountId;
-      var keepType = this.form.type;
-      this.form = {
-        accountId: keepAccount, payeeName: "", amount: "",
-        categoryId: "", memo: "", cleared: false,
-        date: new Date().toISOString().slice(0, 10),
-        type: keepType,
-      };
+    submit(andNext) {
+      var raw = Math.abs(this.parseDollars(this.form.amount));
+      this.errors = { amount: "", account: "", to: "" };
+      if (!raw) this.errors.amount = "Enter an amount.";
+      if (!this.form.accountId) this.errors.account = "Pick an account.";
+      if (this.form.type === "transfer" && (!this.form.toAccountId || this.form.toAccountId === this.form.accountId)) this.errors.to = "Pick a different account to move to.";
+      if (this.errors.amount || this.errors.account || this.errors.to) {
+        var bad = document.getElementById(this.errors.amount ? "qa-amount" : (this.errors.account ? (this.form.type === "transfer" ? "qa-from" : "qa-account") : "qa-to"));
+        if (bad) bad.focus();
+        return;
+      }
+      var s = this.$store.budget;
+      if (this.form.type === "transfer") {
+        s.transfer({ fromAccountId: this.form.accountId, toAccountId: this.form.toAccountId, amount: raw, date: this.form.date, memo: this.form.memo });
+        s.pushToast("Moved " + this.formatCents(raw) + " to " + (s.findAccount(this.form.toAccountId) || {}).name + ".");
+      } else {
+        s.addTransaction({
+          accountId: this.form.accountId, date: this.form.date, payeeName: this.form.payeeName,
+          categoryId: this.form.categoryId || null,
+          amount: raw * (this.form.type === "inflow" ? 1 : -1),
+          memo: this.form.memo, cleared: this.form.cleared,
+        });
+        s.pushToast((this.form.type === "inflow" ? "Added " : "Spent ") + this.formatCents(raw) + (this.form.payeeName ? " · " + this.form.payeeName : "") + ".");
+      }
+      try { localStorage.setItem(LAST_ACCOUNT_KEY, this.form.accountId); } catch (_e) {}
+      var keep = { accountId: this.form.accountId, type: this.form.type, date: this.form.date };
+      this.form = { accountId: keep.accountId, toAccountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false, date: keep.date, type: keep.type };
       this.payeeSuggestions = [];
-      this.open = false;
+      this.categoryAuto = false;
+      if (andNext) {
+        this.$nextTick(function () { var el = document.getElementById("qa-payee"); if (el) el.focus(); });
+      } else {
+        this.open = false;
+      }
     },
   };
 }
