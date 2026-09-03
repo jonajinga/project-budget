@@ -236,3 +236,106 @@
 
 /* Toggle button chrome (in the budget toolbar). */
 .budget__inspector-toggle.is-active { color: var(--accent); }
+
+
+/* ── Category view (the "line item" pane / sheet) ──────────────────────
+   One headline number, a strip of the three terms behind it, a direct
+   Assign field with quick fills, then collapsible sections that each
+   summarise themselves in one line when closed. */
+.insp { display: flex; flex-direction: column; gap: 0; }
+.insp__head { margin-bottom: var(--space-xs); }
+.insp__eyebrow { margin: 0 0 2px; }
+.insp__title-row { display: flex; align-items: center; gap: var(--space-2xs); min-width: 0; }
+.insp__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.insp__iconbtn { width: 30px; min-width: 30px; height: 30px; min-height: 30px; color: var(--fg-muted); }
+.insp__summary {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+  background: var(--bg-alt);
+  padding: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+.insp__avail { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); }
+.insp__avail-label { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); }
+.insp__avail-num { font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.insp__strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2xs);
+  margin: var(--space-2xs) 0 0;
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--border-soft);
+}
+.insp__strip > div { min-width: 0; }
+.insp__strip dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); }
+.insp__strip dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.insp__sec { padding: var(--space-xs) 0; border-top: 1px solid var(--border-soft); }
+.insp__sec:first-of-type { border-top: 0; }
+.insp__assign-label { display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--fg-muted); margin-bottom: 4px; }
+.insp__assign-row { display: flex; gap: var(--space-2xs); align-items: center; }
+.insp__assign-row .input { flex: 1 1 auto; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.insp__assign-row .btn { flex: 0 0 auto; }
+.insp__fills { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: var(--space-2xs); }
+.insp__fill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+  background: var(--bg-elevated);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.insp__fill > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insp__fill .num { flex: 0 0 auto; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent); }
+.insp__fill:hover:not(:disabled) { border-color: var(--accent); }
+.insp__fill:disabled { opacity: 0.5; cursor: default; }
+.insp__fill:disabled .num { color: var(--fg-muted); }
+.insp__hint { margin: 0; font-size: var(--fs-xs); color: var(--fg-muted); line-height: 1.4; }
+.insp__sec--disc { padding: 0; }
+.insp__disc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 0;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+}
+.insp__disc-title { font-weight: 700; font-size: var(--fs-sm); flex: 0 0 auto; }
+.insp__disc-meta { flex: 1 1 auto; min-width: 0; font-size: var(--fs-xs); color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.insp__disc-chev { flex: 0 0 auto; color: var(--fg-muted); transition: transform var(--t-fast); }
+.insp__disc-chev.is-open { transform: rotate(180deg); }
+.insp__disc:hover .insp__disc-title { color: var(--accent); }
+.insp__disc-body { padding: 0 0 var(--space-xs); }
+.insp__disc-body .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2xs); }
+.insp__disc-body .field { margin-bottom: var(--space-2xs); }
+.insp__foot { display: flex; justify-content: flex-end; }
+/* Sheet: no phantom sticky save bar; the sheet scrolls its content. */
+.modal--sheet .insp .form-actions { position: static; }
+
+/* Inspector bars: fixed track too, with the caption beside it. */
+.insp .goal-bar { width: auto; max-width: none; }
+.insp .goal-bar .goal-bar__track { flex: 0 0 9rem; width: 9rem; }

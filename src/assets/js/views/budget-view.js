@@ -271,6 +271,9 @@ function budgetView() {
     renameEditing: false,
     renameDraft: "",
     selectCategory(c, month) {
+      /* Assign field mirrors the cell for this category + month. */
+      var __self = this;
+      this.$nextTick(function () { __self._syncAssignDraft(); });
       var id = c && c.id ? c.id : c;
       if (!id) return;
       this.sel = { catId: id, month: month || this.$store.budget.currentMonth };
@@ -780,6 +783,58 @@ function budgetView() {
       if (this.budgetCollapsed) cls += (cls ? " " : "") + "budget--collapsed";
       return cls;
     },
+    /* ---- Inspector: assign field, section state, summaries ---- */
+    secOpen: { goal: false, cut: false, move: false, notes: false, activity: true },
+    assignDraft: "",
+    _syncAssignDraft() {
+      if (!this.sel) return;
+      var cents = this.$store.budget.assignedFor(this.sel.catId, this.sel.month) || 0;
+      this.assignDraft = this.formatPlain(cents);
+    },
+    commitAssignDraft() {
+      if (!this.sel) return;
+      var cents = this.parseDollars(this.assignDraft);
+      if (!isFinite(cents)) return;
+      var s = this.$store.budget;
+      if (cents === (s.assignedFor(this.sel.catId, this.sel.month) || 0)) return;
+      s.assign(this.sel.catId, this.sel.month, cents);
+      s.pushToast("Assigned " + this.formatCents(cents) + " to " + (this.selCategory() || {}).name + ".");
+      this._syncAssignDraft();
+    },
+    selGroupName() {
+      var c = this.selCategory();
+      if (!c) return "";
+      var g = c.groupId ? this.$store.budget.findCategoryGroup(c.groupId) : null;
+      return g ? g.name : "Other categories";
+    },
+    goalSummary() {
+      if (!this.sel) return "";
+      var s = this.$store.budget;
+      var g = s.findGoal(this.sel.catId);
+      if (!g) return "None yet";
+      var pct = this.goalPercent(this.sel.catId);
+      var type = (s.GOAL_TYPES.find(function (t) { return t.value === g.type; }) || {}).label || "";
+      return this.formatCents(g.target) + " · " + type + " · " + (pct >= 100 ? "funded" : pct + "%");
+    },
+    cutSummary() {
+      if (!this.sel) return "";
+      var s = this.$store.budget;
+      var cut = s.cutForCategory(this.sel.catId);
+      if (!cut) return "None yet";
+      var pr = s.cutProgressFor(cut.id, this.sel.month) || {};
+      return this.cutBadgeText(this.sel.catId) + (cut.goalLabel ? " toward " + cut.goalLabel : "") + " · " + (pr.pct || 0) + "%";
+    },
+    notesSummary() {
+      if (!this.sel) return "";
+      var s = this.$store.budget;
+      var cat = (s.findCategory(this.sel.catId) || {}).note;
+      var mon = s.monthNote(this.sel.catId, this.sel.month);
+      if (cat && mon) return "Category + " + this.monthCardLabel(this.sel.month, true);
+      if (cat) return "Category note";
+      if (mon) return this.monthCardLabel(this.sel.month, true) + " note";
+      return "None";
+    },
+
     /* ---- Month card collapse ----
        Collapsed, a card is one line: month, Ready to Work, tools. The
        choice is per browser and applies to every card at once. */
@@ -1508,14 +1563,10 @@ function budgetView() {
        Exact cents remain on input focus (formatPlain), in tooltips,
        aria-labels, the modals, and the single-month view. */
     fmtGrid(c) {
-      /* Whole dollars whenever the columns are narrow: several months
-         side by side, or a phone, where name + three values share one
-         line. Cents are one tap away in the inspector. */
-      var narrow = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 599px)").matches;
-      if (this.effectiveMonthCount() <= 1 && !narrow) return this.formatCents(c);
-      return Math.round((c || 0) / 100).toLocaleString("en-US", {
-        style: "currency", currency: "USD", maximumFractionDigits: 0,
-      });
+      /* Cents, always. The columns are sized to hold them at every
+         month count and on phones; rounding a budget to whole dollars
+         hid real money. */
+      return this.formatCents(c);
     },
 
     /* Blurred display value — full currency formatting so row Assigned

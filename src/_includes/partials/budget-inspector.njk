@@ -154,12 +154,16 @@
 
     {# ---- Category mode ---- #}
     <template x-if="sel">
-      <div>
-        <header class="budget-inspector__head">
-          <p class="eyebrow" x-text="monthShortLabel(sel.month)"></p>
-          <div class="budget-inspector__title-row">
+      <div class="insp">
+        <header class="insp__head">
+          <p class="eyebrow insp__eyebrow">
+            <span x-text="selGroupName()"></span>
+            <span aria-hidden="true"> · </span>
+            <span x-text="monthCardLabel(sel.month)"></span>
+          </p>
+          <div class="insp__title-row">
             <template x-if="!renameEditing">
-              <h2 class="budget-inspector__title" x-text="selCategory()?.name || ''"></h2>
+              <h2 class="insp__title" x-text="selCategory()?.name || ''"></h2>
             </template>
             <template x-if="renameEditing">
               <input class="input" id="insp-rename" type="text" x-model="renameDraft"
@@ -168,259 +172,256 @@
                      @keydown.escape.stop="renameEditing = false"
                      @blur="commitInspectorRename()">
             </template>
-            <button type="button" class="btn btn--icon btn--sm" x-show="!renameEditing"
+            <button type="button" class="btn btn--icon btn--sm insp__iconbtn" x-show="!renameEditing"
                     @click="renameEditing = true; $nextTick(() => document.getElementById('insp-rename')?.focus())"
                     aria-label="Rename category" data-tip="Rename this category.">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
             </button>
-            <button type="button" class="btn btn--icon btn--sm" x-show="inspectorDocked"
+            <button type="button" class="btn btn--icon btn--sm insp__iconbtn" x-show="inspectorDocked"
                     @click="clearSel()" aria-label="Back to month overview"
                     data-tip="Deselect (Escape does this too).">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
             </button>
           </div>
         </header>
 
-        {# Available breakdown - carry-in becomes visible for the first
-           time anywhere in the app. Exact cents, always. #}
-        <section class="budget-inspector__section" aria-label="Available breakdown">
-          <dl class="budget-inspector__break">
-            <div><dt data-tip="What rolled over from prior months (negative balances do not roll - they reduce the next month's Ready to Work instead).">Carry-in</dt>
-              <dd data-break="carryIn" x-text="formatCents(selRow()?.carryIn || 0)"></dd></div>
-            <div><dt>Assigned</dt>
-              <dd data-break="assigned" x-text="formatCents(selRow()?.assigned || 0)"></dd></div>
-            <div><dt>Activity</dt>
-              <dd data-break="activity" :class="(selRow()?.activity || 0) < 0 ? 'amount--outflow' : ''"
-                  x-text="formatCents(selRow()?.activity || 0)"></dd></div>
-            <div class="budget-inspector__break-total"><dt>Available</dt>
-              <dd data-break="available" :class="(selRow()?.available || 0) < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="formatCents(selRow()?.available || 0)"></dd></div>
+        {# Summary: the number that matters, then how it came to be. #}
+        <section class="insp__summary" aria-label="Available breakdown">
+          <div class="insp__avail">
+            <span class="insp__avail-label">Available</span>
+            <strong class="insp__avail-num num" data-break="available"
+                    :class="(selRow()?.available || 0) < 0 ? 'amount--outflow' : ((selRow()?.available || 0) > 0 ? 'amount--inflow' : '')"
+                    x-text="formatCents(selRow()?.available || 0)"></strong>
+          </div>
+          <dl class="insp__strip">
+            <div data-tip="What rolled over from prior months. Negative balances do not roll; they come out of next month's Ready to Work.">
+              <dt>Carry-in</dt><dd class="num" data-break="carryIn" x-text="formatCents(selRow()?.carryIn || 0)"></dd></div>
+            <div><dt>Assigned</dt><dd class="num" data-break="assigned" x-text="formatCents(selRow()?.assigned || 0)"></dd></div>
+            <div><dt>Outflow</dt><dd class="num" data-break="activity" :class="(selRow()?.activity || 0) < 0 ? 'amount--outflow' : ''" x-text="formatCents(selRow()?.activity || 0)"></dd></div>
           </dl>
         </section>
 
-        {# One-click quick fills - the four strategies that used to cost
-           4-5 clicks through the auto-assign modal, applied to THIS
-           category and month via applyAssignments (one undo entry). #}
-        <section class="budget-inspector__section" aria-label="Quick budget">
-          <p class="field__label">Quick budget</p>
-          <div class="budget-inspector__fills">
-            <button type="button" class="btn btn--secondary btn--sm"
-                    x-show="$store.budget.findGoal(sel.catId)" x-cloak
-                    :disabled="quickFillValue('goal') <= 0"
-                    :data-tip="quickFillValue('goal') > 0 ? 'Add what the goal still needs this month.' : 'The goal is already funded this month.'"
-                    @click="applyQuickFill('goal', 'Fund goal')">
-              Underfunded (goal) <span class="num" x-text="'+' + formatCents(quickFillValue('goal'))"></span>
-            </button>
-            <button type="button" class="btn btn--secondary btn--sm"
-                    :disabled="quickFillValue('last-assigned') <= 0"
-                    data-tip="Copy what you assigned last month."
-                    @click="applyQuickFill('last-assigned', 'Last month\'s assigned')">
-              Last month's assigned <span class="num" x-text="formatCents(quickFillValue('last-assigned'))"></span>
-            </button>
-            <button type="button" class="btn btn--secondary btn--sm"
-                    :disabled="quickFillValue('last-spent') <= 0"
-                    data-tip="Assign what this category actually spent last month."
-                    @click="applyQuickFill('last-spent', 'Last month\'s spending')">
-              Last month's spending <span class="num" x-text="formatCents(quickFillValue('last-spent'))"></span>
-            </button>
-            <button type="button" class="btn btn--secondary btn--sm"
-                    :disabled="quickFillValue('avg-3') <= 0"
-                    data-tip="Assign the average of the last three months of spending."
-                    @click="applyQuickFill('avg-3', '3-month average')">
-              Average of last 3 months <span class="num" x-text="formatCents(quickFillValue('avg-3'))"></span>
-            </button>
-          </div>
+        {# Assign: type an amount, or take one of the fills. Payment pools
+           and income categories are not assigned directly. #}
+        <section class="insp__sec" aria-label="Assign">
+          <template x-if="!assignReadOnly(selCategory() || {})">
+            <div>
+              <form class="insp__assign" @submit.prevent="commitAssignDraft()">
+                <label class="insp__assign-label" for="insp-assign">Assigned in <span x-text="monthCardLabel(sel.month, true)"></span></label>
+                <div class="insp__assign-row">
+                  <input class="input num" id="insp-assign" type="text" inputmode="decimal"
+                         x-model="assignDraft" placeholder="0.00"
+                         data-tip="Type an amount, or an expression like 100+25."
+                         @focus="$event.target.select()">
+                  <button class="btn btn--primary btn--sm" type="submit">Assign</button>
+                </div>
+              </form>
+              <div class="insp__fills" role="group" aria-label="Quick fills">
+                <button type="button" class="insp__fill" x-show="$store.budget.findGoal(sel.catId)" x-cloak
+                        :disabled="quickFillValue('goal') <= 0"
+                        :data-tip="quickFillValue('goal') > 0 ? 'Add what the goal still needs this month.' : 'The goal is already funded this month.'"
+                        @click="applyQuickFill('goal', 'Fund goal')">
+                  <span>Fund goal</span><span class="num" x-text="'+' + formatCents(quickFillValue('goal'))"></span>
+                </button>
+                <button type="button" class="insp__fill" :disabled="quickFillValue('last-assigned') <= 0"
+                        data-tip="Copy what you assigned last month."
+                        @click="applyQuickFill('last-assigned', 'Last month\'s assigned')">
+                  <span>Last assigned</span><span class="num" x-text="formatCents(quickFillValue('last-assigned'))"></span>
+                </button>
+                <button type="button" class="insp__fill" :disabled="quickFillValue('last-spent') <= 0"
+                        data-tip="Assign what this category actually spent last month."
+                        @click="applyQuickFill('last-spent', 'Last month\'s spending')">
+                  <span>Last spent</span><span class="num" x-text="formatCents(quickFillValue('last-spent'))"></span>
+                </button>
+                <button type="button" class="insp__fill" :disabled="quickFillValue('avg-3') <= 0"
+                        data-tip="Assign the average of the last three months of spending."
+                        @click="applyQuickFill('avg-3', '3-month average')">
+                  <span>3-month average</span><span class="num" x-text="formatCents(quickFillValue('avg-3'))"></span>
+                </button>
+              </div>
+            </div>
+          </template>
+          <template x-if="assignReadOnly(selCategory() || {})">
+            <p class="insp__hint"
+               x-text="$store.budget.isPaymentCategory(sel.catId)
+                 ? 'A payment pool fills itself from spending on the card. To top it up, move money into it below.'
+                 : 'Income categories receive money from transactions; assign it from Ready to Work instead.'"></p>
+          </template>
         </section>
 
-        {# Notes - per-category, persistent (commit on blur only). #}
-        <section class="budget-inspector__section">
-          <label class="field__label" for="insp-note">Category note</label>
-          <textarea class="input budget-inspector__note" id="insp-note" rows="2"
-                    x-model="noteDraft" @blur="commitNote()"
-                    placeholder="Applies to every month"></textarea>
-          <label class="field__label" for="insp-note-month"
-                 x-text="monthShortLabel(sel.month) + ' note'"></label>
-          <textarea class="input budget-inspector__note" id="insp-note-month" rows="2"
-                    x-model="noteMonthDraft" @blur="commitMonthNote()"
-                    :placeholder="'Just for ' + monthShortLabel(sel.month)"></textarea>
-        </section>
-
-        {# Goal - status + inline edit; replaces the goal modal. #}
-        <section class="budget-inspector__section" aria-label="Goal">
-          <div class="budget-inspector__goal-status" x-show="$store.budget.findGoal(sel.catId)" x-cloak>
-            <div class="goal-bar" :class="goalBarClass(sel.catId)"
+        {# Collapsible sections: a one-line summary when closed. #}
+        <section class="insp__sec insp__sec--disc" aria-label="Goal">
+          <button type="button" class="insp__disc" :aria-expanded="secOpen.goal.toString()" @click="secOpen.goal = !secOpen.goal">
+            <span class="insp__disc-title">Goal</span>
+            <span class="insp__disc-meta" x-text="goalSummary()"></span>
+            <svg class="insp__disc-chev" :class="secOpen.goal ? 'is-open' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="insp__disc-body" x-show="secOpen.goal" x-cloak>
+            <div class="goal-bar" x-show="$store.budget.findGoal(sel.catId)" x-cloak
+                 :class="goalBarClass(sel.catId)"
                  :style="'--pct:' + goalPercent(sel.catId)"
                  role="progressbar" aria-label="Goal progress"
                  :aria-valuenow="goalPercent(sel.catId)" aria-valuemin="0" aria-valuemax="100">
               <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
               <span class="goal-bar__cap" x-text="goalPercent(sel.catId) >= 100 ? '✓ 100%' : (goalPercent(sel.catId) + '%')"></span>
             </div>
-            <p class="budget-inspector__hint" x-text="goalNarrative()"></p>
-          </div>
-          <form @submit.prevent="saveGoal()">
-            <div class="field">
-              <label class="field__label" for="insp-goal-type">Goal type</label>
-              <select class="select" id="insp-goal-type" x-model="goalForm.type">
-                <template x-for="t in $store.budget.GOAL_TYPES" :key="t.value">
-                  <option :value="t.value" x-text="t.label"></option>
-                </template>
-              </select>
-              <p class="field__hint" x-text="goalTypeHint()"></p>
-            </div>
-            <div class="form-row">
-              <div class="field">
-                <label class="field__label" for="insp-goal-target">Target</label>
-                <input class="input" id="insp-goal-target" type="text" x-model="goalForm.target"
-                       inputmode="decimal" placeholder="0.00">
-                <p class="field__hint calc-preview" x-show="calcPreview(goalForm.target)" x-cloak
-                   x-text="calcPreview(goalForm.target)"></p>
+            <p class="insp__hint" x-show="$store.budget.findGoal(sel.catId)" x-cloak x-text="goalNarrative()"></p>
+            <form @submit.prevent="saveGoal()">
+              <div class="form-row">
+                <div class="field">
+                  <label class="field__label" for="insp-goal-type">Type</label>
+                  <select class="select" id="insp-goal-type" x-model="goalForm.type">
+                    <template x-for="t in $store.budget.GOAL_TYPES" :key="t.value">
+                      <option :value="t.value" x-text="t.label"></option>
+                    </template>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="insp-goal-target">Target</label>
+                  <input class="input" id="insp-goal-target" type="text" x-model="goalForm.target" inputmode="decimal" placeholder="0.00">
+                </div>
               </div>
+              <p class="field__hint" x-text="goalTypeHint()"></p>
               <div class="field" x-show="goalForm.type === 'targetByDate'" x-cloak>
                 <label class="field__label" for="insp-goal-date">By date</label>
                 <input class="input" id="insp-goal-date" type="date" x-model="goalForm.byDate">
                 <p class="field__hint" x-show="goalForm.byDate" x-cloak x-text="goalDateHint()"></p>
               </div>
-            </div>
-            <div class="form-actions form-actions--tight">
-              <button class="btn btn--primary btn--sm" type="submit"
-                      :disabled="!parseDollars(goalForm.target)">Save goal</button>
-              <button class="btn btn--ghost btn--sm" type="button" @click="removeGoal()"
-                      x-show="$store.budget.findGoal(sel.catId)">Remove goal</button>
-            </div>
-          </form>
-        </section>
-
-        {# Move money - inline; replaces the row-path modal. From is
-           the selected category by default but stays editable. #}
-        <section class="budget-inspector__section" aria-label="Move money">
-          <form @submit.prevent="submitMoveMoney()">
-            <div class="field">
-              <label class="field__label" for="insp-mv-from">Move from</label>
-              {# The x-for options mount AFTER x-model applies, and the
-                 browser then silently picks the first option with no
-                 event - so the pane showed "Move from: Income / Marcus
-                 paycheck" for a Groceries selection. Re-apply the value
-                 one tick after mount, when the options exist. #}
-              <select class="select" id="insp-mv-from" x-model="moveMoneyForm.fromId"
-                      x-init="$nextTick(() => { $el.value = moveMoneyForm.fromId; })">
-                <template x-for="opt in moveMoneyCategoryOptions()" :key="'if-' + opt.id">
-                  <option :value="opt.id" x-text="opt.label + ' · ' + formatCents(opt.available)"></option>
-                </template>
-              </select>
-            </div>
-            <div class="field">
-              <label class="field__label" for="insp-mv-to">To</label>
-              <select class="select" id="insp-mv-to" x-model="moveMoneyForm.toId">
-                <option value="">Select category</option>
-                <template x-for="opt in moveMoneyCategoryOptions()" :key="'it-' + opt.id">
-                  <option :value="opt.id" :disabled="opt.id === moveMoneyForm.fromId"
-                          x-text="opt.label + ' · ' + formatCents(opt.available)"></option>
-                </template>
-              </select>
-            </div>
-            <div class="field">
-              <label class="field__label" for="insp-mv-amount">Amount</label>
-              <input class="input" id="insp-mv-amount" type="text" x-model="moveMoneyForm.amount"
-                     inputmode="decimal" placeholder="0.00 · or 100+25">
-              <p class="field__hint calc-preview" x-show="calcPreview(moveMoneyForm.amount)" x-cloak
-                 x-text="calcPreview(moveMoneyForm.amount)"></p>
-            </div>
-            <div class="form-actions form-actions--tight">
-              <button class="btn btn--secondary btn--sm" type="submit"
-                      :disabled="!moveMoneyForm.fromId || !moveMoneyForm.toId || moveMoneyForm.fromId === moveMoneyForm.toId">Move money</button>
-            </div>
-          </form>
-        </section>
-
-        {# Recent activity - the 5 newest transactions this month. #}
-        <section class="budget-inspector__section" aria-label="Recent activity">
-          <p class="field__label">Recent activity</p>
-          <ul class="budget-inspector__txns" x-show="inspectorTxns().length" x-cloak>
-            <template x-for="t in inspectorTxns()" :key="t.id + '-' + (t.splitKey || '')">
-              <li>
-                <span class="budget-inspector__txn-date" x-text="t.date.slice(5)"></span>
-                <span class="budget-inspector__txn-payee" x-text="$store.budget.payeeName(t.payeeId) || '—'"></span>
-                <span class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                      x-text="formatCents(t.amount)"></span>
-              </li>
-            </template>
-          </ul>
-          <p class="budget-inspector__hint" x-show="!inspectorTxns().length" x-cloak>
-            No transactions in <span x-text="monthShortLabel(sel.month)"></span>.
-          </p>
-          <div class="form-actions form-actions--tight">
-            <button class="btn btn--ghost btn--sm" type="button"
-                    x-show="inspectorTxns().length" x-cloak
-                    @click="openActivity({ kind: 'category', id: sel.catId, name: selCategory()?.name || '', month: sel.month })">See all</button>
-            <a class="btn btn--ghost btn--sm"
-               :href="'/app/register/?category=' + sel.catId">Open in register</a>
+              <div class="form-actions form-actions--tight">
+                <button class="btn btn--primary btn--sm" type="submit" :disabled="!parseDollars(goalForm.target)">Save goal</button>
+                <button class="btn btn--ghost btn--sm" type="button" @click="removeGoal()" x-show="$store.budget.findGoal(sel.catId)">Remove goal</button>
+              </div>
+            </form>
           </div>
         </section>
 
-        {# Reduction planning - our own take on budgeting: mark this
-           line item with a $/% monthly cut against its frozen 3-month
-           baseline, optionally toward a named goal, and watch the
-           month overview total the impact. #}
-        <section class="budget-inspector__section" aria-label="Planned cut">
-          <p class="field__label">Planned cut</p>
-          <div class="budget-inspector__cut-status"
-               x-show="$store.budget.cutForCategory(sel.catId)" x-cloak>
+        <section class="insp__sec insp__sec--disc" aria-label="Planned cut">
+          <button type="button" class="insp__disc" :aria-expanded="secOpen.cut.toString()" @click="secOpen.cut = !secOpen.cut">
+            <span class="insp__disc-title">Planned cut</span>
+            <span class="insp__disc-meta" x-text="cutSummary()"></span>
+            <svg class="insp__disc-chev" :class="secOpen.cut ? 'is-open' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="insp__disc-body" x-show="secOpen.cut" x-cloak>
             <template x-if="$store.budget.cutForCategory(sel.catId)">
               <div>
-                <div class="goal-bar" :style="'--pct:' + ($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0)"
-                     :class="($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0) >= 100 ? 'goal-bar--funded' : 'goal-bar--accent'"
+                <div class="goal-bar goal-bar--cut" :style="'--pct:' + ($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0)"
+                     :class="($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0) >= 100 ? 'goal-bar--funded' : ''"
                      role="progressbar" aria-label="Cut progress this month"
                      :aria-valuenow="$store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0"
                      aria-valuemin="0" aria-valuemax="100">
                   <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
                   <span class="goal-bar__cap" x-text="($store.budget.cutProgressFor($store.budget.cutForCategory(sel.catId).id, sel.month)?.pct || 0) + '%'"></span>
                 </div>
-                <p class="budget-inspector__hint"
-                   x-text="(function (s, self) {
-                     var cut = s.cutForCategory(self.sel.catId);
-                     var pr = s.cutProgressFor(cut.id, self.sel.month);
-                     if (!pr) return '';
-                     return 'Baseline ' + self.formatCents(pr.baseline) + '/mo. Saved ' + self.formatCents(pr.saved)
-                          + ' of the ' + self.formatCents(pr.target) + ' planned this month'
-                          + (cut.goalLabel ? ' toward ' + cut.goalLabel : '') + '.';
-                   })($store.budget, $data)"></p>
+                <p class="insp__hint" x-text="cutTooltip(sel.catId)"></p>
               </div>
             </template>
+            <form @submit.prevent="saveCut()">
+              <div class="form-row">
+                <div class="field">
+                  <label class="field__label" for="insp-cut-mode">Cut by</label>
+                  <select class="select" id="insp-cut-mode" x-model="cutForm.mode">
+                    <option value="percent">% of baseline</option>
+                    <option value="amount">$ per month</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="insp-cut-value" x-text="cutForm.mode === 'percent' ? 'Percent' : 'Amount'"></label>
+                  <input class="input" id="insp-cut-value" type="text" inputmode="decimal"
+                         x-model="cutForm.value" :placeholder="cutForm.mode === 'percent' ? '25' : '50.00'">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="field">
+                  <label class="field__label" for="insp-cut-goal">Toward (optional)</label>
+                  <input class="input" id="insp-cut-goal" type="text" x-model="cutForm.goalLabel" placeholder="e.g. Vacation">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="insp-cut-month">By (optional)</label>
+                  <input class="input" id="insp-cut-month" type="month" x-model="cutForm.targetMonth">
+                </div>
+              </div>
+              <div class="form-actions form-actions--tight">
+                <button class="btn btn--primary btn--sm" type="submit">Save cut</button>
+                <button class="btn btn--ghost btn--sm" type="button" x-show="$store.budget.cutForCategory(sel.catId)" x-cloak @click="removeCutSelected()">Remove cut</button>
+              </div>
+            </form>
           </div>
-          <form @submit.prevent="saveCut()">
-            <div class="form-row">
+        </section>
+
+        <section class="insp__sec insp__sec--disc" aria-label="Move money">
+          <button type="button" class="insp__disc" :aria-expanded="secOpen.move.toString()" @click="secOpen.move = !secOpen.move">
+            <span class="insp__disc-title">Move money</span>
+            <span class="insp__disc-meta">Between categories</span>
+            <svg class="insp__disc-chev" :class="secOpen.move ? 'is-open' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="insp__disc-body" x-show="secOpen.move" x-cloak>
+            <form @submit.prevent="submitMoveMoney()">
               <div class="field">
-                <label class="field__label" for="insp-cut-mode">Cut by</label>
-                <select class="select" id="insp-cut-mode" x-model="cutForm.mode">
-                  <option value="percent">% of baseline</option>
-                  <option value="amount">$ per month</option>
+                <label class="field__label" for="insp-mv-from">From</label>
+                <select class="select" id="insp-mv-from" x-model="moveMoneyForm.fromId"
+                        x-init="$nextTick(() => { $el.value = moveMoneyForm.fromId; })">
+                  <template x-for="opt in moveMoneyCategoryOptions()" :key="'if-' + opt.id">
+                    <option :value="opt.id" x-text="opt.label + ' · ' + formatCents(opt.available)"></option>
+                  </template>
                 </select>
               </div>
               <div class="field">
-                <label class="field__label" for="insp-cut-value" x-text="cutForm.mode === 'percent' ? 'Percent' : 'Amount'"></label>
-                <input class="input" id="insp-cut-value" type="text" inputmode="decimal"
-                       x-model="cutForm.value" :placeholder="cutForm.mode === 'percent' ? '25' : '50.00'">
+                <label class="field__label" for="insp-mv-to">To</label>
+                <select class="select" id="insp-mv-to" x-model="moveMoneyForm.toId">
+                  <option value="">Select category</option>
+                  <template x-for="opt in moveMoneyCategoryOptions()" :key="'it-' + opt.id">
+                    <option :value="opt.id" :disabled="opt.id === moveMoneyForm.fromId" x-text="opt.label + ' · ' + formatCents(opt.available)"></option>
+                  </template>
+                </select>
               </div>
-            </div>
-            <div class="field">
-              <label class="field__label" for="insp-cut-goal">Goal (optional)</label>
-              <input class="input" id="insp-cut-goal" type="text" x-model="cutForm.goalLabel"
-                     placeholder="e.g. Vacation fund">
-            </div>
-            <div class="field">
-              <label class="field__label" for="insp-cut-month">Reach it by (optional)</label>
-              <input class="input" id="insp-cut-month" type="month" x-model="cutForm.targetMonth">
-            </div>
-            <div class="form-actions form-actions--tight">
-              <button class="btn btn--secondary btn--sm" type="submit">Save cut</button>
-              <button class="btn btn--ghost btn--sm" type="button"
-                      x-show="$store.budget.cutForCategory(sel.catId)" x-cloak
-                      @click="removeCutSelected()">Remove cut</button>
-            </div>
-          </form>
+              <div class="insp__assign-row">
+                <input class="input num" id="insp-mv-amount" type="text" x-model="moveMoneyForm.amount" inputmode="decimal" placeholder="0.00" aria-label="Amount to move">
+                <button class="btn btn--primary btn--sm" type="submit"
+                        :disabled="!moveMoneyForm.fromId || !moveMoneyForm.toId || moveMoneyForm.fromId === moveMoneyForm.toId">Move</button>
+              </div>
+            </form>
+          </div>
         </section>
 
-        <section class="budget-inspector__section">
+        <section class="insp__sec insp__sec--disc" aria-label="Notes">
+          <button type="button" class="insp__disc" :aria-expanded="secOpen.notes.toString()" @click="secOpen.notes = !secOpen.notes">
+            <span class="insp__disc-title">Notes</span>
+            <span class="insp__disc-meta" x-text="notesSummary()"></span>
+            <svg class="insp__disc-chev" :class="secOpen.notes ? 'is-open' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="insp__disc-body" x-show="secOpen.notes" x-cloak>
+            <label class="field__label" for="insp-note">Category note</label>
+            <textarea class="input budget-inspector__note" id="insp-note" rows="2" x-model="noteDraft" @blur="commitNote()" placeholder="Applies to every month"></textarea>
+            <label class="field__label" for="insp-note-month" x-text="monthCardLabel(sel.month, true) + ' note'"></label>
+            <textarea class="input budget-inspector__note" id="insp-note-month" rows="2" x-model="noteMonthDraft" @blur="commitMonthNote()" :placeholder="'Just for ' + monthCardLabel(sel.month, true)"></textarea>
+          </div>
+        </section>
+
+        <section class="insp__sec insp__sec--disc" aria-label="Recent activity">
+          <button type="button" class="insp__disc" :aria-expanded="secOpen.activity.toString()" @click="secOpen.activity = !secOpen.activity">
+            <span class="insp__disc-title">Activity</span>
+            <span class="insp__disc-meta" x-text="inspectorTxns().length ? (inspectorTxns().length + ' in ' + monthCardLabel(sel.month, true)) : ('None in ' + monthCardLabel(sel.month, true))"></span>
+            <svg class="insp__disc-chev" :class="secOpen.activity ? 'is-open' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="insp__disc-body" x-show="secOpen.activity" x-cloak>
+            <ul class="budget-inspector__txns" x-show="inspectorTxns().length" x-cloak>
+              <template x-for="t in inspectorTxns()" :key="t.id + '-' + (t.splitKey || '')">
+                <li>
+                  <span class="budget-inspector__txn-date" x-text="t.date.slice(5)"></span>
+                  <span class="budget-inspector__txn-payee" x-text="$store.budget.payeeName(t.payeeId) || '—'"></span>
+                  <span class="num" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(t.amount)"></span>
+                </li>
+              </template>
+            </ul>
+            <div class="form-actions form-actions--tight">
+              <button class="btn btn--ghost btn--sm" type="button" x-show="inspectorTxns().length" x-cloak
+                      @click="openActivity({ kind: 'category', id: sel.catId, name: selCategory()?.name || '', month: sel.month })">See all</button>
+              <a class="btn btn--ghost btn--sm" :href="'/app/register/?category=' + sel.catId">Open in register</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="insp__sec insp__foot">
           <button type="button" class="btn btn--ghost btn--sm"
                   data-tip="Remove this category from the grid. Its money, activity and goal are kept; unhide it any time from the list below the grid."
                   @click="hideSelected()">Hide category</button>

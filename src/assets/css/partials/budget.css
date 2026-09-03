@@ -372,13 +372,19 @@
    width:auto lets the flex column stretch the bar to the room left
    after the indent (the base .goal-bar is width:100%, which ran under
    the Assigned column in a narrow multi-month name column). */
+/* Fixed length: a bar that stretched with the column read as a
+   different amount in every layout. --budget-bar-w is the track. */
+.budget { --budget-bar-w: 7rem; }
 .budget .goal-bar--thin {
   width: auto;
-  max-width: 12rem;
+  max-width: none;
   margin-top: 3px;
-  margin-right: var(--space-2xs);
+  margin-right: 0;
   gap: 5px;
+  flex: 0 0 auto;
+  align-self: flex-start;
 }
+.budget .goal-bar--thin .goal-bar__track { flex: 0 0 var(--budget-bar-w); width: var(--budget-bar-w); }
 .goal-bar--thin .goal-bar__track { height: 3px; }
 .goal-bar__icon {
   flex: 0 0 auto;
@@ -687,28 +693,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      minmax(0,1fr) lets greedy value columns crush it to ~40px). */
   .budget--m2 .budget__group-header,
   .budget--m2 .budget__row {
-    grid-template-columns: minmax(18rem, 1.4fr) repeat(2, minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) minmax(4.75rem, 8rem) 2.25rem) auto;
+    grid-template-columns: minmax(18rem, 1.4fr) repeat(2, minmax(5.4rem, 8rem) minmax(5.4rem, 8rem) minmax(5.4rem, 8rem) 2.25rem) auto;
     min-width: 60rem;
   }
   .budget--m3 .budget__group-header,
   .budget--m3 .budget__row {
-    grid-template-columns: minmax(17rem, 1.2fr) repeat(3, minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) minmax(4.6rem, 6.5rem) 2.25rem) auto;
-    min-width: 77rem;
+    grid-template-columns: minmax(17rem, 1.2fr) repeat(3, minmax(5.4rem, 6.5rem) minmax(5.4rem, 6.5rem) minmax(5.4rem, 6.5rem) 2.25rem) auto;
+    min-width: 84rem;
   }
   .budget--m4 .budget__group-header,
   .budget--m4 .budget__row {
-    grid-template-columns: minmax(16rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
-    min-width: 87rem;
+    grid-template-columns: minmax(16rem, 1.1fr) repeat(4, minmax(5.2rem, 6rem) minmax(5.2rem, 6rem) minmax(5.2rem, 6rem) 2.25rem) auto;
+    min-width: 97rem;
   }
   .budget--m5 .budget__group-header,
   .budget--m5 .budget__row {
-    grid-template-columns: minmax(16rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
-    min-width: 102rem;
+    grid-template-columns: minmax(16rem, 1.1fr) repeat(5, minmax(5.2rem, 5.75rem) minmax(5.2rem, 5.75rem) minmax(5.2rem, 5.75rem) 2.25rem) auto;
+    min-width: 115rem;
   }
   .budget--m6 .budget__group-header,
   .budget--m6 .budget__row {
-    grid-template-columns: minmax(16rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
-    min-width: 116rem;
+    grid-template-columns: minmax(16rem, 1.1fr) repeat(6, minmax(5.2rem, 5.5rem) minmax(5.2rem, 5.5rem) minmax(5.2rem, 5.5rem) 2.25rem) auto;
+    min-width: 132rem;
   }
   .budget--m4 .budget__group-header, .budget--m4 .budget__row,
   .budget--m5 .budget__group-header, .budget--m5 .budget__row,
@@ -4716,15 +4722,15 @@ body.pb-dragging { overflow: visible !important; }
     /* Assigned stays fixed (it holds the input); Outflow and Available
        hold buttons and may widen to fit a big number, taking the room
        from the name rather than clipping the pill. */
-    grid-template-columns: minmax(0, 1fr) 3.8rem minmax(3.4rem, max-content) minmax(3.8rem, max-content) 24px;
+    grid-template-columns: minmax(0, 1fr) 4.3rem minmax(3.6rem, max-content) minmax(4.2rem, max-content) 24px;
     grid-template-areas: "cat assigned outflow available actions";
     row-gap: 0;
     column-gap: 3px;
-    padding: 6px 6px 6px 6px;
+    padding: 6px 6px 6px 10px;
     align-items: center;
   }
   .budget .budget__column-header {
-    grid-template-columns: minmax(0, 1fr) 3.8rem minmax(3.4rem, max-content) minmax(3.8rem, max-content) 24px;
+    grid-template-columns: minmax(0, 1fr) 4.3rem minmax(3.6rem, max-content) minmax(4.2rem, max-content) 24px;
     grid-template-areas: "cat assigned outflow available actions";
     padding: 5px 6px 5px 6px;
   }
@@ -4760,6 +4766,16 @@ body.pb-dragging { overflow: visible !important; }
     box-sizing: border-box;
   }
   .budget .budget__assigned-locked { display: flex; align-items: center; justify-content: flex-end; border: 0; }
+  /* Three columns, one dress code: Assigned and Outflow are plain
+     right-aligned figures with the same 0.3rem inset (the input only
+     shows its border on focus); Available alone keeps the pill. A
+     filled pill for the input and a bordered pill only when outflow
+     was non-zero made every row's right edges look different. */
+  .budget .budget__assigned input { background: transparent; border-color: transparent; border-radius: var(--radius-input); }
+  .budget .budget__assigned input:focus { background: var(--bg-elevated); border-color: var(--accent); }
+  .budget .budget__row .budget__activity-btn { background: transparent; border-color: transparent; padding-right: 0.3rem; }
+  .budget .budget__row .budget__activity-btn:not(:disabled):hover { border-color: var(--border-soft); }
+  .budget .budget__row .available-pill { padding: 0 0.3rem; }
   .budget .budget__category-row .budget__cat-name--btn { padding: 2px 0; margin: -2px 0; }
   .budget .budget__row .available-pill,
   .budget .budget__row .budget__activity-btn {
@@ -4775,7 +4791,8 @@ body.pb-dragging { overflow: visible !important; }
   .budget .budget__row-actions { flex-basis: auto; margin-top: 0; }
   .budget .budget__row-actions .btn--icon { width: 24px; min-width: 24px; height: 24px; min-height: 24px; }
   .budget .budget__row-actions .btn--icon svg { width: 16px; height: 16px; }
-  .budget .goal-bar--thin { max-width: none; margin-top: 2px; }
+  .budget { --budget-bar-w: 4.5rem; }
+  .budget .goal-bar--thin { margin-top: 2px; }
   /* Both tracker rows start at the same x: the category bar clears the
      14px checkbox + 8px gap; the group bar sits inside the title block,
      which already starts after that same checkbox + gap. */
