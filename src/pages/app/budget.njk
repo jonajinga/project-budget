@@ -390,7 +390,7 @@ eleventyExcludeFromCollections: true
                     <div class="budget__category-row">
                       <input type="checkbox" class="budget__bulk-check"
                              :checked="isCatSelected(c.id)"
-                             @click.prevent="onCatCheck(c.id, $event)"
+                             @click="onCatCheck(c.id, $event)"
                              :aria-label="'Select ' + c.name + ' for bulk actions'"
                              :data-tip="'Select this category for bulk Clear assigned / Clear available.'">
                       {# Marks come first, in a fixed-width slot, so every

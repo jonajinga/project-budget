@@ -17,6 +17,14 @@ function budgetView() {
        and this one, in the order the grid shows them. */
     _lastCheckedId: null,
     onCatCheck(id, ev) {
+      /* The native toggle is allowed to happen (preventDefault on a
+         checkbox reverts the box AFTER handlers run, which left the box
+         and the state disagreeing); the box is reconciled to the state
+         on the next tick, which matters for a shift-click on an
+         already-selected box. */
+      var box = ev && ev.target;
+      var self = this;
+      this.$nextTick(function () { if (box) box.checked = self.isCatSelected(id); });
       if (ev && ev.shiftKey && this._lastCheckedId && this._lastCheckedId !== id) {
         var order = [];
         (this.$store.budget.categoryGroupsView() || []).forEach(function (b) {
