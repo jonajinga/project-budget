@@ -569,10 +569,10 @@ function budgetView() {
     },
 
     /* ---- Progress rings (goals and cuts) ---- */
-    /* r=11 => circumference 69.12; the dash offset hides the unfilled arc. */
+    /* r=9 => circumference 56.55; the dash offset hides the unfilled arc. */
     ringOffset(pct) {
       var p = Math.max(0, Math.min(100, Number(pct) || 0));
-      return (69.12 * (1 - p / 100)).toFixed(2);
+      return (56.55 * (1 - p / 100)).toFixed(2);
     },
     ringText(pct) {
       var p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
@@ -780,6 +780,15 @@ function budgetView() {
       if (this.budgetCollapsed) cls += (cls ? " " : "") + "budget--collapsed";
       return cls;
     },
+    /* ---- Month card collapse ----
+       Collapsed, a card is one line: month, Ready to Work, tools. The
+       choice is per browser and applies to every card at once. */
+    cardsCollapsed: false,
+    toggleCardsCollapsed() {
+      this.cardsCollapsed = !this.cardsCollapsed;
+      try { localStorage.setItem("projectbudget:budget-cards-collapsed", this.cardsCollapsed ? "1" : "0"); } catch (_e) {}
+    },
+
     /* ---- Ready to Work modal ---------------------------------------- */
     rtwOpen: false,
     rtwForm: { month: "", target: "this", categoryId: "", amount: "" },
@@ -940,6 +949,7 @@ function budgetView() {
          removed first — the router swaps this view in and out and
          Alpine has no destroy hook here. */
       try {
+        this.cardsCollapsed = localStorage.getItem("projectbudget:budget-cards-collapsed") === "1";
         var stored = parseInt(localStorage.getItem("projectbudget:budget-month-count"), 10);
         if (stored >= 1 && stored <= 6) this.monthCount = stored;
       } catch (_e) {}

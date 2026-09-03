@@ -261,8 +261,9 @@
    under the name, not under the checkbox. */
 .budget {
   --budget-check-col: calc(16px + var(--space-2xs));
-  --budget-tree-indent: calc(4px + 20px + var(--space-2xs));
-  --budget-mark-slot: 54px;
+  /* Group toggle: 4px padding + 20px chevron + 4px gap. */
+  --budget-tree-indent: 28px;
+  --budget-mark-slot: 48px;
 }
 @media (min-width: 600px) {
   /* The indent lives on the row's padding and the checkbox is pinned to
@@ -314,121 +315,95 @@
     flex: 0 0 auto;
     position: relative;
     display: grid;
-    grid-template-columns: 25px 25px;
-    column-gap: 4px;
+    grid-template-columns: 14px 14px 14px;
+    column-gap: 3px;
     align-items: center;
     width: var(--budget-mark-slot);
     min-width: var(--budget-mark-slot);
     margin-right: var(--space-2xs);
   }
-  .budget__cat-ind > .ring:not(.ring--mini) { grid-column: 1; }
+  .budget__cat-ind > .mark--goal { grid-column: 1; }
+  .budget__cat-ind > .mark--cut { grid-column: 2; }
   /* The note mark fills the same 25px box as a ring (so the two sit on
      one baseline at one size) but is the bare glyph: no circle around
      it, so it never reads as a third progress ring. */
   .budget__cat-ind > .note-ind {
-    grid-column: 2;
-    width: 25px;
-    height: 25px;
+    grid-column: 3;
+    width: 14px;
+    height: 18px;
     padding: 0;
-    margin: -3px 0;
+    margin: -2px 0;
     border-radius: var(--radius-input);
     color: var(--fg-muted);
   }
-  .budget__cat-ind > .note-ind svg { width: 17px; height: 17px; }
+  .budget__cat-ind > .note-ind svg { width: 13px; height: 13px; }
   .budget__cat-ind > .note-ind:hover { color: var(--accent); }
   .budget .budget__category-row .cut-badge,
   .budget .budget__category-row .note-ind { flex: 0 0 auto; }
 }
-/* Progress rings. One 22px mark beside the name: a ring that fills as
-   a goal is funded (or a planned cut is realized), the percentage in
-   the middle, and a check once it is met. Replaces bar + badge + "100%"
-   caption, which took a second line and crowded the name. */
-.ring {
-  --pct: 0;
-  --ring-fill: var(--accent);
-  --ring-track: var(--border-soft);
+/* Tracker marks: a target for a goal, scissors for a planned cut, in
+   the fixed slot left of the name. The colour is the status: subtle
+   when nothing is there yet, accent (goal) or amber (cut) on the way,
+   green when met. The bar under the name carries the amount. */
+.mark {
   flex: 0 0 auto;
-  width: 25px;
-  height: 25px;
+  width: 14px;
+  height: 18px;
   padding: 0;
-  margin: -3px 0;
+  margin: -2px 0;
   border: 0;
   background: transparent;
   cursor: pointer;
   position: relative;
   display: inline-flex;
-  font: inherit;
-  color: inherit;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-subtle);
 }
-.ring--span { cursor: default; }
-/* The corner badge form: a cut ring riding on a goal ring. */
-.ring--mini {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  margin: 0;
-  margin-top: 2px;
-  width: 12px;
-  height: 12px;
-  z-index: 1;
+.mark--span { cursor: default; }
+.mark::before { content: ""; position: absolute; inset: -6px -4px; }
+.mark svg { width: 14px; height: 14px; display: block; }
+.mark--goal.is-half { color: var(--accent); }
+.mark--goal.is-met { color: var(--ok); }
+.mark--cut { color: var(--warn, #8a5a00); }
+.mark--cut.is-met { color: var(--ok); }
+.mark:hover { color: var(--accent); }
+.mark:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }
+
+/* Progress as a hairline under the name, one per tracker. */
+/* width:auto lets the flex column stretch the bar to the room that is
+   left after the indent (the base .goal-bar is width:100%, which ran
+   under the Assigned column in a narrow multi-month name column). */
+.goal-bar--thin {
+  width: auto;
+  max-width: 12rem;
+  margin-top: 3px;
+  margin-right: var(--space-2xs);
+  gap: 0;
 }
-.ring--mini svg { width: 12px; height: 12px; }
-.ring--mini .ring__track { stroke-width: 3.5; stroke: var(--bg-elevated); }
-.ring--mini .ring__fill { stroke-width: 3.5; }
-.ring--mini .ring__text { display: none; }
-.ring--mini .ring__check { stroke-width: 4; }
-.ring--mini::before { inset: -4px; }
-.ring::before { content: ""; position: absolute; inset: -6px; }
-.ring svg { width: 25px; height: 25px; display: block; overflow: visible; }
-.ring__track { fill: none; stroke: var(--ring-track); stroke-width: 2.1; }
-.ring__fill {
-  fill: none;
-  stroke: var(--ring-fill);
-  stroke-width: 2.1;
-  stroke-linecap: round;
-  stroke-dasharray: 69.12;
-  stroke-dashoffset: 69.12;
-  transform: rotate(-90deg);
-  transform-origin: 12px 12px;
-  transition: stroke-dashoffset var(--t-base);
+.goal-bar--thin .goal-bar__track { height: 3px; }
+.goal-bar--thin + .goal-bar--thin { margin-top: 2px; }
+.goal-bar--cut { --bar-fill: var(--warn, #8a5a00); }
+.goal-bar--cut.goal-bar--funded { --bar-fill: var(--ok); }
+@media (min-width: 600px) {
+  .budget__group .budget__row .goal-bar--thin {
+    margin-left: calc(var(--budget-check-col) + var(--budget-tree-indent) + var(--budget-mark-slot) + var(--space-2xs));
+  }
 }
-/* Centred by text-anchor plus a dy baseline shift set in the markup:
-   dominant-baseline is honoured inconsistently across browsers and left
-   the number riding high in the ring. */
-.ring__text {
-  font-family: var(--font-ui, system-ui, sans-serif);
-  /* 7px leaves ~4px of air either side of "95%" inside an 11-radius
-     ring; 8px left under 3px, and the digits touched the stroke. */
-  font-size: 7px;
-  font-weight: 700;
-  fill: var(--fg);
-  text-anchor: middle;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.05em;
-}
-/* A zero-length arc with round caps still paints a dot; hide it. */
-.ring.is-empty .ring__fill { display: none; }
-.ring__check { fill: none; stroke: var(--ring-fill); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; display: none; }
-.ring.is-met .ring__check { display: block; }
-.ring.is-met .ring__text { display: none; }
-.ring--goal { --ring-fill: var(--fg-subtle); }
-.ring--goal.is-half { --ring-fill: var(--accent); }
-.ring--goal.is-met { --ring-fill: var(--ok); }
-/* A cut ring's track is dashed so it never reads as a second goal ring
-   when both sit beside one name. */
-.ring--cut { --ring-fill: var(--warn, #8a5a00); }
-.ring--cut .ring__track { stroke-dasharray: 2 2.2; }
-.ring--cut.is-met { --ring-fill: var(--warn, #8a5a00); }
-.ring:hover .ring__track { stroke: var(--border-strong, var(--border)); }
-.ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 50%; }
-@media (prefers-reduced-motion: reduce) { .ring__fill { transition: none; } }
 /* Month-note indicator inside the DATA row's Assigned cell, before the
    input. Scoped to .budget__row: header and group-total cells share
    the class and must keep their right-aligned text. */
-.budget__row .budget__assigned { display: flex; align-items: center; }
-.budget__row .budget__assigned > input,
-.budget__row .budget__assigned > .budget__assigned-locked { flex: 1 1 auto; min-width: 0; }
-.note-ind--month { padding: 4px; margin: -4px 0; flex: 0 0 auto; }
+/* Month-note mark: a small glyph in the cell's top-left corner, where a
+   right-aligned amount never reaches even in the narrowest column. */
+.budget__row .budget__assigned { position: relative; }
+.note-ind--month {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  padding: 2px;
+  margin: 0;
+}
+.note-ind--month svg { width: 9px; height: 9px; }
 .budget__month-head-tools .budget__inspector-toggle.is-active { color: var(--accent); }
 
 /* Names are ONE line, always. A name longer than its column ends in
@@ -715,18 +690,18 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   }
   .budget--m4 .budget__group-header,
   .budget--m4 .budget__row {
-    grid-template-columns: minmax(13rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
-    min-width: 84rem;
+    grid-template-columns: minmax(14rem, 1.1fr) repeat(4, minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) minmax(4.4rem, 6rem) 2.25rem) auto;
+    min-width: 85rem;
   }
   .budget--m5 .budget__group-header,
   .budget--m5 .budget__row {
-    grid-template-columns: minmax(13rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
-    min-width: 99rem;
+    grid-template-columns: minmax(14rem, 1.1fr) repeat(5, minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) minmax(4.3rem, 5.75rem) 2.25rem) auto;
+    min-width: 100rem;
   }
   .budget--m6 .budget__group-header,
   .budget--m6 .budget__row {
-    grid-template-columns: minmax(13rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
-    min-width: 113rem;
+    grid-template-columns: minmax(14rem, 1.1fr) repeat(6, minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) minmax(4.2rem, 5.5rem) 2.25rem) auto;
+    min-width: 114rem;
   }
   .budget--m4 .budget__group-header, .budget--m4 .budget__row,
   .budget--m5 .budget__group-header, .budget--m5 .budget__row,
@@ -770,11 +745,50 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     border-top: 3px solid transparent;
   }
   .budget__month-head.is-current { border-top-color: var(--accent); }
+  /* Collapsed: one line - name, Ready to Work, tools. */
+  .budget__month-head.is-collapsed {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-top: var(--space-2xs);
+    padding-bottom: var(--space-2xs);
+  }
+  .budget__month-head.is-collapsed .budget__month-head-top {
+    display: contents;
+  }
+  .budget__month-head.is-collapsed .budget__month-head-spacer { display: none; }
+  .budget__month-head.is-collapsed .budget__month-head-name {
+    flex: 0 0 auto;
+    text-align: left;
+    font-size: var(--fs-md);
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .budget__month-head.is-collapsed { flex-wrap: wrap; }
+  .budget__month-head.is-collapsed .budget__month-head-rtw {
+    flex: 1 1 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: var(--space-2xs);
+    border-top: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .budget__month-head.is-collapsed .budget__month-head-rtw .num { font-size: var(--fs-lg); }
+  /* Collapsed order: name, Ready to Work, tools at the far right. */
+  .budget__month-head.is-collapsed .budget__month-head-name { order: 1; }
+  .budget__month-head.is-collapsed .budget__month-head-rtw { order: 2; }
+  .budget__month-head.is-collapsed .budget__month-head-tools { order: 3; flex: 0 0 auto; margin-left: auto; }
   /* Name dead-centre: the tools on the right and an equal-width spacer on
      the left, so the title never drifts as the tool cluster changes. */
+  /* Tools get their full width first; the name is centred by the two
+     flexible columns when there is room and slides left, then ellipses,
+     when there is not. It used to let the tools overflow into the name
+     in a narrow multi-month card. */
   .budget__month-head-top {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(max-content, 1fr);
     align-items: center;
     gap: var(--space-2xs);
   }
@@ -788,9 +802,10 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     gap: 2px;
   }
   .budget__month-head-tools .btn--icon {
-    width: 28px; min-width: 28px; height: 28px; min-height: 28px; position: relative;
+    width: 26px; min-width: 26px; height: 26px; min-height: 26px; position: relative;
     color: var(--fg-muted);
   }
+  .budget__month-head-tools .btn--icon svg { width: 15px; height: 15px; }
   .budget__month-head-tools .btn--icon::before { content: ""; position: absolute; inset: -8px; }
   .budget__month-head-tools .btn--icon:hover { color: var(--accent); background: var(--bg-elevated); }
   .budget__month-head-name {
@@ -1119,8 +1134,9 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 .budget__group-header .group-toggle {
   min-width: 0;
   text-align: left;
+  gap: 4px;
 }
-.budget__cat-ind--group { flex: 0 0 auto; }
+.budget__cat-ind--group { flex: 0 0 auto; margin-right: 4px; }
 .budget__group-header .group-toggle strong {
   min-width: 0;
   font-size: var(--fs-md);
@@ -1410,6 +1426,21 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
 /* The budget page is one surface: the HUD (month strip + month-count
    picker) sits directly on top of the grid with no gap, no double
    border, and a divider between them. */
+/* The budget page runs its type scale at 80%: a data screen, where a
+   row is a row and the eye is scanning columns, not reading prose. The
+   tokens are redefined in this scope so every fs-* consumer on the page
+   follows; fixed-px marks (rings, icons) are already sized for the grid. */
+.app-page--budget {
+  --fs-2xs:  0.55rem;
+  --fs-xs:   0.6rem;
+  --fs-sm:   0.65rem;
+  --fs-base: 0.7rem;
+  --fs-md:   0.75rem;
+  --fs-lg:   0.85rem;
+  --fs-xl:   0.95rem;
+  --fs-2xl:  1.1rem;
+  font-size: var(--fs-base);
+}
 /* Full bleed: the month strip sits flush under the app header and the
    grid runs edge to edge beneath it. One surface, no card-in-a-card. */
 .app-page--budget {
