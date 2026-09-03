@@ -4699,3 +4699,78 @@ body.pb-dragging { overflow: visible !important; }
     max-width: 100%;
   }
 }
+
+
+/* ── Phones: one line per row ─────────────────────────────────────────
+   Name and the three values on a single line, always. Values are whole
+   dollars here (fmtGrid), pills lose their padding, the kebab is 24px,
+   and the name takes what is left and ellipsizes. A hairline tracker
+   bar may still sit under the name inside its own cell. Placed last in
+   the file so it wins over the earlier two-row phone recipe. */
+@media (max-width: 599px) {
+  .budget .budget__group-header,
+  .budget .budget__row {
+    /* FIXED value tracks. An <input> has an intrinsic width near 20ch,
+       so an auto track let the Assigned field swallow the whole row and
+       the name column collapsed to nothing at 330px. */
+    grid-template-columns: minmax(0, 1fr) 3.8rem 3.6rem 3.8rem 24px;
+    grid-template-areas: "cat assigned outflow available actions";
+    row-gap: 0;
+    column-gap: 3px;
+    padding: 6px 6px 6px 6px;
+    align-items: center;
+  }
+  .budget .budget__column-header {
+    grid-template-columns: minmax(0, 1fr) 3.8rem 3.6rem 3.8rem 24px;
+    grid-template-areas: "cat assigned outflow available actions";
+    padding: 5px 6px 5px 6px;
+  }
+  .budget .budget__column-header .budget__category { display: block; visibility: hidden; }
+  /* Word per column, inside its own 3.6-3.8rem track: small caps, no
+     tracking, so ASSIGNED / OUTFLOW / AVAILABLE stop running together. */
+  .budget .budget__column-header .budget__assigned,
+  .budget .budget__column-header .budget__activity,
+  .budget .budget__column-header .budget__available {
+    text-align: right;
+    padding: 0 0.3rem 0 0;
+    font-size: 0.6rem;
+    letter-spacing: 0;
+    overflow: hidden;
+  }
+  .budget .budget__category { font-size: var(--fs-sm); font-weight: 500; }
+  .budget .budget__category-row { flex-wrap: nowrap; gap: 6px; }
+  .budget .budget__category-row .budget__cat-name { flex: 1 1 auto; min-width: 0; }
+  .budget .budget__bulk-check { width: 14px; height: 14px; }
+  .budget .budget__assigned,
+  .budget .budget__activity,
+  .budget .budget__available { font-size: var(--fs-2xs); text-align: right; }
+  .budget .budget__assigned input,
+  .budget .budget__assigned-locked {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 28px;
+    padding: 0 0.3rem;
+    font-size: var(--fs-2xs);
+    border-radius: 999px;
+    text-align: right;
+    box-sizing: border-box;
+  }
+  .budget .budget__assigned-locked { display: flex; align-items: center; justify-content: flex-end; border: 0; }
+  .budget .budget__category-row .budget__cat-name--btn { padding: 2px 0; margin: -2px 0; }
+  .budget .budget__row .available-pill,
+  .budget .budget__row .budget__activity-btn {
+    min-width: 0;
+    min-height: 28px;
+    padding: 0 0.35rem;
+    font-size: var(--fs-2xs);
+  }
+  .budget .budget__group-total { font-size: var(--fs-xs); padding-right: 0.3rem; }
+  .budget .budget__activity-btn.budget__activity-btn--group { font-size: var(--fs-xs); }
+  .budget .budget__group-header strong { font-size: var(--fs-sm); }
+  .budget .budget__group-header .group-toggle { min-height: 28px; padding: 2px 4px 2px 0; }
+  .budget .budget__row-actions { flex-basis: auto; margin-top: 0; }
+  .budget .budget__row-actions .btn--icon { width: 24px; min-width: 24px; height: 24px; min-height: 24px; }
+  .budget .budget__row-actions .btn--icon svg { width: 16px; height: 16px; }
+  .budget .goal-bar--thin { max-width: none; margin-top: 2px; }
+}

@@ -1508,7 +1508,11 @@ function budgetView() {
        Exact cents remain on input focus (formatPlain), in tooltips,
        aria-labels, the modals, and the single-month view. */
     fmtGrid(c) {
-      if (this.effectiveMonthCount() <= 1) return this.formatCents(c);
+      /* Whole dollars whenever the columns are narrow: several months
+         side by side, or a phone, where name + three values share one
+         line. Cents are one tap away in the inspector. */
+      var narrow = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 599px)").matches;
+      if (this.effectiveMonthCount() <= 1 && !narrow) return this.formatCents(c);
       return Math.round((c || 0) / 100).toLocaleString("en-US", {
         style: "currency", currency: "USD", maximumFractionDigits: 0,
       });
