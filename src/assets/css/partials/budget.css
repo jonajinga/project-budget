@@ -1,6 +1,7 @@
 .budget {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 .budget__toolbar {
   display: flex;
@@ -622,38 +623,45 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    month-scoped menu, the arithmetic behind the month in small lines,
    and Ready to Work as the headline. The row is the same grid as the
    data rows, so each card spans exactly its month's value columns. */
-.budget__month-header { display: none; }
-@media (min-width: 600px) {
-  .budget__month-header {
-    display: grid;
-    background: transparent;
-    border-top: 0;
-    border-bottom: 0;
-    padding-top: 0;
-    padding-bottom: var(--space-2xs);
-    align-items: stretch;
-  }
-  .budget__month-spacer { grid-area: cat; }
+.budget__month-header {
+  display: grid;
+  background: var(--bg-alt);
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  padding: 0;
+  align-items: stretch;
+  column-gap: 0;
+}
+/* Phones: the row is a plain block and the card is the full width. The
+   HUD no longer carries Ready to Work, so the card must exist here too. */
+@media (max-width: 599px) {
+  .budget__month-header { display: block; }
+}
+/* Single month: the card is the whole band. The category-column
+   spacer only exists in multi-month, where the cards sit over their
+   own value columns like Actual Budget's month headers. */
+.budget__month-spacer { display: none; }
+@media all {
   .budget__month-head {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-2xs);
     min-width: 0;
-    padding: var(--space-2xs) var(--space-sm) var(--space-sm);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-input);
+    padding: var(--space-xs) var(--space-sm) var(--space-sm);
+    border-top: 3px solid transparent;
   }
-  .budget__month-head.is-current { border-color: var(--accent); }
+  .budget__month-head.is-current { border-top-color: var(--accent); }
   .budget__month-head-top {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
+    gap: var(--space-2xs);
   }
+  .budget__month-auto { grid-column: 1; justify-self: start; white-space: nowrap; }
+  .budget__month-head-name { grid-column: 2; }
   .budget__month-head-name {
-    grid-column: 2;
     margin: 0;
     text-align: center;
     font-family: var(--font-display);
@@ -720,6 +728,10 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget__month-head-rtw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .budget__month-ahead {
     margin: 0;
+    /* base.css caps paragraphs at a reading measure; that left this
+       line hugging the left of a wide single-month card. */
+    max-width: none;
+    align-self: center;
     text-align: center;
     font-size: var(--fs-2xs);
     color: var(--fg-subtle);
@@ -731,11 +743,23 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m4 .budget__month-head,
   .budget--m5 .budget__month-head,
   .budget--m6 .budget__month-head { grid-column: span 4; }
+  .budget--m2 .budget__month-spacer,
+  .budget--m3 .budget__month-spacer,
+  .budget--m4 .budget__month-spacer,
+  .budget--m5 .budget__month-spacer,
+  .budget--m6 .budget__month-spacer { display: block; }
   .budget--m2 .budget__month-header,
   .budget--m3 .budget__month-header,
   .budget--m4 .budget__month-header,
   .budget--m5 .budget__month-header,
   .budget--m6 .budget__month-header { column-gap: var(--space-2xs); }
+  /* Narrow cards: icon-only Auto-assign. */
+  .budget--m3 .budget__month-auto-label,
+  .budget--m4 .budget__month-auto-label,
+  .budget--m5 .budget__month-auto-label,
+  .budget--m6 .budget__month-auto-label { display: none; }
+  .budget--m3 .budget__month-auto, .budget--m4 .budget__month-auto,
+  .budget--m5 .budget__month-auto, .budget--m6 .budget__month-auto { padding-left: 0.45rem; padding-right: 0.45rem; }
   .budget--m4 .budget__month-head-name,
   .budget--m5 .budget__month-head-name,
   .budget--m6 .budget__month-head-name { font-size: var(--fs-md); }
@@ -1129,8 +1153,8 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   gap: var(--space-2xs);
   padding: var(--space-2xs);
   background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .month-strip__year {
   display: inline-flex;
@@ -1261,10 +1285,20 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    One outer border, hairline divider between the two rows, no
    floating sub-blocks. Replaces three disconnected bars (month
    strip, RTA card, toolbar) with one unified header. */
+/* The budget page is one surface: the HUD (month strip + month-count
+   picker) sits directly on top of the grid with no gap, no double
+   border, and a divider between them. */
+.app-page--budget { gap: var(--space-sm); }
+.app-page--budget .budget-layout { margin-top: calc(-1 * var(--space-sm)); }
 .budget__hud {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding-right: var(--space-2xs);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   /* No overflow: hidden — would clip the toolbar kebab's popover
      menu (which is absolutely positioned outside the toolbar row).
      The HUD's --radius is 0 anyway so there's nothing to clip. */

@@ -711,6 +711,67 @@ function budgetView() {
       if (this.budgetCollapsed) cls += (cls ? " " : "") + "budget--collapsed";
       return cls;
     },
+    /* ---- Ready to Work modal ---------------------------------------- */
+    rtwOpen: false,
+    rtwForm: { month: "", target: "this", categoryId: "", amount: "" },
+    openRtw(month) {
+      var m = month || this.$store.budget.currentMonth;
+      var rta = this.rtaCents(m);
+      this.rtwForm = {
+        month: m,
+        target: "this",
+        categoryId: "",
+        amount: rta > 0 ? this.formatPlain(rta) : "",
+      };
+      this.rtwOpen = true;
+      var self = this;
+      this.$nextTick(function () {
+        var el = document.getElementById("rtw-cat");
+        if (el) el.focus();
+      });
+    },
+    nextMonthOf(m) {
+      var p = (m || "").split("-").map(Number);
+      if (!p[0]) return m;
+      var d = new Date(p[0], p[1], 1);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    },
+    /* Every assignable category (no payment pools, no income, no hidden)
+       with its Available in the target month, so the picker shows where
+       money is thin. */
+    rtwCategoryOptions() {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      if (!s.profile) return [];
+      var m = this.rtwForm.target === "next" ? this.nextMonthOf(this.rtwForm.month) : this.rtwForm.month;
+      var self = this;
+      var out = [];
+      (s.categoryGroupsView() || []).forEach(function (b) {
+        (b.categories || []).forEach(function (c) {
+          if (s.isPaymentCategory(c.id) || s.isIncomeCategory(c.id)) return;
+          out.push({
+            id: c.id,
+            label: (b.group ? b.group.name + " / " : "") + c.name,
+            available: self.categoryAvailable(c.id, m),
+          });
+        });
+      });
+      return out;
+    },
+    submitRtw() {
+      var f = this.rtwForm;
+      if (!f.categoryId) return;
+      var cents = this.parseDollars(f.amount);
+      if (!cents) return;
+      var s = this.$store.budget;
+      var m = f.target === "next" ? this.nextMonthOf(f.month) : f.month;
+      var have = s.assignedFor(f.categoryId, m) || 0;
+      s.assign(f.categoryId, m, have + cents);
+      var name = s.categoryName(f.categoryId);
+      s.pushToast("Assigned " + this.formatCents(cents) + " to " + name + " in " + this.monthCardLabel(m) + ".");
+      this.rtwOpen = false;
+    },
+
     /* ---- Month cards ---------------------------------------------- */
     /* "September 2026", or just "September" when short is true and the
        month is in the current calendar year (the year is noise on a

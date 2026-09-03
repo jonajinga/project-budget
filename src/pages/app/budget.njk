@@ -8,7 +8,7 @@ eleventyExcludeFromCollections: true
 {% from "partials/icon-trash.njk" import iconTrash %}
 {% from "partials/overflow-menu.njk" import overflow %}
 {% from "partials/empty-state.njk" import emptyState %}
-<div class="app-page" x-data="budgetView()" x-init="init()">
+<div class="app-page app-page--budget" x-data="budgetView()" x-init="init()">
 
   {# Visually-hidden page heading — SR users land on a clear page
      title; sighted users see the month strip + RTA card as the
@@ -64,108 +64,24 @@ eleventyExcludeFromCollections: true
       </button>
     </div>
 
-    <div class="budget__toolbar">
-      <div class="cluster" style="gap: var(--space-2xs);">
-        {# Paired month-level stats — Ready to Work (the headline,
-           accent-filled) and Assigned (the supporting context, neutral
-           outline). Same component, same shape, different emphasis,
-           so the eye reads them as one block. #}
-        {# The RTA stat is now the door to the month overview - where
-           its breakdown lives and overspending gets fixed. It used to
-           be an inert span with only a tooltip to explain itself. #}
-        <button type="button" class="budget-stat budget-stat--accent budget-stat--btn"
-              :class="rtaCents() < 0 ? 'budget-stat--danger' : (rtaCents() === 0 ? 'budget-stat--muted' : '')"
-              :data-tip="(rtaCents() < 0 ? 'You assigned more than you have. ' : (rtaCents() === 0 ? 'Every dollar is assigned. ' : 'Inflow not yet given a job. ')) + 'Click for the breakdown and overspending fixes.'"
-              @click="openOverview()"
-              :aria-label="'Ready to Work: ' + formatCents(rtaCents()) + '. Open the month overview.'">
-          <span class="budget-stat__label">Ready to Work</span>
-          <strong class="budget-stat__value" x-text="formatCents(rtaCents())"></strong>
-        </button>
-        <span class="budget-stat"
-              data-tip="Dollars committed to categories this month so far."
-              :aria-label="'Assigned this month: ' + formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))">
-          <span class="budget-stat__label">Assigned</span>
-          <strong class="budget-stat__value" x-text="formatCents($store.budget.totalAssignedInMonth($store.budget.currentMonth))"></strong>
-        </span>
-        <span class="budget__toolbar-sep" aria-hidden="true"></span>
-        <button type="button" class="btn btn--primary btn--sm"
-                @click="openAutoAssign({ kind: 'all', name: 'All categories', ids: null })"
-                data-tip="Fill in this month's Assigned column for every category — from goal needs, last month's plan, or recent averages.">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;">
-            <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
-          </svg>
-          Auto-assign
-        </button>
-        {# Auto-assign is the only inline headline action; every other
-           toolbar action lives in this kebab so the row stays compact
-           at every viewport. #}
-        {% call overflow(label="Budget actions") %}
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; $store.budget.jumpToThisMonth()">Jump to this month</button>
-          </li>
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; bulkClearAssigned('all')">Clear assigned (all)</button>
-          </li>
-          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; openTemplates()">Templates…</button>
-          </li>
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; newGroupOpen = true; newGroupName = ''">+ New group…</button>
-          </li>
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; $store.budget.setAllCatGroupsCollapsed(!$store.budget.allCatGroupsCollapsed())"
-                    x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all groups' : 'Collapse all groups'">Collapse all groups</button>
-          </li>
-          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; saveCurrentView()">Save current view</button>
-          </li>
-        {% endcall %}
-        {# 1/2/3 parallel month columns (Actual Budget's model). Only
-           offered when the viewport can hold more than one; the picker
-           itself never appears on phones. #}
-        <div class="budget__months-picker" role="group" aria-label="Visible months"
-             x-show="viewportMaxMonths > 1" x-cloak>
-          <template x-for="n in [1, 2, 3, 4, 5, 6]" :key="'mc-' + n">
-            <button type="button" class="budget__months-btn"
-                    :class="monthCount === n ? 'is-active' : ''"
-                    :disabled="n > viewportMaxMonths"
-                    :aria-pressed="(monthCount === n).toString()"
-                    :aria-label="'Show ' + n + ' month' + (n === 1 ? '' : 's')"
-                    :data-tip="n > viewportMaxMonths
-                      ? 'Multi-month needs a wider window.'
-                      : (n === 1 ? 'Show a single month.' : 'Show ' + n + ' months side by side - the grid scrolls sideways if it needs more room.')"
-                    @click="setMonthCount(n)" x-text="n"></button>
-          </template>
-        </div>
-        <button type="button" class="btn btn--icon budget__inspector-toggle"
-                x-show="inspectorDocked" x-cloak
-                :class="inspectorOpen ? 'is-active' : ''"
-                @click="setInspectorOpen(!inspectorOpen)"
-                :aria-pressed="inspectorOpen.toString()"
-                aria-label="Toggle inspector pane"
-                :data-tip="inspectorOpen ? 'Hide the inspector pane (frees room for a third month column).' : 'Show the inspector pane.'">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/>
-          </svg>
-        </button>
-        <button type="button" class="btn btn--icon budget__collapse-toggle"
-                @click="budgetCollapsed = !budgetCollapsed"
-                :aria-label="budgetCollapsed ? 'Expand budget grid' : 'Collapse budget grid'"
-                :data-tip="budgetCollapsed ? 'Show every category row again.' : 'Hide every category row and show only the Total Budget summary.'">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-               :style="budgetCollapsed ? 'transform: rotate(-90deg); transition: transform 150ms ease;' : 'transition: transform 150ms ease;'">
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </button>
-      </div>
+    {# The rest of the old toolbar - Ready to Work and Assigned stats,
+       Auto-assign, the page kebab, the collapse and inspector toggles -
+       now lives on each month card, which is the one place a person
+       looks when deciding what to do with a month. Only the month-count
+       picker stays up here, because it changes how many cards there are. #}
+    <div class="budget__months-picker" role="group" aria-label="Visible months"
+         x-show="viewportMaxMonths > 1" x-cloak>
+      <template x-for="n in [1, 2, 3, 4, 5, 6]" :key="'mc-' + n">
+        <button type="button" class="budget__months-btn"
+                :class="monthCount === n ? 'is-active' : ''"
+                :disabled="n > viewportMaxMonths"
+                :aria-pressed="(monthCount === n).toString()"
+                :aria-label="'Show ' + n + ' month' + (n === 1 ? '' : 's')"
+                :data-tip="n > viewportMaxMonths
+                  ? 'Multi-month needs a wider window.'
+                  : (n === 1 ? 'Show a single month.' : 'Show ' + n + ' months side by side - the grid scrolls sideways if it needs more room.')"
+                @click="setMonthCount(n)" x-text="n"></button>
+      </template>
     </div>
   </div>
 
@@ -183,11 +99,6 @@ eleventyExcludeFromCollections: true
   <div class="budget-layout"
        :class="inspectorDocked && inspectorOpen ? 'budget-layout--open' : ''">
   <section class="budget" x-show="hasCategories" x-cloak :class="monthColClass()">
-    <div x-show="!budgetCollapsed" x-cloak>
-      {# Sticky header block: an optional month strip (only when more
-         than one month is visible) + the column header. Sticks below
-         the site header; the offset is measured because the header's
-         height varies with safe-area insets. #}
       {# Month cards - one per visible month, in the same grid as the
          rows so each spans its own value columns. Actual Budget's month
          header, in this app's vocabulary: the name, a month-scoped menu,
@@ -199,6 +110,15 @@ eleventyExcludeFromCollections: true
         <template x-for="vm in visibleMonths()" :key="'mh-' + vm">
           <div class="budget__month-head" :class="vm === thisMonthValue() ? 'is-current' : ''">
             <div class="budget__month-head-top">
+              <button type="button" class="btn btn--primary btn--sm budget__month-auto"
+                      @click="openAutoAssign({ kind: 'all', name: 'All categories', ids: null, month: vm })"
+                      :data-tip="'Fill in the Assigned column for every category in ' + monthCardLabel(vm) + ' - from goal needs, last month\'s plan, or recent averages.'"
+                      :aria-label="'Auto-assign ' + monthCardLabel(vm)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align: -2px;">
+                  <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
+                </svg>
+                <span class="budget__month-auto-label">Auto-assign</span>
+              </button>
               <h2 class="budget__month-head-name" x-text="monthCardLabel(vm)"></h2>
               {% call overflow(label="Month actions") %}
                 <li role="none">
@@ -239,6 +159,34 @@ eleventyExcludeFromCollections: true
                   <button type="button" role="menuitem" class="overflow-menu__item"
                           @click="open = false; openOverview()">Month overview</button>
                 </li>
+                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; $store.budget.jumpToThisMonth()">Jump to this month</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; newGroupOpen = true; newGroupName = ''">+ New group...</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; $store.budget.setAllCatGroupsCollapsed(!$store.budget.allCatGroupsCollapsed())"
+                          x-text="$store.budget.allCatGroupsCollapsed() ? 'Expand all groups' : 'Collapse all groups'">Collapse all groups</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; budgetCollapsed = !budgetCollapsed"
+                          x-text="budgetCollapsed ? 'Show the category grid' : 'Hide the category grid'">Hide the category grid</button>
+                </li>
+                <li role="none" x-show="inspectorDocked">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; setInspectorOpen(!inspectorOpen)"
+                          x-text="inspectorOpen ? 'Hide the inspector pane' : 'Show the inspector pane'">Hide the inspector pane</button>
+                </li>
+                <li role="none">
+                  <button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; saveCurrentView()">Save current view</button>
+                </li>
               {% endcall %}
             </div>
             <dl class="budget__month-lines" :aria-label="'How Ready to Work for ' + monthCardLabel(vm) + ' adds up'">
@@ -261,9 +209,9 @@ eleventyExcludeFromCollections: true
             </dl>
             <button type="button" class="budget__month-head-rtw"
                     :class="rtaCents(vm) < 0 ? 'amount--outflow' : (rtaCents(vm) === 0 ? 'is-zero' : '')"
-                    :data-tip="'Ready to Work in ' + monthCardLabel(vm) + ' - click for the breakdown and overspending fixes.'"
-                    :aria-label="'Ready to Work in ' + monthCardLabel(vm) + ': ' + formatCents(rtaCents(vm)) + '. Open the month overview.'"
-                    @click="openOverview()">
+                    :data-tip="'Give this money a job: assign it to a category, or save it for next month.'"
+                    :aria-label="'Ready to Work in ' + monthCardLabel(vm) + ': ' + formatCents(rtaCents(vm)) + '. Assign it to a category or save it for next month.'"
+                    @click="openRtw(vm)">
               <span class="budget__month-head-rtw-label">Ready to Work</span>
               <span class="num" x-text="fmtGrid(rtaCents(vm))"></span>
             </button>
@@ -275,6 +223,11 @@ eleventyExcludeFromCollections: true
         </template>
       </div>
 
+    <div x-show="!budgetCollapsed" x-cloak>
+      {# Sticky header block: an optional month strip (only when more
+         than one month is visible) + the column header. Sticks below
+         the site header; the offset is measured because the header's
+         height varies with safe-area insets. #}
       {# Sticky header block: the column header. Sticks below the site
          header; the offset is measured because the header's height
          varies with safe-area insets. #}
@@ -779,6 +732,66 @@ eleventyExcludeFromCollections: true
         </form>
       </div>
     </div>
+  </template>
+
+  {# Ready to Work modal - the headline number's one job: give the
+     money a job. Assign it to a category this month, or save it for
+     next month by assigning it to a category THERE (money nobody
+     assigns rolls forward on its own; this is for people who want to
+     decide now). #}
+  <template x-if="rtwOpen">
+  <div class="modal-backdrop" @click.self="rtwOpen = false" @keydown.escape.window="rtwOpen = false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rtw-title">
+      <button class="modal__close" type="button" @click="rtwOpen = false" aria-label="Close">&times;</button>
+      <h2 class="modal__title" id="rtw-title">
+        Ready to Work: <span x-text="formatCents(rtaCents(rtwForm.month))"></span>
+      </h2>
+      <p class="modal__lead" style="color: var(--fg-muted); margin-top: 0;">
+        <span x-text="monthCardLabel(rtwForm.month)"></span> has this much inflow that no category has claimed.
+        <span x-show="rtaCents(rtwForm.month) < 0" x-cloak>It is negative: more was assigned than came in. Pull assignments back until it reaches zero.</span>
+      </p>
+      <form @submit.prevent="submitRtw()" class="form-stack">
+        <div class="field">
+          <span class="field__label">Where should it go?</span>
+          <div class="cluster" style="gap: var(--space-2xs);">
+            <label class="btn btn--sm" :class="rtwForm.target === 'this' ? 'btn--primary' : 'btn--ghost'">
+              <input type="radio" class="visually-hidden" value="this" x-model="rtwForm.target">
+              A category in <span x-text="monthCardLabel(rtwForm.month, true)"></span>
+            </label>
+            <label class="btn btn--sm" :class="rtwForm.target === 'next' ? 'btn--primary' : 'btn--ghost'">
+              <input type="radio" class="visually-hidden" value="next" x-model="rtwForm.target">
+              Save for <span x-text="monthCardLabel(nextMonthOf(rtwForm.month), true)"></span>
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="rtw-cat">Category</label>
+          <select class="select" id="rtw-cat" x-model="rtwForm.categoryId" required>
+            <option value="">Choose a category...</option>
+            <template x-for="opt in rtwCategoryOptions()" :key="'rtw-' + opt.id">
+              <option :value="opt.id" x-text="opt.label + '  (' + formatCents(opt.available) + ' available)'"></option>
+            </template>
+          </select>
+          <p class="field__hint" x-show="rtwForm.target === 'next'" x-cloak>
+            The amount is added to that category's Assigned in <span x-text="monthCardLabel(nextMonthOf(rtwForm.month), true)"></span>, so it is spoken for before the month starts.
+          </p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="rtw-amount">Amount</label>
+          <input class="input" id="rtw-amount" type="text" inputmode="decimal" x-model="rtwForm.amount"
+                 placeholder="0.00" data-tip="Type an amount, or an expression like 100+25.">
+          <p class="field__hint">Defaults to all of it. Assign less to keep some unassigned.</p>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit" :disabled="!rtwForm.categoryId">
+            <span x-text="rtwForm.target === 'next' ? 'Save for next month' : 'Assign'"></span>
+          </button>
+          <button class="btn btn--ghost" type="button" @click="rtwOpen = false; openOverview()">Open month overview</button>
+          <button class="btn btn--ghost" type="button" @click="rtwOpen = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
   </template>
 
   <template x-if="templatesOpen">
