@@ -390,7 +390,7 @@ eleventyExcludeFromCollections: true
                     <div class="budget__category-row">
                       <input type="checkbox" class="budget__bulk-check"
                              :checked="isCatSelected(c.id)"
-                             @change="toggleCatSelected(c.id)"
+                             @click.prevent="onCatCheck(c.id, $event)"
                              :aria-label="'Select ' + c.name + ' for bulk actions'"
                              :data-tip="'Select this category for bulk Clear assigned / Clear available.'">
                       {# Marks come first, in a fixed-width slot, so every
@@ -698,43 +698,90 @@ eleventyExcludeFromCollections: true
   {# Floating bulk-actions bar — visible only when at least one category
      is selected. Clear assigned / Clear available apply to the
      selection; Cancel deselects everything. #}
-  <div class="bulk-actions-bar"
-       x-show="selectedCatIds.length && !(inspectorDocked && inspectorOpen)"
-       x-cloak role="region" aria-label="Bulk actions">
-    <div class="bulk-actions-bar__count">
-      <strong x-text="selectedCatIds.length"></strong>
-      <span x-text="selectedCatIds.length === 1 ? 'category selected' : 'categories selected'"></span>
-    </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button type="button" class="btn btn--primary btn--sm" @click="bulkAutoAssign()"
-              data-tip="Open the auto-assign strategy picker for every selected category.">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;">
-          <path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/>
-        </svg>
-        Auto-assign
-      </button>
-      {# Secondary bulk actions inline on desktop, kebab on mobile so
-         the count + primary action always fit one line at 360px. #}
-      <span class="bulk-actions-bar__more bulk-actions-bar__more--desktop">
-        <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAssigned('selection')"
-                data-tip="Reset Assigned to $0 for every selected category in this month.">Clear assigned</button>
-        <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAvailable('selection')"
-                data-tip="Push Available to $0 for every selected category — pulls money back to Ready to Work.">Clear available</button>
-      </span>
-      <span class="bulk-actions-bar__more bulk-actions-bar__more--mobile">
-        {% call overflow(label="More bulk actions") %}
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; bulkClearAssigned('selection')">Clear assigned</button>
-          </li>
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; bulkClearAvailable('selection')">Clear available</button>
-          </li>
-        {% endcall %}
-      </span>
-      <button type="button" class="btn btn--ghost btn--sm" @click="clearSelection()"
-              data-tip="Deselect everything.">Cancel</button>
+  {# Selection toolbar. Floats above the grid while categories are
+     ticked: what is selected and what it adds up to, then the things
+     you can do to all of them at once. The Assign popover applies one
+     amount to every selected category (set, add or subtract). Shift-click
+     on a checkbox selects a range. #}
+  <div class="selbar" x-show="selectedCatIds.length" x-cloak role="region" aria-label="Selected categories"
+       @keydown.escape.window="if (selAssignOpen) selAssignOpen = false">
+    <div class="selbar__inner">
+      <div class="selbar__count" x-data="overflowMenu('left')" @click.outside="open = false">
+        <button type="button" x-ref="trigger" class="selbar__count-btn" :aria-expanded="open.toString()" aria-haspopup="menu"
+                @click="open = !open" data-tip="Select all or none.">
+          <span class="selbar__check" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 10 17 19 8"/></svg>
+          </span>
+          <strong x-text="selectedCatIds.length"></strong>
+          <span class="selbar__count-word" x-text="selectedCatIds.length === 1 ? 'selected' : 'selected'"></span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <ul x-ref="list" class="overflow-menu__list overflow-menu__list--left" role="menu" x-show="open" x-cloak>
+          <li role="none"><button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; selectAllCats()">Select all categories</button></li>
+          <li role="none"><button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; clearSelection()">Deselect all</button></li>
+        </ul>
+      </div>
+      <div class="selbar__totals" :data-tip="'Totals for the selection in ' + monthCardLabel($store.budget.currentMonth) + '.'">
+        <span><span class="selbar__k">Assigned</span> <span class="num" x-text="formatCents(selectionTotals().assigned)"></span></span>
+        <span><span class="selbar__k">Available</span> <span class="num" :class="selectionTotals().available < 0 ? 'amount--outflow' : ''" x-text="formatCents(selectionTotals().available)"></span></span>
+      </div>
+
+      <div class="selbar__actions">
+        <div class="selbar__assign" x-data @click.outside="selAssignOpen = false">
+          <button type="button" class="btn btn--primary btn--sm" :class="selAssignOpen ? 'is-open' : ''"
+                  :aria-expanded="selAssignOpen.toString()"
+                  @click="toggleSelAssign()"
+                  data-tip="Set, add or subtract one amount across every selected category.">Assign…</button>
+          <div class="selbar__pop" x-show="selAssignOpen" x-cloak role="dialog" aria-label="Assign to selection">
+            <div class="selbar__pop-modes" role="group" aria-label="How to apply">
+              <button type="button" class="selbar__pop-mode" :class="selAssign.mode === 'set' ? 'is-active' : ''" @click="selAssign.mode = 'set'">Set to</button>
+              <button type="button" class="selbar__pop-mode" :class="selAssign.mode === 'add' ? 'is-active' : ''" @click="selAssign.mode = 'add'">Add</button>
+              <button type="button" class="selbar__pop-mode" :class="selAssign.mode === 'sub' ? 'is-active' : ''" @click="selAssign.mode = 'sub'">Subtract</button>
+            </div>
+            <form class="selbar__pop-row" @submit.prevent="applySelAssign()">
+              <span class="selbar__pop-cur" aria-hidden="true">$</span>
+              <input class="input num selbar__pop-input" id="selbar-amount" type="text" inputmode="decimal" placeholder="0.00"
+                     x-model="selAssign.amount" aria-label="Amount">
+              <button class="btn btn--primary btn--sm" type="submit" :disabled="!parseDollars(selAssign.amount)"
+                      x-text="'Apply to ' + selectedCatIds.length"></button>
+            </form>
+            <p class="selbar__pop-hint" x-text="selAssignHint()"></p>
+          </div>
+        </div>
+        <button type="button" class="btn btn--secondary btn--sm" @click="bulkAutoAssign()"
+                data-tip="Fill every selected category from goals, last month, or recent averages.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align: -2px; margin-right: 3px;"><path d="M13 2L4.5 13.5h6L9 22l8.5-11.5h-6L13 2z"/></svg>
+          Auto-assign
+        </button>
+        <div class="overflow-menu" x-data="overflowMenu('right')" @click.outside="open = false">
+          <button type="button" x-ref="trigger" class="btn btn--secondary btn--sm" :aria-expanded="open.toString()" aria-haspopup="menu" @click="open = !open">
+            Clear <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left: 2px;"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul x-ref="list" class="overflow-menu__list overflow-menu__list--right" role="menu" x-show="open" x-cloak>
+            <li role="none"><button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; bulkClearAssigned('selection')">Clear assigned to $0</button></li>
+            <li role="none"><button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; bulkClearAvailable('selection')">Clear available (pull back to Ready to Work)</button></li>
+          </ul>
+        </div>
+        <div class="overflow-menu" x-data="overflowMenu('right')" @click.outside="open = false">
+          <button type="button" x-ref="trigger" class="btn btn--icon btn--sm selbar__more" :aria-expanded="open.toString()" aria-haspopup="menu"
+                  aria-label="More actions" data-tip="Move to a group, hide." @click="open = !open">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
+          </button>
+          <ul x-ref="list" class="overflow-menu__list overflow-menu__list--right" role="menu" x-show="open" x-cloak>
+            <li role="none" class="overflow-menu__head">Move to group</li>
+            <template x-for="g in ($store.budget.profile ? $store.budget.profile.categoryGroups : [])" :key="'mg-' + g.id">
+              <li role="none" x-show="g.name !== 'Credit Card Payments'">
+                <button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; bulkMoveToGroup(g.id)" x-text="g.name"></button>
+              </li>
+            </template>
+            <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+            <li role="none"><button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; bulkHide()">Hide selected categories</button></li>
+          </ul>
+        </div>
+        <button type="button" class="btn btn--icon btn--sm selbar__close" @click="clearSelection()" aria-label="Deselect all" data-tip="Deselect (Esc).">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 

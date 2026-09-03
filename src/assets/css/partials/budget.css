@@ -4802,3 +4802,82 @@ body.pb-dragging { overflow: visible !important; }
   .budget .budget__group .budget__row .goal-bar--thin { margin-left: 22px; }
   .budget .goal-bar--group { margin-left: 0; }
 }
+
+
+/* ── Selection toolbar ───────────────────────────────────────────────
+   Floats bottom-centre while categories are ticked. One row on desktop:
+   count (with select-all menu), live totals, then the actions. On
+   phones the totals drop under the count and the action row scrolls. */
+.selbar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0));
+  transform: translateX(-50%);
+  z-index: 120;
+  max-width: calc(100vw - 24px);
+}
+.selbar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 8px 6px 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.08);
+}
+.selbar__count { position: relative; flex: 0 0 auto; }
+.selbar__count-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 10px 4px 6px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.selbar__count-btn:hover { background: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated)); }
+.selbar__check { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; background: var(--accent); color: var(--fg-on-accent); }
+.selbar__count-word { color: var(--fg-muted); }
+.selbar__totals { display: flex; gap: var(--space-sm); font-size: var(--fs-xs); white-space: nowrap; padding-right: var(--space-2xs); border-right: 1px solid var(--border-soft); }
+.selbar__totals .num { font-weight: 700; font-variant-numeric: tabular-nums; }
+.selbar__k { color: var(--fg-muted); margin-right: 3px; }
+.selbar__actions { display: flex; align-items: center; gap: 6px; }
+.selbar__more, .selbar__close { width: 32px; min-width: 32px; height: 32px; min-height: 32px; color: var(--fg-muted); }
+.selbar__assign { position: relative; }
+.selbar__pop {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: 19rem;
+  padding: var(--space-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+}
+.selbar__pop-modes { display: grid; grid-template-columns: repeat(3, 1fr); padding: 2px; border-radius: 999px; background: var(--bg-alt); margin-bottom: var(--space-2xs); }
+.selbar__pop-mode { min-height: 28px; border: 0; border-radius: 999px; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
+.selbar__pop-mode.is-active { background: var(--bg-elevated); color: var(--fg); box-shadow: var(--shadow-sm); }
+.selbar__pop-row { display: flex; align-items: center; gap: 6px; position: relative; }
+.selbar__pop-cur { position: absolute; left: 10px; color: var(--fg-muted); font-weight: 600; pointer-events: none; }
+.selbar__pop-input { flex: 1 1 auto; min-width: 0; padding-left: 1.4rem; text-align: right; font-weight: 600; }
+.selbar__pop-hint { margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--fg-muted); line-height: 1.4; }
+.overflow-menu__head { padding: 6px 12px 2px; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-subtle); }
+@media (max-width: 767px) {
+  .selbar { left: 8px; right: 8px; transform: none; max-width: none; bottom: calc(72px + env(safe-area-inset-bottom, 0)); }
+  .selbar__inner { flex-wrap: wrap; gap: 6px; border-radius: 12px; }
+  .selbar__totals { border-right: 0; padding-right: 0; flex: 1 1 auto; justify-content: flex-end; }
+  .selbar__actions { flex-basis: 100%; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .selbar__actions::-webkit-scrollbar { display: none; }
+  .selbar__actions .btn { flex: 0 0 auto; }
+  .selbar__pop { left: 0; right: 0; width: auto; }
+}
+/* Hide the toolbar under any open modal, like the old bar did. */
+body:has(.modal-backdrop:not([style*="display: none"])) .selbar { display: none !important; }

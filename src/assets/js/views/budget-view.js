@@ -13,6 +13,93 @@ function budgetView() {
        every cat in the group is currently selected. */
     selectedCatIds: [],
     isCatSelected(id) { return this.selectedCatIds.indexOf(id) !== -1; },
+    /* Shift-click selects the range between the last checkbox touched
+       and this one, in the order the grid shows them. */
+    _lastCheckedId: null,
+    onCatCheck(id, ev) {
+      if (ev && ev.shiftKey && this._lastCheckedId && this._lastCheckedId !== id) {
+        var order = [];
+        (this.$store.budget.categoryGroupsView() || []).forEach(function (b) {
+          (b.categories || []).forEach(function (c) { order.push(c.id); });
+        });
+        var a = order.indexOf(this._lastCheckedId), b = order.indexOf(id);
+        if (a !== -1 && b !== -1) {
+          var lo = Math.min(a, b), hi = Math.max(a, b);
+          var self = this;
+          order.slice(lo, hi + 1).forEach(function (cid) { if (!self.isCatSelected(cid)) self.selectedCatIds.push(cid); });
+          this._lastCheckedId = id;
+          return;
+        }
+      }
+      this.toggleCatSelected(id);
+      this._lastCheckedId = id;
+    },
+    selectAllCats() {
+      this.selectedCatIds = this.$store.budget.allBudgetableCategoryIds().slice();
+    },
+    /* The Assign popover on the selection toolbar. */
+    selAssignOpen: false,
+    selAssign: { mode: "set", amount: "" },
+    toggleSelAssign() {
+      this.selAssignOpen = !this.selAssignOpen;
+      if (this.selAssignOpen) this.$nextTick(function () { var el = document.getElementById("selbar-amount"); if (el) el.focus(); });
+    },
+    selAssignHint() {
+      var cents = this.parseDollars(this.selAssign.amount);
+      var n = this.selectedCatIds.length;
+      if (!cents) return "One amount, applied to each of the " + n + " selected categor" + (n === 1 ? "y" : "ies") + ".";
+      var s = this.$store.budget;
+      var m = s.currentMonth;
+      var total = 0;
+      var self = this;
+      this.selectedCatIds.forEach(function (id) {
+        var cur = s.assignedFor(id, m) || 0;
+        total += self.selAssign.mode === "set" ? cents : (self.selAssign.mode === "add" ? cur + cents : Math.max(0, cur - cents));
+      });
+      var delta = total - this.selectionTotals().assigned;
+      return "Selection assigned becomes " + this.formatCents(total) + " (" + (delta >= 0 ? "+" : "-") + this.formatCents(Math.abs(delta)) + ").";
+    },
+    applySelAssign() {
+      var cents = this.parseDollars(this.selAssign.amount);
+      if (!cents || !this.selectedCatIds.length) return;
+      var s = this.$store.budget;
+      var m = s.currentMonth;
+      var plan = {};
+      var self = this;
+      this.selectedCatIds.forEach(function (id) {
+        var cur = s.assignedFor(id, m) || 0;
+        plan[id] = self.selAssign.mode === "set" ? cents : (self.selAssign.mode === "add" ? cur + cents : Math.max(0, cur - cents));
+      });
+      var n = s.applyAssignments(plan, m, (this.selAssign.mode === "set" ? "Set" : (this.selAssign.mode === "add" ? "Add" : "Subtract")) + " " + this.formatCents(cents) + " x " + this.selectedCatIds.length);
+      s.pushToast("Assigned " + n + " categor" + (n === 1 ? "y" : "ies") + ".", "ok");
+      this.selAssignOpen = false;
+      this.selAssign.amount = "";
+    },
+    bulkMoveToGroup(groupId) {
+      var s = this.$store.budget;
+      var ids = this.selectedCatIds.slice();
+      if (!ids.length) return;
+      var g = s.findCategoryGroup(groupId);
+      s.batchMutate(function () {
+        ids.forEach(function (id) { s.moveCategoryToGroup(id, groupId); });
+      }, "Move " + ids.length + " to " + (g ? g.name : "group"));
+      s.pushToast("Moved " + ids.length + " categor" + (ids.length === 1 ? "y" : "ies") + " to " + (g ? g.name : "the group") + ".", "ok");
+      this.clearSelection();
+    },
+    async bulkHide() {
+      var s = this.$store.budget;
+      var ids = this.selectedCatIds.slice();
+      if (!ids.length) return;
+      var ok = await window.PBDialog.confirm({
+        title: "Hide " + ids.length + " categor" + (ids.length === 1 ? "y" : "ies") + "?",
+        message: "They leave the grid but keep their money, activity and goals. Unhide any time from the list below the grid.",
+        confirmLabel: "Hide",
+      });
+      if (!ok) return;
+      s.batchMutate(function () { ids.forEach(function (id) { s.setCategoryHidden(id, true); }); }, "Hide " + ids.length);
+      s.pushToast("Hid " + ids.length + " categor" + (ids.length === 1 ? "y" : "ies") + ".", "ok");
+      this.clearSelection();
+    },
     toggleCatSelected(id) {
       var i = this.selectedCatIds.indexOf(id);
       if (i === -1) this.selectedCatIds.push(id);
