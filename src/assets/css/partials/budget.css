@@ -551,20 +551,40 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
    column, then one line of Assigned / Outflow / Available per month -
    instead of a mile-wide scrolling strip. */
 .budget.budget--collapsed { overflow-x: visible; }
-.budget.budget--collapsed .budget__total-row {
-  grid-template-areas: none;
-  grid-template-columns: repeat(3, minmax(8rem, max-content));
-  justify-content: start;
-  row-gap: var(--space-2xs);
-  min-width: 0;
+/* Collapsed totals render as .budget__mcards (below); the grid-flow
+   total row is expanded-mode only. */
+.budget__mcards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
 }
-/* The label takes its own full row so each month's three cells align
-   in clean columns below it (with the label in the flow, month cells
-   drifted one slot per row). */
-.budget.budget--collapsed .budget__total-row .budget__total-label { grid-column: 1 / -1; }
-.budget.budget--collapsed .budget__total-row .budget__assigned,
-.budget.budget--collapsed .budget__total-row .budget__activity,
-.budget.budget--collapsed .budget__total-row .budget__available { border-left: 0; }
+.budget__mcard {
+  flex: 1 1 14rem;
+  max-width: 20rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-input);
+  padding: var(--space-sm);
+}
+.budget__mcard-title {
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--fs-md);
+}
+.budget__mcard-stats { margin: 0; display: grid; gap: 2px; }
+.budget__mcard-stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2xs);
+  font-size: var(--fs-sm);
+}
+.budget__mcard-stats dt { color: var(--fg-muted); }
+.budget__mcard-stats dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Group-header identity cluster: checkbox, chevron and name stay on
    ONE line (the shared .cluster utility wraps, which stacked the

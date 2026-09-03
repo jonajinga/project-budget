@@ -469,7 +469,32 @@ eleventyExcludeFromCollections: true
     </div> {# /budgetCollapsed wrapper #}
 
     {# Total budget — bottom summary row matching the columns above. #}
-    <div class="budget__group-header budget__total-row" aria-label="Totals for the visible months">
+    {# Collapsed grid: one clean summary CARD per visible month.
+       (The grid-flow total row drifted cells at higher month counts
+       and read as a wall of uppercase labels - cards cannot drift.) #}
+    <div class="budget__mcards" x-show="budgetCollapsed" x-cloak>
+      <template x-for="vm in visibleMonths()" :key="'sum-' + vm">
+        <article class="budget__mcard">
+          <h3 class="budget__mcard-title" x-text="monthShortLabel(vm)"></h3>
+          <dl class="budget__mcard-stats">
+            <div><dt>Assigned</dt>
+              <dd x-text="formatCents($store.budget.totalAssignedInMonth(vm))"></dd></div>
+            <div><dt>Outflow</dt>
+              <dd :class="monthlyOutflowTotal(vm) < 0 ? 'amount--outflow' : ''"
+                  x-text="formatCents(monthlyOutflowTotal(vm))"></dd></div>
+            <div><dt>Available</dt>
+              <dd :class="monthlyAvailableTotal(vm) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                  x-text="formatCents(monthlyAvailableTotal(vm))"></dd></div>
+            <div><dt>Ready to assign</dt>
+              <dd :class="rtaCents(vm) < 0 ? 'amount--outflow' : ''"
+                  x-text="formatCents(rtaCents(vm))"></dd></div>
+          </dl>
+        </article>
+      </template>
+    </div>
+
+    <div class="budget__group-header budget__total-row" aria-label="Totals for the visible months"
+         x-show="!budgetCollapsed" x-cloak>
       <div class="budget__total-label budget__category">
         <span class="budget__total-eyebrow">Month total</span>
         <strong x-text="effectiveMonthCount() > 1 ? (monthShortLabel($store.budget.currentMonth) + ' +' + (effectiveMonthCount() - 1)) : monthHeaderLabel()"></strong>
@@ -575,7 +600,9 @@ eleventyExcludeFromCollections: true
   {# Floating bulk-actions bar — visible only when at least one category
      is selected. Clear assigned / Clear available apply to the
      selection; Cancel deselects everything. #}
-  <div class="bulk-actions-bar" x-show="selectedCatIds.length" x-cloak role="region" aria-label="Bulk actions">
+  <div class="bulk-actions-bar"
+       x-show="selectedCatIds.length && !(inspectorDocked && inspectorOpen)"
+       x-cloak role="region" aria-label="Bulk actions">
     <div class="bulk-actions-bar__count">
       <strong x-text="selectedCatIds.length"></strong>
       <span x-text="selectedCatIds.length === 1 ? 'category selected' : 'categories selected'"></span>
