@@ -263,7 +263,7 @@
   --budget-check-col: calc(16px + var(--space-2xs));
   /* Group toggle: 4px padding + 20px chevron + 4px gap. */
   --budget-tree-indent: 28px;
-  --budget-mark-slot: 48px;
+  --budget-mark-slot: 16px;
 }
 @media (min-width: 600px) {
   /* The indent lives on the row's padding and the checkbox is pinned to
@@ -315,20 +315,17 @@
     flex: 0 0 auto;
     position: relative;
     display: grid;
-    grid-template-columns: 14px 14px 14px;
-    column-gap: 3px;
+    grid-template-columns: 16px;
+    column-gap: 0;
     align-items: center;
     width: var(--budget-mark-slot);
     min-width: var(--budget-mark-slot);
-    margin-right: var(--space-2xs);
   }
-  .budget__cat-ind > .mark--goal { grid-column: 1; }
-  .budget__cat-ind > .mark--cut { grid-column: 2; }
   /* The note mark fills the same 25px box as a ring (so the two sit on
      one baseline at one size) but is the bare glyph: no circle around
      it, so it never reads as a third progress ring. */
   .budget__cat-ind > .note-ind {
-    grid-column: 3;
+    grid-column: 1;
     width: 14px;
     height: 18px;
     padding: 0;
@@ -341,53 +338,44 @@
   .budget .budget__category-row .cut-badge,
   .budget .budget__category-row .note-ind { flex: 0 0 auto; }
 }
-/* Tracker marks: a target for a goal, scissors for a planned cut, in
-   the fixed slot left of the name. The colour is the status: subtle
-   when nothing is there yet, accent (goal) or amber (cut) on the way,
-   green when met. The bar under the name carries the amount. */
-.mark {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 18px;
-  padding: 0;
-  margin: -2px 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--fg-subtle);
-}
-.mark--span { cursor: default; }
-.mark::before { content: ""; position: absolute; inset: -6px -4px; }
-.mark svg { width: 14px; height: 14px; display: block; }
-.mark--goal.is-half { color: var(--accent); }
-.mark--goal.is-met { color: var(--ok); }
-.mark--cut { color: var(--warn, #8a5a00); }
-.mark--cut.is-met { color: var(--ok); }
-.mark:hover { color: var(--accent); }
-.mark:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }
-
-/* Progress as a hairline under the name, one per tracker. */
-/* width:auto lets the flex column stretch the bar to the room that is
-   left after the indent (the base .goal-bar is width:100%, which ran
-   under the Assigned column in a narrow multi-month name column). */
-.goal-bar--thin {
+/* Progress as a hairline under the name, one per tracker, each led by
+   its icon (target = goal, scissors = cut) in the bar's own colour.
+   width:auto lets the flex column stretch the bar to the room left
+   after the indent (the base .goal-bar is width:100%, which ran under
+   the Assigned column in a narrow multi-month name column). */
+.budget .goal-bar--thin {
   width: auto;
   max-width: 12rem;
   margin-top: 3px;
   margin-right: var(--space-2xs);
-  gap: 0;
+  gap: 5px;
 }
 .goal-bar--thin .goal-bar__track { height: 3px; }
+.goal-bar__icon {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  color: var(--bar-fill);
+}
+/* Group rows: the toggle and its bars stack; bars indent to the name. */
+.budget__group-title {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.budget__group-title .group-toggle { align-self: flex-start; max-width: 100%; }
+/* The group name sits exactly where its categories' names do: after
+   the chevron, leave the same slot + gap the category rows reserve. */
+.budget__group-title .group-toggle strong { margin-left: calc(var(--budget-mark-slot) + var(--space-2xs)); }
+.goal-bar--group { margin-left: var(--budget-tree-indent); margin-top: 1px; }
 .goal-bar--thin + .goal-bar--thin { margin-top: 2px; }
 .goal-bar--cut { --bar-fill: var(--warn, #8a5a00); }
 .goal-bar--cut.goal-bar--funded { --bar-fill: var(--ok); }
 @media (min-width: 600px) {
   .budget__group .budget__row .goal-bar--thin {
-    margin-left: calc(var(--budget-check-col) + var(--budget-tree-indent) + var(--budget-mark-slot) + var(--space-2xs));
+    margin-left: calc(var(--budget-check-col) + var(--budget-tree-indent));
   }
 }
 /* Month-note indicator inside the DATA row's Assigned cell, before the
@@ -1136,7 +1124,6 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   text-align: left;
   gap: 4px;
 }
-.budget__cat-ind--group { flex: 0 0 auto; margin-right: 4px; }
 .budget__group-header .group-toggle strong {
   min-width: 0;
   font-size: var(--fs-md);

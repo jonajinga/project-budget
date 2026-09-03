@@ -280,37 +280,37 @@ eleventyExcludeFromCollections: true
                      @change="toggleGroupSelected(group)"
                      :aria-label="'Select all categories in ' + (group.group?.name || 'Other')"
                      :data-tip="'Select / deselect every category in ' + (group.group?.name || 'Other categories') + ' for bulk actions.'">
+              <div class="budget__group-title">
               <button type="button" class="group-toggle"
                       @click="group.group && $store.budget.toggleCategoryGroupCollapsed(group.group.id)"
                       :aria-expanded="group.group && !$store.budget.isCatGroupCollapsed(group.group.id) ? 'true' : 'false'"
                       :disabled="!group.group">
                 <span class="group-toggle__chevron" :class="group.group && $store.budget.isCatGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
-                {# Group-level trackers: every member goal rolled into one
-                   ring (weighted by target), every member cut into another
-                   (dollars saved over dollars planned). Same slot as the
-                   category rows, so the marks form one column. #}
-                <span class="budget__cat-ind budget__cat-ind--group" @click.stop>
-                  <span class="mark mark--goal mark--span"
-                        x-show="groupGoal(group).count" x-cloak
-                        :class="ringClass(groupGoal(group).pct, 'goal')"
-                        :data-tip="groupGoal(group).tip"
-                        role="img" :aria-label="groupGoal(group).tip">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>
-                    </svg>
-                  </span>
-                  <span class="mark mark--cut mark--span"
-                        x-show="groupCut(group).count" x-cloak
-                        :class="ringClass(groupCut(group).pct, 'cut')"
-                        :data-tip="groupCut(group).tip"
-                        role="img" :aria-label="groupCut(group).tip">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
-                    </svg>
-                  </span>
-                </span>
                 <strong x-text="group.group ? group.group.name : 'Other categories'"></strong>
               </button>
+              {# Rolled-up trackers under the group name: goals weighted by
+                 target, cuts as dollars saved over dollars planned. #}
+              <div class="goal-bar goal-bar--thin goal-bar--group"
+                   x-show="groupGoal(group).count" x-cloak
+                   :class="groupGoal(group).pct >= 100 ? 'goal-bar--funded' : (groupGoal(group).pct >= 50 ? 'goal-bar--accent' : 'goal-bar--muted')"
+                   :style="{ '--pct': groupGoal(group).pct }"
+                   :data-tip="groupGoal(group).tip"
+                   role="progressbar" :aria-label="groupGoal(group).tip"
+                   :aria-valuenow="groupGoal(group).pct" aria-valuemin="0" aria-valuemax="100">
+                <svg class="goal-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+                <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
+              </div>
+              <div class="goal-bar goal-bar--thin goal-bar--group goal-bar--cut"
+                   x-show="groupCut(group).count" x-cloak
+                   :class="groupCut(group).pct >= 100 ? 'goal-bar--funded' : ''"
+                   :style="{ '--pct': groupCut(group).pct }"
+                   :data-tip="groupCut(group).tip"
+                   role="progressbar" :aria-label="groupCut(group).tip"
+                   :aria-valuenow="groupCut(group).pct" aria-valuemin="0" aria-valuemax="100">
+                <svg class="goal-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
+              </div>
+              </div>
             </div>
             {# Group totals stay as plain bold tabular numerals — no
                pill chrome — so they read as summary lines rather
@@ -403,26 +403,6 @@ eleventyExcludeFromCollections: true
                          name starts at the same x whether or not the row
                          has a goal, a cut, or a note. Order: goal, cut, note. #}
                       <span class="budget__cat-ind">
-                        <button type="button" class="mark mark--goal"
-                                x-show="$store.budget.findGoal(c.id)" x-cloak
-                                :class="ringClass(goalPercent(c.id), 'goal')"
-                                :data-tip="goalBarTooltip(c.id)"
-                                :aria-label="'Goal for ' + c.name + ': ' + goalPercent(c.id) + '% funded. ' + goalLabel(c.id)"
-                                @click="selectCategory(c)">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>
-                          </svg>
-                        </button>
-                        <button type="button" class="mark mark--cut"
-                                x-show="$store.budget.cutForCategory(c.id)" x-cloak
-                                :class="ringClass(cutPercent(c.id), 'cut')"
-                                :data-tip="cutTooltip(c.id)"
-                                :aria-label="'Planned cut on ' + c.name + ': ' + cutPercent(c.id) + '% of this month\'s target saved. ' + cutBadgeText(c.id)"
-                                @click="selectCategory(c)">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
-                          </svg>
-                        </button>
                         <button type="button" class="note-ind"
                                 x-show="hasNotes(c)" x-cloak
                                 :data-tip="notesTip(c)"
@@ -448,6 +428,7 @@ eleventyExcludeFromCollections: true
                          :aria-valuenow="goalPercent(c.id)"
                          :aria-valuetext="goalPercent(c.id) + '% of goal for ' + c.name + '. ' + goalLabel(c.id)"
                          aria-valuemin="0" aria-valuemax="100">
+                      <svg class="goal-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
                       <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
                     </div>
                     <div class="goal-bar goal-bar--thin goal-bar--cut"
@@ -460,6 +441,7 @@ eleventyExcludeFromCollections: true
                          :aria-valuenow="cutPercent(c.id)"
                          :aria-valuetext="cutPercent(c.id) + '% of this month\'s planned cut realized for ' + c.name"
                          aria-valuemin="0" aria-valuemax="100">
+                      <svg class="goal-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
                       <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
                     </div>
                   </div>
