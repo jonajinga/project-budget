@@ -89,11 +89,19 @@
   font-size: var(--fs-md);
   font-weight: 700;
   line-height: 1.15;
+  /* Block, and capped by the PARENT's width, not a ch count: inside a
+     centred flex column an inline child keeps its max-content width and
+     paints straight over the controls beside it when the header is
+     narrow. 100% of a parent that shrinks is the only cap that works. */
+  display: block;
+  width: 100%;
   max-width: 32ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: center;
 }
+.site-header__profile { align-items: stretch; }
 @media (min-width: 768px) { .site-header__profile-name { font-size: var(--fs-lg); } }
 
 .site-nav { display: none; }
@@ -212,10 +220,10 @@
    button get clipped. Tighter padding + smaller icons + hide
    undo/redo (they're rare on mobile, and Cmd+Z still works) keeps
    everything on one row inside a 360-px viewport. */
-@media (max-width: 599px) {
-  /* Grid layout (1fr auto 1fr + justify-self per child) lives in
-     the .site-header__inner--app base rules so it covers tablets
-     too — only the mobile-specific padding + icon sizing live here. */
+/* Applies up to 767px, not 599: the 600-767 band (the bottom tab bar's
+   own breakpoint) had every control of the desktop header squeezed into
+   one row, with the hamburger touching the name. */
+@media (max-width: 767px) {
   .site-header__inner--app {
     gap: var(--space-3xs);
     padding-inline: var(--space-2xs);

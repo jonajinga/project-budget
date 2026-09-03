@@ -984,6 +984,40 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   background: var(--bg);
 }
 
+/* ── Phones (below 600px) ─────────────────────────────────────────────
+   - The month strip scrolls sideways (twelve tabs do not fit in 330px;
+     the active one is scrolled into view by the view).
+   - The mark slot beside the name is fixed here too, so names share a
+     left edge whether or not the row has a note.
+   - Tracker bars start under the name; the month-note mark is hidden,
+     since it collided with the full-width Assigned pill (the note is
+     still in the category's notes dialog). */
+@media (max-width: 599px) {
+  .budget__hud .month-strip__tabs {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    gap: 2px;
+  }
+  .budget__hud .month-strip__tabs::-webkit-scrollbar { display: none; }
+  .budget__hud .month-strip__tab { flex: 0 0 auto; padding: 0.3rem 0.8rem; scroll-snap-align: center; }
+  .budget__cat-ind {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: 16px;
+    width: 16px;
+    min-width: 16px;
+  }
+  .budget__cat-ind > .note-ind { grid-column: 1; width: 16px; height: 18px; padding: 0; margin: -2px 0; color: var(--fg-muted); }
+  .budget__cat-ind > .note-ind svg { width: 13px; height: 13px; }
+  .budget__group-title .group-toggle strong { margin-left: 0; }
+  .budget .budget__group .budget__row .goal-bar--thin { margin-left: calc(16px + var(--space-2xs)); }
+  .budget .goal-bar--group { margin-left: 28px; }
+  .note-ind--month { display: none; }
+}
+
 /* ── The narrow band: 600 to 899px (a small window, a tablet) ─────────
    The desktop recipe let the three value columns grow to 9rem each and
    the name column keep the full checkbox + tree indent + mark slot, so

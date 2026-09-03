@@ -979,9 +979,32 @@ function budgetView() {
         var sec = document.querySelector(".budget");
         if (sec) {
           var top = sec.getBoundingClientRect().top + window.scrollY;
-          self._gridVh = Math.max(240, Math.round(window.innerHeight - top));
+          /* On phones the fixed tab bar covers the bottom of the window;
+             the grid must stop above it or its last rows hide behind it. */
+          var tab = document.querySelector(".tab-bar");
+          /* offsetParent is null for ANY fixed element, so test display. */
+          var tabH = (tab && getComputedStyle(tab).position === "fixed" && getComputedStyle(tab).display !== "none") ? tab.offsetHeight : 0;
+          self._gridVh = Math.max(240, Math.round(window.innerHeight - top - tabH));
         }
       };
+      /* Phones scroll the month strip sideways; keep the active month in
+         view whenever it changes. */
+      var centerActiveMonth = function () {
+        if (!window.matchMedia("(max-width: 599px)").matches) return;
+        requestAnimationFrame(function () {
+          var el = document.querySelector(".month-strip__tab.is-active");
+          var wrap = el && el.closest(".month-strip__tabs");
+          if (!el || !wrap) return;
+          wrap.scrollLeft = el.offsetLeft - (wrap.clientWidth - el.offsetWidth) / 2;
+        });
+      };
+      if (window.Alpine && window.Alpine.effect) {
+        window.Alpine.effect(function () {
+          var st = window.Alpine.store("budget");
+          void (st && st.currentMonth);
+          centerActiveMonth();
+        });
+      }
       if (window.__pbBudgetViewCleanup) window.__pbBudgetViewCleanup();
       mq2.addEventListener("change", setMax);
       mq3.addEventListener("change", setMax);
@@ -999,6 +1022,9 @@ function budgetView() {
          HUD and any banner above it, which are not laid out yet here. */
       setTimeout(measureSticky, 60);
       setTimeout(measureSticky, 600);
+      /* The tabs are an x-for; the first effect run can precede them. */
+      setTimeout(centerActiveMonth, 60);
+      setTimeout(centerActiveMonth, 600);
 
       /* Honor incoming `?m=YYYY-MM` from a recalled saved view. The
          store may not be ready yet — poll until it is, then apply. */
