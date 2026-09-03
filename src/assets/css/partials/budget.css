@@ -340,11 +340,11 @@
 .ring--span { cursor: default; }
 .ring::before { content: ""; position: absolute; inset: -6px; }
 .ring svg { width: 24px; height: 24px; display: block; overflow: visible; }
-.ring__track { fill: none; stroke: var(--ring-track); stroke-width: 2; }
+.ring__track { fill: none; stroke: var(--ring-track); stroke-width: 2.1; }
 .ring__fill {
   fill: none;
   stroke: var(--ring-fill);
-  stroke-width: 2;
+  stroke-width: 2.1;
   stroke-linecap: round;
   stroke-dasharray: 62.83;
   stroke-dashoffset: 62.83;
