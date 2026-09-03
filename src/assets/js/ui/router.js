@@ -40,6 +40,10 @@ const VIEW_SCRIPTS = {
   "/app/register/": "/assets/js/views/register-view.js",
   "/app/budget/": "/assets/js/views/budget-view.js",
   "/app/calendar/": "/assets/js/views/calendar-view.js",
+  /* The two history pages share the inline-SVG chart helper, which must be on
+     window before their factories run. Arrays load in order. */
+  "/app/cuts/": ["/assets/js/ui/mini-charts.js", "/assets/js/views/cuts-view.js"],
+  "/app/category/": ["/assets/js/ui/mini-charts.js", "/assets/js/views/category-view.js"],
 };
 
 /* Heavy vendor libraries, loaded on first arrival at a route that needs them.
@@ -106,7 +110,7 @@ function loadScript(src) {
 
 async function loadDepsFor(path) {
   const deps = [];
-  if (VIEW_SCRIPTS[path]) deps.push(VIEW_SCRIPTS[path]);
+  if (VIEW_SCRIPTS[path]) deps.push(...[].concat(VIEW_SCRIPTS[path]));
   if (VENDOR_FOR_ROUTE[path]) deps.push(...VENDOR_FOR_ROUTE[path]);
   if (CHART_ROUTES.test(path)) deps.push(...CHART_SCRIPTS);
   if (REPORT_ROUTES.test(path)) deps.push(...REPORT_SCRIPTS);
@@ -254,7 +258,7 @@ function setTitleFrom(container) {
 
 let navToken = 0;
 
-export async function navigate(rawPath, { push = true, restoreScroll = null } = {}) {
+export async function navigate(rawPath, { push = true, restoreScroll = null, search = "" } = {}) {
   const path = normalise(rawPath);
   const mount = document.getElementById(MOUNT_ID);
   if (!mount) return false;
@@ -325,7 +329,9 @@ export async function navigate(rawPath, { push = true, restoreScroll = null } = 
          branch -- same rule the browser applies. */
       historyIndex += 1;
       historyDepth = historyIndex;
-      history.pushState({ path, idx: historyIndex }, "", path);
+      /* The query string rides along untouched: /app/category/?cat=ID is a
+         different page from /app/category/ even though both share a fragment. */
+      history.pushState({ path, search, idx: historyIndex }, "", path + (search || ""));
       announceHistory();
     }
 
@@ -381,7 +387,8 @@ function onClick(e) {
   const a = e.target.closest("a[href]");
   if (!isInternalAppLink(a)) return;
   e.preventDefault();
-  navigate(new URL(a.href, location.href).pathname);
+  const target = new URL(a.href, location.href);
+  navigate(target.pathname, { search: target.search });
 }
 
 export function startRouter() {
@@ -404,7 +411,7 @@ export function startRouter() {
        menu, and counting steps would drift. */
     if (e.state && typeof e.state.idx === "number") historyIndex = e.state.idx;
     announceHistory();
-    navigate(path, { push: false });
+    navigate(path, { push: false, search: (e.state && e.state.search) || location.search || "" });
   });
   history.replaceState({ path: normalise(location.pathname), idx: 0 }, "", location.href);
   historyIndex = 0;
