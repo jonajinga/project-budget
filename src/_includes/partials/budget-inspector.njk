@@ -156,42 +156,75 @@
     <template x-if="sel">
       <div class="insp">
         <header class="insp__head">
-          <p class="eyebrow insp__eyebrow">
-            <span x-text="selGroupName()"></span>
-            <span aria-hidden="true"> · </span>
-            <span x-text="monthCardLabel(sel.month)"></span>
-          </p>
-          <div class="insp__title-row">
-            <template x-if="!renameEditing">
-              <h2 class="insp__title" x-text="selCategory()?.name || ''"></h2>
-            </template>
-            <template x-if="renameEditing">
-              <input class="input" id="insp-rename" type="text" x-model="renameDraft"
-                     aria-label="Category name"
-                     @keydown.enter="commitInspectorRename()"
-                     @keydown.escape.stop="renameEditing = false"
-                     @blur="commitInspectorRename()">
-            </template>
-            <button type="button" class="btn btn--icon btn--sm insp__iconbtn" x-show="!renameEditing"
-                    @click="renameEditing = true; $nextTick(() => document.getElementById('insp-rename')?.focus())"
-                    aria-label="Rename category" data-tip="Rename this category.">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-            </button>
-            <button type="button" class="btn btn--icon btn--sm insp__iconbtn" x-show="inspectorDocked"
-                    @click="clearSel()" aria-label="Back to month overview"
-                    data-tip="Deselect (Escape does this too).">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
-            </button>
+          <div class="insp__head-row">
+            <p class="eyebrow insp__eyebrow">
+              <span x-text="selGroupName()"></span>
+              <span aria-hidden="true"> · </span>
+              <span x-text="monthCardLabel(sel.month)"></span>
+            </p>
+            <div class="insp__head-tools">
+              {# Rename / hide / delete live in one menu so the title line
+                 is the title and nothing else. #}
+              <div class="overflow-menu" x-data="overflowMenu('right')"
+                   @keydown.escape.window="open = false" @click.outside="open = false">
+                <button type="button" x-ref="trigger" class="btn btn--icon insp__iconbtn overflow-menu__trigger"
+                        :class="open ? 'is-open' : ''" :aria-expanded="open.toString()" aria-haspopup="menu"
+                        aria-label="Category actions" data-tip="Rename, hide or delete this category."
+                        @click="open = !open">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
+                </button>
+                <ul x-ref="list" class="overflow-menu__list overflow-menu__list--right" role="menu" x-show="open" x-cloak>
+                  <li role="none"><button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; startInspectorRename()">Rename...</button></li>
+                  <li role="none"><button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; openNotes(selCategory())">Notes...</button></li>
+                  <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                  <li role="none"><button type="button" role="menuitem" class="overflow-menu__item"
+                          @click="open = false; hideSelected()">Hide category</button></li>
+                  <li role="none"><button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                          @click="open = false; deleteCategoryRow(selCategory())">Delete category</button></li>
+                </ul>
+              </div>
+              <button type="button" class="btn btn--icon insp__iconbtn" x-show="inspectorDocked"
+                      @click="clearSel()" aria-label="Back to month overview" data-tip="Deselect (Escape does this too).">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+              </button>
+            </div>
           </div>
+          <template x-if="!renameEditing">
+            <h2 class="insp__title" x-text="selCategory()?.name || ''"></h2>
+          </template>
+          <template x-if="renameEditing">
+            <input class="input insp__rename" id="insp-rename" type="text" x-model="renameDraft"
+                   aria-label="Category name"
+                   @keydown.enter="commitInspectorRename()"
+                   @keydown.escape.stop="renameEditing = false"
+                   @blur="commitInspectorRename()">
+          </template>
         </header>
 
-        {# Summary: the number that matters, then how it came to be. #}
-        <section class="insp__summary" aria-label="Available breakdown">
-          <div class="insp__avail">
-            <span class="insp__avail-label">Available</span>
-            <strong class="insp__avail-num num" data-break="available"
-                    :class="(selRow()?.available || 0) < 0 ? 'amount--outflow' : ((selRow()?.available || 0) > 0 ? 'amount--inflow' : '')"
-                    x-text="formatCents(selRow()?.available || 0)"></strong>
+        {# Hero: the number, its status, and (with a goal) the goal line
+           with a fixed-length bar. Then the three terms behind it. #}
+        <section class="insp__hero" aria-label="Available">
+          <div class="insp__hero-top">
+            <div>
+              <span class="insp__avail-label">Available</span>
+              <strong class="insp__avail-num num" data-break="available"
+                      :class="(selRow()?.available || 0) < 0 ? 'amount--outflow' : ((selRow()?.available || 0) > 0 ? 'amount--inflow' : '')"
+                      x-text="formatCents(selRow()?.available || 0)"></strong>
+            </div>
+            <span class="insp__status" :class="'insp__status--' + selStatus().kind"
+                  x-show="selStatus().kind !== 'ok'" x-cloak x-text="selStatus().label"></span>
+          </div>
+          <div class="insp__goal-line" x-show="$store.budget.findGoal(sel.catId)" x-cloak>
+            <div class="goal-bar" :class="goalBarClass(sel.catId)"
+                 :style="'--pct:' + goalPercent(sel.catId)"
+                 role="progressbar" aria-label="Goal progress"
+                 :aria-valuenow="goalPercent(sel.catId)" aria-valuemin="0" aria-valuemax="100">
+              <span class="goal-bar__track"><span class="goal-bar__fill"></span></span>
+              <span class="goal-bar__cap" x-text="goalPercent(sel.catId) >= 100 ? '✓ 100%' : (goalPercent(sel.catId) + '%')"></span>
+            </div>
+            <p class="insp__goal-text" x-text="goalLine()"></p>
           </div>
           <dl class="insp__strip">
             <div data-tip="What rolled over from prior months. Negative balances do not roll; they come out of next month's Ready to Work.">
@@ -201,43 +234,51 @@
           </dl>
         </section>
 
-        {# Assign: type an amount, or take one of the fills. Payment pools
-           and income categories are not assigned directly. #}
+        {# Six months of outflow at a glance, with the average. #}
+        <section class="insp__spark" aria-label="Spending, last six months" x-show="selSpark().max > 0" x-cloak>
+          <div class="insp__spark-head">
+            <span class="insp__spark-title">Last 6 months</span>
+            <span class="insp__spark-avg num" x-text="'avg ' + formatCents(selSpark().avg) + '/mo'"></span>
+          </div>
+          {# Plain HTML bars: they scale with the pane without distorting,
+             and each one carries its month's amount as a tooltip. #}
+          <div class="insp__bars">
+            <template x-for="b in selSpark().bars" :key="'sp-' + b.month">
+              <div class="insp__bar-col" :data-tip="monthCardLabel(b.month) + ': ' + formatCents(b.out)">
+                <div class="insp__bar-track">
+                  <div class="insp__bar" :class="b.current ? 'is-current' : ''" :style="{ height: (b.out > 0 ? Math.max(4, b.pct) : 0) + '%' }"></div>
+                </div>
+                <span class="insp__bar-label" x-text="b.label"></span>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        {# Assign: the amount for this month, then suggestions that
+           would actually change something (zero and no-op fills are
+           not offered). Payment pools and income categories explain
+           themselves instead. #}
         <section class="insp__sec" aria-label="Assign">
           <template x-if="!assignReadOnly(selCategory() || {})">
             <div>
               <form class="insp__assign" @submit.prevent="commitAssignDraft()">
                 <label class="insp__assign-label" for="insp-assign">Assigned in <span x-text="monthCardLabel(sel.month, true)"></span></label>
                 <div class="insp__assign-row">
-                  <input class="input num" id="insp-assign" type="text" inputmode="decimal"
+                  <span class="insp__assign-cur" aria-hidden="true">$</span>
+                  <input class="input num insp__assign-input" id="insp-assign" type="text" inputmode="decimal"
                          x-model="assignDraft" placeholder="0.00"
                          data-tip="Type an amount, or an expression like 100+25."
                          @focus="$event.target.select()">
                   <button class="btn btn--primary btn--sm" type="submit">Assign</button>
                 </div>
               </form>
-              <div class="insp__fills" role="group" aria-label="Quick fills">
-                <button type="button" class="insp__fill" x-show="$store.budget.findGoal(sel.catId)" x-cloak
-                        :disabled="quickFillValue('goal') <= 0"
-                        :data-tip="quickFillValue('goal') > 0 ? 'Add what the goal still needs this month.' : 'The goal is already funded this month.'"
-                        @click="applyQuickFill('goal', 'Fund goal')">
-                  <span>Fund goal</span><span class="num" x-text="'+' + formatCents(quickFillValue('goal'))"></span>
-                </button>
-                <button type="button" class="insp__fill" :disabled="quickFillValue('last-assigned') <= 0"
-                        data-tip="Copy what you assigned last month."
-                        @click="applyQuickFill('last-assigned', 'Last month\'s assigned')">
-                  <span>Last assigned</span><span class="num" x-text="formatCents(quickFillValue('last-assigned'))"></span>
-                </button>
-                <button type="button" class="insp__fill" :disabled="quickFillValue('last-spent') <= 0"
-                        data-tip="Assign what this category actually spent last month."
-                        @click="applyQuickFill('last-spent', 'Last month\'s spending')">
-                  <span>Last spent</span><span class="num" x-text="formatCents(quickFillValue('last-spent'))"></span>
-                </button>
-                <button type="button" class="insp__fill" :disabled="quickFillValue('avg-3') <= 0"
-                        data-tip="Assign the average of the last three months of spending."
-                        @click="applyQuickFill('avg-3', '3-month average')">
-                  <span>3-month average</span><span class="num" x-text="formatCents(quickFillValue('avg-3'))"></span>
-                </button>
+              <div class="insp__chips" role="group" aria-label="Suggestions" x-show="suggestionList().length" x-cloak>
+                <template x-for="sug in suggestionList()" :key="'sug-' + sug.kind">
+                  <button type="button" class="insp__chip" :data-tip="sug.tip" @click="applyQuickFill(sug.kind, sug.undo)">
+                    <span x-text="sug.label"></span>
+                    <span class="num" x-text="sug.text"></span>
+                  </button>
+                </template>
               </div>
             </div>
           </template>
@@ -421,11 +462,6 @@
           </div>
         </section>
 
-        <section class="insp__sec insp__foot">
-          <button type="button" class="btn btn--ghost btn--sm"
-                  data-tip="Remove this category from the grid. Its money, activity and goal are kept; unhide it any time from the list below the grid."
-                  @click="hideSelected()">Hide category</button>
-        </section>
       </div>
     </template>
   </div>

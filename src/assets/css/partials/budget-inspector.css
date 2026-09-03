@@ -339,3 +339,80 @@
 /* Inspector bars: fixed track too, with the caption beside it. */
 .insp .goal-bar { width: auto; max-width: none; }
 .insp .goal-bar .goal-bar__track { flex: 0 0 9rem; width: 9rem; }
+
+/* ── Category view, second pass: hero, sparkline, chips, menu ─────── */
+.insp__head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2xs); }
+.insp__head-tools { display: inline-flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.insp__head .insp__title { margin-top: 2px; font-size: var(--fs-xl); }
+.insp__rename { margin-top: 2px; font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 700; }
+.insp__hero {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+  background: var(--bg-alt);
+  padding: var(--space-xs) var(--space-sm) var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+.insp__hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
+.insp__hero-top > div { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.insp__hero .insp__avail-num { font-size: var(--fs-3xl); line-height: 1.05; }
+.insp__status {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  color: var(--fg-muted);
+}
+.insp__status--funded { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 10%, var(--bg-elevated)); }
+.insp__status--partial { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated)); }
+.insp__status--needed { color: var(--warn, #8a5a00); border-color: color-mix(in srgb, var(--warn, #8a5a00) 40%, transparent); background: color-mix(in srgb, var(--warn, #8a5a00) 10%, var(--bg-elevated)); }
+.insp__status--over { color: var(--danger, #b04444); border-color: color-mix(in srgb, var(--danger, #b04444) 40%, transparent); background: color-mix(in srgb, var(--danger, #b04444) 10%, var(--bg-elevated)); }
+.insp__goal-line { margin-top: var(--space-2xs); }
+.insp__goal-line .goal-bar { margin-top: 0; }
+.insp__goal-text { margin: 4px 0 0; font-size: var(--fs-xs); color: var(--fg-muted); line-height: 1.4; }
+.insp__spark {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-input);
+  padding: var(--space-2xs) var(--space-sm) 4px;
+  margin-bottom: var(--space-xs);
+}
+.insp__spark-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2xs); }
+.insp__spark-title { font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); }
+.insp__spark-avg { font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.insp__bars { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 4px; }
+.insp__bar-col { display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-width: 0; }
+.insp__bar-track { height: 36px; display: flex; align-items: flex-end; }
+.insp__bar { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--border-strong, var(--border)); }
+.insp__bar.is-current { background: var(--accent); }
+.insp__bar-label { font-size: var(--fs-2xs); color: var(--fg-subtle); text-align: center; }
+.insp__assign-row { position: relative; }
+.insp__assign-cur { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--fg-muted); font-weight: 600; pointer-events: none; }
+.insp__assign-input { padding-left: 1.4rem; font-size: var(--fs-md); font-weight: 600; }
+.insp__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2xs); }
+.insp__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.insp__chip .num { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.insp__chip:hover { border-color: var(--accent); color: var(--fg); }
+.insp__chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.insp__eyebrow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The floating add button sits over the pane's bottom edge; leave room
+   so the last section can scroll clear of it. */
+.budget-inspector .insp { padding-bottom: 4rem; }

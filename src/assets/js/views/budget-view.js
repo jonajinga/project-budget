@@ -783,6 +783,82 @@ function budgetView() {
       if (this.budgetCollapsed) cls += (cls ? " " : "") + "budget--collapsed";
       return cls;
     },
+    /* ---- Inspector: hero status, goal line, sparkline, suggestions ---- */
+    startInspectorRename() {
+      this.renameDraft = (this.selCategory() || {}).name || "";
+      this.renameEditing = true;
+      this.$nextTick(function () { var el = document.getElementById("insp-rename"); if (el) { el.focus(); el.select(); } });
+    },
+    selStatus() {
+      if (!this.sel) return { kind: "none", label: "" };
+      var s = this.$store.budget;
+      var row = this.selRow() || {};
+      if ((row.available || 0) < 0) return { kind: "over", label: "Overspent" };
+      var g = s.findGoal(this.sel.catId);
+      if (g) {
+        var st = s.goalStatus(this.sel.catId, this.sel.month);
+        if (st === "funded" || st === "over") return { kind: "funded", label: "Funded" };
+        if (st === "partial") return { kind: "partial", label: "Partly funded" };
+        return { kind: "needed", label: "Needs funding" };
+      }
+      if ((row.available || 0) === 0) return { kind: "zero", label: "Nothing left" };
+      return { kind: "ok", label: "Available" };
+    },
+    goalLine() {
+      if (!this.sel) return "";
+      var s = this.$store.budget;
+      var g = s.findGoal(this.sel.catId);
+      if (!g) return "";
+      var row = this.selRow() || {};
+      var need = s.goalNeeded(this.sel.catId, this.sel.month) || 0;
+      var target = this.formatCents(g.target || 0);
+      var by = "";
+      if (g.type === "targetByDate" && g.byDate) {
+        var p = g.byDate.split("-").map(Number);
+        by = " by " + new Date(p[0], p[1] - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      }
+      var kind = g.type === "targetByDate" ? "saved" : (g.type === "refillUpTo" ? "balance" : "assigned this month");
+      var have = g.type === "targetByDate" || g.type === "refillUpTo" ? (row.available || 0) : (row.assigned || 0);
+      var tail = need > 0 ? " · " + this.formatCents(need) + " more this month" : " · on track";
+      return this.formatCents(have) + " of " + target + " " + kind + by + tail;
+    },
+    selSpark() {
+      if (!this.sel) return { bars: [], max: 0, avg: 0 };
+      var s = this.$store.budget;
+      var months = [];
+      var m = this.sel.month;
+      for (var i = 0; i < 6; i++) { months.unshift(m); m = this.prevMonthOf(m); }
+      var vals = months.map(function (mm) { return Math.max(0, -(s.activityFor(this.sel.catId, mm) || 0)); }, this);
+      var max = Math.max.apply(null, vals.concat([0]));
+      var self = this;
+      var prior = vals.slice(0, 5);
+      var avg = prior.length ? Math.round(prior.reduce(function (a, b) { return a + b; }, 0) / prior.length) : 0;
+      return {
+        max: max, avg: avg,
+        bars: months.map(function (mm, i) {
+          var out = vals[i];
+          return { month: mm, out: out, pct: max > 0 ? Math.round((out / max) * 100) : 0,
+                   label: self.monthCardLabel(mm, true).slice(0, 3), current: mm === self.sel.month };
+        }),
+      };
+    },
+    suggestionList() {
+      if (!this.sel) return [];
+      var s = this.$store.budget;
+      var out = [];
+      var cur = s.assignedFor(this.sel.catId, this.sel.month) || 0;
+      var add = function (kind, label, cents, undo, tip, plus) {
+        if (!(cents > 0)) return;
+        if (!plus && cents === cur) return; /* already exactly this */
+        out.push({ kind: kind, label: label, text: (plus ? "+" : "") + this.formatCents(cents), undo: undo, tip: tip });
+      }.bind(this);
+      if (s.findGoal(this.sel.catId)) add("goal", "Fund goal", this.quickFillValue("goal"), "Fund goal", "Add what the goal still needs this month.", true);
+      add("last-assigned", "Last month", this.quickFillValue("last-assigned"), "Last month's assigned", "Copy what you assigned last month.");
+      add("last-spent", "Last spent", this.quickFillValue("last-spent"), "Last month's spending", "Assign what this category spent last month.");
+      add("avg-3", "3-mo average", this.quickFillValue("avg-3"), "3-month average", "Assign the average of the last three months of spending.");
+      return out;
+    },
+
     /* ---- Inspector: assign field, section state, summaries ---- */
     secOpen: { goal: false, cut: false, move: false, notes: false, activity: true },
     assignDraft: "",
