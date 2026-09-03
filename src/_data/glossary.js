@@ -2,7 +2,7 @@ export default [
   {
     term: "401(k)",
     key: "401k",
-    body: "An employer-sponsored retirement account. Track it in Project Budget as a <a href=\"/glossary/#tracking-account\">tracking account</a> so contributions and growth show up in <a href=\"/glossary/#net-worth\">net worth</a> without inflating <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a>.",
+    body: "An employer-sponsored retirement account. Track it in Project Budget as a <a href=\"/glossary/#tracking-account\">tracking account</a> so contributions and growth show up in <a href=\"/glossary/#net-worth\">net worth</a> without inflating <a href=\"/glossary/#ready-to-assign\">Ready to Work</a>.",
   },
   {
     term: "Active profile",
@@ -52,7 +52,7 @@ export default [
   {
     term: "Carry-over",
     key: "carry-over",
-    body: "The <a href=\"/glossary/#available\">available</a> balance in a category at month-end rolls into the same category's starting balance next month. Negative available in an <a href=\"/glossary/#on-budget-account\">on-budget</a> category does not roll; it reduces next month's <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a>.",
+    body: "The <a href=\"/glossary/#available\">available</a> balance in a category at month-end rolls into the same category's starting balance next month. Negative available in an <a href=\"/glossary/#on-budget-account\">on-budget</a> category does not roll; it reduces next month's <a href=\"/glossary/#ready-to-assign\">Ready to Work</a>.",
   },
   {
     term: "Cash account",
@@ -62,7 +62,7 @@ export default [
   {
     term: "Cash-back",
     key: "cash-back",
-    body: "A reward some credit cards pay for purchases, usually a small percentage of spending. Record it as an <a href=\"/glossary/#inflow\">inflow</a> to <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a> when it posts, or directly to a category if it offsets a specific expense.",
+    body: "A reward some credit cards pay for purchases, usually a small percentage of spending. Record it as an <a href=\"/glossary/#inflow\">inflow</a> to <a href=\"/glossary/#ready-to-assign\">Ready to Work</a> when it posts, or directly to a category if it offsets a specific expense.",
   },
   {
     term: "Cash flow",
@@ -82,7 +82,7 @@ export default [
   {
     term: "Checking account",
     key: "checking-account",
-    body: "The everyday <a href=\"/glossary/#on-budget-account\">on-budget account</a> most people use for paychecks, bills, and debit-card spending. Its balance feeds <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a>.",
+    body: "The everyday <a href=\"/glossary/#on-budget-account\">on-budget account</a> most people use for paychecks, bills, and debit-card spending. Its balance feeds <a href=\"/glossary/#ready-to-assign\">Ready to Work</a>.",
   },
   {
     term: "Cleared",
@@ -187,7 +187,7 @@ export default [
   {
     term: "Inflow",
     key: "inflow",
-    body: "Money coming into an account — a paycheck, a refund, a gift, a transfer-in. Inflows to <a href=\"/glossary/#on-budget-account\">on-budget accounts</a> usually land in <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a> unless you direct them to a specific <a href=\"/glossary/#category\">category</a>.",
+    body: "Money coming into an account — a paycheck, a refund, a gift, a transfer-in. Inflows to <a href=\"/glossary/#on-budget-account\">on-budget accounts</a> usually land in <a href=\"/glossary/#ready-to-assign\">Ready to Work</a> unless you direct them to a specific <a href=\"/glossary/#category\">category</a>.",
   },
   {
     term: "IRA",
@@ -197,7 +197,7 @@ export default [
   {
     term: "KPI",
     key: "kpi",
-    body: "Key Performance Indicator — a single headline number, such as Ready to Assign or this month's <a href=\"/glossary/#savings-rate\">savings rate</a>, surfaced in a <a href=\"/glossary/#tile\">tile</a> at the top of a screen.",
+    body: "Key Performance Indicator — a single headline number, such as Ready to Work or this month's <a href=\"/glossary/#savings-rate\">savings rate</a>, surfaced in a <a href=\"/glossary/#tile\">tile</a> at the top of a screen.",
   },
   {
     term: "Loan",
@@ -247,7 +247,7 @@ export default [
   {
     term: "Move money",
     key: "move-money",
-    body: "Reassign already-assigned dollars from one <a href=\"/glossary/#category\">category</a> to another without touching <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a>. The everyday cure for an <a href=\"/glossary/#overspent\">overspent</a> envelope.",
+    body: "Reassign already-assigned dollars from one <a href=\"/glossary/#category\">category</a> to another without touching <a href=\"/glossary/#ready-to-assign\">Ready to Work</a>. The everyday cure for an <a href=\"/glossary/#overspent\">overspent</a> envelope.",
   },
   {
     term: "Net worth",
@@ -267,7 +267,7 @@ export default [
   {
     term: "On-budget account",
     key: "on-budget-account",
-    body: "An account whose balance contributes to <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a>. <a href=\"/glossary/#checking-account\">Checking</a>, <a href=\"/glossary/#savings-account\">savings</a>, <a href=\"/glossary/#cash-account\">cash</a>, and <a href=\"/glossary/#credit-card-account\">credit cards</a> are typically on-budget.",
+    body: "An account whose balance contributes to <a href=\"/glossary/#ready-to-assign\">Ready to Work</a>. <a href=\"/glossary/#checking-account\">Checking</a>, <a href=\"/glossary/#savings-account\">savings</a>, <a href=\"/glossary/#cash-account\">cash</a>, and <a href=\"/glossary/#credit-card-account\">credit cards</a> are typically on-budget.",
   },
   {
     term: "Outflow",
@@ -340,7 +340,7 @@ export default [
     body: "A shortcut that fills a category's <a href=\"/glossary/#assigned\">assigned</a> using last month's spending, last month's assigned, or the category's <a href=\"/glossary/#goal\">goal</a> target — one click instead of typing the number.",
   },
   {
-    term: "Ready to Assign",
+    term: "Ready to Work",
     key: "ready-to-assign",
     body: "Money you have received but not yet given a job. It comes from <a href=\"/glossary/#inflow\">inflow</a> transactions you marked as ready-to-assign and any unassigned balance carrying over from prior months.",
   },
@@ -452,7 +452,7 @@ export default [
   {
     term: "Tracking account",
     key: "tracking-account",
-    body: "An account whose balance counts toward <a href=\"/glossary/#net-worth\">net worth</a> but not toward <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a>. Investments, home value, vehicles, <a href=\"/glossary/#mortgage\">mortgages</a>, and <a href=\"/glossary/#loan\">loans</a> are tracking accounts.",
+    body: "An account whose balance counts toward <a href=\"/glossary/#net-worth\">net worth</a> but not toward <a href=\"/glossary/#ready-to-assign\">Ready to Work</a>. Investments, home value, vehicles, <a href=\"/glossary/#mortgage\">mortgages</a>, and <a href=\"/glossary/#loan\">loans</a> are tracking accounts.",
   },
   {
     term: "Tracking asset",
@@ -492,6 +492,6 @@ export default [
   {
     term: "Zero-based budget",
     key: "zero-based-budget",
-    body: "A budget where every dollar of <a href=\"/glossary/#ready-to-assign\">Ready to Assign</a> has been given a job — <a href=\"/glossary/#assigned\">assigned</a> to a category, saved toward a <a href=\"/glossary/#goal\">goal</a>, or set aside for a <a href=\"/glossary/#sinking-fund\">sinking fund</a> — so the unassigned total is zero. The discipline at the heart of <a href=\"/glossary/#envelope\">envelope</a> budgeting.",
+    body: "A budget where every dollar of <a href=\"/glossary/#ready-to-assign\">Ready to Work</a> has been given a job — <a href=\"/glossary/#assigned\">assigned</a> to a category, saved toward a <a href=\"/glossary/#goal\">goal</a>, or set aside for a <a href=\"/glossary/#sinking-fund\">sinking fund</a> — so the unassigned total is zero. The discipline at the heart of <a href=\"/glossary/#envelope\">envelope</a> budgeting.",
   },
 ];

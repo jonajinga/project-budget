@@ -48,7 +48,7 @@
          :class="$store.budget.readyToAssign() < 0 ? 'rec-summary__tile--outflow' : 'rec-summary__tile--inflow'"
          href="/app/budget/"
          data-tip="Dollars not yet assigned to any category this month. Click to open the budget.">
-        <span class="rec-summary__label">Ready to assign</span>
+        <span class="rec-summary__label">Ready to Work</span>
         <span class="rec-summary__value"
               :class="$store.budget.readyToAssign() < 0 ? 'amount--outflow' : ''"
               x-text="fmt($store.budget.readyToAssign())"></span>

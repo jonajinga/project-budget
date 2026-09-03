@@ -149,7 +149,7 @@ function budgetView() {
       if (window.PBDialog) {
         var ok = await window.PBDialog.confirm({
           title: "Clear available to $0?",
-          message: "Push Available to $0 for " + label + " in this month — pulls money back to Ready to Assign by lowering Assigned. Cmd/Ctrl+Z undoes.",
+          message: "Push Available to $0 for " + label + " in this month — pulls money back to Ready to Work by lowering Assigned. Cmd/Ctrl+Z undoes.",
           confirmLabel: "Clear available",
         });
         if (!ok) return;
@@ -191,7 +191,7 @@ function budgetView() {
       if (window.PBDialog) {
         var ok = await window.PBDialog.confirm({
           title: "Clear available to $0?",
-          message: "Push Available to $0 for " + label + " in this month — pulls money back to Ready to Assign by lowering Assigned. Cmd/Ctrl+Z undoes.",
+          message: "Push Available to $0 for " + label + " in this month — pulls money back to Ready to Work by lowering Assigned. Cmd/Ctrl+Z undoes.",
           confirmLabel: "Clear available",
         });
         if (!ok) return;
@@ -262,6 +262,7 @@ function budgetView() {
     inspectorDocked: false,
     inspectorOpen: true,
     noteDraft: "",
+    noteMonthDraft: "",
     renameEditing: false,
     renameDraft: "",
     selectCategory(c, month) {
@@ -289,6 +290,7 @@ function budgetView() {
       var s = this.$store.budget;
       var cat = s.findCategory(this.sel.catId);
       this.noteDraft = (cat && cat.note) || "";
+      this.noteMonthDraft = s.monthNote(this.sel.catId, this.sel.month);
       this.renameDraft = (cat && cat.name) || "";
       this.renameEditing = false;
       var g = s.findGoal(this.sel.catId);
@@ -301,6 +303,12 @@ function budgetView() {
     commitNote() {
       if (!this.sel) return;
       if (this.$store.budget.setCategoryNote(this.sel.catId, this.noteDraft)) {
+        this.$store.budget.pushToast("Note saved.");
+      }
+    },
+    commitMonthNote() {
+      if (!this.sel) return;
+      if (this.$store.budget.setMonthNote(this.sel.catId, this.sel.month, this.noteMonthDraft)) {
         this.$store.budget.pushToast("Note saved.");
       }
     },
@@ -334,6 +342,54 @@ function budgetView() {
       });
       out.sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); });
       return out.slice(0, 5);
+    },
+
+    /* ---- Notes: category-wide + per-month ------------------------ */
+    notesCat: null,
+    noteForm: { category: "", months: {} },
+    hasNotes(c) {
+      void this.$store.budget._listVersion;
+      var s = this.$store.budget;
+      if ((s.findCategory(c.id) || {}).note) return true;
+      var months = this.visibleMonths();
+      for (var i = 0; i < months.length; i++) {
+        if (s.monthNote(c.id, months[i])) return true;
+      }
+      return false;
+    },
+    notesTip(c) {
+      var s = this.$store.budget;
+      var parts = [];
+      var catNote = (s.findCategory(c.id) || {}).note;
+      if (catNote) parts.push(catNote);
+      var self = this;
+      this.visibleMonths().forEach(function (m) {
+        var n = s.monthNote(c.id, m);
+        if (n) parts.push(self.monthShortLabel(m) + ": " + n);
+      });
+      var tip = parts.join(" · ");
+      return tip.length > 220 ? tip.slice(0, 217) + "..." : tip;
+    },
+    openNotes(c) {
+      if (!c) return;
+      var s = this.$store.budget;
+      var months = {};
+      var self = this;
+      this.visibleMonths().forEach(function (m) { months[m] = s.monthNote(c.id, m); });
+      this.noteForm = { category: (s.findCategory(c.id) || {}).note || "", months: months };
+      this.notesCat = { id: c.id, name: c.name };
+    },
+    saveNotes() {
+      if (!this.notesCat) return;
+      var s = this.$store.budget;
+      var id = this.notesCat.id;
+      var changed = s.setCategoryNote(id, this.noteForm.category);
+      var self = this;
+      Object.keys(this.noteForm.months).forEach(function (m) {
+        if (s.setMonthNote(id, m, self.noteForm.months[m])) changed = true;
+      });
+      if (changed) s.pushToast("Notes saved.");
+      this.notesCat = null;
     },
 
     /* ---- Quick fills + month overview + hide (phase 4) ---------- */

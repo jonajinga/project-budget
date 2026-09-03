@@ -34,7 +34,7 @@ export const PANEL_BLOCKS = {
       kind: "kpis",
       kpis: [
         { label: "Net worth", value: money(store, store.netWorth()) },
-        { label: "Ready to assign", value: money(store, store.readyToAssign()) },
+        { label: "Ready to Work", value: money(store, store.readyToAssign()) },
         { label: "Month", value: store.currentMonth || "" },
       ],
     };
@@ -44,7 +44,7 @@ export const PANEL_BLOCKS = {
     return {
       kind: "kpis",
       kpis: [
-        { label: "Ready to assign", value: money(store, store.readyToAssign()) },
+        { label: "Ready to Work", value: money(store, store.readyToAssign()) },
         { label: "Net worth", value: money(store, store.netWorth()) },
         { label: "Overspent", value: String(store.overspentCount(store.currentMonth) || 0) },
       ],

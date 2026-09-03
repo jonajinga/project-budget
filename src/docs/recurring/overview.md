@@ -22,7 +22,7 @@ Each template has:
 
 - **Payee** — the merchant or counterparty
 - **Account** — where the transaction will land
-- **Category** — what envelope it pulls from (or *Ready to Assign* for income)
+- **Category** — what envelope it pulls from (or *Ready to Work* for income)
 - **Amount** — negative for outflows, positive for inflows
 - **Memo** — optional, pre-filled on every posting
 - **Frequency** — how often it recurs (see [Frequencies and cadence](/docs/recurring/frequencies/))

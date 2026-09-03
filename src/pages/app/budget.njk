@@ -66,7 +66,7 @@ eleventyExcludeFromCollections: true
 
     <div class="budget__toolbar">
       <div class="cluster" style="gap: var(--space-2xs);">
-        {# Paired month-level stats — Ready to Assign (the headline,
+        {# Paired month-level stats — Ready to Work (the headline,
            accent-filled) and Assigned (the supporting context, neutral
            outline). Same component, same shape, different emphasis,
            so the eye reads them as one block. #}
@@ -77,8 +77,8 @@ eleventyExcludeFromCollections: true
               :class="rtaCents() < 0 ? 'budget-stat--danger' : (rtaCents() === 0 ? 'budget-stat--muted' : '')"
               :data-tip="(rtaCents() < 0 ? 'You assigned more than you have. ' : (rtaCents() === 0 ? 'Every dollar is assigned. ' : 'Inflow not yet given a job. ')) + 'Click for the breakdown and overspending fixes.'"
               @click="openOverview()"
-              :aria-label="'Ready to assign: ' + formatCents(rtaCents()) + '. Open the month overview.'">
-          <span class="budget-stat__label">Ready to assign</span>
+              :aria-label="'Ready to Work: ' + formatCents(rtaCents()) + '. Open the month overview.'">
+          <span class="budget-stat__label">Ready to Work</span>
           <strong class="budget-stat__value" x-text="formatCents(rtaCents())"></strong>
         </button>
         <span class="budget-stat"
@@ -194,11 +194,14 @@ eleventyExcludeFromCollections: true
           <span class="budget__category" aria-hidden="true"></span>
           <template x-for="vm in visibleMonths()" :key="'mh-' + vm">
             <div class="budget__month-head">
-              <strong x-text="monthShortLabel(vm)"></strong>
-              <span class="budget__month-head-rta"
-                    :class="rtaCents(vm) < 0 ? 'amount--outflow' : ''"
-                    :data-tip="'Ready to assign in ' + monthShortLabel(vm) + '.'"
-                    x-text="'RTA ' + fmtGrid(rtaCents(vm))"></span>
+              <strong class="budget__month-head-name" x-text="monthShortLabel(vm)"></strong>
+              <button type="button" class="budget__month-head-rtw"
+                      :class="rtaCents(vm) < 0 ? 'amount--outflow' : ''"
+                      :data-tip="'Ready to Work in ' + monthShortLabel(vm) + ' - click for the breakdown and actions.'"
+                      :aria-label="'Ready to Work in ' + monthShortLabel(vm) + ': ' + formatCents(rtaCents(vm)) + '. Open the month overview.'"
+                      @click="openOverview()">
+                Ready to Work <span class="num" x-text="fmtGrid(rtaCents(vm))"></span>
+              </button>
             </div>
           </template>
           <span class="budget__row-actions" aria-hidden="true"></span>
@@ -327,6 +330,13 @@ eleventyExcludeFromCollections: true
                             x-cloak
                             :data-tip="'Planned cut: ' + cutBadgeText(c.id) + ' against the 3-month baseline. Details in the inspector.'"
                             x-text="cutBadgeText(c.id)"></span>
+                      <button type="button" class="note-ind"
+                              x-show="hasNotes(c)" x-cloak
+                              :data-tip="notesTip(c)"
+                              :aria-label="'Notes for ' + c.name"
+                              @click="openNotes(c)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
+                      </button>
                       <span class="goal-badge"
                             x-show="$store.budget.findGoal(c.id)"
                             x-cloak
@@ -393,7 +403,7 @@ eleventyExcludeFromCollections: true
                           <span class="budget__assigned-locked num"
                                 :data-tip="$store.budget.isPaymentCategory(c.id)
                                   ? 'Payment pools are funded with Move money, not direct assignment.'
-                                  : 'Income categories receive money from transactions. Assign it from Ready to Assign instead.'"
+                                  : 'Income categories receive money from transactions. Assign it from Ready to Work instead.'"
                                 x-text="formatAssigned($store.budget.assignedFor(c.id, vm))"></span>
                         </template>
                       </div>
@@ -426,6 +436,10 @@ eleventyExcludeFromCollections: true
                             <li role="none">
                               <button type="button" role="menuitem" class="overflow-menu__item"
                                       @click="open = false; openAutoAssign({ kind: 'category', name: c.name, id: c.id, month: vm })">Auto-assign…</button>
+                            </li>
+                            <li role="none">
+                              <button type="button" role="menuitem" class="overflow-menu__item"
+                                      @click="open = false; openNotes(c)">Notes…</button>
                             </li>
                             <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
                             <li role="none">
@@ -486,7 +500,7 @@ eleventyExcludeFromCollections: true
             <div><dt>Available</dt>
               <dd :class="monthlyAvailableTotal(vm) < 0 ? 'amount--outflow' : 'amount--inflow'"
                   x-text="formatCents(monthlyAvailableTotal(vm))"></dd></div>
-            <div><dt>Ready to assign</dt>
+            <div><dt>Ready to Work</dt>
               <dd :class="rtaCents(vm) < 0 ? 'amount--outflow' : ''"
                   x-text="formatCents(rtaCents(vm))"></dd></div>
           </dl>
@@ -623,7 +637,7 @@ eleventyExcludeFromCollections: true
         <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAssigned('selection')"
                 data-tip="Reset Assigned to $0 for every selected category in this month.">Clear assigned</button>
         <button type="button" class="btn btn--secondary btn--sm" @click="bulkClearAvailable('selection')"
-                data-tip="Push Available to $0 for every selected category — pulls money back to Ready to Assign.">Clear available</button>
+                data-tip="Push Available to $0 for every selected category — pulls money back to Ready to Work.">Clear available</button>
       </span>
       <span class="bulk-actions-bar__more bulk-actions-bar__more--mobile">
         {% call overflow(label="More bulk actions") %}
@@ -646,6 +660,42 @@ eleventyExcludeFromCollections: true
      values as a named template, or apply a saved template to the
      current month. Templates live on the profile under
      `budgetTemplates`. #}
+  {# Notes modal - the category-wide note plus one note per visible
+     month. Reached from the row's note icon or any month kebab. #}
+  <template x-if="notesCat">
+    <div class="modal-backdrop" @click.self="notesCat = null"
+         @keydown.escape.window="notesCat = null">
+      <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="bd-notes-title">
+        <button class="modal__close" type="button" @click="notesCat = null" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <h2 class="modal__title" id="bd-notes-title">
+          Notes · <span x-text="notesCat?.name"></span>
+        </h2>
+        <form @submit.prevent="saveNotes()">
+          <div class="field">
+            <label class="field__label" for="bd-note-cat">Category note</label>
+            <textarea class="input" id="bd-note-cat" rows="2" x-model="noteForm.category"
+                      placeholder="Applies to every month"></textarea>
+          </div>
+          <template x-for="vm in visibleMonths()" :key="'nf-' + vm">
+            <div class="field">
+              <label class="field__label" :for="'bd-note-' + vm"
+                     x-text="monthShortLabel(vm) + ' note'"></label>
+              <textarea class="input" :id="'bd-note-' + vm" rows="2"
+                        x-model="noteForm.months[vm]"
+                        :placeholder="'Just for ' + monthShortLabel(vm)"></textarea>
+            </div>
+          </template>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Save notes</button>
+            <button class="btn btn--ghost" type="button" @click="notesCat = null">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
   <template x-if="templatesOpen">
   <div class="modal-backdrop" @click.self="templatesOpen = false" @keydown.escape.window="templatesOpen = false">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tpl-title" style="max-width: 560px;">

@@ -36,7 +36,7 @@ The *Visa payment* category doesn't care. It earmarks the full $48 anyway — th
 
 Open the red *Groceries* row. Click Available, pick *Move money from…*, and pull $75 out of *Just for Fun*. *Groceries* returns to zero. *Visa payment* is untouched (it was already correct).
 
-If you don't fix it, next month's [Ready to Assign](/glossary/#ready-to-assign) starts $75 lower. The card still gets paid.
+If you don't fix it, next month's [Ready to Work](/glossary/#ready-to-assign) starts $75 lower. The card still gets paid.
 
 ## Day 28: statement arrives
 
@@ -73,7 +73,7 @@ Treat as a transfer from *Visa* to *Cash on hand* (or wherever the cash went). T
 
 ### Reward redemption as statement credit
 
-A statement credit reduces the Visa balance. Enter it as account *Visa*, amount +$X, category *Ready to Assign* (the special inflow category). This adds $X to RTA — you can now assign it. *Visa payment* Activity decreases by $X automatically because the credit also reduces what you owe.
+A statement credit reduces the Visa balance. Enter it as account *Visa*, amount +$X, category *Ready to Work* (the special inflow category). This adds $X to RTA — you can now assign it. *Visa payment* Activity decreases by $X automatically because the credit also reduces what you owe.
 
 ## A common misconception
 

@@ -17,9 +17,9 @@ Every category row shows three numbers, once per visible month:
 
 The 1 / 2 / 3 picker in the toolbar shows up to three month columns side by side (on wide screens; phones stay single-month). The leftmost column is the anchor month; the extra columns run forward so you can budget ahead. Editing a cell writes to its own column's month.
 
-## Ready to Assign
+## Ready to Work
 
-The stat at the top of [Budget](/app/budget/) shows the dollars that have entered an on-budget account but haven't been given a job yet. Click it: the month overview breaks the number down — inflow, everything assigned so far, and overspending lost (overspending in a prior month doesn't follow the category; it comes out of Ready to Assign the next month). Every overspent category is listed there with a one-click cover from the category holding the most available.
+The stat at the top of [Budget](/app/budget/) shows the dollars that have entered an on-budget account but haven't been given a job yet. Click it: the month overview breaks the number down — inflow, everything assigned so far, and overspending lost (overspending in a prior month doesn't follow the category; it comes out of Ready to Work the next month). Every overspent category is listed there with a one-click cover from the category holding the most available.
 
 ## Quick budget
 

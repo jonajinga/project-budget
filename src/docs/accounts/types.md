@@ -7,7 +7,7 @@ order: 1
 
 ## On-budget accounts
 
-These accounts contribute to Ready to Assign. Inflows can be assigned; outflows draw from the categories they're tagged to.
+These accounts contribute to Ready to Work. Inflows can be assigned; outflows draw from the categories they're tagged to.
 
 - **Checking** — your everyday spending account. Most transactions start here.
 - **Savings** — money set aside for goals. Still on-budget, since you might shift dollars between it and checking.
@@ -16,7 +16,7 @@ These accounts contribute to Ready to Assign. Inflows can be assigned; outflows 
 
 ## Off-budget tracking accounts
 
-These contribute to **net worth** but not to Ready to Assign. You use them to keep an honest picture of where you stand without having to assign their balances.
+These contribute to **net worth** but not to Ready to Work. You use them to keep an honest picture of where you stand without having to assign their balances.
 
 - **Tracking asset** — investments, home value, vehicle value. Update the balance occasionally; transactions are optional.
 - **Tracking liability** — mortgage, auto loan, student loan. Stored as a negative balance.

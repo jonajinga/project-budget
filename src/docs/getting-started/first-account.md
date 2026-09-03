@@ -15,14 +15,14 @@ Open [Accounts](/app/accounts/) and add accounts in this order — it makes the 
 2. **Savings** — even if it's just an emergency fund.
 3. **Every credit card you actively use** — the [Credit Card Payment](/glossary/#credit-card-payment-category) category is created for each one.
 4. **Cash on hand** — optional; only worth tracking if you handle cash regularly.
-5. **Tracking accounts** — investments, your home, vehicle loans, the mortgage. These don't affect [Ready to Assign](/glossary/#ready-to-assign) but they show up in net worth.
+5. **Tracking accounts** — investments, your home, vehicle loans, the mortgage. These don't affect [Ready to Work](/glossary/#ready-to-assign) but they show up in net worth.
 
 ## The opening balance
 
 Project Budget asks for one number when you add an account: today's balance. Whatever's in there right now.
 
-- For on-budget accounts (checking / savings / cash), that opening balance becomes an inflow tagged *Starting balance* and lands in Ready to Assign. You decide what categories it funds.
-- For credit cards, the opening balance is typically negative (you owe money). It does **not** add to Ready to Assign — instead, the same amount appears as a pre-assigned debt in the card's payment category.
+- For on-budget accounts (checking / savings / cash), that opening balance becomes an inflow tagged *Starting balance* and lands in Ready to Work. You decide what categories it funds.
+- For credit cards, the opening balance is typically negative (you owe money). It does **not** add to Ready to Work — instead, the same amount appears as a pre-assigned debt in the card's payment category.
 - For tracking accounts, the balance is recorded but no Ready-to-Assign inflow is created.
 
 ## Account groups

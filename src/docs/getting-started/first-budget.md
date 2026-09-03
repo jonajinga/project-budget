@@ -1,11 +1,11 @@
 ---
 title: "Your first budget"
-subtitle: "Walk through one assigning session from zero categories to zero Ready to Assign."
+subtitle: "Walk through one assigning session from zero categories to zero Ready to Work."
 category: "getting-started"
 order: 5
 ---
 
-The first time you open [Budget](/app/budget/) after creating a profile, it's empty. No groups, no categories, [Ready to Assign](/glossary/#ready-to-assign) equal to the sum of your on-budget account balances. This page walks through one complete assigning session.
+The first time you open [Budget](/app/budget/) after creating a profile, it's empty. No groups, no categories, [Ready to Work](/glossary/#ready-to-assign) equal to the sum of your on-budget account balances. This page walks through one complete assigning session.
 
 ## 1. Create category groups
 
@@ -29,7 +29,7 @@ Inside each group, add the specific lines. Three principles:
 
 ## 3. Assign every dollar
 
-Back on [Budget](/app/budget/), Ready to Assign is the cash sitting in your on-budget accounts. Click into each category's **Assigned** column and type a dollar amount. The Ready-to-Assign counter at the top ticks down.
+Back on [Budget](/app/budget/), Ready to Work is the cash sitting in your on-budget accounts. Click into each category's **Assigned** column and type a dollar amount. The Ready-to-Assign counter at the top ticks down.
 
 The order most people find easiest:
 
@@ -38,7 +38,7 @@ The order most people find easiest:
 3. Fund Quality of Life — groceries, gas, dining.
 4. Whatever's left, push into Savings Goals or Fun.
 
-When Ready to Assign hits zero, every dollar has a job. That's the goal of every month going forward.
+When Ready to Work hits zero, every dollar has a job. That's the goal of every month going forward.
 
 ## 4. Use Auto-assign for shortcuts
 
@@ -52,7 +52,7 @@ Goals turn fuzzy intentions into specific monthly targets. See [Goals](/docs/env
 
 That's the budget telling you the truth. Two options:
 
-- Lower assignments in lower-priority categories until Ready to Assign reaches zero.
+- Lower assignments in lower-priority categories until Ready to Work reaches zero.
 - Leave under-funded categories at zero this month and re-evaluate when more income arrives.
 
 You haven't done anything wrong — you've made the gap visible for the first time.

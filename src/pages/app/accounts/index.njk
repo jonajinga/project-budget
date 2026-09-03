@@ -55,7 +55,7 @@ eleventyExcludeFromCollections: true
       <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
       <h2 class="modal__title" id="acct-help-title">About accounts</h2>
       <div class="prose">
-        <p>Cash, checking, savings, and credit-card accounts are <strong>on-budget</strong>: every dollar in them needs to be assigned to a category. Investment and loan accounts are <strong>tracking</strong>: they count toward net worth but do not affect Ready to Assign.</p>
+        <p>Cash, checking, savings, and credit-card accounts are <strong>on-budget</strong>: every dollar in them needs to be assigned to a category. Investment and loan accounts are <strong>tracking</strong>: they count toward net worth but do not affect Ready to Work.</p>
         <p><strong>Reorder:</strong> use the Move up / Move down items in each row's kebab menu (⋮).</p>
       </div>
       <div class="form-actions">
@@ -311,7 +311,7 @@ eleventyExcludeFromCollections: true
           <div class="field">
             <label class="field__label" for="acct-type">Type</label>
             <select class="select" id="acct-type" x-model="newAccount.type"
-                    data-tip="On-budget: checking, savings, cash, credit card — affect Ready to Assign. Tracking: investments and loans — affect net worth only.">
+                    data-tip="On-budget: checking, savings, cash, credit card — affect Ready to Work. Tracking: investments and loans — affect net worth only.">
               <template x-for="t in $store.budget.ACCOUNT_TYPES" :key="t.value">
                 <option :value="t.value" x-text="t.label"></option>
               </template>
@@ -375,7 +375,7 @@ eleventyExcludeFromCollections: true
                 <option :value="t.value" x-text="t.label"></option>
               </template>
             </select>
-            <p class="field__hint">Changing the type also flips whether the account counts toward Ready to Assign.</p>
+            <p class="field__hint">Changing the type also flips whether the account counts toward Ready to Work.</p>
           </div>
           <div class="field">
             <label class="field__label" for="edit-group">Group</label>

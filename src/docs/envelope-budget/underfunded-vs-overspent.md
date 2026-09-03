@@ -23,7 +23,7 @@ Example: *Dining out* had $50 available. You spent $73 on debit. Available is no
 
 **The fix:** move $23 in from another category. Click the available cell, pick *Move money from…*, choose a category with surplus, confirm. The red disappears.
 
-If you don't move money, the deficit silently reduces next month's [Ready to Assign](/glossary/#ready-to-assign) by $23 when the month rolls over. The category's [Carry-over](/glossary/#carry-over) resets to zero — you don't keep digging a deeper hole. See [Carry-over rules](/docs/envelope-budget/carry-over-rules/).
+If you don't move money, the deficit silently reduces next month's [Ready to Work](/glossary/#ready-to-assign) by $23 when the month rolls over. The category's [Carry-over](/glossary/#carry-over) resets to zero — you don't keep digging a deeper hole. See [Carry-over rules](/docs/envelope-budget/carry-over-rules/).
 
 ## Overspent (credit card)
 
@@ -31,7 +31,7 @@ Credit-card overspending is a different animal. When you spend $73 on a card but
 
 **The fix:** same as cash — move $23 from another category into *Dining out*. The Available there returns to zero. The payment category doesn't change.
 
-If you don't move money, the same thing happens at month-end: next month's Ready to Assign drops by $23. The card still gets paid; you just take the dent in next month's starting position.
+If you don't move money, the same thing happens at month-end: next month's Ready to Work drops by $23. The card still gets paid; you just take the dent in next month's starting position.
 
 ## How to spot the difference quickly
 

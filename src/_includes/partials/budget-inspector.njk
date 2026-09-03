@@ -72,10 +72,10 @@
                 <dd data-rta="inflow" x-text="formatCents(rtaBreak(vm).inflow)"></dd></div>
               <div><dt data-tip="Everything assigned to categories, this month and before.">Assigned so far</dt>
                 <dd data-rta="assigned" x-text="'-' + formatCents(rtaBreak(vm).assigned)"></dd></div>
-              <div><dt data-tip="Overspending in PRIOR months does not follow the category - it comes out of Ready to Assign here.">Overspending lost</dt>
+              <div><dt data-tip="Overspending in PRIOR months does not follow the category - it comes out of Ready to Work here.">Overspending lost</dt>
                 <dd data-rta="lost" :class="rtaBreak(vm).lost > 0 ? 'amount--outflow' : ''"
                     x-text="'-' + formatCents(rtaBreak(vm).lost)"></dd></div>
-              <div class="budget-inspector__break-total"><dt>Ready to assign</dt>
+              <div class="budget-inspector__break-total"><dt>Ready to Work</dt>
                 <dd data-rta="rta" :class="rtaBreak(vm).rta < 0 ? 'amount--outflow' : 'amount--inflow'"
                     x-text="formatCents(rtaBreak(vm).rta)"></dd></div>
             </dl>
@@ -115,7 +115,7 @@
               <dd data-cuts="annual" x-text="formatCents($store.budget.cutsSummaryFor($store.budget.currentMonth).annualPlanned)"></dd></div>
             <div><dt data-tip="Planned monthly savings as a share of your average monthly inflow (last 3 months).">Share of income</dt>
               <dd x-text="$store.budget.cutsSummaryFor($store.budget.currentMonth).pctOfAvgInflow + '%'"></dd></div>
-            <div><dt data-tip="Each achieved month leaves this much more in Ready to Assign than the baseline trajectory.">Ready to assign</dt>
+            <div><dt data-tip="Each achieved month leaves this much more in Ready to Work than the baseline trajectory.">Ready to Work</dt>
               <dd x-text="'+' + formatCents($store.budget.cutsSummaryFor($store.budget.currentMonth).projectedRtaDelta) + '/mo'"></dd></div>
             <div x-show="$store.budget.ageOfMoneyStat() != null" x-cloak>
               <dt data-tip="How old the dollars you spend are (YNAB's metric) - and where the cuts would push it.">Age of money</dt>
@@ -177,7 +177,7 @@
            time anywhere in the app. Exact cents, always. #}
         <section class="budget-inspector__section" aria-label="Available breakdown">
           <dl class="budget-inspector__break">
-            <div><dt data-tip="What rolled over from prior months (negative balances do not roll - they reduce the next month's Ready to Assign instead).">Carry-in</dt>
+            <div><dt data-tip="What rolled over from prior months (negative balances do not roll - they reduce the next month's Ready to Work instead).">Carry-in</dt>
               <dd data-break="carryIn" x-text="formatCents(selRow()?.carryIn || 0)"></dd></div>
             <div><dt>Assigned</dt>
               <dd data-break="assigned" x-text="formatCents(selRow()?.assigned || 0)"></dd></div>
@@ -226,10 +226,15 @@
 
         {# Notes - per-category, persistent (commit on blur only). #}
         <section class="budget-inspector__section">
-          <label class="field__label" for="insp-note">Notes</label>
+          <label class="field__label" for="insp-note">Category note</label>
           <textarea class="input budget-inspector__note" id="insp-note" rows="2"
                     x-model="noteDraft" @blur="commitNote()"
-                    placeholder="e.g. Costco run twice a month"></textarea>
+                    placeholder="Applies to every month"></textarea>
+          <label class="field__label" for="insp-note-month"
+                 x-text="monthShortLabel(sel.month) + ' note'"></label>
+          <textarea class="input budget-inspector__note" id="insp-note-month" rows="2"
+                    x-model="noteMonthDraft" @blur="commitMonthNote()"
+                    :placeholder="'Just for ' + monthShortLabel(sel.month)"></textarea>
         </section>
 
         {# Goal - status + inline edit; replaces the goal modal. #}

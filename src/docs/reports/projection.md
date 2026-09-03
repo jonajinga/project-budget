@@ -22,7 +22,7 @@ projected balance(account, month) =
 
 Goal funding is layered separately:
 
-- *Monthly fixed* goals contribute their target as an outflow from Ready to Assign each month.
+- *Monthly fixed* goals contribute their target as an outflow from Ready to Work each month.
 - *Reach a target by a date* goals contribute their per-month need.
 - *Monthly top-up* and *Refill up to a balance* goals contribute the average top-up / refill of the last 3 months.
 

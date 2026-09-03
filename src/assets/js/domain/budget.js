@@ -7,7 +7,7 @@
    - "Inflow to budget" = any transaction with amount > 0, categoryId === null,
      transferTxnId === null. The user can override by categorizing income.
    - On-budget overspending in month M doesn't roll into month M+1 — instead,
-     it reduces month M+1's Ready to Assign (the overspending was funded by
+     it reduces month M+1's Ready to Work (the overspending was funded by
      RTA, even if no category was assigned to cover it).
    - Credit-card payment categories compute activity from card spending and
      card payments rather than from direct transactions on that category.
@@ -223,7 +223,7 @@ export function totalInflowToBudget(profile, month) {
   return sum;
 }
 
-/* Ready to Assign at `month`:
+/* Ready to Work at `month`:
      inflow_through_end_of_month
    - total_assigned_through_month
    - overspending_lost_in_prior_months

@@ -26,13 +26,13 @@ The two are linked. Editing one updates the other. Deleting one deletes both. Th
 
 ## What transfers do to the budget
 
-For two on-budget accounts (checking → savings), nothing changes in [Ready to Assign](/glossary/#ready-to-assign), category Available, or net worth. You moved cash from one envelope-eligible bucket to another. No category is touched.
+For two on-budget accounts (checking → savings), nothing changes in [Ready to Work](/glossary/#ready-to-assign), category Available, or net worth. You moved cash from one envelope-eligible bucket to another. No category is touched.
 
 For on-budget → credit card (paying a card), the source account drops, the card account rises (less debt), and the [Credit Card Payment](/glossary/#credit-card-payment-category) category's Available drops by the payment amount — cash that was earmarked is now spent. See [Credit-card workflow](/docs/accounts/credit-card-workflow/).
 
-For on-budget → tracking (moving cash to a 401k contribution that's a tracking-asset account), the source account drops and the tracking account rises. Ready to Assign drops too, because the cash left an on-budget account. This is the right behavior — you no longer have those dollars to spend.
+For on-budget → tracking (moving cash to a 401k contribution that's a tracking-asset account), the source account drops and the tracking account rises. Ready to Work drops too, because the cash left an on-budget account. This is the right behavior — you no longer have those dollars to spend.
 
-For tracking → on-budget (moving cash out of a brokerage to checking), the tracking account drops and the on-budget account rises. Ready to Assign rises by the transferred amount.
+For tracking → on-budget (moving cash out of a brokerage to checking), the tracking account drops and the on-budget account rises. Ready to Work rises by the transferred amount.
 
 ## What transfers are not
 
@@ -48,7 +48,7 @@ For tracking → on-budget (moving cash out of a brokerage to checking), the tra
 
 **Sending money via Venmo / Zelle to a friend.** Not a transfer. That's an outflow to a friend (use a *Gifts* or *Reimbursements* category). The friend is not your account.
 
-**Receiving money via Venmo / Zelle from a friend.** Not a transfer either. That's an inflow categorized to whatever the money was for — if they paid you back for dinner, category it to *Dining out* as a positive (refilling the envelope), not to Ready to Assign.
+**Receiving money via Venmo / Zelle from a friend.** Not a transfer either. That's an inflow categorized to whatever the money was for — if they paid you back for dinner, category it to *Dining out* as a positive (refilling the envelope), not to Ready to Work.
 
 ## Transfers in imports
 

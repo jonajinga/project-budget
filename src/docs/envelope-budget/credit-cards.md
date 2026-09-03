@@ -23,4 +23,4 @@ Make a transfer from checking to Visa. Project Budget creates the paired entries
 
 ## Overspending on the card
 
-If you spend $60 on groceries but only $40 was budgeted, *Groceries* goes red and the deficit reduces next month's Ready to Assign. The Visa payment category still earmarks the full $60 you owe, so the bill is funded regardless.
+If you spend $60 on groceries but only $40 was budgeted, *Groceries* goes red and the deficit reduces next month's Ready to Work. The Visa payment category still earmarks the full $60 you owe, so the bill is funded regardless.

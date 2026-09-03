@@ -20,5 +20,5 @@ Project Budget runs entirely in your browser. There is no account to create, no 
 1. Create a profile from the [Profiles](/app/profiles/) page (or accept the sample profile that loads on first visit).
 2. On [Accounts](/app/accounts/), add a checking account with its current balance, a savings account, and any credit card.
 3. On [Budget](/app/budget/), use the group / category menus (⋮) to add groups (for example *Immediate Obligations*, *True Expenses*, *Quality of Life*) and categories inside them.
-4. Enter your most recent paycheck on the [Register](/app/register/) — leave it uncategorized to make it Ready to Assign.
-5. Back on [Budget](/app/budget/), assign that money to categories until Ready to Assign reaches zero.
+4. Enter your most recent paycheck on the [Register](/app/register/) — leave it uncategorized to make it Ready to Work.
+5. Back on [Budget](/app/budget/), assign that money to categories until Ready to Work reaches zero.

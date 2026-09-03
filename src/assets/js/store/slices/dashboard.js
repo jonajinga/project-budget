@@ -166,7 +166,7 @@ export const dashboardSlice = {
       }
     });
 
-    /* Rule 3: more than $100 sitting in Ready to Assign — nudge the
+    /* Rule 3: more than $100 sitting in Ready to Work — nudge the
        user to assign it before it loses its job. */
     var rta = this.readyToAssign(this.currentMonth);
     if (rta > 10000) {

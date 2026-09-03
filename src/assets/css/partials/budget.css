@@ -456,6 +456,16 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget--m4 .budget__row-actions,
   .budget--m5 .budget__row-actions,
   .budget--m6 .budget__row-actions { grid-area: auto; }
+  /* The multi-month section is a horizontal scroll container, which
+     makes it the sticky ancestor: the headers pinned 65px down INSIDE
+     it and left a permanent blank band. Static here; single-month
+     keeps its viewport-sticky headers. */
+  .budget--m2 .budget__headers, .budget--m3 .budget__headers,
+  .budget--m4 .budget__headers, .budget--m5 .budget__headers,
+  .budget--m6 .budget__headers {
+    position: static;
+  }
+
   /* Per-month kebab cell: compact, centered trigger. */
   .budget--m2 .budget__row .budget__row-actions, .budget--m3 .budget__row .budget__row-actions,
   .budget--m4 .budget__row .budget__row-actions, .budget--m5 .budget__row .budget__row-actions,
@@ -545,18 +555,33 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   .budget__month-head {
     grid-column: span 4;
     display: flex;
-    align-items: baseline;
-    justify-content: flex-end;
-    gap: var(--space-2xs);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1px;
     font-size: var(--fs-sm);
-    padding-right: 0.65rem;
+    padding: var(--space-3xs) 0.65rem;
     border-left: 1px solid var(--border-soft);
   }
-  .budget__month-head-rta {
+  .budget__month-head-name { font-size: var(--fs-md); }
+  .budget__month-head-rtw {
+    background: transparent;
+    border: 0;
+    padding: 2px 0;
+    margin: -2px 0;
+    font: inherit;
     font-size: var(--fs-xs);
     color: var(--fg-muted);
     font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    display: inline-flex;
+    gap: var(--space-3xs);
+    align-items: baseline;
   }
+  .budget__month-head-rtw .num { font-weight: 700; color: var(--accent); }
+  .budget__month-head-rtw.amount--outflow .num { color: var(--danger, #b04444); }
+  .budget__month-head-rtw:hover { text-decoration: underline; color: var(--fg); }
+  .budget__month-head-rtw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 }
 
 /* Collapsed grid: only the HUD and the Month total remain, so the
@@ -681,6 +706,28 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
   margin: -4px 0;
 }
 .budget__cat-name--btn:hover { color: var(--accent); text-decoration: underline; }
+/* Names are never silently amputated: wrap to two lines before any
+   ellipsis, both for category buttons and group names. Full details
+   are one click away in the inspector. */
+.budget__cat-name,
+.budget__cat-name--btn {
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+.group-toggle { min-width: 0; }
+.group-toggle strong {
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
 .budget__cat-name--btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .budget__cat-name {
   /* flex: 1 lets the name grow to fill available width AFTER the
@@ -690,9 +737,14 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
      to the next line via flex-wrap above. */
   flex: 1 1 auto;
   min-width: 4ch;
+  /* Two-line wrap instead of a one-line amputation - names should
+     never be silently cut off. */
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
 .budget__row-actions { flex: 0 0 auto; max-width: 100%; flex-wrap: wrap; }
 /* Mobile: let the name take its natural width (no ellipsis). */
@@ -786,9 +838,15 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     white-space: nowrap;
   }
   .budget__group-header .group-toggle strong {
-    white-space: nowrap;
+    /* Same rule as category names: wrap to two lines, never amputate
+       to "Transpo...". */
+    white-space: normal;
     overflow: hidden;
-    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+    text-align: left;
   }
 }
 @media (hover: none) {
@@ -847,6 +905,23 @@ body:has(.modal-backdrop:not([style*="display: none"])) .bulk-actions-bar {
     padding: 0.15rem 0.55rem;
   }
 }
+/* Note indicator: shows when a category carries any note (category
+   wide or per visible month); hover previews, click opens the modal. */
+.note-ind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  padding: 6px;
+  margin: -6px 0;
+  border-radius: var(--radius-input);
+}
+.note-ind:hover { color: var(--accent); }
+.note-ind:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+
 /* The roving Assigned cell (phase 5): a focusable grid cell needs a
    visible focus state distinct from the input's own. */
 .budget__assigned:focus-visible {

@@ -14,7 +14,7 @@ Moving $50 from *Dining out* to *Groceries* this month means:
 - *Dining out*'s **Assigned** drops by $50.
 - *Groceries*'s **Assigned** rises by $50.
 
-No transaction is created. The bank doesn't see anything. [Ready to Assign](/glossary/#ready-to-assign) is unchanged. The reports for *Dining out* and *Groceries* reflect the new assignment.
+No transaction is created. The bank doesn't see anything. [Ready to Work](/glossary/#ready-to-assign) is unchanged. The reports for *Dining out* and *Groceries* reflect the new assignment.
 
 You can only move dollars between categories that exist in the same profile and the same month. To shift money across months, edit the future month's Assigned directly.
 
@@ -28,17 +28,17 @@ Click any category's **Available** cell. The cell flips to an editor with two ch
 
 ## Method 3: edit Assigned directly
 
-The most surgical and the easiest to think about. Type a lower number in the source row's **Assigned**, hit Enter, then type a higher number in the destination row's **Assigned**. Ready to Assign briefly rises by the difference, then falls back to zero when you finish the second edit.
+The most surgical and the easiest to think about. Type a lower number in the source row's **Assigned**, hit Enter, then type a higher number in the destination row's **Assigned**. Ready to Work briefly rises by the difference, then falls back to zero when you finish the second edit.
 
-This works because Ready to Assign is the buffer between un-assigned dollars and category Assigned. Pulling money out of a category puts it back in Ready to Assign; assigning it elsewhere takes it out again.
+This works because Ready to Work is the buffer between un-assigned dollars and category Assigned. Pulling money out of a category puts it back in Ready to Work; assigning it elsewhere takes it out again.
 
-## When to move from Ready to Assign
+## When to move from Ready to Work
 
-If Ready to Assign is positive (typically because new inflow arrived since the last assigning session), assign that money directly into the category that needs it rather than borrowing from another category. Keep envelopes that are working as they are.
+If Ready to Work is positive (typically because new inflow arrived since the last assigning session), assign that money directly into the category that needs it rather than borrowing from another category. Keep envelopes that are working as they are.
 
 ## When to move from another category
 
-When Ready to Assign is zero and a category is [overspent](/docs/envelope-budget/underfunded-vs-overspent/) or about to be, you have to take money from somewhere. Pick the lowest-priority category that has surplus this month — usually a discretionary one like *Entertainment* or *Just for Fun*.
+When Ready to Work is zero and a category is [overspent](/docs/envelope-budget/underfunded-vs-overspent/) or about to be, you have to take money from somewhere. Pick the lowest-priority category that has surplus this month — usually a discretionary one like *Entertainment* or *Just for Fun*.
 
 ## What not to do
 

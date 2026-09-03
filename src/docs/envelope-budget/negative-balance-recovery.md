@@ -1,11 +1,11 @@
 ---
 title: "Recovering from a negative balance"
-subtitle: "When Ready to Assign goes red, what to do and in what order."
+subtitle: "When Ready to Work goes red, what to do and in what order."
 category: "envelope-budget"
 order: 8
 ---
 
-Negative [Ready to Assign](/glossary/#ready-to-assign) means you've committed more dollars than you have in your on-budget accounts. The hero at the top of [Budget](/app/budget/) turns red. The fix is mechanical and short.
+Negative [Ready to Work](/glossary/#ready-to-assign) means you've committed more dollars than you have in your on-budget accounts. The hero at the top of [Budget](/app/budget/) turns red. The fix is mechanical and short.
 
 ## How you got here
 
@@ -13,7 +13,7 @@ Three common causes:
 
 1. **A prior-month overspend rolled forward.** A category ended last month negative, and the deficit hit this month's RTA. See [Carry-over rules](/docs/envelope-budget/carry-over-rules/).
 2. **You over-assigned.** You typed a number into a category's Assigned that pushed the running total past your inflow.
-3. **A miscategorized inflow.** A paycheck or refund got tagged to a spending category instead of staying in Ready to Assign.
+3. **A miscategorized inflow.** A paycheck or refund got tagged to a spending category instead of staying in Ready to Work.
 
 The recovery differs slightly for each. Walk through these in order.
 
@@ -24,13 +24,13 @@ Click the red RTA number to see the breakdown. The popover shows:
 - This month's inflows (positive)
 - This month's category assignments (negative)
 - Prior-month deficits absorbed (negative)
-- Net = current Ready to Assign
+- Net = current Ready to Work
 
 That tells you whether you're dealing with a current-month over-assignment, a carry-over hit, or a categorization error.
 
 ## Step 2: check for miscategorized income
 
-On [Register](/app/register/), filter the current month to *Inflow* transactions only. Every paycheck, refund, or interest payment should be categorized to *Ready to Assign* (the special inflow category, not a spending category). Anything tagged to a spending category is being treated as a refund to that envelope rather than as new money — fix the category and RTA jumps back up by the inflow amount.
+On [Register](/app/register/), filter the current month to *Inflow* transactions only. Every paycheck, refund, or interest payment should be categorized to *Ready to Work* (the special inflow category, not a spending category). Anything tagged to a spending category is being treated as a refund to that envelope rather than as new money — fix the category and RTA jumps back up by the inflow amount.
 
 ## Step 3: roll back the most recent assignment
 
@@ -66,5 +66,5 @@ If a prior-month overspend pushed RTA so far negative that this month's income c
 
 Two habits that prevent most red-RTA days:
 
-- Run [Auto-assign](/docs/envelope-budget/auto-assign/) at the start of each month with a strategy that respects Ready to Assign's limits — the preview will warn before pushing you negative.
+- Run [Auto-assign](/docs/envelope-budget/auto-assign/) at the start of each month with a strategy that respects Ready to Work's limits — the preview will warn before pushing you negative.
 - Reconcile each account monthly so overspends are caught immediately, not three months later.

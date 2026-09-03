@@ -43,14 +43,14 @@ Copy last month's Assigned values verbatim. Different from *Last month's spendin
 
 ## The preview
 
-Each row in the modal shows the dollar total that strategy would apply. Negative previews are valid (a category that received money via inflow last month would Auto-assign to a negative). The total at the bottom is the net change to Ready to Assign — positive means you're freeing up cash, negative means you're committing it.
+Each row in the modal shows the dollar total that strategy would apply. Negative previews are valid (a category that received money via inflow last month would Auto-assign to a negative). The total at the bottom is the net change to Ready to Work — positive means you're freeing up cash, negative means you're committing it.
 
 ## A common workflow
 
 The Auto-assign sequence most users land on after a few months:
 
 1. **Goal target** — first pass; everything with a stated commitment gets covered.
-2. Look at what's left in Ready to Assign.
+2. Look at what's left in Ready to Work.
 3. **Three-month average** scoped to a *Variable spending* group — fund groceries, gas, dining at typical levels.
 4. Manually assign what's left to savings or fun.
 
@@ -59,7 +59,7 @@ The whole session takes under a minute once it's habit.
 ## What Auto-assign won't do
 
 - Touch credit-card payment categories (those are derived from card spending, not assigned directly).
-- Overspend [Ready to Assign](/glossary/#ready-to-assign) — if a strategy would push RTA negative, the apply button warns and asks for confirmation.
+- Overspend [Ready to Work](/glossary/#ready-to-assign) — if a strategy would push RTA negative, the apply button warns and asks for confirmation.
 - Modify months other than the active one.
 
 If you want different behavior in a specific category, exclude it by scoping Auto-assign to its group and using a different strategy for that category afterward.

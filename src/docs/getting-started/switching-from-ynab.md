@@ -13,7 +13,7 @@ The model is intentionally similar.
 
 | YNAB term            | Project Budget term                    |
 |----------------------|-----------------------------------------|
-| Ready to Assign      | [Ready to Assign](/glossary/#ready-to-assign) — same idea, same name |
+| Ready to Work      | [Ready to Work](/glossary/#ready-to-assign) — same idea, same name |
 | Category Assigned    | [Assigned](/glossary/#assigned)         |
 | Category Activity    | [Activity](/glossary/#activity)         |
 | Category Available   | [Available](/glossary/#available)       |
@@ -22,7 +22,7 @@ The model is intentionally similar.
 | Reconcile            | [Reconcile](/docs/accounts/reconciliation/) — same flow |
 | Targets (Goals)      | [Goals](/docs/envelope-budget/goals/) — four types vs YNAB's three |
 
-What's the same: every dollar gets a job, overspending in cash categories reduces next month's Ready to Assign, credit cards use a paired payment category.
+What's the same: every dollar gets a job, overspending in cash categories reduces next month's Ready to Work, credit cards use a paired payment category.
 
 What's different:
 

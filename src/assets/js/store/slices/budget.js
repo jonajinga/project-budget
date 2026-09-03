@@ -190,6 +190,43 @@ export const budgetSlice = {
     return ids.length;
   },
 
+  /**
+   * The per-month note for a category (budgets[m].notes - the schema
+   * field that sat unwritten since v1).
+   * @param {id} categoryId
+   * @param {string} [month]
+   * @returns {string}
+   */
+  monthNote(categoryId, month) {
+    void this._listVersion;
+    if (!this.profile) return "";
+    var m = month || this.currentMonth;
+    var rec = this.profile.budgets[m];
+    return (rec && rec.notes && rec.notes[categoryId]) || "";
+  },
+  /**
+   * Set (or clear) the per-month note. Trimmed; no-op when unchanged
+   * so a blur that changed nothing does not spam undo. One undo entry
+   * per real change; empty notes are removed from the map.
+   * @returns {boolean} true if changed
+   */
+  setMonthNote(categoryId, month, text) {
+    if (!this.profile) return false;
+    var m = month || this.currentMonth;
+    var clean = String(text == null ? "" : text).trim();
+    var existing = this.profile.budgets[m] || { month: m, assigned: {}, notes: {} };
+    var current = (existing.notes && existing.notes[categoryId]) || "";
+    if (current === clean) return false;
+    this._recordUndo("Edit note");
+    var nextNotes = Object.assign({}, existing.notes || {});
+    if (clean) nextNotes[categoryId] = clean;
+    else delete nextNotes[categoryId];
+    this.profile.budgets[m] = Object.assign({}, existing, { notes: nextNotes });
+    this._bumpLists();
+    this._save();
+    return true;
+  },
+
   /* ---- Bulk-clear helpers --------------------------------------- */
   /**
    * Set assigned to 0 for every catId in `categoryIds` in `month`,
