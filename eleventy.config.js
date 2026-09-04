@@ -34,6 +34,10 @@ const CSS_PARTIAL_ORDER = [
   "tab-bar.css",
   "goal-progress.css",
   "dashboard.css",
+  /* accounts.css after components.css: its .acct-table-card rule has to
+     beat the shared `.card { overflow-x: auto }` on equal specificity,
+     and equal specificity is decided by source order. */
+  "accounts.css",
   "contact.css",
   "style-guide.css",
   "print.css",
