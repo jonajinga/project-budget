@@ -57,7 +57,7 @@
             <div class="dash-widget__body">{{ V2.v_stat() }}</div>
           </template>
           <template x-if="$store.budget.widgetKind(widget) === 'chart' && widget.source.indexOf('report:') === 0">
-            <div class="dash-widget__body">
+            <div class="dash-widget__body dash-widget__body--chart">
               <div class="chart dashboard__chart"
                    data-chart-host
                    :data-widget-id="widget.id"

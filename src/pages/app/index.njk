@@ -143,6 +143,7 @@ eleventyExcludeFromCollections: true
          x-show="$store.budget.profile" x-cloak>
       <template x-for="(widget, i) in widgets()" :key="widget.id">
         <section class="dash-widget"
+                 :class="{ 'is-collapsed': isCollapsed(widget, i), 'has-toggle': phone }"
                  :data-widget-id="widget.id"
                  :data-widget-kind="$store.budget.widgetKind(widget)"
                  :style="widgetStyle(widget)"
@@ -196,6 +197,23 @@ eleventyExcludeFromCollections: true
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>
+
+          {# Phone only: the card's own header, turned into the control that
+             folds it away. Rendered only when `phone` is true rather than
+             hidden by a media query, so a screen reader on a desktop is
+             never told a card is collapsed when it is fully visible.
+
+             The widget's own <h2> is hidden underneath it (see .has-toggle
+             in dashboard.css) so the title is not printed twice. #}
+          <button type="button" class="dash-widget__toggle"
+                  x-show="phone" x-cloak
+                  :aria-expanded="(!isCollapsed(widget, i)).toString()"
+                  @click="toggleCollapse(widget, i)">
+            <span class="dash-widget__toggle-title" x-text="titleOf(widget)"></span>
+            <svg class="dash-widget__toggle-mark" width="14" height="14" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                 stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
 
           {{ B.widgetBody() }}
 
@@ -413,6 +431,59 @@ function dashboardView() {
        app a day later and finding every card wearing drag handles reads as
        breakage. */
     editing: false,
+
+    /* ---- Phone: collapsible widget cards (Jon, 2026-09-04) ----
+       Thirteen widgets, all open, made the phone dashboard about 7,800
+       pixels tall -- roughly twenty screens of scrolling to reach the last
+       card. The top four stay open, the rest start collapsed, and whatever
+       you open or close afterwards is remembered.
+
+       Remembered in localStorage rather than in the profile, because which
+       cards you want folded away is a property of THIS SCREEN, not of the
+       budget: the same profile opened on a desktop should not inherit a
+       phone's folds. It is also why nothing is ever collapsed above the
+       phone breakpoint -- `phone` is a real matchMedia result, not a CSS
+       class, so aria-expanded on the toggle always describes what is
+       actually on screen instead of what a stylesheet happens to be
+       hiding at this width. */
+    COLLAPSE_KEY: "projectbudget:dash-collapsed",
+    OPEN_BY_DEFAULT: 4,
+    phone: false,
+    /* { dashboardId: { widgetId: true|false } }. Keyed by dashboard inside
+       one entry so switching dashboards needs no reload of this state. */
+    collapsed: {},
+
+    _loadCollapsed() {
+      try {
+        var raw = localStorage.getItem(this.COLLAPSE_KEY);
+        var v = raw ? JSON.parse(raw) : null;
+        this.collapsed = v && typeof v === "object" && !Array.isArray(v) ? v : {};
+      } catch (_e) {
+        this.collapsed = {};
+      }
+    },
+    _collapsedFor() {
+      return this.collapsed[this.activeId() || "default"] || {};
+    },
+    /* `i` is the widget's position in the list, which is what "the top four"
+       means. An explicit true/false from the person always wins over it. */
+    isCollapsed(widget, i) {
+      if (!this.phone || !widget) return false;
+      var v = this._collapsedFor()[widget.id];
+      if (typeof v === "boolean") return v;
+      return i >= this.OPEN_BY_DEFAULT;
+    },
+    toggleCollapse(widget, i) {
+      if (!widget) return;
+      var dash = this.activeId() || "default";
+      var next = Object.assign({}, this.collapsed);
+      next[dash] = Object.assign({}, next[dash] || {});
+      next[dash][widget.id] = !this.isCollapsed(widget, i);
+      this.collapsed = next;
+      try {
+        localStorage.setItem(this.COLLAPSE_KEY, JSON.stringify(this.collapsed));
+      } catch (_e) {}
+    },
 
     /* ---- The builder ----
        One dialog for both "add" and "configure". The draft is a full widget
@@ -857,6 +928,22 @@ function dashboardView() {
       /* Seed the inline quick-add form. Account is filled in lazily
          via the quickAccounts() getter once the profile loads. */
       this.quickForm.date = new Date().toISOString().slice(0, 10);
+
+      /* ---- Phone detection for the collapsible cards ----
+         599px is the phone breakpoint the hero and the tab bar already
+         use. Tracked live rather than read once, so rotating a phone or
+         dragging a desktop window narrow gets the right affordance without
+         a reload. */
+      this._loadCollapsed();
+      try {
+        var mq = window.matchMedia("(max-width: 599px)");
+        this.phone = !!mq.matches;
+        var onMq = function (e) { self.phone = !!e.matches; };
+        if (mq.addEventListener) mq.addEventListener("change", onMq);
+        else if (mq.addListener) mq.addListener(onMq);
+      } catch (_e) {
+        this.phone = false;
+      }
       /* ---- Charts ----
          The two sparklines live inside widgets now, so their host elements
          are not guaranteed to exist when init() runs, and they can appear or
@@ -1261,6 +1348,29 @@ function dashboardView() {
             if (a.groupName !== b.groupName) return a.groupName.localeCompare(b.groupName);
             return a.name.localeCompare(b.name);
           });
+      });
+    },
+
+    /* The same accounts, folded into their groups, so the group name is a
+       header over its tiles instead of a label repeated on each one. The
+       list is already sorted by group then name, so a single pass in order
+       produces groups in the same order the flat list had. */
+    accountGroupsForGrid() {
+      var self = this;
+      return this._memo("accountGroupsForGrid", function () {
+        var out = [];
+        var byName = Object.create(null);
+        self.allAccountsForGrid().forEach(function (a) {
+          var name = a.groupName || "Other";
+          var g = byName[name];
+          if (!g) {
+            g = byName[name] = { name: name, accounts: [], total: 0 };
+            out.push(g);
+          }
+          g.accounts.push(a);
+          g.total += a.balance;
+        });
+        return out;
       });
     },
 
