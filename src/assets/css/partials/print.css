@@ -76,6 +76,23 @@
   .app-page__title { font-size: 16pt; }
   .app-page__lead { color: #333; font-size: 10pt; }
 
+  /* App chrome (S8): on screen the page name is hidden and the sidebar
+     says where you are. Paper has no sidebar, so the heading comes back
+     -- and the strip of controls, which is unusable on paper, goes.
+     Scoped to the page's own h1 so the app's other visually-hidden
+     labels stay hidden. */
+  .app-toolbar { display: none !important; }
+  .app-page > h1.visually-hidden,
+  .app-page > .app-page__inner > h1.visually-hidden {
+    position: static !important;
+    width: auto;
+    height: auto;
+    margin: 0 0 12pt;
+    overflow: visible;
+    clip: auto;
+    font-size: 16pt;
+  }
+
   /* Always show URLs alongside links */
   a { color: #000; text-decoration: none; }
   a[href^="http"]::after,

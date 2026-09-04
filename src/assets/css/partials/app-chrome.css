@@ -1,0 +1,270 @@
+/* ---- App chrome (S8, 2026-09-04) -----------------------------------
+   Every /app/* route is a working surface, not an article.
+
+   Before this layer each page opened with a 2.75rem display heading
+   and a paragraph of explanation: about 180 to 240 pixels of the
+   window spent before the first number. Import was the extreme case --
+   title plus prose took 240px, the one control it offers took 190,
+   and the remaining 350 were empty. The budget page had already
+   dropped both. Its title is visually hidden and its toolbar sits
+   flush under the app header, which is the whole reason it reads as
+   an app and the other 43 routes read as a website.
+
+   Jon's decision, 2026-09-04: no page header at all. The sidebar
+   already says which page you are on, so the visible page name goes
+   and only the controls remain. The <h1> stays in the markup as
+   .visually-hidden -- screen readers still land on a titled page, and
+   print.css puts it back on paper, where there is no sidebar to say
+   what you are looking at.
+
+   Three parts:
+     .app-toolbar   one full-bleed control strip under the app header
+     .app-page      no masthead; the first control sits at the top
+     .panel         a surface with a hairline, not a floating card
+
+   Deliberately NOT sticky. The site header is sticky at 4rem and
+   every sticky table head in the app is offset `top: 4rem` against
+   it. A sticky toolbar would need all of them to become
+   calc(4rem + toolbar), which couples 40 pages to this file's height.
+   The budget HUD is not sticky either -- its grid scrolls inside
+   itself instead. */
+
+:root {
+  /* One number for the strip's height so a page that needs to
+     measure against it (a chart, an internal scroll area) can, rather
+     than hard-coding 44px in a second place. */
+  --app-toolbar-h: 2.75rem;
+}
+
+/* ---- The strip -----------------------------------------------------
+   Full bleed: pull out through .app-main's own padding so the strip
+   touches the sidebar on one side and the window on the other, the way
+   the budget month strip does. --app-main-pad-y and --container-pad
+   are the two values .app-main pads with, so reading them back is what
+   keeps this correct when either changes. */
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  flex-wrap: wrap;
+  min-height: var(--app-toolbar-h);
+  margin: calc(-1 * var(--app-main-pad-y, var(--space-lg)))
+          calc(-1 * var(--container-pad))
+          var(--space-md);
+  padding: var(--space-3xs) var(--container-pad);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* .app-page > * carries `max-width: 100%` (app.css) to make its
+   overflow-x containers actually clip. That cap also stops the strip
+   from growing back out through the negative margin, so it stopped one
+   gutter short of the right edge while reaching the left one -- the bar
+   looked misaligned rather than full width. */
+.app-page > .app-toolbar { max-width: none; }
+
+/* A page whose body is one big surface (a table, a grid) wants the
+   strip to sit directly on top of it with no gap and no double
+   border. */
+.app-toolbar--flush { margin-bottom: 0; }
+
+/* Controls that belong together. The first group sits left, and
+   .app-toolbar__actions pushes everything after it to the right
+   edge. */
+.app-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+.app-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Hairline between two clusters of controls. Groups without adding a
+   hard divider, same as the budget toolbar's separator. */
+.app-toolbar__sep {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--space-3xs) var(--space-3xs);
+  background: var(--border-soft);
+  flex-shrink: 0;
+}
+
+/* Context text -- a count, a range, the account a register is
+   filtered to. Never a sentence: anything that reads as prose belongs
+   behind the info button. */
+.app-toolbar__context {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* The one exception to "no page name": a page whose title is DATA
+   rather than a label -- the register's account name, the category
+   page's category, the calendar's month. Small and inline, the way an
+   app names the thing you are looking at rather than the screen you
+   are on. */
+.app-toolbar__subject {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Phones: the strip keeps one row. Controls that cannot fit scroll
+   sideways rather than stacking into four rows -- the calendar
+   toolbar became six rows at 390 and that is the failure being
+   avoided. */
+@media (max-width: 599px) {
+  .app-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: var(--space-sm);
+  }
+  .app-toolbar::-webkit-scrollbar { display: none; }
+  .app-toolbar--flush { margin-bottom: 0; }
+  .app-toolbar__subject { font-size: var(--fs-md); }
+}
+
+/* An empty strip is not a strip. A page with no controls at all
+   should start with its content, not with 44 pixels of nothing. */
+.app-toolbar:empty { display: none; }
+
+/* ---- The page ------------------------------------------------------
+   With the masthead gone the page is a stack of surfaces. Tighten the
+   gap: --space-lg (32px) was set when each block was a floating card
+   that needed air around it. */
+.app-page--dense { gap: var(--space-md); }
+
+/* A page with one control and nothing else to show until it is used --
+   import is the case -- left about 460 pixels of empty ground above the
+   footer. Filling the window costs nothing and stops the page reading
+   as unfinished. */
+.app-page--fill { min-height: calc(100dvh - 4rem - 2 * var(--app-main-pad-y, var(--space-lg))); }
+.app-page--fill > .app-grow { flex: 1 1 auto; }
+
+/* Whole-page bleed, for a route that is one continuous data surface
+   (a register, an account list, a report table). The budget page's
+   own rule, generalised. */
+.app-page--flush {
+  gap: 0;
+  margin: calc(-1 * var(--app-main-pad-y, var(--space-lg)))
+          calc(-1 * var(--container-pad))
+          0;
+}
+.app-page--flush > * { max-width: none; }
+/* Its own toolbar already bled; bleeding it twice would push it off
+   the left edge by a full gutter. */
+.app-page--flush > .app-toolbar { margin-inline: 0; margin-top: 0; }
+
+/* ---- Surfaces ------------------------------------------------------
+   A panel is a card that has stopped floating: same ground, hairline
+   edge, no rounding at the page's full width. Cards stay for the few
+   places a page really is a set of separate objects (settings
+   sections, the profile list). */
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+.panel--flush {
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+.panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-bottom: 1px solid var(--border-soft);
+  min-height: 2.5rem;
+}
+.panel__title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  margin: 0;
+}
+.panel__actions { display: flex; align-items: center; gap: var(--space-2xs); margin-left: auto; }
+.panel__body { padding: var(--space-sm); }
+.panel__body--flush { padding: 0; }
+
+/* ---- Retired -------------------------------------------------------
+   .app-page__header / __title / __lead are still in 40-odd templates
+   while the conversion runs page by page. Until the last one is
+   converted they render as the old masthead. The rules stay in
+   layout.css; nothing here overrides them, so a converted page and an
+   unconverted one can sit in the same build. */
+
+/* ---- Drop target ---------------------------------------------------
+   A panel a file can be dropped on. The browser's default file input
+   ("Choose File / No file chosen") is the most operating-system-looking
+   control on the web; a page that leads with one reads as a form. The
+   real input is still in the markup, visually hidden, and this label
+   points at it -- so clicking, tabbing and a screen reader all reach
+   the same control, and dropping is the addition rather than the
+   replacement. */
+.panel--drop {
+  /* The label, not the panel, is the click target, so it has to be the
+     thing that fills the panel -- otherwise a tall drop zone puts its
+     text at the top and leaves most of its own area dead to a click. */
+  display: flex;
+  border-style: dashed;
+  border-color: var(--border);
+  background: var(--bg-alt);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.panel--drop.is-dragging {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.panel__drop-label {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3xs);
+  padding: var(--space-lg) var(--space-md);
+  min-height: 8rem;
+  cursor: pointer;
+  text-align: center;
+  color: var(--fg-muted);
+}
+.panel__drop-label:hover { color: var(--accent); }
+.panel--drop:focus-within {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.panel__drop-title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--fg);
+}
+.panel__drop-hint { font-size: var(--fs-sm); }
+@media (max-width: 599px) {
+  /* Nothing is dragged on a phone; the panel is simply a large tap
+     target for the picker. */
+  .panel__drop-label { min-height: 5.5rem; padding: var(--space-md); }
+}

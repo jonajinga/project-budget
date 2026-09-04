@@ -1,0 +1,52 @@
+{# App page chrome (S8, 2026-09-04).
+
+   Replaces the .app-page__header masthead on every /app/* route. Jon's
+   decision, 2026-09-04: no visible page name. The sidebar already says
+   which page you are on, so the heading goes and only the controls
+   stay -- the budget page's shape, which is the one screen in the app
+   that reads as an app.
+
+   The <h1> is still emitted, visually hidden. Two things need it:
+   screen readers, which otherwise land on a page with no title, and
+   print.css, which puts it back on paper where there is no sidebar to
+   say what the sheet is.
+
+   Usage, inside an element that has an Alpine scope:
+
+     {% from "partials/app-toolbar.njk" import appToolbar %}
+     {% call appToolbar("Trash") %}
+       <div class="app-toolbar__group">
+         <button class="btn btn--ghost">Refresh</button>
+       </div>
+       <div class="app-toolbar__actions">
+         <button class="btn btn--danger">Empty trash</button>
+       </div>
+     {% endcall %}
+
+   `flush` -- pass true when the page body is one continuous surface
+   (a full-width table) so the strip sits directly on it with no gap.
+
+   A page with no controls at all calls it with an empty body: the
+   heading is emitted for screen readers and the empty strip removes
+   itself (.app-toolbar:empty). #}
+{% macro appToolbar(title, flush=false) %}
+<h1 class="visually-hidden">{{ title }}</h1>
+<div class="app-toolbar{% if flush %} app-toolbar--flush{% endif %}">{{ caller() }}</div>
+{% endmacro %}
+
+{# Same strip, but the page's subject is data rather than a label --
+   the register's account name, the category page's category, the
+   calendar's month. Those name the thing you are looking at, not the
+   screen you are on, so they stay visible and small.
+
+   `title` is the screen-reader heading; `subject` is the visible text
+   (pass raw HTML, e.g. an x-text span, so it can be Alpine-bound). #}
+{% macro appToolbarSubject(title, subject, flush=false) %}
+<h1 class="visually-hidden">{{ title }}</h1>
+<div class="app-toolbar{% if flush %} app-toolbar--flush{% endif %}">
+  <div class="app-toolbar__group">
+    <p class="app-toolbar__subject">{{ subject | safe }}</p>
+  </div>
+  {{ caller() }}
+</div>
+{% endmacro %}

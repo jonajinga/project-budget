@@ -5,25 +5,52 @@ description: "Import a JSON profile, or CSV / OFX / QFX / QIF / GoCardless trans
 permalink: /app/import/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="importView()">
-  <header class="app-page__header">
-    <h1 class="app-page__title">Import</h1>
-  </header>
-
-  <p class="app-page__lead">
-    Two flavors: a JSON profile from a previous Project Budget export, or a transaction file from your bank. Files are parsed locally — nothing is uploaded.
-  </p>
-
-  <section class="card">
-    <h2 class="card__title">Choose a file</h2>
-    <div class="form-stack">
-      <div class="field">
-        <label class="field__label" for="imp-file">File</label>
-        <input class="input" id="imp-file" type="file" accept=".json,.csv,.ofx,.qfx,.qif" @change="onPick($event)">
-        <p class="field__hint">Accepted: .json (Project Budget profile), .csv (Chase/Capital One/Discover/Mint/Actual/GoCardless), .ofx, .qfx, .qif</p>
-      </div>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense app-page--fill" x-data="importView()">
+  {% call appToolbar("Import") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-show="fileName" x-cloak x-text="fileName"></span>
     </div>
-  </section>
+    <div class="app-toolbar__actions">
+      <button class="btn btn--ghost" type="button" x-show="mode" x-cloak @click="reset()">Start over</button>
+      <button class="btn btn--primary" type="button"
+              @click="$refs.file.click()">Choose file</button>
+      {% call pageInfo(id="import", title="About importing", label="What Import accepts and where the file goes") %}
+        <p>Two flavors: a JSON profile from a previous Project Budget export,
+        or a transaction file from your bank.</p>
+        <p>Accepted file types:</p>
+        <ul>
+          <li><strong>.json</strong> - a Project Budget profile, or a bundle of them</li>
+          <li><strong>.csv</strong> - Chase, Capital One, Discover, Mint, Actual or GoCardless</li>
+          <li><strong>.ofx</strong> and <strong>.qfx</strong> - a bank statement download</li>
+          <li><strong>.qif</strong> - the older Quicken format</li>
+        </ul>
+        <p>Every import runs in your browser. The file you choose is read by
+        this page and never leaves the device.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
+
+  {# A drop target, not a raw file input. The old page rendered the
+     browser's default "Choose File / No file chosen" control, which is
+     the most operating-system-looking element on the web and a good part
+     of why this screen read as a form rather than an app. The input is
+     still there, visually hidden, so keyboard and screen-reader users get
+     the real control and the label still opens the picker. #}
+  <div class="panel panel--drop app-grow"
+       :class="dragging ? 'is-dragging' : ''"
+       @dragover.prevent="dragging = true"
+       @dragleave.prevent="dragging = false"
+       @drop.prevent="onDrop($event)">
+    <input class="visually-hidden" id="imp-file" type="file" x-ref="file"
+           accept=".json,.csv,.ofx,.qfx,.qif" @change="onPick($event)">
+    <label class="panel__drop-label" for="imp-file">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="panel__drop-title">Drop a file here, or choose one</span>
+      <span class="panel__drop-hint">JSON profile, or CSV / OFX / QFX / QIF from your bank</span>
+    </label>
+  </div>
 
   {# JSON import flow #}
   <section class="card" x-show="mode === 'json'" x-cloak style="margin-top: var(--space-md);">
@@ -186,15 +213,14 @@ eleventyExcludeFromCollections: true
     </div>
   </section>
 
-  <p class="form-help" style="margin-top: var(--space-md);">
-    All imports run in your browser. The file you select never leaves this page.
-  </p>
 </div>
 
 <script>
 function importView() {
   return {
     mode: null,                  // 'json' | 'txn' | null
+    fileName: "",                // shown in the toolbar once a file is read
+    dragging: false,             // drop target is lit
     jsonParsed: { ok: false },
     replaceMode: false,
     replaceConfirm: "",
@@ -217,6 +243,8 @@ function importView() {
 
     reset() {
       this.mode = null;
+      this.fileName = "";
+      this.dragging = false;
       this.jsonParsed = { ok: false };
       this.replaceMode = false;
       this.replaceConfirm = "";
@@ -233,10 +261,25 @@ function importView() {
       if (input) input.value = "";
     },
 
-    async onPick(ev) {
-      this.reset();
+    onPick(ev) {
       var file = ev.target.files && ev.target.files[0];
+      return this.handleFile(file);
+    },
+
+    /* Dropping a file and choosing one land in the same place. The
+       drop event carries its file on dataTransfer, not on a target
+       input, so it cannot reuse onPick directly. */
+    onDrop(ev) {
+      this.dragging = false;
+      var dt = ev.dataTransfer;
+      var file = dt && dt.files && dt.files[0];
+      return this.handleFile(file);
+    },
+
+    async handleFile(file) {
+      this.reset();
       if (!file) return;
+      this.fileName = file.name;
       var ext = (file.name.split(".").pop() || "").toLowerCase();
       var text = await file.text();
 

@@ -20,6 +20,10 @@ const CSS_PARTIAL_ORDER = [
   "components.css",
   "nav.css",
   "app.css",
+  /* app-chrome.css after app.css: .app-page--flush > * has to beat
+     `.app-page > * { max-width: 100% }`, and on equal specificity that
+     is decided by source order. */
+  "app-chrome.css",
   "register.css",
   "budget.css",
   "budget-inspector.css",
@@ -386,6 +390,7 @@ export default function (eleventyConfig) {
             /^cat-/, /^month-strip/, /^sample-/, /^pool-/,
             /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/,
             /^hist__/, /^mini-chart/, /^cuts__/, /^cl-/, /^table/, /^col-p/, /^page-info/,
+            /^app-toolbar/, /^app-page/, /^panel/,
           ],
           greedy: [
             /* An attribute that only ever appears Alpine-bound is written
@@ -440,6 +445,7 @@ export default function (eleventyConfig) {
             /^budget__/, /^cal-/, /^register__/,
             /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/, /^acct-cards/,
             /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/, /^dash-/, /^cl-/,
+            /^app-toolbar/, /^app-page/, /^panel/,
           ],
           greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/, /^aria-/],
           deep: [/dialog/, /sortable/, /tippy/, /popper/],
