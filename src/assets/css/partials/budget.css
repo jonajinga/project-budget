@@ -4486,9 +4486,9 @@ body.pb-dragging { overflow: visible !important; }
 .rec-card {
   display: flex;
   align-items: center;
-  gap: var(--space-2xs);
+  gap: var(--space-3xs);
   min-height: 56px;
-  padding: var(--space-2xs) var(--space-xs);
+  padding: var(--space-2xs) var(--space-2xs);
   border-bottom: 1px solid var(--border-soft);
 }
 .rec-card:hover { background: var(--bg-alt); }
@@ -4561,10 +4561,14 @@ body.pb-dragging { overflow: visible !important; }
 .rec-card__category { flex: 1 1 auto; }
 .rec-card__category.is-uncategorized { color: var(--fg-subtle); font-style: italic; }
 .rec-card__sep      { flex: 0 0 auto; }
-/* Frequency and memo are marks, not columns. Frequency is not in Jon's
-   two-line spec, but it is what makes a recurring template recurring, and
-   as a chip it costs no height -- it does not reprint a label, which is
-   the thing the old layout got wrong. */
+/* Memo and paused are marks, not columns: an "M" chip and a word, pushed
+   to the right end of line two.
+
+   A frequency chip was here too and was removed. It costs no height, but
+   "Every two weeks" is 96px of a 334px row and it took that width off
+   account and category -- the two fields Jon's spec actually names for
+   line two, which were reduced to "Chas..." and "H...". Frequency is one
+   tap away in the row's edit modal and is a column again at 600px. */
 .rec-card__marks {
   margin-left: auto;
   display: inline-flex;
@@ -4582,7 +4586,6 @@ body.pb-dragging { overflow: visible !important; }
   color: var(--fg-subtle);
   white-space: nowrap;
 }
-.rec-card__mark--freq   { font-weight: 600; text-transform: none; }
 .rec-card__mark--paused { color: var(--danger); border-color: var(--danger); }
 /* Post keeps its own tap target on the row. Two taps to post -- open the
    kebab, then choose -- is the wrong trade on the one page whose whole
@@ -4590,9 +4593,13 @@ body.pb-dragging { overflow: visible !important; }
 .rec-cards .rec-post {
   flex: 0 0 auto;
   min-height: 44px;
-  padding: 0.2rem 0.6rem;
+  /* Every pixel here comes off the payee on line one, which at the first
+     measurement had 86px and read "Great...". Tight horizontal padding
+     and a 4px gap give it back about 25. */
+  padding: 0 0.45rem;
 }
 .rec-cards .overflow-menu { flex: 0 0 auto; }
+.rec-cards .overflow-menu__trigger { min-width: 32px; padding-left: 0; padding-right: 0; }
 
 /* Show/hide swap. Rows only render on phones; the table only on
    tablet+. The x-show attributes keep both in the DOM but
@@ -4817,18 +4824,24 @@ body.pb-dragging { overflow: visible !important; }
   align-items: flex-end;
 }
 .rec-toolbar__filters .field { min-width: 140px; }
-/* On a phone the four filters were four full-width rows, about 190px of
-   chrome between the search box and the first template. Two-up halves
-   that; the selects still clear the 44px touch target. */
+/* Phone: tighter toolbar chrome, but the four filters stay one per row.
+
+   Two-up was tried and reverted. It halves the control to 148px, and a
+   native <select> cannot ellipsize -- Chromium reserves about 20px of the
+   content box for its own arrow, so "Inflows + outflows" (136px at the
+   16px base size) came out as "Inflows + outflo", cut mid-word. Dropping
+   the type to 12px made it fit, but components.css pins form controls to
+   max(1rem, 16px) precisely so per-page overrides do not trigger iOS
+   Safari's zoom-on-focus, and re-introducing that to save 104px of
+   scroll is the wrong trade. */
 @media (max-width: 599px) {
-  .rec-toolbar { gap: var(--space-2xs); margin-bottom: var(--space-2xs); padding-bottom: var(--space-2xs); }
-  .rec-toolbar__filters {
-    flex: 1 1 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .rec-toolbar {
     gap: var(--space-2xs);
+    margin-bottom: var(--space-2xs);
+    padding-bottom: var(--space-2xs);
   }
-  .rec-toolbar__filters .field { min-width: 0; }
+  .rec-toolbar__filters { flex: 1 1 100%; }
+  .rec-toolbar__filters .field { flex: 1 1 100%; min-width: 0; }
   .rec-toolbar__filters .select { width: 100%; min-width: 0; }
 }
 .rec-toolbar__count {

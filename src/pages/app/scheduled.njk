@@ -179,9 +179,6 @@ eleventyExcludeFromCollections: true
                 <span class="rec-card__mark" x-show="s.template.memo" x-cloak
                       :title="'Memo: ' + (s.template.memo || '')"
                       :aria-label="'Memo: ' + (s.template.memo || '')">M</span>
-                <span class="rec-card__mark rec-card__mark--freq"
-                      :title="'Frequency: ' + $store.budget.frequencyLabel(s)"
-                      x-text="$store.budget.frequencyLabel(s)"></span>
                 <span class="rec-card__mark rec-card__mark--paused" x-show="s.paused" x-cloak
                       title="Paused">Paused</span>
               </span>
