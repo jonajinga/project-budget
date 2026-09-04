@@ -6,10 +6,47 @@ import { gotoApp } from "./helpers.js";
 const wide = (viewport) => viewport && viewport.width >= 1180;
 
 async function catIdOf(page, name) {
-  return page.evaluate((n) => {
+  const id = await page.evaluate((n) => {
     const s = window.Alpine.store("budget");
-    return s.profile.categories.find((c) => c.name === n).id;
+    const hit = s.profile.categories.find((c) => c.name === n);
+    return hit ? hit.id : null;
   }, name);
+  /* A named lookup that misses used to throw "Cannot read properties of
+     undefined (reading 'id')", which says nothing about the cause. The
+     sample's categories get reworked; "Coffee" and "HOA" were both
+     renamed away and three tests failed on that TypeError for months. */
+  if (!id) throw new Error(`no category named "${name}" in the sample profile`);
+  return id;
+}
+
+/* Pick a category by shape rather than by name, so a rename to the
+   sample does not break the test again. Skips payment and income
+   categories, whose Assigned cells behave differently on purpose. */
+async function anyPlainCatId(page, exclude = []) {
+  const id = await page.evaluate((skip) => {
+    const s = window.Alpine.store("budget");
+    const hit = (s.profile.categories || []).find((c) =>
+      !skip.includes(c.name) && !c.hidden && !s.paymentCardId(c.id) && !s.isIncomeCategory(c.id));
+    return hit ? hit.id : null;
+  }, exclude);
+  if (!id) throw new Error("the sample has no plain expense category");
+  return id;
+}
+
+/* Make a category overspent in `month` rather than hunting for one.
+   Nothing in the sample is overspent in any 2026 month - the test used
+   to rely on "HOA is overspent in 2026-03 (available -$9.00)", which
+   stopped being true. Arranging it is both truer to what is under test
+   and immune to the next data refresh. */
+async function makeOverspent(page, month) {
+  const id = await anyPlainCatId(page);
+  await page.evaluate(({ id, month }) => {
+    const s = window.Alpine.store("budget");
+    const row = s.categoryRow(id, month);
+    s.assign(id, month, row.assigned - row.available - 900);
+  }, { id, month });
+  await page.waitForTimeout(200);
+  return id;
 }
 
 test("a quick fill sets the cell and ONE undo reverts it wholly", async ({ seeded, viewport }) => {
@@ -39,7 +76,7 @@ test("the RTA stat opens the month overview and its breakdown adds up", async ({
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
-  await page.getByRole("button", { name: /Ready to assign/ }).click();
+  await page.getByRole("button", { name: /^Ready to Work in / }).click();
   const pane = page.locator(".budget-inspector");
   const shown = await page.evaluate(() => {
     /* assigned + lost display with a minus prefix (they are
@@ -60,11 +97,10 @@ test("covering an overspent category zeroes its pill in one click", async ({ see
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
-  /* HOA is overspent in 2026-03 in the sample (available -$9.00). */
-  const hoaId = await catIdOf(page, "HOA");
+  const hoaId = await makeOverspent(page, "2026-03");
   const availBefore = await page.evaluate((id) => window.Alpine.store("budget").categoryRow(id, "2026-03").available, hoaId);
   expect(availBefore).toBeLessThan(0);
-  await page.getByRole("button", { name: /Ready to assign/ }).click();
+  await page.getByRole("button", { name: /^Ready to Work in / }).click();
   const row = page.locator(".budget-inspector [data-overspent-id='" + hoaId + "']");
   await row.getByRole("button", { name: /Cover / }).click();
   await page.waitForTimeout(300);
@@ -77,14 +113,32 @@ test("a category can be hidden from the UI and unhidden again", async ({ seeded,
   test.skip(!wide(viewport), "drives the docked inspector's Hide button");
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
-  const catId = await catIdOf(page, "Coffee");
+  const catId = await anyPlainCatId(page, ["Groceries"]);
+  const hiddenBefore = await page.evaluate(() => window.Alpine.store("budget").hiddenCategories().length);
+  const catName = await page.evaluate((id) => window.Alpine.store("budget").categoryName(id), catId);
   await page.locator(`.budget__row[data-cat-id="${catId}"] .budget__cat-name`).click();
-  await page.locator(".budget-inspector").getByRole("button", { name: "Hide category" }).click();
+  /* Hide, rename and delete moved behind the inspector's "Category
+     actions" kebab; they are menu items now, not buttons sitting on
+     the pane. */
+  await page.locator(".budget-inspector").getByRole("button", { name: "Category actions" }).click();
+  await page.locator(".budget-inspector").getByRole("menuitem", { name: "Hide category" }).click();
   await page.waitForTimeout(300);
   await expect(page.locator(`.budget__row[data-cat-id="${catId}"]`)).toHaveCount(0);
-  /* The disclosure below the grid lists it and unhides it. */
-  await page.getByRole("button", { name: /Hidden categories \(1\)/ }).click();
-  await page.locator(".budget__hidden").getByRole("button", { name: "Unhide" }).click();
+  /* The disclosure below the grid lists it and unhides it. Counted
+     relative to what was already hidden, not against a hard-coded 1:
+     the sample ships two hidden categories of its own, so this waited
+     forever for "Hidden categories (1)" while the button said 3. And
+     the row is found by its category rather than by taking the first
+     Unhide button, because there are now three of them. */
+  await expect
+    .poll(() => page.evaluate(() => window.Alpine.store("budget").hiddenCategories().length))
+    .toBe(hiddenBefore + 1);
+  await page.getByRole("button", { name: /^Hidden categories \(/ }).click();
+  await page
+    .locator(".budget__hidden li, .budget__hidden tr")
+    .filter({ hasText: catName })
+    .getByRole("button", { name: "Unhide" })
+    .click();
   await page.waitForTimeout(300);
   await expect(page.locator(`.budget__row[data-cat-id="${catId}"]`)).toHaveCount(1);
   await page.close();

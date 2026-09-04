@@ -53,11 +53,17 @@ test("the month overview shows the portfolio impact and it matches the store", a
   await page.evaluate(() => {
     const s = window.Alpine.store("budget");
     const dining = s.profile.categories.find((c) => c.name === "Dining out");
-    const coffee = s.profile.categories.find((c) => c.name === "Coffee");
+    /* "Coffee" was renamed out of the sample; take any other plain
+       category so a data refresh cannot break this again. */
+    const coffee = s.profile.categories.find((c) =>
+      c.id !== dining.id && !c.hidden && !s.paymentCardId(c.id) && !s.isIncomeCategory(c.id));
     s.addCut({ categoryId: dining.id, mode: "percent", value: 2500 });
     s.addCut({ categoryId: coffee.id, mode: "amount", value: 2000 });
   });
-  await page.getByRole("button", { name: /Ready to assign/ }).click();
+  /* The month card's figure is "Ready to Work", and the regex is
+     anchored because "Collapse month cards to Ready to Work" also
+     matches a loose one. */
+  await page.getByRole("button", { name: /^Ready to Work in / }).click();
   await page.waitForTimeout(300);
   const shown = await page.evaluate(() => {
     const cents = (t) => Math.abs(Math.round(parseFloat(t.replace(/[$,+]/g, "")) * 100));
