@@ -73,9 +73,13 @@ eleventyExcludeFromCollections: true
         </div>
       </dl>
       <p x-show="excludedNames().length" x-cloak class="about-profile__excluded-list">
-        Excluded accounts:
+        {# Non-breaking spaces, not plain ones: the build's HTML minifier
+           trims whitespace at the edge of a text node, which ran the
+           label into the first name and every comma into the next one
+           ("Excluded accounts:Sofia 529,Lucas 529"). #}
+        Excluded accounts:&#160;
         <template x-for="(n, i) in excludedNames()" :key="n">
-          <span><span x-text="n"></span><span x-show="i < excludedNames().length - 1" aria-hidden="true">, </span></span>
+          <span><span x-text="n"></span><span x-show="i < excludedNames().length - 1" aria-hidden="true">,&#160;</span></span>
         </template>
       </p>
     </section>

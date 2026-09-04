@@ -5,7 +5,7 @@ description: "Copy a one-shot report of your browser, theme, storage size, and r
 permalink: /app/diagnostics/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="diagnosticsView()" x-init="collect()">
+<div class="app-page" x-data="diagnosticsView()" x-init="start()">
   <header class="app-page__header">
     <div>
       <p class="eyebrow">Diagnostics</p>
@@ -46,6 +46,22 @@ function diagnosticsView() {
   return {
     report: "",
     copied: false,
+
+    /* x-init used to call collect() directly, which ran before the
+       store had loaded the profile, so the report said "Profile count:
+       0" and "(no active profile)" with a profile plainly open. Wait
+       for the store, then collect; the Refresh button still collects
+       immediately. */
+    start() {
+      var self = this;
+      var tries = 0;
+      var poll = function () {
+        var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
+        if ((!s || s.loading) && ++tries < 200) { setTimeout(poll, 50); return; }
+        self.collect();
+      };
+      poll();
+    },
 
     collect() {
       var lines = [];
