@@ -6,65 +6,82 @@ permalink: /app/audit-log/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="auditLogView()" x-init="refresh()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Audit</p>
-      <h1 class="app-page__title">Audit log</h1>
-      <p class="app-page__lead">
-        Recent activity in this profile, newest-first. Built from transaction history, scheduled-template runs, and snapshot events — read-only and useful when a household shares a profile.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--flush" x-data="auditLogView()" x-init="refresh()">
+  {# Three selects sat in a card of their own under the masthead. They
+     are filters, so they move to the collapsible row under the strip
+     (see docs/app-chrome-guide.md 2b) with a count badge, because a
+     filter that is on and out of sight looks like missing data. #}
+  {% call appToolbar("Audit log", flush=true) %}
+    <div class="app-toolbar__group">
+      <button type="button"
+              class="btn btn--ghost app-toolbar__filter-toggle"
+              @click="filtersOpen = !filtersOpen"
+              :aria-expanded="filtersOpen.toString()"
+              aria-controls="audit-filters">
+        Filters
+        <span class="app-toolbar__filter-count" x-show="activeFilterCount()" x-cloak
+              x-text="activeFilterCount()"></span>
+      </button>
+      <span class="app-toolbar__context"
+            x-text="events().length + (events().length === 1 ? ' event' : ' events')"></span>
     </div>
-    {% call overflow(label="Audit-log actions") %}
-      <li role="none">
-        <button type="button" role="menuitem" class="overflow-menu__item"
-                @click="open = false; refresh()">Refresh</button>
-      </li>
-      <li role="none">
-        <button type="button" role="menuitem" class="overflow-menu__item"
-                @click="open = false; exportCSV()">Export CSV</button>
-      </li>
-    {% endcall %}
-  </header>
-
-  <section class="card">
-    <div class="cluster" style="gap: var(--space-md);">
-      <label class="field" style="margin: 0;">
-        <span class="field__label">Filter by event</span>
-        <select class="select" x-model="kind">
-          <option value="all">All events</option>
-          <option value="txn">Transactions</option>
-          <option value="sched">Recurring posts</option>
-          <option value="snap">Snapshots</option>
-        </select>
-      </label>
-      <label class="field" style="margin: 0;">
-        <span class="field__label">Account</span>
-        <select class="select" x-model="acctId">
-          <option value="">All accounts</option>
-          <template x-for="a in ($store.budget.profile?.accounts || [])" :key="a.id">
-            <option :value="a.id" x-text="a.name"></option>
-          </template>
-        </select>
-      </label>
-      <label class="field" style="margin: 0;">
-        <span class="field__label">Last</span>
-        <select class="select" x-model.number="days">
-          <option :value="7">7 days</option>
-          <option :value="30">30 days</option>
-          <option :value="90">90 days</option>
-          <option :value="365">1 year</option>
-          <option :value="3650">All time</option>
-        </select>
-      </label>
+    <div class="app-toolbar__actions">
+      {% call overflow(label="Audit-log actions") %}
+        <li role="none">
+          <button type="button" role="menuitem" class="overflow-menu__item"
+                  @click="open = false; refresh()">Refresh</button>
+        </li>
+        <li role="none">
+          <button type="button" role="menuitem" class="overflow-menu__item"
+                  @click="open = false; exportCSV()">Export CSV</button>
+        </li>
+      {% endcall %}
+      {% call pageInfo(id="audit-log", title="About the audit log", label="What the log records and where it comes from") %}
+        <p>Recent activity in this profile, newest-first. Built from transaction history, scheduled-template runs, and snapshot events - read-only and useful when a household shares a profile.</p>
+      {% endcall %}
     </div>
-  </section>
+  {% endcall %}
 
-  <p x-show="!events().length" x-cloak style="color: var(--fg-muted); margin-top: var(--space-md);">
+  <div class="app-filters" id="audit-filters" x-show="filtersOpen" x-cloak>
+    <div class="field">
+      <label class="visually-hidden" for="audit-kind">Filter by event</label>
+      <select class="select" id="audit-kind" x-model="kind">
+        <option value="all">All events</option>
+        <option value="txn">Transactions</option>
+        <option value="sched">Recurring posts</option>
+        <option value="snap">Snapshots</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="visually-hidden" for="audit-account">Account</label>
+      <select class="select" id="audit-account" x-model="acctId">
+        <option value="">All accounts</option>
+        <template x-for="a in ($store.budget.profile?.accounts || [])" :key="a.id">
+          <option :value="a.id" x-text="a.name"></option>
+        </template>
+      </select>
+    </div>
+    <div class="field">
+      <label class="visually-hidden" for="audit-days">Window</label>
+      <select class="select" id="audit-days" x-model.number="days">
+        <option :value="7">Last 7 days</option>
+        <option :value="30">Last 30 days</option>
+        <option :value="90">Last 90 days</option>
+        <option :value="365">Last 1 year</option>
+        <option :value="3650">All time</option>
+      </select>
+    </div>
+    <button class="btn btn--ghost" type="button" x-show="activeFilterCount()" x-cloak
+            @click="clearFilters()">Clear</button>
+  </div>
+
+  <p class="app-gutter" x-show="!events().length" x-cloak style="color: var(--fg-muted);">
     No events in this window.
   </p>
 
-  <table class="table" style="margin-top: var(--space-md);" x-show="events().length" x-cloak>
+  <table class="table" x-show="events().length" x-cloak>
     <thead>
       <tr>
         <th>When</th>
@@ -88,7 +105,7 @@ eleventyExcludeFromCollections: true
     </tbody>
   </table>
 
-  <section class="card prose" style="margin-top: var(--space-lg);">
+  <section class="card prose app-gutter" style="margin-top: var(--space-lg);">
     <h2>What's in the log</h2>
     <ul>
       <li><strong>Transactions</strong> — built from <code>profile.transactions</code>. Date and amount are accurate; "who created it" isn't tracked yet.</li>
@@ -106,7 +123,27 @@ function auditLogView() {
     acctId: "",
     days: 30,
 
-    refresh() { /* getter is reactive — placeholder for an explicit refresh button. */ },
+    /* The three selects live in the collapsible filter row under the
+       strip. filtersOpen drives it; activeFilterCount() drives the
+       badge, so a filter that is on is never invisible. The window
+       select counts only when it is off its 30-day default. */
+    filtersOpen: false,
+
+    activeFilterCount() {
+      var n = 0;
+      if (this.kind !== "all") n += 1;
+      if (this.acctId !== "") n += 1;
+      if (this.days !== 30) n += 1;
+      return n;
+    },
+
+    clearFilters() {
+      this.kind = "all";
+      this.acctId = "";
+      this.days = 30;
+    },
+
+    refresh() { /* getter is reactive - placeholder for an explicit refresh button. */ },
 
     formatCents(c) {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });

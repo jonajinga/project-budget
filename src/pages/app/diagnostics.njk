@@ -5,40 +5,45 @@ description: "Copy a one-shot report of your browser, theme, storage size, and r
 permalink: /app/diagnostics/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="diagnosticsView()" x-init="start()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Diagnostics</p>
-      <h1 class="app-page__title">Diagnostics report</h1>
-      <p class="app-page__lead">
-        Copy the block below and paste it into a <a href="/app/contact/">contact form</a> message when reporting a bug. Nothing here is sent automatically.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense app-page--fill" x-data="diagnosticsView()" x-init="start()">
+  {# The old page opened with a masthead and a prose card listing what
+     the report contains, so the report itself - the only thing on the
+     page you actually do something with - started 250 pixels down. The
+     prose is in the info modal now and the report is the page. #}
+  {% call appToolbar("Diagnostics") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-show="copied" x-cloak
+            style="color: var(--ok);">Copied. Paste it into your support message.</span>
     </div>
-    <button class="btn btn--primary btn--sm" type="button" @click="copyAll()">Copy to clipboard</button>
-  </header>
-
-  <section class="card prose">
-    <h2>What's in this report</h2>
-    <ul>
-      <li>Browser user-agent + viewport size</li>
-      <li>Theme + reduced-motion preference</li>
-      <li>App build identifier (so we know which release you're on)</li>
-      <li>Profile count + active-profile shape (account count, transaction count, byte size)</li>
-      <li>Recent in-browser errors captured since the page loaded</li>
-    </ul>
-    <p>No transaction amounts, payee names, account numbers, or anything else identifying ever appears in this report.</p>
-  </section>
-
-  <section class="card" style="margin-top: var(--space-md);">
-    <h2 class="card__title">Report</h2>
-    <textarea class="diagnostics-output" readonly x-text="report" rows="22"></textarea>
-    <div class="cluster" style="margin-top: var(--space-sm);">
-      <button class="btn btn--primary" type="button" @click="copyAll()">Copy to clipboard</button>
+    <div class="app-toolbar__actions">
       <button class="btn btn--ghost" type="button" @click="collect()">Refresh</button>
       <a class="btn btn--ghost" href="/app/contact/">Open contact form</a>
+      <button class="btn btn--primary" type="button" @click="copyAll()">Copy to clipboard</button>
+      {% call pageInfo(id="diagnostics", title="About this report", label="What is in the report and where it goes") %}
+        <p>Copy the block below and paste it into a <a href="/app/contact/">contact form</a> message when reporting a bug. Nothing here is sent automatically.</p>
+        <p>What's in this report:</p>
+        <ul>
+          <li>Browser user-agent + viewport size</li>
+          <li>Theme + reduced-motion preference</li>
+          <li>App build identifier (so we know which release you're on)</li>
+          <li>Profile count + active-profile shape (account count, transaction count, byte size)</li>
+          <li>Recent in-browser errors captured since the page loaded</li>
+        </ul>
+        <p>No transaction amounts, payee names, account numbers, or anything else identifying ever appears in this report.</p>
+      {% endcall %}
     </div>
-    <p x-show="copied" x-cloak style="margin-top: var(--space-sm); color: var(--ok); font-size: var(--fs-sm);">Copied. Paste it into your support message.</p>
-  </section>
+  {% endcall %}
+
+  <div class="panel diagnostics-panel app-grow">
+    <div class="panel__head">
+      <h2 class="panel__title">Report</h2>
+    </div>
+    <div class="panel__body">
+      <textarea class="diagnostics-output" readonly x-text="report" rows="22"></textarea>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -163,8 +168,14 @@ function diagnosticsView() {
 </script>
 
 <style>
+  /* The panel is the page's one surface and it absorbs the leftover
+     window height (.app-grow), so the textarea has to grow with it
+     rather than staying at its own 22rem. */
+  .diagnostics-panel { display: flex; flex-direction: column; }
+  .diagnostics-panel > .panel__body { flex: 1 1 auto; display: flex; }
   .diagnostics-output {
     width: 100%;
+    flex: 1 1 auto;
     min-height: 22rem;
     font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
     font-size: 0.78rem;

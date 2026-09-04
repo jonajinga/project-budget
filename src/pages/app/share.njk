@@ -5,16 +5,26 @@ description: "Generate a redacted snapshot of a single report you can share — 
 permalink: /app/share/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="shareView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Share</p>
-      <h1 class="app-page__title">Share a redacted snapshot</h1>
-      <p class="app-page__lead">
-        Generate a take-home view of one report — proportions and trends stay readable, but dollar amounts are scrubbed. Useful for "look at my budget" conversations where you don't want to share exact numbers.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="shareView()" x-init="init()">
+  {# The three export buttons and the status line used to sit at the
+     bottom of the preview card. They are the page's actions, so they
+     move into the strip. #}
+  {% call appToolbar("Share a snapshot") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-show="status" x-cloak
+            style="color: var(--ok);" x-text="status"></span>
     </div>
-  </header>
+    <div class="app-toolbar__actions">
+      <button class="btn btn--primary" type="button" @click="copyAsText()">Copy as text</button>
+      <button class="btn btn--secondary" type="button" @click="copyAsHTML()">Copy as HTML</button>
+      <button class="btn btn--ghost" type="button" @click="downloadJSON()">Download JSON</button>
+      {% call pageInfo(id="share", title="About sharing a snapshot", label="What a redacted snapshot is and what it hides") %}
+        <p>Generate a take-home view of one report - proportions and trends stay readable, but dollar amounts are scrubbed. Useful for "look at my budget" conversations where you don't want to share exact numbers.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <section class="card">
     <h2 class="card__title">Pick the report to share</h2>
@@ -66,12 +76,6 @@ eleventyExcludeFromCollections: true
       </ul>
       <p x-show="!rows.length" x-cloak style="color: var(--fg-muted); padding: var(--space-md);">No data in this report yet.</p>
     </div>
-    <div class="cluster" style="margin-top: var(--space-sm);">
-      <button class="btn btn--primary" type="button" @click="copyAsText()">Copy as text</button>
-      <button class="btn btn--secondary" type="button" @click="copyAsHTML()">Copy as HTML</button>
-      <button class="btn btn--ghost" type="button" @click="downloadJSON()">Download JSON</button>
-    </div>
-    <p x-show="status" x-cloak style="margin-top: var(--space-sm); color: var(--ok); font-size: var(--fs-sm);" x-text="status"></p>
   </section>
 
   <section class="card prose" style="margin-top: var(--space-md);">

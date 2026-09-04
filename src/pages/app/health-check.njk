@@ -5,17 +5,22 @@ description: "Run deterministic checks against your profile — orphaned transac
 permalink: /app/health-check/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="healthCheckView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Health</p>
-      <h1 class="app-page__title">Health check</h1>
-      <p class="app-page__lead">
-        Checks your budget for things that quietly get out of shape.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="healthCheckView()" x-init="init()">
+  {% call appToolbar("Health check") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-show="$store.budget.profile" x-cloak
+            x-text="(warnings + failures) ? (warnings + failures) + ' to look at' : 'All clear'"></span>
     </div>
-    <button class="btn btn--primary" type="button" @click="run()">Run checks</button>
-  </header>
+    <div class="app-toolbar__actions">
+      <button class="btn btn--primary" type="button" @click="run()">Run checks</button>
+      {% call pageInfo(id="health-check", title="About the health check", label="What the health check looks for") %}
+        <p>Checks your budget for things that quietly get out of shape.</p>
+        <p>Every check runs against the active profile in this browser. Nothing is changed and nothing is sent anywhere: each finding links to the page where you can fix it.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <p x-show="!$store.budget.profile" x-cloak style="color: var(--fg-muted);">No active profile to check.</p>
 

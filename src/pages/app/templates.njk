@@ -6,17 +6,21 @@ permalink: /app/templates/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="savedViewsView()" x-init="load()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Saved views</p>
-      <h1 class="app-page__title">Saved views</h1>
-      <p class="app-page__lead">
-        A view is a register filter or report configuration you save once and recall with a click. Stored in this browser only — they don't follow your profile to other devices, but they do survive page reloads.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="savedViewsView()" x-init="load()">
+  {% call appToolbar("Saved views") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-show="views.length" x-cloak
+            x-text="views.length + (views.length === 1 ? ' saved view' : ' saved views')"></span>
     </div>
-    <button class="btn btn--primary" type="button" @click="openCreate()">New saved view</button>
-  </header>
+    <div class="app-toolbar__actions">
+      <button class="btn btn--primary" type="button" @click="openCreate()">New saved view</button>
+      {% call pageInfo(id="saved-views", title="About saved views", label="What a saved view is and where it is stored") %}
+        <p>A view is a register filter or report configuration you save once and recall with a click. Stored in this browser only - they don't follow your profile to other devices, but they do survive page reloads.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <p x-show="!views.length" x-cloak style="color: var(--fg-muted);">No saved views yet. Build one below — start with a name, pick the page, and (optionally) paste in the URL query string from your filtered view.</p>
 
