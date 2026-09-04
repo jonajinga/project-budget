@@ -218,7 +218,10 @@ function savedViewsView() {
 
 <style>
   .saved-views { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
-  .saved-view { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-md); padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-input); align-items: center; }
+  /* Block surfaces take the page's own ground now (2026-09-04):
+     a tinted box on a plain canvas is the seam the app chrome removes.
+     The hairline border is what separates it. */
+  .saved-view { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-md); padding: var(--space-md); background: var(--bg); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-input); align-items: center; }
   @media (max-width: 599px) { .saved-view { grid-template-columns: 1fr; } }
   .saved-view__main { min-width: 0; }
   .saved-view__name { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); }

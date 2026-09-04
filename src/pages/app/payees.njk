@@ -58,27 +58,28 @@ eleventyExcludeFromCollections: true
     </div>
   </section>
 
-  <section class="card app-gutter">
-    <p x-show="!rows.length && !$store.budget.allPayees().length" x-cloak style="color: var(--fg-muted);">
-      No payees yet. They're created automatically when you add a transaction.
-    </p>
+  <p class="app-gutter" x-show="!rows.length && !$store.budget.allPayees().length" x-cloak style="color: var(--fg-muted);">
+    No payees yet. They're created automatically when you add a transaction.
+  </p>
 
-    {# Bulk action bar — shown when any payee is selected. Lets you merge
-       many payees into one target in a single sweep. #}
-    <div class="cluster" x-show="selectedIds.length > 0" x-cloak
-         style="margin-bottom: var(--space-sm); padding: var(--space-2xs) var(--space-sm); background: var(--bg-alt); border-left: 3px solid var(--accent); justify-content: space-between;">
-      <span>
-        <strong x-text="selectedIds.length"></strong> selected
-      </span>
-      <div class="cluster">
-        <button class="btn btn--ghost btn--sm" type="button" @click="clearSelection()">Clear</button>
-        <button class="btn btn--secondary btn--sm" type="button"
-                :disabled="selectedIds.length < 2"
-                @click="openBulkMerge()"
-                data-tip="Pick one selected payee as the target; the rest collapse into it.">Bulk merge…</button>
-      </div>
+  {# Bulk action bar - shown when any payee is selected. Lets you merge
+     many payees into one target in a single sweep. It is a row of the
+     page now rather than a box inside the table's card: on the flush
+     page a floating bar would be the one thing not touching the edges. #}
+  <div class="cluster app-gutter payees-bulk" x-show="selectedIds.length > 0" x-cloak>
+    <span>
+      <strong x-text="selectedIds.length"></strong> selected
+    </span>
+    <div class="cluster">
+      <button class="btn btn--ghost btn--sm" type="button" @click="clearSelection()">Clear</button>
+      <button class="btn btn--secondary btn--sm" type="button"
+              :disabled="selectedIds.length < 2"
+              @click="openBulkMerge()"
+              data-tip="Pick one selected payee as the target; the rest collapse into it.">Bulk merge…</button>
     </div>
+  </div>
 
+  <section class="card payees-table-card" x-show="rows.length" x-cloak>
     <table class="table has-card-fallback" x-show="rows.length" x-cloak>
       <thead>
         <tr>
@@ -200,7 +201,8 @@ eleventyExcludeFromCollections: true
     </ul>
   </section>
 
-  {# Inline disclosure replaces the old "About payees" modal. #}
+  {# The "About payees" modal is the shared pageInfo macro now; see the
+     strip above. #}
 
   {# Bulk merge modal — pick one selected payee as the target. #}
   <div class="modal-backdrop" x-show="bulkMergeOpen" x-cloak @keydown.escape.window="bulkMergeOpen = false">
@@ -460,3 +462,22 @@ function payeesView() {
   };
 }
 </script>
+
+<style>
+  /* The table runs to the window edges on the flush page, so its card
+     drops the side borders, the rounding and its own padding: the
+     hairline at top and bottom is what separates it from the tiles
+     above and the page below. */
+  .payees-table-card { padding: 0; overflow: visible; }
+  .app-page--flush > .payees-table-card {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+  /* The selection bar is a row of the page, not a floating box: it takes
+     the page ground and says what it is with an accent rail. */
+  .payees-bulk {
+    justify-content: space-between;
+    border-left: 3px solid var(--accent);
+  }
+</style>

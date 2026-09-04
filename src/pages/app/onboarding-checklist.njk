@@ -146,7 +146,10 @@ function onboardingChecklist() {
   .onboarding-progress__fill { position: absolute; inset: 0 auto 0 0; width: var(--pct); background: var(--accent); border-radius: inherit; transition: width var(--t-fast); }
   .onboarding-progress__label { margin: var(--space-2xs) 0 0; color: var(--fg-muted); font-size: var(--fs-sm); }
   .onboarding-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-md); }
-  .onboarding-step { display: grid; grid-template-columns: 48px 1fr; gap: var(--space-md); padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--border-strong); border-radius: var(--radius-input); align-items: flex-start; }
+  /* Block surfaces take the page's own ground now (2026-09-04):
+     a tinted box on a plain canvas is the seam the app chrome removes.
+     The hairline border is what separates it. */
+  .onboarding-step { display: grid; grid-template-columns: 48px 1fr; gap: var(--space-md); padding: var(--space-md); background: var(--bg); border: 1px solid var(--border-soft); border-left: 3px solid var(--border-strong); border-radius: var(--radius-input); align-items: flex-start; }
   @media (max-width: 479px) {
     .onboarding-step { grid-template-columns: 36px 1fr; gap: var(--space-sm); padding: var(--space-sm); }
     .onboarding-step__check { width: 28px; height: 28px; font-size: 0.95rem; }

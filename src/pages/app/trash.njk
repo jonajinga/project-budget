@@ -141,7 +141,7 @@ eleventyExcludeFromCollections: true
     </tbody>
   </table>
 
-  <section class="card prose app-gutter" style="margin-top: var(--space-lg);">
+  <section class="card prose app-gutter">
     <h2>How retention works</h2>
     <h3>Transactions</h3>
     <ul>
@@ -286,10 +286,12 @@ function trashView() {
 
 <style>
   /* Section titles on a flush page. .app-gutter gives them their side
-     gutter back; these two rules give the second section the extra air
-     above it that its old inline --space-xl margin carried. */
+     gutter and a hairline underneath; the second section gets its extra
+     air from padding rather than a margin, because a margin here shows
+     the page ground through the gap and the point of the flush page is
+     that there are no gaps. */
   .trash__section-title { font-family: var(--font-display); font-size: var(--fs-lg); }
-  .app-page--flush > .trash__section-title--later { margin-top: var(--space-lg); }
+  .app-page--flush > .trash__section-title--later { padding-top: var(--space-lg); }
   .trash__sub { display: none; }
   @media (max-width: 599px) { .trash__sub { display: block; color: var(--fg-muted); font-size: var(--fs-xs); } }
 </style>

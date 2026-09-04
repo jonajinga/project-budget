@@ -82,10 +82,19 @@
 /* Controls that belong together. The first group sits left, and
    .app-toolbar__actions pushes everything after it to the right
    edge. */
+/* flex: 1 1 auto, not the default 0 1 auto. With the default, Chrome
+   sized the group from its own max-content and then shrank its
+   children to fit it, so on payees a 224px search field rendered at
+   190 and "159 of 159 payees" ellipsised to "159 of 159 pa..." with
+   650 pixels of empty strip to its right. Growing into the free space
+   costs nothing -- the controls inside have flex-grow 0, so the slack
+   lands at the end of the group -- and .app-toolbar__actions still
+   pins itself right with its auto margin. */
 .app-toolbar__group {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
+  flex: 1 1 auto;
   min-width: 0;
 }
 .app-toolbar__actions {

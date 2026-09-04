@@ -26,9 +26,13 @@ eleventyExcludeFromCollections: true
     </div>
   {% endcall %}
 
-  {# Data summary card — quick overview + jump links #}
-  <section class="card" x-show="$store.budget.profile" x-cloak>
-    <h2 class="card__title">Data</h2>
+  {# One document in titled sections rather than eight floating boxes.
+     Each section is a .panel: a small uppercase title bar and one
+     hairline, sitting on the page's own ground. #}
+  {# Data summary — quick overview + jump links #}
+  <section class="panel" x-show="$store.budget.profile" x-cloak>
+    <div class="panel__head"><h2 class="panel__title">Data</h2></div>
+    <div class="panel__body">
     <p class="card__body" style="margin-bottom: var(--space-sm);">
       An overview of what's stored in this browser and how to manage it.
     </p>
@@ -97,11 +101,13 @@ eleventyExcludeFromCollections: true
               :disabled="!$store.budget.profiles?.length"
               data-tip="Download every profile in this browser as one JSON bundle.">Export all profiles</button>
     </div>
+    </div>
   </section>
 
   <div class="grid grid--2">
-    <section class="card">
-      <h2 class="card__title">Storage</h2>
+    <section class="panel">
+      <div class="panel__head"><h2 class="panel__title">Storage</h2></div>
+      <div class="panel__body">
       <p class="card__body" style="margin-bottom: var(--space-sm);">
         Profile data is held in your browser's localStorage. Typical browser quota is 5&ndash;10 MB. Export to JSON if you are nearing the cap.
       </p>
@@ -137,10 +143,12 @@ eleventyExcludeFromCollections: true
                 @click="$store.budget.resaveAllProfiles()"
                 data-tip="Re-serialize every profile to pick up the current storage format (compression, short IDs). Frees space if older raw-JSON profiles are still around.">Re-save all profiles now</button>
       </div>
+      </div>
     </section>
 
-    <section class="card" x-data="settingsThemePicker()" x-init="init()">
-      <h2 class="card__title">Appearance</h2>
+    <section class="panel" x-data="settingsThemePicker()" x-init="init()">
+      <div class="panel__head"><h2 class="panel__title">Appearance</h2></div>
+      <div class="panel__body">
       <p class="card__body" style="margin-bottom: var(--space-sm);">
         Pick a color theme. The header sun/moon button still toggles
         between the two base themes (light + dark); the picker below
@@ -165,9 +173,10 @@ eleventyExcludeFromCollections: true
           </button>
         </template>
       </div>
+      </div>
     </section>
 
-    <section class="card" x-data="{
+    <section class="panel" x-data="{
       get enabled() {
         try { return localStorage.getItem('projectbudget:tooltips-off') !== '1'; }
         catch (_e) { return true; }
@@ -180,7 +189,8 @@ eleventyExcludeFromCollections: true
         document.dispatchEvent(new CustomEvent('projectbudget:tooltips-changed'));
       }
     }">
-      <h2 class="card__title">Tooltips</h2>
+      <div class="panel__head"><h2 class="panel__title">Tooltips</h2></div>
+      <div class="panel__body">
       <p class="card__body" style="margin-bottom: var(--space-sm);">
         Hover-help on numeric fields, buttons, and budget terms. Turn them off if they get in the way.
       </p>
@@ -188,10 +198,12 @@ eleventyExcludeFromCollections: true
         <input type="checkbox" :checked="enabled" @change="toggle()">
         <span>Show tooltips throughout the app</span>
       </label>
+      </div>
     </section>
 
-    <section class="card" style="grid-column: 1 / -1;">
-      <h2 class="card__title">Manual snapshots</h2>
+    <section class="panel" style="grid-column: 1 / -1;">
+      <div class="panel__head"><h2 class="panel__title">Manual snapshots</h2></div>
+      <div class="panel__body">
       <p class="card__body" style="margin-bottom: var(--space-sm);">
         Take a labeled snapshot any time &mdash; before a risky operation like fresh-start, history trim, or a large import. Snapshots are kept until you remove them (cap 20 per profile, oldest gets evicted) and do not compete with the rolling 14-day daily backups.
       </p>
@@ -254,10 +266,12 @@ eleventyExcludeFromCollections: true
       <p x-show="!$store.budget.listSnapshots().length" x-cloak style="color: var(--fg-muted);">
         No snapshots yet. Take one before any operation you might want to undo.
       </p>
+      </div>
     </section>
 
-    <section class="card" style="grid-column: 1 / -1;">
-      <h2 class="card__title">Daily backups (automatic)</h2>
+    <section class="panel" style="grid-column: 1 / -1;">
+      <div class="panel__head"><h2 class="panel__title">Daily backups (automatic)</h2></div>
+      <div class="panel__body">
       <p class="card__body" style="margin-bottom: var(--space-sm);">
         One snapshot per calendar day for the active profile. The last 14 days are kept. Use these to recover from drift; use manual snapshots above for named recovery points.
       </p>
@@ -313,13 +327,15 @@ eleventyExcludeFromCollections: true
           </template>
         </tbody>
       </table>
+      </div>
     </section>
 
     {# Trash section moved to /app/trash/ so transaction trash and
        profile trash live on one page. Settings keeps a quick link
        + a count tile so the entry point stays discoverable. #}
-    <section class="card" style="grid-column: 1 / -1;">
-      <h2 class="card__title">Trash</h2>
+    <section class="panel" style="grid-column: 1 / -1;">
+      <div class="panel__head"><h2 class="panel__title">Trash</h2></div>
+      <div class="panel__body">
       <p class="card__body" style="margin-bottom: var(--space-sm);">
         Soft-deleted transactions (30-day retention) and profiles (7-day retention) live on the dedicated Trash page now. Restore or purge from there.
       </p>
@@ -332,13 +348,16 @@ eleventyExcludeFromCollections: true
       <div class="cluster">
         <a class="btn btn--primary btn--sm" href="/app/trash/">Open Trash</a>
       </div>
+      </div>
     </section>
 
-    <section class="card" style="grid-column: 1 / -1;">
-      <h2 class="card__title">About</h2>
+    <section class="panel" style="grid-column: 1 / -1;">
+      <div class="panel__head"><h2 class="panel__title">About</h2></div>
+      <div class="panel__body">
       <p class="card__body">
         Project Budget version 0.1.0. Source on <a href="{{ site.repo }}" rel="noopener">GitHub</a>. MIT licensed.
       </p>
+      </div>
     </section>
   </div>
 

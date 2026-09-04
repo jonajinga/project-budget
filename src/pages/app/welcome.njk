@@ -280,8 +280,11 @@ function welcomeWizard() {
 
 <style>
   .welcome-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-md); }
+  /* Block surfaces take the page's own ground now (2026-09-04):
+     a tinted box on a plain canvas is the seam the app chrome removes.
+     The hairline border is what separates it. */
   .welcome-step {
-    background: var(--bg-elevated);
+    background: var(--bg);
     border: 1px solid var(--border-soft);
     border-left: 3px solid var(--border-strong);
     border-radius: var(--radius-input);
@@ -289,7 +292,7 @@ function welcomeWizard() {
     transition: border-color var(--t-fast), background var(--t-fast);
   }
   .welcome-step.is-current { border-left-color: var(--accent); }
-  .welcome-step.is-done    { border-left-color: var(--ok); background: color-mix(in oklab, var(--ok) 4%, var(--bg-elevated)); }
+  .welcome-step.is-done    { border-left-color: var(--ok); background: color-mix(in oklab, var(--ok) 4%, var(--bg)); }
   /* Muted by COLOUR, not by opacity.
      `opacity: 0.6` fades everything inside the step -- including text --
      against the page, and the browser composites it to a colour the

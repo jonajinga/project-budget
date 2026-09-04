@@ -183,7 +183,10 @@ function backupView() {
   .backup-panel__msg { color: var(--ok); font-size: var(--fs-sm); }
   .backup-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
   @media (max-width: 899px) { .backup-actions { grid-template-columns: 1fr; } }
-  .backup-action { display: flex; flex-direction: column; padding: var(--space-md); background: var(--bg-alt); border: 1px solid var(--border-soft); border-radius: var(--radius-input); }
+  /* Block surfaces take the page's own ground now (2026-09-04):
+     a tinted box on a plain canvas is the seam the app chrome removes.
+     The hairline border is what separates it. */
+  .backup-action { display: flex; flex-direction: column; padding: var(--space-md); background: var(--bg); border: 1px solid var(--border-soft); border-radius: var(--radius-input); }
   .backup-action .btn { margin-top: auto; align-self: flex-start; }
   .backup-action__title { margin: 0 0 var(--space-2xs); font-family: var(--font-display); font-size: var(--fs-lg); }
   .backup-action__body { margin: 0 0 var(--space-sm); max-width: none; color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.5; }

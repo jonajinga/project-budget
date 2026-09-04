@@ -114,7 +114,10 @@ eleventyExcludeFromCollections: true
     .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 599px)  { .tools-grid { grid-template-columns: 1fr; } }
-  .tools-card { display: block; padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-input); color: var(--fg); text-decoration: none; transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast); }
+  /* Block surfaces take the page's own ground now (2026-09-04):
+     a tinted box on a plain canvas is the seam the app chrome removes.
+     The hairline border is what separates it. */
+  .tools-card { display: block; padding: var(--space-md); background: var(--bg); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-input); color: var(--fg); text-decoration: none; transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast); }
   .tools-card:hover { background: var(--bg-alt); border-color: var(--accent); transform: translateY(-1px); }
   .tools-card__title { margin: 0 0 var(--space-2xs); font-family: var(--font-display); font-size: var(--fs-lg); color: var(--fg); }
   .tools-card:hover .tools-card__title { color: var(--accent); }

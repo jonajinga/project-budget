@@ -249,7 +249,10 @@ function healthCheckView() {
 
 <style>
   .health-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
-  .health-item { padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--ok); border-radius: var(--radius-input); }
+  /* Block surfaces take the page's own ground now (2026-09-04):
+     a tinted box on a plain canvas is the seam the app chrome removes.
+     The hairline border is what separates it. */
+  .health-item { padding: var(--space-md); background: var(--bg); border: 1px solid var(--border-soft); border-left: 3px solid var(--ok); border-radius: var(--radius-input); }
   .health-item--warn   { border-left-color: var(--warn); }
   .health-item--danger { border-left-color: var(--danger); }
   .health-item__head { display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-2xs); }
