@@ -46,11 +46,19 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   7,776 pixels tall. Names now ellipsis with a tooltip, cards fold on
   phones with the top four open and the choice remembered, and the page
   is 2,961 pixels. Verified independently.
-- [~] **P3 Recurring.** Amount, Post button and row menu are off screen
-  at tablet width; phone cards are about 400 pixels each. In progress.
-- [~] **P4 Accounts.** Column header repeats seven times, columns do
-  not line up between groups, phone pills and names are clipped. In
-  progress.
+- [x] **P3 Recurring.** At tablet width the table was 785 pixels inside
+  a 697 pixel card, so the Post button and row menu sat past the edge of
+  the screen and were reachable only by discovering that the card
+  scrolls sideways. Fixed layout, payee absorbs the slack, frequency
+  gives way first. Post moved from 1060 to 928 and the row menu from
+  1096 to 964, both inside the 1024 viewport. Phone cards went from 258
+  to 61 pixels each and the page from 11,731 to 3,572. Posting works at
+  both sizes with a 44 pixel tap target. Verified independently, and
+  the shared tile strip on five other pages is untouched.
+- [~] **P4 Accounts.** Worker reports it finished on branch
+  task/P4-accounts: one table with group section rows, a single sticky
+  header, and a colgroup so columns line up. NOT reviewed, NOT
+  verified, NOT merged. Next up.
 - [ ] **P5 Calendar.** Phone view is unlabelled coloured blobs and a
   six-row toolbar. Needs an agenda list, with the grid as a picker.
 
