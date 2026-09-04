@@ -16,13 +16,23 @@ async function closeInspector(page) {
   if ((await toggle.getAttribute("aria-pressed")) === "true") await toggle.click();
 }
 
+
+/* The month-count control is a <select> labelled "Months shown", not a
+   row of "Show N months" buttons. It changed when the budget HUD was
+   built and these five tests have been looking for the old buttons
+   ever since, failing on a 30-second locator timeout apiece. */
+async function setMonths(page, n) {
+  await page.getByLabel("Months shown").selectOption(String(n));
+  await page.waitForTimeout(300);
+}
+
 test("picking 3 months renders three labelled columns with independent inputs", async ({ seeded, viewport }) => {
   test.skip(!wide(viewport), "3 columns need >=1280");
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
   await closeInspector(page);
-  await page.getByRole("button", { name: "Show 3 months" }).click();
+  await setMonths(page, 3);
   await expect(page.locator(".budget__month-head")).toHaveCount(3);
   const labels = await page.locator(".budget__month-head").allTextContents();
   expect(labels.join(" ")).toMatch(/Mar/);
@@ -40,7 +50,7 @@ test("editing a non-anchor column writes to THAT month and only that month", asy
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
-  await page.getByRole("button", { name: "Show 2 months" }).click();
+  await setMonths(page, 2);
   const catId = await page.evaluate(() => {
     const s = window.Alpine.store("budget");
     return s.profile.categories.find((c) => c.name === "Groceries").id;
@@ -67,7 +77,7 @@ test("a store write updates every visible column (the reactivity handshake)", as
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
-  await page.getByRole("button", { name: "Show 2 months" }).click();
+  await setMonths(page, 2);
   const catId = await page.evaluate(() => {
     const s = window.Alpine.store("budget");
     return s.profile.categories.find((c) => c.name === "Groceries").id;
@@ -85,7 +95,7 @@ test("the URL still carries only the anchor month", async ({ seeded, viewport })
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
   await closeInspector(page);
-  await page.getByRole("button", { name: "Show 3 months" }).click();
+  await setMonths(page, 3);
   await page.waitForTimeout(200);
   expect(new URL(page.url()).search).toBe("?m=2026-03");
   await page.close();
@@ -95,7 +105,7 @@ test("the month count survives a reload", async ({ seeded, viewport }) => {
   test.skip(!wide(viewport), "needs multi-month");
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
-  await page.getByRole("button", { name: "Show 2 months" }).click();
+  await setMonths(page, 2);
   await expect(page.locator(".budget__month-head")).toHaveCount(2);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.Alpine?.store?.("budget")?.loading === false, { timeout: 8000 }).catch(() => {});
