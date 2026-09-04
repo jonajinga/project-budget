@@ -69,6 +69,7 @@
 /* Past 1200px there is room to spare, so give the two fixed columns
    their comfortable width instead of handing every spare pixel to a
    name column that is already twice what it needs. */
+/* breakpoint-contract: allow -- 1200: past this the two fixed columns get their comfortable width */
 @media (min-width: 1200px) {
   .acct-table__col-type { width: 11rem; }
   .acct-table__col-bal  { width: 9.5rem; }

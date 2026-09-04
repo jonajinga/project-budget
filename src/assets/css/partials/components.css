@@ -496,6 +496,7 @@
    sidebar first takes its 266px out of the page, so 1024 is the
    narrowest a page card ever gets: the one width this rule exists for.
    Reached independently by two agents on the same day. */
+/* breakpoint-contract: allow -- 1024 inclusive, not 1023 -- iPad landscape, the narrowest a card gets */
 @media (max-width: 1024px) { .col-p3 { display: none !important; } }
 @media (max-width: 599px)  { .col-p2 { display: none !important; } }
 

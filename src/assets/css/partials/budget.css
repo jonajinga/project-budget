@@ -4683,6 +4683,7 @@ body.pb-dragging { overflow: visible !important; }
 }
 /* Above 1250 the card is 918px or wider, so the date and the amount can
    have their natural width and nothing ellipsizes that does not have to. */
+/* breakpoint-contract: allow -- 1250: the card is 918px or wider, so nothing ellipsizes needlessly */
 @media (min-width: 1250px) {
   .rec-table .col-date   { width: 7rem; }
   .rec-table .col-amount { width: 7rem; }

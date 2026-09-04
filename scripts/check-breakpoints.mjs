@@ -53,11 +53,53 @@ const MEDIA = /@media([^{]*)\{/g;
 const WIDTH = /\((min|max)-width:\s*(\d+)px\)/g;
 
 const violations = [];
+const exempted = [];
 const used = new Map();
+
+/* Deliberate deviations, declared where they happen.
+ *
+ * Every one of the nine off-contract breakpoints in this codebase turned
+ * out to be a reasoned decision with the reason written directly above
+ * it -- "1024 inclusive, not 1023: it is iPad landscape and where the
+ * sidebar first takes its 266px out of the page", "above 1250 the card
+ * is 918px or wider so nothing ellipsizes that does not have to", and so
+ * on. None was drift.
+ *
+ * With no way to say that, this check failed CI permanently, which makes
+ * it noise: a gate that is always red stops being read, and the next
+ * person's accidental 1120px lands in a list nobody looks at. The escape
+ * hatch is what makes the gate mean something again.
+ *
+ * Put it on the line immediately above the @media, with a reason:
+ *
+ *   /* breakpoint-contract: allow -- 1024 inclusive, iPad landscape *​/
+ *   @media (max-width: 1024px) { ... }
+ *
+ * A normal CSS block comment. The first version of this used `//`, to
+ * survive stripComments() -- which it did, and then shipped straight
+ * into the built stylesheet, where `//` is not valid CSS at all. A
+ * browser reads it as a selector and swallows the @media block that
+ * follows it, so the rule the pragma was defending would have been
+ * silently deleted in production. allowedLines() reads the RAW file
+ * before comments are stripped, so a block comment works and is safe.
+ * Same-line also works.
+ */
+const ALLOW = /breakpoint-contract:\s*allow/;
+function allowedLines(raw) {
+  const out = new Set();
+  const lines = raw.split("\n");
+  lines.forEach((line, i) => {
+    if (!ALLOW.test(line)) return;
+    out.add(i + 1);      /* same line as the @media */
+    out.add(i + 2);      /* the line below it */
+  });
+  return out;
+}
 
 for (const file of readdirSync(PARTIALS).filter((f) => f.endsWith(".css")).sort()) {
   const raw = readFileSync(join(PARTIALS, file), "utf8");
   const css = stripComments(raw);
+  const allowed = allowedLines(raw);
 
   /* Line numbers must come from the ORIGINAL text, or every reported line
      is wrong by however many comment lines preceded it. Track the offset
@@ -89,6 +131,10 @@ for (const file of readdirSync(PARTIALS).filter((f) => f.endsWith(".css")).sort(
       const key = `${kind}-${val}`;
       used.set(key, (used.get(key) || 0) + 1);
       const ok = kind === "min" ? allowedMin.has(val) : allowedMax.has(val);
+      if (!ok && allowed.has(lineOf(m.index))) {
+        exempted.push(`${file}:${lineOf(m.index)}  (${kind}-width: ${val}px)`);
+        continue;
+      }
       if (!ok) {
         const suggestion =
           kind === "min"
@@ -118,6 +164,11 @@ for (const [key, count] of sorted) {
   const [kind, val] = key.split("-");
   const ok = kind === "min" ? allowedMin.has(+val) : allowedMax.has(+val);
   console.log(`  ${ok ? "ok " : "OFF"}  ${kind}-width: ${val}px  x${count}`);
+}
+
+if (exempted.length) {
+  console.log(`\n${exempted.length} declared exception(s) -- reasoned deviations, not drift:`);
+  for (const e of exempted) console.log(`  ${e}`);
 }
 
 if (violations.length) {

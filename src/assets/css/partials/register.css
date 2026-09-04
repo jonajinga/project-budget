@@ -222,6 +222,7 @@
    takes an ellipsis that does not have to. Below it the compact set
    above applies and the long names ellipsize with the full value in
    the cell's tooltip. */
+/* breakpoint-contract: allow -- 1250: the card is 918px or wider, so nothing ellipsizes needlessly */
 @media (min-width: 1250px) {
   .register__table .col-date     { width: 7rem; }
   .register__table .col-payee    { width: 23%; }
@@ -234,10 +235,12 @@
    wide, is 3 pixels. A 3px column with a header on it is worse than no
    column. .col-p3 in the markup covers 1024 and below; this covers the
    band above it, up to where memo starts at about 78px and grows. */
+/* breakpoint-contract: allow -- 1249: below this memo is 3px wide, which is worse than no column */
 @media (max-width: 1249px) {
   .register__table .col-memo { display: none; }
 }
 
+/* breakpoint-contract: allow -- 1249: below this memo is 3px wide, which is worse than no column */
 @media (max-width: 1249px) {
   .register__table th,
   .register__table td {
@@ -813,6 +816,7 @@
    Date and Account beneath it, Actions on their own line. Same markup and
    the same table semantics for a screen reader; only the visual layout
    changes, so `scope` and the header row still do their job. */
+/* breakpoint-contract: allow -- 1024 inclusive -- the iPad-landscape band the row layout is built for */
 @media (max-width: 1024px) {
   .recurring-due,
   .recurring-due tbody,
@@ -869,6 +873,7 @@
    the entry rather than on a line of their own, which is the whole of
    the third row. Two lines instead of three: about 60px a row against
    the 85px the wrapped five-column table produced. */
+/* breakpoint-contract: allow -- 1024 inclusive -- the iPad-landscape band the row layout is built for */
 @media (min-width: 600px) and (max-width: 1024px) {
   .recurring-due tr {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
