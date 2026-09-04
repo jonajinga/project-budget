@@ -91,7 +91,7 @@ eleventyExcludeFromCollections: true
         <input class="input" id="rec-search" type="search"
                x-model="searchQuery"
                data-tip="Searches payee, memo, account and category."
-               placeholder="Search recurring…">
+               placeholder="Search recurring&#8230;">
       </div>
       <div class="rec-toolbar__filters">
         <div class="field">
@@ -392,7 +392,7 @@ eleventyExcludeFromCollections: true
                         x-show="!s.paused" x-cloak
                         data-tip="Post this occurrence as a real transaction now and advance the next date.">Post</button>
                 <span x-show="s.paused" x-cloak class="badge badge--paused rec-paused-chip"
-                      data-tip="Paused — won't queue until resumed.">Paused</span>
+                      data-tip="Paused. Will not queue until resumed.">Paused</span>
                 {% call overflow(label="Recurring template actions") %}
                   <li role="none">
                     <button type="button" role="menuitem" class="overflow-menu__item"
