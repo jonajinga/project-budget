@@ -439,11 +439,16 @@
     white-space: nowrap;
   }
   /* Reset for tables that have their own treatment. */
+  /* Report and card tables used to reset to a rigid table here, which
+     pushed their money columns past the phone's right edge with no
+     way to reach them. They now keep the scrolling block form; the
+     card itself already scrolls too. Tables that stack (.table--stack)
+     are handled below and win by specificity. */
   .report .table,
   .card .table {
-    display: table;
-    overflow-x: visible;
-    white-space: normal;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
   /* Tables with their own mobile-card fallback stay hidden — the
      fallback already shows. Without this override the generic
@@ -464,6 +469,104 @@
   -webkit-overflow-scrolling: touch;
 }
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---- Responsive table recipe (S2, 2026-09-04) ----------------------
+   One set of rules for every data table in the app. Pages opt in with
+   classes and attributes; nothing here changes a table that does not.
+
+   Column priority. Mark a <th> and its <td>s with .col-p3 to hide the
+   column below 1024px, .col-p2 to hide it below 600px. Money and
+   action columns never carry a priority class: they are the last
+   thing a reader gives up, so they are the last thing to hide.
+
+   Scroll. A table wider than its card scrolls inside .table-scroll.
+   Add .table-scroll--sticky-first to pin the first column (the name)
+   while the numbers scroll under it.
+
+   Sticky header. .table--sticky-head pins the header row to the top
+   of the scrolling ancestor. Use it on tables over about fifteen rows.
+
+   Stack. .table--stack turns every row into a card below 600px. Each
+   <td> carries data-label="Column" for the small label on its left;
+   the first cell is the card title; a cell with .table__actions holds
+   the kebab and sits in the top-right corner. Money cells keep .num.
+   When a table stacks, the plain-table phone fallback (display:block
+   scroll) must not also apply, so the stack rule wins by specificity. */
+@media (max-width: 1023px) { .col-p3 { display: none !important; } }
+@media (max-width: 599px)  { .col-p2 { display: none !important; } }
+
+.table-scroll--sticky-first th:first-child,
+.table-scroll--sticky-first td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg-elevated);
+  box-shadow: 1px 0 0 var(--border-soft);
+}
+.table-scroll--sticky-first thead th:first-child { z-index: 2; background: var(--bg-alt); }
+
+.table--sticky-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-alt);
+  box-shadow: 0 1px 0 var(--border-soft);
+}
+
+@media (max-width: 599px) {
+  .app-page .table.table--stack,
+  .app-page .table--stack { display: block; white-space: normal; overflow: visible; }
+  .table--stack thead { display: none; }
+  .table--stack tbody, .table--stack tr, .table--stack td { display: block; width: 100%; }
+  .table--stack tr {
+    position: relative;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-input);
+    padding: var(--space-2xs) var(--space-xs);
+    margin-bottom: var(--space-xs);
+    background: var(--bg-elevated);
+  }
+  .table--stack tbody tr:hover { background: var(--bg-elevated); }
+  .table--stack td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-sm);
+    padding: 3px 0;
+    border-bottom: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  .table--stack td.num { text-align: right; }
+  .table--stack td[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: var(--fg-muted);
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .table--stack td[data-label] > * { margin-left: auto; text-align: right; }
+  .table--stack td:first-child {
+    display: block;
+    padding-right: 44px;
+    font-size: var(--fs-md);
+    font-weight: 600;
+  }
+  .table--stack td.table__actions {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: auto;
+    padding: 0;
+    z-index: 2;
+  }
+  /* A stacked card has no columns to pin; the sticky first cell would
+     otherwise sit above the actions button. */
+  .table-scroll--sticky-first .table--stack td:first-child { position: static; box-shadow: none; background: transparent; }
+  .table--stack td.table__actions::before { content: none; }
+}
 
 /* Badge */
 .badge {

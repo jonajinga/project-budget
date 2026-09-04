@@ -66,17 +66,4 @@
 
 /* Five tiles on one row when there is room. */
 .hist__kpis { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-/* The cuts table becomes a stack of cards on phones. */
-@media (max-width: 699px) {
-  .hist__table--stack thead { display: none; }
-  .hist__table--stack, .hist__table--stack tbody, .hist__table--stack tr, .hist__table--stack td { display: block; width: 100%; }
-  .hist__table--stack tr { position: relative; border: 1px solid var(--border-soft); border-radius: var(--radius-input); padding: var(--space-2xs) var(--space-xs); margin-bottom: var(--space-xs); }
-  .hist__table--stack td { border-bottom: 0; text-align: left; white-space: normal; padding: 3px 0; display: flex; justify-content: space-between; gap: var(--space-sm); align-items: baseline; }
-  .hist__table--stack td[data-label]::before { content: attr(data-label); color: var(--fg-muted); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.05em; flex: 0 0 auto; }
-  .hist__table--stack td[data-label] > div:first-of-type { text-align: right; }
-  .hist__table--stack td[data-label] { flex-wrap: wrap; }
-  .hist__table--stack td[data-label] > * { margin-left: auto; text-align: right; }
-  .hist__table--stack td:first-child { display: block; padding-right: 40px; font-size: var(--fs-md); }
-  .hist__table--stack td.hist__table-actions { position: absolute; top: 4px; right: 4px; width: auto; padding: 0; }
-  .hist__table--stack .hist__bar { width: 100%; margin-top: 2px; }
-}
+/* Phone card stacking now comes from .table--stack in components.css. */

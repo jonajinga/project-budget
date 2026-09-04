@@ -86,7 +86,7 @@ eleventyExcludeFromCollections: true
           <span class="hist__card-meta" x-text="'Measured for ' + monthLabel($store.budget.currentMonth)"></span>
         </div>
         <div class="hist__table-wrap">
-          <table class="hist__table hist__table--stack">
+          <table class="hist__table table table--stack">
             <thead>
               <tr>
                 <th>Category</th>
@@ -125,7 +125,7 @@ eleventyExcludeFromCollections: true
                     <div x-text="c.cut.goalLabel || (c.cut.targetMonth ? 'A date' : '-')"></div>
                     <div class="hist__card-meta" x-show="c.cut.targetMonth" x-text="fmt(c.series.projectedByTarget) + ' by ' + monthLabel(c.cut.targetMonth, true)"></div>
                   </td>
-                  <td class="hist__table-actions">
+                  <td class="table__actions">
                     {% call overflow(label="Cut actions") %}
                       <li role="none"><a role="menuitem" class="overflow-menu__item" :href="categoryHref(c)">Category history</a></li>
                       <li role="none"><button type="button" role="menuitem" class="overflow-menu__item" @click="open = false; openEdit(c)">Edit cut</button></li>

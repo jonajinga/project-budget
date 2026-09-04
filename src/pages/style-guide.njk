@@ -232,6 +232,26 @@ function rta(profile, month) {
   </div>
 </section>
 
+<h2 id="data-tables">Tables</h2>
+<p>Every data table uses <code>.table</code> plus the responsive recipe below. Money cells carry <code>.num</code> and always show cents.</p>
+<ul>
+  <li><strong>Column priority.</strong> Add <code>.col-p3</code> to a header and its cells to hide that column below 1024px, <code>.col-p2</code> to hide it below 600px. Money and action columns never carry a priority class.</li>
+  <li><strong>Scroll.</strong> Wrap a wide table in <code>.table-scroll</code>. Add <code>.table-scroll--sticky-first</code> to pin the name column while the numbers scroll.</li>
+  <li><strong>Sticky header.</strong> Add <code>.table--sticky-head</code> on tables over about fifteen rows.</li>
+  <li><strong>Stack on phones.</strong> Add <code>.table--stack</code> and give each cell <code>data-label="Column"</code>. The first cell becomes the card title; a cell with <code>.table__actions</code> holds the kebab menu in the corner.</li>
+</ul>
+<div class="table-scroll table-scroll--sticky-first">
+  <table class="table table--stack table--sticky-head">
+    <thead>
+      <tr><th>Payee</th><th class="col-p3">Account</th><th class="col-p2">Category</th><th class="num">Amount</th><th></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Kroger</td><td class="col-p3" data-label="Account">Amex Blue Cash</td><td class="col-p2" data-label="Category">Groceries</td><td class="num" data-label="Amount">-$257.44</td><td class="table__actions"><button class="btn btn--icon" type="button" aria-label="Row actions">&#8942;</button></td></tr>
+      <tr><td>Rocket Mortgage</td><td class="col-p3" data-label="Account">Huntington Checking</td><td class="col-p2" data-label="Category">Mortgage</td><td class="num" data-label="Amount">-$1,889.40</td><td class="table__actions"><button class="btn btn--icon" type="button" aria-label="Row actions">&#8942;</button></td></tr>
+    </tbody>
+  </table>
+</div>
+
 <h2 id="badges">Badges</h2>
 <p>For inline metadata — status, tags, counts. Pair color with a label so the meaning isn't color-only.</p>
 <div class="example__row">
