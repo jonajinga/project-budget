@@ -29,12 +29,50 @@
              : 'projectbudget:sidebarOpen:mobile';
            localStorage.setItem(key, this.sidebarOpen ? '1' : '0');
          } catch (_e) {}
+       },
+
+       /* ---- Edge peek (desktop only) ----------------------------------
+          With the sidebar collapsed, moving the pointer to the left edge
+          slides it back over the content, and moving away puts it back.
+          It is a peek, not a reopen: the grid stays collapsed and the
+          sidebar floats, so the whole page does not reflow every time a
+          cursor passes the edge. The hamburger is still how you pin it
+          open for good.
+
+          _peekTimer is the close delay. Without it the sidebar shuts the
+          instant the pointer crosses a 1px gap between the hotzone and
+          the panel, which makes the whole thing feel broken. 220ms is
+          long enough for a diagonal path to the first link and short
+          enough not to feel stuck. */
+       peek: false,
+       _peekTimer: null,
+       _canPeek() {
+         return window.matchMedia('(min-width: 1024px)').matches &&
+                window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+                !this.sidebarOpen;
+       },
+       peekOpen() {
+         clearTimeout(this._peekTimer);
+         if (this._canPeek()) this.peek = true;
+       },
+       peekClose(delay) {
+         clearTimeout(this._peekTimer);
+         this._peekTimer = setTimeout(() => { this.peek = false; }, delay === 0 ? 0 : 220);
        }
      }"
-     :class="{ 'app-shell--sidebar-closed': !sidebarOpen }"
+     :class="{ 'app-shell--sidebar-closed': !sidebarOpen, 'app-shell--peek': peek }"
      @open-sidebar.window="sidebarOpen = true; _persistSidebar()"
      @close-sidebar.window="sidebarOpen = false; _persistSidebar()"
-     @toggle-sidebar.window="sidebarOpen = !sidebarOpen; _persistSidebar()">
+     @toggle-sidebar.window="sidebarOpen = !sidebarOpen; _persistSidebar()"
+     @close-peek.window="peekClose(0)"
+     @keydown.escape.window="peekClose(0)">
+  {# The strip the pointer has to reach to bring the sidebar back. Six
+     pixels at the very left edge of the window, present only while the
+     sidebar is collapsed on a desktop with a real pointer. Nothing
+     interactive lives there: .app-main pads its content in by a full
+     gutter, so this cannot swallow a click meant for the page. #}
+  <div class="app-sidebar-hotzone" aria-hidden="true"
+       @mouseenter="peekOpen()"></div>
   {% include "partials/app-shell.njk" %}
   {# Mobile backdrop — visible only when sidebarOpen and the sidebar
      is in its mobile slide-out state. Click anywhere off-sidebar to
