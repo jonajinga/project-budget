@@ -79,13 +79,35 @@ test("the RTA stat opens the month overview and its breakdown adds up", async ({
   await page.getByRole("button", { name: /^Ready to Work in / }).click();
   const pane = page.locator(".budget-inspector");
   const shown = await page.evaluate(() => {
-    /* assigned + lost display with a minus prefix (they are
-       deductions); the arithmetic uses magnitudes. */
-    const cents = (t) => Math.abs(Math.round(parseFloat(t.replace(/[$,]/g, "")) * 100));
-    const g = (n) => cents(document.querySelector(`[data-rta="${n}"]`).textContent);
-    return { inflow: g("inflow"), assigned: g("assigned"), lost: g("lost"), rta: g("rta") };
+    /* Five lines, not three. The panel opens with "Left over from
+       <prev month>" - the carried balance - and the test used to model
+       only inflow, assigned and lost, so its arithmetic was short by
+       the whole carry and it compared 1,799,819 against a displayed
+       75,958. The app was right.
+
+       Signs: assigned and lost are rendered with a hard "-" prefix and
+       are magnitudes, so they are taken as absolute. carried and rta
+       are rendered signed and must keep their sign - a negative Ready
+       to Work is a real state and absolute values would hide it. */
+    const num = (t) => Math.round(parseFloat(t.replace(/[$,+]/g, "")) * 100);
+    const g = (n) => num(document.querySelector(`[data-rta="${n}"]`).textContent);
+    return {
+      carried: g("carried"),
+      inflow: Math.abs(g("inflow")),
+      assigned: Math.abs(g("assigned")),
+      lost: Math.abs(g("lost")),
+      rta: g("rta"),
+    };
   });
-  expect(shown.inflow - shown.assigned - shown.lost).toBe(shown.rta);
+  /* What this proves, and what it does not. At the domain level the sum
+     is a tautology: monthSummary derives `lost` as
+     carried + inflow - assigned - rta, so the five numbers reconcile by
+     construction and no arithmetic bug could show up here. Its teeth are
+     at the DOM level - it catches a data-rta binding pointing at the
+     wrong field. Verified: rebinding "lost" to `ahead` fails it. The
+     assertion below, against the store, is the one that checks a
+     number. */
+  expect(shown.carried + shown.inflow - shown.assigned - shown.lost).toBe(shown.rta);
   const real = await page.evaluate(() => window.Alpine.store("budget").readyToAssign("2026-03"));
   expect(shown.rta).toBe(real);
   await pane.locator("[data-rta]").first().waitFor();
