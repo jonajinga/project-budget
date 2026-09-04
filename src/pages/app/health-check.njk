@@ -11,7 +11,7 @@ eleventyExcludeFromCollections: true
       <p class="eyebrow">Health</p>
       <h1 class="app-page__title">Health check</h1>
       <p class="app-page__lead">
-        Deterministic checks for things that quietly get out of shape — orphaned references, malformed dates, categories with no group, recurring templates pointing at deleted accounts. Each finding links to the page that lets you fix it.
+        Checks your budget for things that quietly get out of shape.
       </p>
     </div>
     <button class="btn btn--primary" type="button" @click="run()">Run checks</button>
@@ -41,13 +41,18 @@ eleventyExcludeFromCollections: true
 
     <ul class="health-list" style="margin-top: var(--space-md);">
       <template x-for="c in checks" :key="c.id">
-        <li class="health-item" :class="'health-item--' + c.severity">
+        <li class="health-item" :class="['health-item--' + c.severity, c.severity === 'ok' ? 'is-clear' : '']">
           <div class="health-item__head">
             <span class="health-item__icon" x-text="iconFor(c.severity)" aria-hidden="true"></span>
             <h3 class="health-item__title" x-text="c.title"></h3>
-            <span class="health-item__count" x-text="c.count + ' ' + (c.count === 1 ? 'finding' : 'findings')"></span>
+            <span class="health-item__count"
+                  x-text="c.severity === 'ok' ? 'Clear' : (c.count + ' ' + (c.count === 1 ? 'finding' : 'findings'))"></span>
           </div>
-          <p class="health-item__desc" x-text="c.description"></p>
+          {# A check that found nothing needs one line: its name and a tick.
+             Seven of eight cards were a title, a paragraph and "0 findings"
+             in a 140px card, which buried the one check that mattered. The
+             description stays available as a tooltip. #}
+          <p class="health-item__desc" x-show="c.severity !== 'ok'" :title="c.description" x-text="c.description"></p>
           <details x-show="c.findings && c.findings.length" x-cloak>
             <summary>Show details</summary>
             <ul class="health-item__findings">
@@ -249,6 +254,11 @@ function healthCheckView() {
   .health-item__title { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); }
   .health-item__count { margin-left: auto; color: var(--fg-muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
   .health-item__desc { margin: 0 0 var(--space-sm); color: var(--fg-muted); }
+  /* Clear checks are a single row: tick, name, "Clear". */
+  .health-item.is-clear { padding: var(--space-2xs) var(--space-sm); }
+  .health-item.is-clear .health-item__head { margin-bottom: 0; align-items: center; }
+  .health-item.is-clear .health-item__title { font-size: var(--fs-md); font-family: var(--font-ui); font-weight: 600; }
+  .health-item.is-clear .health-item__icon { width: 18px; height: 18px; font-size: 0.7rem; }
   .health-item__findings { padding-left: var(--space-md); margin: var(--space-2xs) 0 0; }
   .health-item__action { margin-top: var(--space-sm); }
 </style>
