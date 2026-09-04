@@ -1338,9 +1338,15 @@ button.search-result:focus-visible {
    padding + letter-spacing as the outer ACCOUNTS section header
    directly above them. */
 .acct-group__head {
-  display: flex;
+  /* Two lines: chevron, name (ellipsis) and count on the first, the
+     group total right-aligned on the second. With cents always shown
+     (S1) the total no longer fits beside the name in a 260px sidebar. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: var(--space-2xs);
+  row-gap: 2px;
   align-items: center;
-  gap: var(--space-2xs);
   width: 100%;
   padding: 0.35rem 0.65rem;
   background: none;
@@ -1359,8 +1365,10 @@ button.search-result:focus-visible {
   transition: background var(--t-fast), color var(--t-fast);
 }
 .acct-group__head:not(:disabled):hover { color: var(--fg); background: var(--bg-alt); }
+.acct-group__head > .app-nav__section-chevron { grid-column: 1; grid-row: 1; }
 .acct-group__name {
-  flex: 1;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   line-height: 1.2;
   overflow: hidden;
@@ -1368,7 +1376,9 @@ button.search-result:focus-visible {
   white-space: nowrap;
 }
 .acct-group__total {
-  flex-shrink: 0;
+  grid-column: 2 / 4;
+  grid-row: 2;
+  justify-self: end;
   font-family: var(--font-ui);
   font-variant-numeric: tabular-nums;
   font-size: 0.7rem;
@@ -1382,13 +1392,13 @@ button.search-result:focus-visible {
    visible so users see "Daily 3 $4.5k" / "Retirement 0 $0" / etc.
    without having to expand each group. */
 .acct-group__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  flex-shrink: 0;
-  margin-left: auto;
+  /* The wrapper stays for the x-show, but its children lay out on the
+     head's own grid. */
+  display: contents;
 }
 .acct-group__count {
+  grid-column: 3;
+  grid-row: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
