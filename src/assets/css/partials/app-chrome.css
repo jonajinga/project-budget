@@ -292,3 +292,80 @@
      target for the picker. */
   .panel__drop-label { min-height: 5.5rem; padding: var(--space-md); }
 }
+
+/* ---- Page filter bars that moved into the strip (S8) ---------------
+   Several pages rendered their filters as a form row of their own
+   below the masthead: a search box and two to four selects, each sized
+   like a form field. In the strip they are toolbar controls and have
+   to be sized like ones, or a page with four filters is taller than
+   the header it replaced. Scoped to .app-toolbar so the same markup
+   still lays out as a form anywhere else. */
+.app-toolbar .field { margin: 0; flex: 0 1 auto; min-width: 0; }
+.app-toolbar .field > .input,
+.app-toolbar .field > .select { width: 100%; }
+@media (min-width: 600px) {
+  .app-toolbar .rec-toolbar__search { flex: 0 1 14rem; min-width: 7rem; }
+  .app-toolbar .rec-toolbar__filters {
+    display: flex;
+    gap: var(--space-2xs);
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .app-toolbar .rec-toolbar__filters .select { min-width: 0; }
+}
+.app-toolbar .rec-toolbar__count { margin: 0; }
+
+/* ---- Collapsible filter row (S8) -----------------------------------
+   Some pages have more filters than a strip can hold. Recurring has a
+   search box and four selects; at 1024 they made the strip three rows
+   and 160 pixels tall, which is worse than the masthead it replaced.
+
+   So the strip keeps the search and a Filters toggle, and the selects
+   live in a row underneath that is collapsed by default. Opening it
+   costs one click and nothing when it is shut. The toggle carries a
+   count so a filter that is on is never hidden without saying so --
+   the failure this pattern has to avoid is a user staring at a
+   filtered list wondering where their rows went.
+
+   Deliberately a row rather than a floating popover: a popover needs
+   anchor positioning, and this app's existing fixed-position menus
+   break under any ancestor transform (see STATE.md trap 5). A row has
+   no positioning to get wrong at any width. */
+.app-toolbar__filter-toggle { position: relative; }
+.app-toolbar__filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  margin-left: 0.35rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.app-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: calc(-1 * var(--space-md)) calc(-1 * var(--container-pad)) var(--space-md);
+  padding: var(--space-2xs) var(--container-pad);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-soft);
+}
+.app-page--flush > .app-filters { margin: 0; }
+.app-page > .app-filters { max-width: none; }
+.app-filters .field { margin: 0; flex: 0 1 12rem; min-width: 0; }
+.app-filters .field > .select,
+.app-filters .field > .input { width: 100%; }
+@media (min-width: 600px) {
+  .app-filters .select,
+  .app-filters .input { min-height: 2rem; padding-block: 0.2rem; font-size: var(--fs-sm); }
+}
+@media (max-width: 599px) {
+  .app-filters .field { flex: 1 1 100%; }
+}
