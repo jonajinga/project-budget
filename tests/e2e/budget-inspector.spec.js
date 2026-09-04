@@ -25,7 +25,10 @@ test("selecting a category shows a breakdown that adds up to Available", async (
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
   const catId = await selectGroceries(page);
   const pane = page.locator(".budget-inspector");
-  await expect(pane.locator(".budget-inspector__title")).toContainText("Groceries");
+  /* .budget-inspector__title is the MONTH OVERVIEW heading, rendered
+     only when nothing is selected. With a category selected the pane
+     titles itself with .insp__title. */
+  await expect(pane.locator(".insp__title")).toContainText("Groceries");
   const shown = await page.evaluate(() => {
     const cents = (t) => Math.round(parseFloat(t.replace(/[$,]/g, "")) * 100);
     const g = (n) => cents(document.querySelector(`[data-break="${n}"]`).textContent);
@@ -45,7 +48,14 @@ test("a category note reaches the persisted profile payload", async ({ seeded, v
   const page = await seeded.newPage();
   await gotoApp(page, "/app/budget/");
   await selectGroceries(page);
-  const note = page.locator(".budget-inspector textarea");
+  /* Two textareas now: the category note (every month) and a
+     month-scoped one. This test is about the category note. */
+  /* The pane groups its sections behind disclosures now, so the field
+     is in the DOM while its section is shut - which is why this used
+     to resolve a locator and then time out waiting for it to become
+     editable, rather than failing to find it. */
+  await page.locator(".budget-inspector").getByRole("button", { name: /^Notes/ }).click();
+  const note = page.locator("#insp-note");
   await note.fill("Costco run twice a month");
   await note.blur();
   /* Cannot assert via reload here: the seeded fixture's init script
@@ -75,6 +85,11 @@ test("editing the goal from the pane updates the row badge", async ({ seeded, vi
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
   const catId = await selectGroceries(page);
   const pane = page.locator(".budget-inspector");
+  /* The goal form is behind a disclosure that reads "Goal <summary>";
+     the field exists in the DOM while it is shut, which is why this
+     resolved a locator and then timed out waiting for it to be
+     editable rather than failing to find it. */
+  await pane.getByRole("button", { name: /^Goal/ }).click();
   await pane.locator("#insp-goal-target").fill("9999");
   await pane.getByRole("button", { name: "Save goal" }).click();
   await page.waitForTimeout(300);
@@ -83,7 +98,7 @@ test("editing the goal from the pane updates the row badge", async ({ seeded, vi
     return s.findGoal(id).target;
   }, catId);
   expect(target).toBe(999900);
-  await expect(page.locator(`.budget__row[data-cat-id="${catId}"] .goal-badge`)).toBeVisible();
+  await expect(page.locator(`.budget__row[data-cat-id="${catId}"] .goal-bar:not(.goal-bar--cut)`)).toBeVisible();
   await page.close();
 });
 
@@ -102,9 +117,12 @@ test("moving money inline from the pane lands on the selected month", async ({ s
     return { from: s.assignedFor(a, "2026-03"), to: s.assignedFor(b, "2026-03") };
   }, [catId, toId]);
   const pane = page.locator(".budget-inspector");
+  await pane.getByRole("button", { name: /^Move money/ }).click();
   await pane.locator("#insp-mv-to").selectOption(toId);
   await pane.locator("#insp-mv-amount").fill("25");
-  await pane.getByRole("button", { name: "Move money" }).click();
+  /* "Move", not "Move money" - that is the disclosure opened above, and
+     clicking it a second time just shut the section again. */
+  await pane.getByRole("button", { name: "Move", exact: true }).click();
   await page.waitForTimeout(300);
   const after = await page.evaluate(([a, b]) => {
     const s = window.Alpine.store("budget");
