@@ -102,6 +102,22 @@
   flex-shrink: 0;
 }
 
+/* Controls in the strip are toolbar-sized. The app's default input is
+   built for a form: 2.6rem tall with 16px text, the 16px being
+   deliberate because iOS Safari zooms the page when a focused input is
+   smaller. Three of those make the strip taller than the app header
+   itself. Shrink them from 600px up only, so a phone -- the only place
+   that zoom happens -- keeps the full-size control. */
+@media (min-width: 600px) {
+  .app-toolbar .input,
+  .app-toolbar .select,
+  .app-toolbar .btn {
+    min-height: 2rem;
+    padding-block: 0.2rem;
+    font-size: var(--fs-sm);
+  }
+}
+
 /* Context text -- a count, a range, the account a register is
    filtered to. Never a sentence: anything that reads as prose belongs
    behind the info button. */
@@ -179,6 +195,14 @@
 /* Its own toolbar already bled; bleeding it twice would push it off
    the left edge by a full gutter. */
 .app-page--flush > .app-toolbar { margin-inline: 0; margin-top: 0; }
+
+/* Not everything on a flush page wants to touch the window. A table
+   gains from the extra width; a strip of tiles just looks like it fell
+   off the edge. This gives one child its gutter back. */
+/* Margin, not padding: several of these are cards with their own
+   border, and padding would leave the border itself running to the
+   window edge with the content inset from it. */
+.app-page--flush > .app-gutter { margin: var(--space-sm) var(--container-pad); }
 
 /* ---- Surfaces ------------------------------------------------------
    A panel is a card that has stopped floating: same ground, hairline
@@ -274,4 +298,81 @@
   /* Nothing is dragged on a phone; the panel is simply a large tap
      target for the picker. */
   .panel__drop-label { min-height: 5.5rem; padding: var(--space-md); }
+}
+
+/* ---- Page filter bars that moved into the strip (S8) ---------------
+   Several pages rendered their filters as a form row of their own
+   below the masthead: a search box and two to four selects, each sized
+   like a form field. In the strip they are toolbar controls and have
+   to be sized like ones, or a page with four filters is taller than
+   the header it replaced. Scoped to .app-toolbar so the same markup
+   still lays out as a form anywhere else. */
+.app-toolbar .field { margin: 0; flex: 0 1 auto; min-width: 0; }
+.app-toolbar .field > .input,
+.app-toolbar .field > .select { width: 100%; }
+@media (min-width: 600px) {
+  .app-toolbar .rec-toolbar__search { flex: 0 1 14rem; min-width: 7rem; }
+  .app-toolbar .rec-toolbar__filters {
+    display: flex;
+    gap: var(--space-2xs);
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .app-toolbar .rec-toolbar__filters .select { min-width: 0; }
+}
+.app-toolbar .rec-toolbar__count { margin: 0; }
+
+/* ---- Collapsible filter row (S8) -----------------------------------
+   Some pages have more filters than a strip can hold. Recurring has a
+   search box and four selects; at 1024 they made the strip three rows
+   and 160 pixels tall, which is worse than the masthead it replaced.
+
+   So the strip keeps the search and a Filters toggle, and the selects
+   live in a row underneath that is collapsed by default. Opening it
+   costs one click and nothing when it is shut. The toggle carries a
+   count so a filter that is on is never hidden without saying so --
+   the failure this pattern has to avoid is a user staring at a
+   filtered list wondering where their rows went.
+
+   Deliberately a row rather than a floating popover: a popover needs
+   anchor positioning, and this app's existing fixed-position menus
+   break under any ancestor transform (see STATE.md trap 5). A row has
+   no positioning to get wrong at any width. */
+.app-toolbar__filter-toggle { position: relative; }
+.app-toolbar__filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  margin-left: 0.35rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.app-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: calc(-1 * var(--space-md)) calc(-1 * var(--container-pad)) var(--space-md);
+  padding: var(--space-2xs) var(--container-pad);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-soft);
+}
+.app-page--flush > .app-filters { margin: 0; }
+.app-page > .app-filters { max-width: none; }
+.app-filters .field { margin: 0; flex: 0 1 12rem; min-width: 0; }
+.app-filters .field > .select,
+.app-filters .field > .input { width: 100%; }
+@media (min-width: 600px) {
+  .app-filters .select,
+  .app-filters .input { min-height: 2rem; padding-block: 0.2rem; font-size: var(--fs-sm); }
+}
+@media (max-width: 599px) {
+  .app-filters .field { flex: 1 1 100%; }
 }

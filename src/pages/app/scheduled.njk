@@ -7,35 +7,87 @@ eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="scheduledView()" x-init="init()">
-  <header class="app-page__header">
-    <h1 class="app-page__title">Recurring transactions</h1>
-    <div class="cluster">
-      <button class="btn btn--icon" type="button"
-              @click="showHelp = true"
-              aria-label="About recurring transactions"
-              data-tip="How templates, frequencies, and the approval queue work.">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--flush" x-data="scheduledView()" x-init="init()">
+  {# The search box and the four filter selects were their own row under
+     the masthead. They are the page's controls, so they belong in the
+     one strip with Add and the info button. #}
+  {% call appToolbar("Recurring transactions", flush=true) %}
+    <div class="app-toolbar__group">
+      <div class="rec-toolbar__search field">
+        <label class="visually-hidden" for="rec-search">Search recurring by payee, memo, account or category</label>
+        <input class="input" id="rec-search" type="search"
+               x-model="searchQuery"
+               data-tip="Searches payee, memo, account and category."
+               placeholder="Search recurring&#8230;">
+      </div>
+      {# Four selects will not fit a strip at 1024 - they made it three
+         rows and 160 pixels tall, worse than the masthead. They live in
+         a row underneath that opens on request; the badge says how many
+         are on so a filtered list never looks like a missing one. #}
+      <button type="button"
+              class="btn btn--ghost app-toolbar__filter-toggle"
+              @click="filtersOpen = !filtersOpen"
+              :aria-expanded="filtersOpen.toString()"
+              aria-controls="rec-filters">
+        Filters
+        <span class="app-toolbar__filter-count" x-show="activeFilterCount()" x-cloak
+              x-text="activeFilterCount()"></span>
       </button>
-      <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">+ Add recurring</button>
+      <p class="app-toolbar__context" x-show="hasActiveFilter()" x-cloak>
+        <span x-text="filtered().length"></span> of <span x-text="totalCount()"></span> showing
+      </p>
     </div>
-  </header>
-
-  {# Info / help modal — opened by the (i) icon in the header. #}
-  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rec-help-title" @click.outside="showHelp = false">
-      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h2 class="modal__title" id="rec-help-title">About recurring transactions</h2>
-      <div class="prose">
-        <p>Templates sit in a queue. When the due date arrives, the entry surfaces in the <a href="/app/register/">register</a> for you to approve or skip — it never posts automatically.</p>
+    <div class="app-toolbar__actions">
+      <button class="btn btn--primary" type="button" @click="openCreate()" :disabled="!$store.budget.profile">+ Add recurring</button>
+      {% call pageInfo(id="recurring", title="About recurring transactions", label="How templates, frequencies and the approval queue work") %}
+        <p>Templates sit in a queue. When the due date arrives, the entry surfaces in the <a href="/app/register/">register</a> for you to approve or skip. It never posts automatically.</p>
         <p><strong>Frequency:</strong> pick from weekly, biweekly, monthly, semi-monthly, quarterly, annual, or build a custom interval (every <em>N</em> days / weeks / months).</p>
         <p><strong>Inflow vs outflow:</strong> any template with a positive amount is an inflow (income, refunds); negative amounts are outflows (bills, subscriptions). The summary tiles let you filter the list by kind.</p>
         <p><strong>Post on demand:</strong> use the row's <em>Post now</em> action to apply the template ahead of schedule. <em>Skip</em> advances the next-due date without posting.</p>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
-      </div>
+      {% endcall %}
     </div>
+  {% endcall %}
+
+  <div class="app-filters" id="rec-filters" x-show="filtersOpen" x-cloak>
+    <div class="field">
+      <label class="visually-hidden" for="rec-account">Account</label>
+      <select class="select" id="rec-account" x-model="filterAccountId">
+        <option value="">All accounts</option>
+        <template x-for="a in openAccounts()" :key="a.id">
+          <option :value="a.id" x-text="a.name"></option>
+        </template>
+      </select>
+    </div>
+    <div class="field">
+      <label class="visually-hidden" for="rec-freq">Frequency</label>
+      <select class="select" id="rec-freq" x-model="filterFrequency">
+        <option value="">All frequencies</option>
+        <template x-for="f in $store.budget.FREQUENCIES" :key="f.value">
+          <option :value="f.value" x-text="f.label"></option>
+        </template>
+      </select>
+    </div>
+    <div class="field">
+      <label class="visually-hidden" for="rec-kind">Kind</label>
+      <select class="select" id="rec-kind" x-model="filterKind">
+        <option value="all">Inflows + outflows</option>
+        <option value="inflow">Inflows only</option>
+        <option value="outflow">Outflows only</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="visually-hidden" for="rec-sort">Sort by</label>
+      <select class="select" id="rec-sort" x-model="sortKey">
+        <option value="nextDate">Sort: next date</option>
+        <option value="amount">Sort: amount</option>
+        <option value="payee">Sort: payee</option>
+        <option value="frequency">Sort: frequency</option>
+      </select>
+    </div>
+    <button type="button" class="btn btn--ghost" x-show="hasActiveFilter()" x-cloak
+            @click="clearFilters()">Clear</button>
   </div>
 
   {# Summary tiles — quick view of monthly cash flow committed to
@@ -47,7 +99,7 @@ eleventyExcludeFromCollections: true
   {# --tight is page-scoped on purpose. .rec-summary is shared with the
      accounts, payees, trash, dashboard, health-check and about-this-profile
      pages, and the phone shape of those is not this task's to change. #}
-  <section class="rec-summary rec-summary--tight" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
+  <section class="rec-summary rec-summary--tight app-gutter" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
     <button type="button" class="rec-summary__tile rec-summary__tile--accent"
             :class="filterKind === 'all' ? 'is-active' : ''"
             :aria-pressed="(filterKind === 'all').toString()"
@@ -85,56 +137,6 @@ eleventyExcludeFromCollections: true
   </section>
 
   <section class="card">
-    <div class="rec-toolbar">
-      <div class="rec-toolbar__search field">
-        <label class="visually-hidden" for="rec-search">Search recurring by payee, memo, account or category</label>
-        <input class="input" id="rec-search" type="search"
-               x-model="searchQuery"
-               data-tip="Searches payee, memo, account and category."
-               placeholder="Search recurring&#8230;">
-      </div>
-      <div class="rec-toolbar__filters">
-        <div class="field">
-          <label class="visually-hidden" for="rec-account">Account</label>
-          <select class="select" id="rec-account" x-model="filterAccountId">
-            <option value="">All accounts</option>
-            <template x-for="a in openAccounts()" :key="a.id">
-              <option :value="a.id" x-text="a.name"></option>
-            </template>
-          </select>
-        </div>
-        <div class="field">
-          <label class="visually-hidden" for="rec-freq">Frequency</label>
-          <select class="select" id="rec-freq" x-model="filterFrequency">
-            <option value="">All frequencies</option>
-            <template x-for="f in $store.budget.FREQUENCIES" :key="f.value">
-              <option :value="f.value" x-text="f.label"></option>
-            </template>
-          </select>
-        </div>
-        <div class="field">
-          <label class="visually-hidden" for="rec-kind">Kind</label>
-          <select class="select" id="rec-kind" x-model="filterKind">
-            <option value="all">Inflows + outflows</option>
-            <option value="inflow">Inflows only</option>
-            <option value="outflow">Outflows only</option>
-          </select>
-        </div>
-        <div class="field">
-          <label class="visually-hidden" for="rec-sort">Sort by</label>
-          <select class="select" id="rec-sort" x-model="sortKey">
-            <option value="nextDate">Sort: next date</option>
-            <option value="amount">Sort: amount</option>
-            <option value="payee">Sort: payee</option>
-            <option value="frequency">Sort: frequency</option>
-          </select>
-        </div>
-      </div>
-      <p class="rec-toolbar__count" x-show="hasActiveFilter()" x-cloak>
-        <span x-text="filtered().length"></span> of <span x-text="totalCount()"></span> showing
-      </p>
-    </div>
-
     {# ---- Phone rows (<600px) -------------------------------------
        Two lines, about 56px each. Line one is the next date, the payee
        and the amount; line two is the account and the category, with the
@@ -519,7 +521,6 @@ eleventyExcludeFromCollections: true
 <script>
 function scheduledView() {
   return {
-    showHelp: false,
     show: false,
     mode: "create", // 'create' | 'edit'
     editId: null,
@@ -530,6 +531,7 @@ function scheduledView() {
     cellEdit: { txnId: null, field: null, draft: "", sign: "outflow" },
     /* Toolbar state — drives filtered() + the summary. */
     searchQuery: "",
+    filtersOpen: false,        // the filter row is collapsed until asked for
     filterAccountId: "",
     filterFrequency: "",
     filterKind: "all",
@@ -557,6 +559,18 @@ function scheduledView() {
     hasActiveFilter() {
       return !!(this.searchQuery || this.filterAccountId ||
                 this.filterFrequency || this.filterKind !== "all");
+    },
+    /* Badge on the Filters toggle. Counts only what is hidden inside
+       the collapsed row -- the search box stays visible in the strip,
+       so counting it would accuse the row of a filter it does not
+       hold. A filter that is on must never be invisible. */
+    activeFilterCount() {
+      var n = 0;
+      if (this.filterAccountId) n++;
+      if (this.filterFrequency) n++;
+      if (this.filterKind !== "all") n++;
+      if (this.sortKey && this.sortKey !== "nextDate") n++;
+      return n;
     },
     clearFilters() {
       this.searchQuery = "";

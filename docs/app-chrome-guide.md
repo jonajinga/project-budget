@@ -81,6 +81,46 @@ what makes the budget page feel dense.
 Order within the strip: context and filters left, actions right.
 `.app-toolbar__sep` draws a hairline between two clusters.
 
+### 2b. More filters than a strip can hold
+
+Some pages have too many filters for one row. Recurring has a search box
+and four selects; in the strip they made it three rows and 160 pixels
+tall at 1024, which is worse than the masthead it replaced.
+
+The pattern for that case, already built and working on
+`src/pages/app/scheduled.njk`: the strip keeps the search box and a
+**Filters** toggle; the selects move into a `.app-filters` row directly
+under the strip that is collapsed by default.
+
+    <button type="button" class="btn btn--ghost app-toolbar__filter-toggle"
+            @click="filtersOpen = !filtersOpen"
+            :aria-expanded="filtersOpen.toString()"
+            aria-controls="foo-filters">
+      Filters
+      <span class="app-toolbar__filter-count" x-show="activeFilterCount()" x-cloak
+            x-text="activeFilterCount()"></span>
+    </button>
+    ...
+    <div class="app-filters" id="foo-filters" x-show="filtersOpen" x-cloak>
+      <div class="field">...</div>
+      <button class="btn btn--ghost" x-show="hasActiveFilter()" x-cloak
+              @click="clearFilters()">Clear</button>
+    </div>
+
+Add `filtersOpen: false` and an `activeFilterCount()` to the page's
+Alpine factory. **The badge is not optional.** A filter that is on and
+hidden inside a collapsed row is a user staring at a short list
+wondering where their rows went. Count only what the row actually
+holds - if the search box stays in the strip, do not count it.
+
+It is a row rather than a floating popover on purpose: a popover needs
+anchor positioning, and this app's fixed-position menus break under any
+ancestor transform (STATE.md trap 5). A row has no positioning to get
+wrong at any width.
+
+Use it when the strip would otherwise carry more than about three
+controls plus the actions. Two selects, leave them in the strip.
+
 ### 3. Pick the page's body shape
 
 - **One continuous data surface** (a full-width table: accounts,

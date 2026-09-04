@@ -34,6 +34,15 @@
   padding: 0;
 }
 
+/* On the flush page (S8) the table runs to the window edges, so its
+   card loses the side borders and the rounding that would otherwise
+   draw a box around the whole screen. */
+.app-page--flush > .acct-table-card {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+}
+
 .acct-table {
   table-layout: fixed;
   width: 100%;

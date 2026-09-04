@@ -880,3 +880,20 @@
   }
   .recurring-due td:nth-child(5) { padding-top: 0; text-align: right; }
 }
+
+/* ---- Filters inside the app strip (S8) -----------------------------
+   The account combo and the search box moved up from their own row
+   into the shared .app-toolbar. Standing alone they were a form row
+   and sized like one: the search asked for an 18rem flex basis and the
+   combo for a 12rem minimum, which is more than the strip can give
+   once the count and the kebab have taken their share -- so the strip
+   wrapped to two lines and was taller than the masthead it replaced.
+   In the strip they are toolbar controls: one line, allowed to shrink,
+   never allowed to wrap. */
+.app-toolbar .register__filters {
+  flex-wrap: nowrap;
+  gap: var(--space-2xs);
+  flex: 0 1 auto;
+}
+.app-toolbar .register__filters .acct-combo { flex: 0 1 13rem; min-width: 7rem; }
+.app-toolbar .register__filters .register__search { flex: 0 1 16rem; min-width: 7rem; width: auto; }
