@@ -6,42 +6,40 @@ permalink: /app/payees/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="payeesView()">
-  <header class="app-page__header">
-    <h1 class="app-page__title">Payees</h1>
-    <div class="cluster">
-      <button class="btn btn--icon" type="button"
-              @click="showHelp = true"
-              aria-label="About payees"
-              data-tip="What a payee is, how default categories auto-fill, and how merging works.">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
-      </button>
-      <a class="btn btn--ghost btn--sm" href="/app/register/">Open register</a>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--flush" x-data="payeesView()">
+  {# The hand-rolled (i) button and its modal are gone: the same job is
+     the pageInfo macro's, and two patterns for one control is how a
+     page ends up with two behaviours. The search box and the count
+     came up out of the card's own toolbar row so the page has one
+     strip rather than two. #}
+  {% call appToolbar("Payees", flush=true) %}
+    <div class="app-toolbar__group">
+      <div class="field app-toolbar__search">
+        <label class="visually-hidden" for="pay-search">Search payees</label>
+        <input class="input" id="pay-search" type="search" x-model="query" placeholder="Search by name&#8230;">
+      </div>
+      <span class="app-toolbar__context" x-show="$store.budget.allPayees().length" x-cloak>
+        <span x-text="rows.length"></span> of <span x-text="$store.budget.allPayees().length"></span> payees
+      </span>
     </div>
-  </header>
-
-  {# Info / help modal — opened by the (i) icon in the header. #}
-  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-help-title" @click.outside="showHelp = false">
-      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h2 class="modal__title" id="pay-help-title">About payees</h2>
-      <div class="prose">
-        <p>Every payee remembers a default category — when you start typing the payee on a new transaction, the category auto-fills.</p>
+    <div class="app-toolbar__actions">
+      <a class="btn btn--ghost btn--sm" href="/app/register/">Open register</a>
+      {% call pageInfo(id="payees", title="About payees", label="What a payee is, how default categories auto-fill, and how merging works.") %}
+        <p>Every payee remembers a default category - when you start typing the payee on a new transaction, the category auto-fills.</p>
         <p><strong>Rename:</strong> click a payee's name to edit it inline. Press Enter or click outside to save, Escape to cancel.</p>
         <p><strong>Merge:</strong> joins two payees into one and re-points every transaction that used the source to the target.</p>
         <p><strong>Delete:</strong> leaves the payee's transactions in the register but unlinks them from the payee record.</p>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
-      </div>
+      {% endcall %}
     </div>
-  </div>
+  {% endcall %}
 
   {# Stat cards. Live snapshot of the payee list — total payees, how
      many have a default category set, top-used payee, and the sum of
      every transaction count. Reuses .rec-summary chrome from the
      other app pages. #}
-  <section class="rec-summary" x-show="$store.budget.allPayees().length" x-cloak>
+  <section class="rec-summary app-gutter" x-show="$store.budget.allPayees().length" x-cloak>
     <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total payees seen across every transaction.">
       <span class="rec-summary__label">Payees</span>
       <span class="rec-summary__value" x-text="payeeCount()"></span>
@@ -60,17 +58,7 @@ eleventyExcludeFromCollections: true
     </div>
   </section>
 
-  <section class="card">
-    <header class="report-toolbar">
-      <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="pay-search">Search payees</label>
-        <input class="input" id="pay-search" type="search" x-model="query" placeholder="Search by name…">
-      </div>
-      <p class="report-toolbar__count">
-        <span x-text="rows.length"></span> of <span x-text="$store.budget.allPayees().length"></span> payees
-      </p>
-    </header>
-
+  <section class="card app-gutter">
     <p x-show="!rows.length && !$store.budget.allPayees().length" x-cloak style="color: var(--fg-muted);">
       No payees yet. They're created automatically when you add a transaction.
     </p>
@@ -274,7 +262,6 @@ eleventyExcludeFromCollections: true
 <script>
 function payeesView() {
   return {
-    showHelp: false,
     query: "",
     sortKey: "name",
     sortDir: "asc",

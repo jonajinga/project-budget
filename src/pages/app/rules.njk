@@ -7,17 +7,22 @@ eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="rulesView()" x-init="init()">
-
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Rules</h1>
-      <p class="app-page__lead">
-        Pattern-based automation that fires on every new transaction
-        you enter manually <em>and</em> on every row of a bank import.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="rulesView()" x-init="init()">
+  {% call appToolbar("Rules") %}
+    <div class="app-toolbar__group">
+      {# Each section already owns its own "+ New rule" button, so the
+         strip carries the count rather than a third copy of them. #}
+      <span class="app-toolbar__context"
+            x-text="($store.budget.listCategorizeRules().length + $store.budget.listNormalizeRules().length) + ' rules'"></span>
     </div>
-  </header>
+    <div class="app-toolbar__actions">
+      {% call pageInfo(id="rules", title="About rules", label="When rules run and in what order") %}
+        <p>Pattern-based automation that fires on every new transaction you enter manually <em>and</em> on every row of a bank import.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   {# ---- Auto-categorize rules ---- #}
   <section class="card">

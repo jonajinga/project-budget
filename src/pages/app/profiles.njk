@@ -7,7 +7,8 @@ eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
 {% from "partials/page-info.njk" import pageInfo %}
-<div class="app-page" x-data="{
+{% from "partials/app-toolbar.njk" import appToolbar %}
+<div class="app-page app-page--dense" x-data="{
   newName: '',
   renameId: null,
   renameValue: '',
@@ -34,16 +35,21 @@ eleventyExcludeFromCollections: true
     this.newName = '';
   },
 }">
-  <header class="app-page__header">
-    <div class="app-page__title-row">
-      <h1 class="app-page__title">Profiles</h1>
+  {# This page already used the pageInfo macro; only the masthead
+     around it changes. #}
+  {% call appToolbar("Profiles") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context"
+            x-text="($store.budget.profiles?.length || 0) + (($store.budget.profiles?.length || 0) === 1 ? ' profile' : ' profiles')"></span>
+    </div>
+    <div class="app-toolbar__actions">
       {% call pageInfo(id="profiles", title="About profiles", label="What a profile is and where the data lives.") %}
         <p>Each profile is a complete budget: its own accounts, categories, transactions, and goals. Profiles are isolated from each other and live in your browser's localStorage.</p>
         <p><strong>Privacy:</strong> nothing leaves your browser. Switching profiles, renaming, or deleting changes only the local copy.</p>
         <p><strong>Back up:</strong> use <a href="/app/backup/">Backup</a> to save a JSON snapshot you can re-import later.</p>
       {% endcall %}
     </div>
-  </header>
+  {% endcall %}
 
   <section class="card">
     <h2 class="card__title">Create a profile</h2>

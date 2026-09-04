@@ -315,6 +315,11 @@
 .app-toolbar .field > .input,
 .app-toolbar .field > .select { width: 100%; }
 @media (min-width: 600px) {
+  /* The shared name for a search box in the strip. rec-toolbar__search
+     is the recurring page's own name for the same control; this one is
+     for pages that had no toolbar class of their own to bring with
+     them (payees). */
+  .app-toolbar .app-toolbar__search,
   .app-toolbar .rec-toolbar__search { flex: 0 1 14rem; min-width: 7rem; }
   .app-toolbar .rec-toolbar__filters {
     display: flex;

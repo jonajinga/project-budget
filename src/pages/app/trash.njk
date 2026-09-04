@@ -6,24 +6,26 @@ permalink: /app/trash/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="trashView()" x-init="refresh()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Trash</p>
-      <h1 class="app-page__title">Trash</h1>
-      <p class="app-page__lead">
-        Soft-deleted transactions and profiles wait here before they're purged. Transactions keep for 30 days, profiles for 7. Reconciled transactions can't be deleted in the first place.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--flush" x-data="trashView()" x-init="refresh()">
+  {% call appToolbar("Trash", flush=true) %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-show="items.length" x-cloak
+            x-text="items.length + (items.length === 1 ? ' transaction' : ' transactions') + ', ' + expiringSoon + ' expiring this week'"></span>
     </div>
-    <div class="cluster">
-      <button class="btn btn--ghost btn--sm" type="button" @click="refresh()">Refresh</button>
-      <button class="btn btn--danger btn--sm" type="button" @click="emptyAll()" :disabled="!items.length">Empty transactions trash</button>
+    <div class="app-toolbar__actions">
+      <button class="btn btn--ghost" type="button" @click="refresh()">Refresh</button>
+      <button class="btn btn--danger" type="button" @click="emptyAll()" :disabled="!items.length">Empty transactions trash</button>
+      {% call pageInfo(id="trash", title="About the trash", label="How long deleted things are kept") %}
+        <p>Soft-deleted transactions and profiles wait here before they're purged. Transactions keep for 30 days, profiles for 7. Reconciled transactions can't be deleted in the first place.</p>
+      {% endcall %}
     </div>
-  </header>
+  {% endcall %}
 
-  <h2 style="margin: var(--space-md) 0 var(--space-sm); font-family: var(--font-display);">Transactions</h2>
+  <h2 class="app-gutter trash__section-title">Transactions</h2>
 
-  <section class="rec-summary" x-show="items.length" x-cloak aria-label="Trash summary">
+  <section class="rec-summary app-gutter" x-show="items.length" x-cloak aria-label="Trash summary">
     <div class="rec-summary__tile rec-summary__tile--accent">
       <span class="rec-summary__label">Items</span>
       <span class="rec-summary__value" x-text="items.length"></span>
@@ -44,7 +46,7 @@ eleventyExcludeFromCollections: true
     </div>
   </section>
 
-  <p x-show="!items.length" x-cloak style="color: var(--fg-muted); margin-top: var(--space-md);">
+  <p class="app-gutter" x-show="!items.length" x-cloak style="color: var(--fg-muted);">
     Trash is empty. Anything you delete from the register lands here for 30 days before it's purged automatically.
   </p>
 
@@ -96,9 +98,9 @@ eleventyExcludeFromCollections: true
     </tbody>
   </table>
 
-  <h2 style="margin: var(--space-xl) 0 var(--space-sm); font-family: var(--font-display);">Profiles</h2>
+  <h2 class="app-gutter trash__section-title trash__section-title--later">Profiles</h2>
 
-  <p x-show="!trashedProfiles().length" x-cloak style="color: var(--fg-muted);">
+  <p class="app-gutter" x-show="!trashedProfiles().length" x-cloak style="color: var(--fg-muted);">
     No profiles in trash. Deleting a profile from <a href="/app/profiles/">/app/profiles/</a> moves it here for 7 days.
   </p>
 
@@ -139,7 +141,7 @@ eleventyExcludeFromCollections: true
     </tbody>
   </table>
 
-  <section class="card prose" style="margin-top: var(--space-lg);">
+  <section class="card prose app-gutter" style="margin-top: var(--space-lg);">
     <h2>How retention works</h2>
     <h3>Transactions</h3>
     <ul>
@@ -283,6 +285,11 @@ function trashView() {
 </script>
 
 <style>
+  /* Section titles on a flush page. .app-gutter gives them their side
+     gutter back; these two rules give the second section the extra air
+     above it that its old inline --space-xl margin carried. */
+  .trash__section-title { font-family: var(--font-display); font-size: var(--fs-lg); }
+  .app-page--flush > .trash__section-title--later { margin-top: var(--space-lg); }
   .trash__sub { display: none; }
   @media (max-width: 599px) { .trash__sub { display: block; color: var(--fg-muted); font-size: var(--fs-xs); } }
 </style>
