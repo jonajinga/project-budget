@@ -515,10 +515,20 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId === t.id">
+              {# Save and Cancel as stacked icon buttons. The Actions column
+                 is 44px wide - it holds one kebab - and the words did not
+                 fit it, so they spilled across the cleared column and out
+                 of the card. Both keep an aria-label and a tooltip. #}
               <td class="col-actions num">
-                <div class="cluster register__edit-actions">
-                  <button class="btn btn--primary btn--sm" type="button" @click="saveEdit()">Save</button>
-                  <button class="btn btn--ghost btn--sm" type="button" @click="cancelEdit()">Cancel</button>
+                <div class="register__edit-actions">
+                  <button class="btn btn--icon register__edit-save" type="button"
+                          @click="saveEdit()" aria-label="Save changes" data-tip="Save changes">
+                    <span aria-hidden="true">&#10003;</span>
+                  </button>
+                  <button class="btn btn--icon register__edit-cancel" type="button"
+                          @click="cancelEdit()" aria-label="Cancel editing" data-tip="Cancel editing">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
                 </div>
               </td>
             </template>

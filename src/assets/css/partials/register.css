@@ -321,13 +321,53 @@
   padding: 0.35rem 0.5rem;
   font-size: var(--fs-sm);
 }
-.register__row--editing input[type="date"] { min-width: 0; }
-.register__edit-actions {
-  flex-wrap: nowrap;
-  justify-content: flex-end;
-  gap: var(--space-3xs);
+/* A native date field renders its own three sub-fields plus a picker
+   icon and will not shrink below their combined width, so at the
+   column's 88px of content box it truncated the year. Smaller type and
+   almost no padding gets "09/03/2026" and the icon inside it. */
+.register__row--editing input[type="date"] {
+  min-width: 0;
+  font-size: var(--fs-2xs);
+  padding-left: 2px;
+  padding-right: 0;
 }
-.register__edit-actions .btn { white-space: nowrap; }
+/* Save and Cancel stack inside the 44px Actions column. As text
+   buttons they needed about 130px and spilled across the cleared
+   column and out of the card once the table stopped being allowed to
+   grow past it. */
+.register__edit-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.register__edit-actions .btn--icon {
+  width: 32px;
+  min-width: 32px;
+  height: 28px;
+  min-height: 28px;
+  font-size: var(--fs-md);
+  line-height: 1;
+  border-radius: var(--radius-input);
+}
+.register__edit-save {
+  background: var(--accent);
+  color: var(--fg-on-accent);
+}
+.register__edit-save:hover { background: var(--accent); filter: brightness(1.08); color: var(--fg-on-accent); }
+.register__edit-cancel {
+  border: 1px solid var(--border-strong);
+  color: var(--fg-muted);
+}
+
+/* The two pills have 88px of content box to share inside a fixed-width
+   Amount column. Their 3.5rem floor made them 122px, which pushed the
+   toggle across the cleared column. */
+.register__row--editing .txn-type-toggle--sm .txn-type-toggle__opt {
+  min-width: 0;
+  padding: 0.2rem 0.3rem;
+}
 
 /* Calculator live preview — sits under any amount input whose value
    contains a math expression. Tabular numerals + accent tint so it
