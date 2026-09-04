@@ -1,0 +1,121 @@
+/* ---- Phone agenda + month picker (P5, 2026-09-04) ------------------
+   Registered in CSS_PARTIAL_ORDER after budget.css, which is where the
+   rest of the .cal-* rules live, so these win on equal specificity.
+   PurgeCSS keeps /^cal-/ through the existing safelist entry.
+
+   The month grid at 390px was seven columns of about 50 pixels holding
+   coloured blobs with no payee, no amount and no legend. Below 600px
+   the grid shrinks to a picker -- it still answers "which days have
+   something on them" -- and the agenda below it is what people read. */
+
+/* Above 600px the grid is legible and the agenda would just repeat it. */
+.cal-agenda { display: none; }
+
+@media (max-width: 599px) {
+  .cal-agenda { display: block; margin-top: var(--space-sm); }
+
+  .cal-agenda__day {
+    border-top: 1px solid var(--border-soft);
+    padding-top: var(--space-2xs);
+    margin-bottom: var(--space-sm);
+  }
+  .cal-agenda__day.is-today { border-top-color: var(--accent); }
+
+  .cal-agenda__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2xs);
+    margin: 0 0 var(--space-3xs);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+  }
+  .cal-agenda__day.is-today .cal-agenda__date { color: var(--accent); }
+  .cal-agenda__net {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* A scheduled entry has not happened yet, so it says so rather than
+     relying on a colour a person has to learn. */
+  .cal-agenda__badge {
+    display: inline-block;
+    margin-left: 0.35rem;
+    padding: 0 0.3rem;
+    border-radius: var(--radius-chip);
+    background: var(--bg-alt);
+    border: 1px solid var(--border-soft);
+    color: var(--fg-muted);
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: 1px;
+  }
+
+  .cal-agenda__empty {
+    color: var(--fg-muted);
+    text-align: center;
+    padding: var(--space-lg) 0;
+    margin: 0;
+  }
+}
+
+/* ---- The grid becomes a picker (phones only) ------------------------
+   With the agenda carrying the detail, the grid above it only has to
+   answer "which days have something on them". It was doing that with
+   coloured blobs stacked inside 50-pixel cells, which pushed the
+   agenda 690 pixels down the page and told nobody anything.
+
+   So on phones: the entry blobs go, the cells shrink, and a day that
+   has entries gets one dot. Tapping a day still opens it, exactly as
+   before -- this removes decoration, not function. */
+@media (max-width: 599px) {
+  .cal__entries { display: none; }
+
+  .cal__cell { min-height: 0; }
+  .cal__cell-inner { min-height: 0; padding: 0; }
+  .cal__day-btn { padding: var(--space-3xs) 0; }
+  .cal__day-num { font-size: var(--fs-sm); }
+
+  /* One dot for "this day has something", drawn under the number.
+     .cal__cell--has is the class the template already binds when a day
+     is not empty. */
+  .cal__cell--has .cal__day-btn::after {
+    content: "";
+    display: block;
+    width: 4px;
+    height: 4px;
+    margin: 2px auto 0;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Money never truncates. Four period tiles shrinking to a 4.5rem
+     minimum on a 390px screen clipped "-$5,420.52" to "-$5,4...".
+     They wrap to two per row instead, which is what the tile strip
+     recipe (S3) does everywhere else. */
+  .cal-extra-period__totals {
+    /* inline-flex sizes to its content, so flex-wrap had nothing to
+       wrap against and the four tiles ran off the right edge instead
+       of onto a second line. */
+    display: flex;
+    width: 100%;
+  }
+  .cal-extra-period__stat {
+    flex: 1 1 7.5rem;
+    min-width: 7.5rem;
+  }
+}
+
+/* Not solved: the kebab still takes a row of its own below 600px, so
+   the phone toolbar is four rows rather than three. Three attempts at
+   pairing it with the Filters toggle (flex-grow on the toggle, width:
+   auto against the full-width .btn rule, margin on the actions) all
+   left them on separate lines, and the cause is somewhere else in the
+   .cal-toolbar cascade that I did not find. It costs about 38 pixels.
+   Left alone rather than guessed at again. */

@@ -44,6 +44,54 @@ eleventyExcludeFromCollections: true
         </button>
       </div>
 
+      {# The disclosure the phone toolbar was always styled for. The CSS
+         for .cal-toolbar__filters-toggle and .cal-toolbar__row--filters
+         has been in budget.css since the mobile pass, but the markup was
+         never added, so at 390 the toolbar rendered all six controls and
+         wrapped to six rows before the grid even started. #}
+      <button type="button"
+              class="btn btn--ghost cal-toolbar__filters-toggle"
+              @click="filtersOpen = !filtersOpen"
+              :aria-expanded="filtersOpen.toString()"
+              aria-controls="cal-filters">
+        Filters
+        <span class="app-toolbar__filter-count" x-show="activeFilterCount()" x-cloak
+              x-text="activeFilterCount()"></span>
+      </button>
+      <div class="cal-toolbar__actions">
+        {% call overflow(label="Calendar options") %}
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; jumpToday()">Jump to today</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none" x-show="view === 'month' || view === 'week' || view === 'day'">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="showDayTotals = !showDayTotals">
+              <span x-text="(showDayTotals ? '✓ ' : '   ') + 'Grid totals'"></span>
+            </button>
+          </li>
+          <li role="none" x-show="view === 'year'">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="yearShowNet = !yearShowNet">
+              <span x-text="(yearShowNet ? '✓ ' : '   ') + 'Net $ instead of dates'"></span>
+            </button>
+          </li>
+          <li role="none" x-show="view === 'month' || view === 'week' || view === 'day'">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; window.PBDialog && window.PBDialog.prompt({ title: 'Custom span', label: (view === 'month' ? 'Months to show (1-60)' : (view === 'week' ? 'Weeks to show (1-60)' : 'Days to show (1-60)')), defaultValue: String(view === 'month' ? monthSpan : (view === 'week' ? weekSpan : daySpan)), okLabel: 'Apply' }).then(n => { var v = parseInt(n, 10); if (v >= 1 && v <= 60) setSpan(v); })">Custom span…</button>
+          </li>
+          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+          <li role="none">
+            <button type="button" role="menuitem" class="overflow-menu__item"
+                    @click="open = false; saveCurrentView()">Save current view…</button>
+          </li>
+        {% endcall %}
+      </div>
+    </div>
+
+    <div class="cal-toolbar__row cal-toolbar__row--filters" id="cal-filters"
+         :data-collapsed="(!filtersOpen).toString()">
       <div class="cal-toolbar__span-buttons"
            x-show="view === 'month' || view === 'week' || view === 'day'" x-cloak
            role="group"
@@ -108,37 +156,8 @@ eleventyExcludeFromCollections: true
         <span x-text="visibleCount()"></span>
       </p>
 
-      <div class="cal-toolbar__actions">
-        {% call overflow(label="Calendar options") %}
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; jumpToday()">Jump to today</button>
-          </li>
-          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-          <li role="none" x-show="view === 'month' || view === 'week' || view === 'day'">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="showDayTotals = !showDayTotals">
-              <span x-text="(showDayTotals ? '✓ ' : '   ') + 'Grid totals'"></span>
-            </button>
-          </li>
-          <li role="none" x-show="view === 'year'">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="yearShowNet = !yearShowNet">
-              <span x-text="(yearShowNet ? '✓ ' : '   ') + 'Net $ instead of dates'"></span>
-            </button>
-          </li>
-          <li role="none" x-show="view === 'month' || view === 'week' || view === 'day'">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; window.PBDialog && window.PBDialog.prompt({ title: 'Custom span', label: (view === 'month' ? 'Months to show (1-60)' : (view === 'week' ? 'Weeks to show (1-60)' : 'Days to show (1-60)')), defaultValue: String(view === 'month' ? monthSpan : (view === 'week' ? weekSpan : daySpan)), okLabel: 'Apply' }).then(n => { var v = parseInt(n, 10); if (v >= 1 && v <= 60) setSpan(v); })">Custom span…</button>
-          </li>
-          <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-          <li role="none">
-            <button type="button" role="menuitem" class="overflow-menu__item"
-                    @click="open = false; saveCurrentView()">Save current view…</button>
-          </li>
-        {% endcall %}
-      </div>
     </div>
+
   </header>
 
   <p class="app-page__lead" x-show="!$store.budget.profile" x-cloak>
@@ -557,6 +576,79 @@ eleventyExcludeFromCollections: true
     </article>
   </template>
   </section>
+
+  {# ---- Phone agenda (P5, 2026-09-04) --------------------------------
+     The month grid at 390px was seven columns of about 50 pixels
+     carrying coloured blobs with no payee, no amount and no legend --
+     the audit's words were "unlabelled coloured blobs", and they were
+     accurate. Below 600px the grid above shrinks to a picker and this
+     is the view people actually read.
+
+     Rendered for every viewport and hidden by CSS above 600px rather
+     than switched on a JS breakpoint: a matchMedia flag has to be kept
+     in sync with resize and rotation, and getting that wrong shows an
+     empty screen. A media query cannot be out of date.
+
+     The rows are the same .cal-day__row used by the Day view, so a
+     posted entry opens the same edit modal and a scheduled one links
+     to the same template. #}
+  <section class="cal-agenda" x-show="$store.budget.profile && view === 'month'" x-cloak
+           aria-label="Agenda">
+    <template x-for="cell in agendaDays()" :key="'ag' + cell.iso">
+      <article class="cal-agenda__day" :class="cell.isToday ? 'is-today' : ''">
+        <h3 class="cal-agenda__head">
+          <span class="cal-agenda__date" x-text="agendaLabel(cell.iso)"></span>
+          <span class="cal-agenda__net"
+                :class="agendaNet(cell) < 0 ? 'amount--outflow' : 'amount--inflow'"
+                x-text="formatCents(agendaNet(cell))"></span>
+        </h3>
+        <ul class="cal-day__list">
+          <template x-for="t in cell.posted" :key="'agp' + cell.iso + t.id">
+            <li>
+              <button type="button"
+                      class="cal-day__row cal-day__row--clickable"
+                      :class="t.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                      @click="openTxn(t.id)">
+                <div>
+                  <p class="cal-day__row-payee" x-text="$store.budget.payeeName(t.payeeId) || (t.transferTxnId ? 'Transfer' : '-')"></p>
+                  <p class="cal-day__row-meta">
+                    <span x-text="$store.budget.findAccount(t.accountId)?.name || ''"></span>
+                    <span x-show="t.categoryId" x-text="' - ' + ($store.budget.categoryName(t.categoryId) || '')"></span>
+                  </p>
+                </div>
+                <span class="cal-day__row-amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(t.amount)"></span>
+              </button>
+            </li>
+          </template>
+          <template x-for="s in cell.scheduled" :key="'ags' + cell.iso + s.id">
+            <li>
+              <a class="cal-day__row cal-day__row--clickable cal-agenda__row--scheduled"
+                 :class="s.template.amount < 0 ? 'cal__row--out' : 'cal__row--in'"
+                 :href="'/app/scheduled/#edit-' + s.id">
+                <div>
+                  <p class="cal-day__row-payee">
+                    <span x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '-'"></span>
+                    <span class="cal-agenda__badge">Scheduled</span>
+                  </p>
+                  <p class="cal-day__row-meta">
+                    <span x-text="$store.budget.findAccount(s.template.accountId)?.name || ''"></span>
+                    <span x-text="' - ' + $store.budget.frequencyLabel(s)"></span>
+                  </p>
+                </div>
+                <span class="cal-day__row-amount" :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(s.template.amount)"></span>
+              </a>
+            </li>
+          </template>
+        </ul>
+      </article>
+    </template>
+    <p class="cal-agenda__empty" x-show="!agendaDays().length" x-cloak>
+      Nothing posted or scheduled this month.
+    </p>
+  </section>
+
 
   {# ---- Week view --------------------------------------------------- #}
   <section x-show="$store.budget.profile && view === 'week'" x-cloak>

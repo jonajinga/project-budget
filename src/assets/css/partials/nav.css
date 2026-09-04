@@ -1521,3 +1521,79 @@ button.search-result:focus-visible {
 .acct-totals__sum:first-of-type {
   border-top: 1px solid var(--border-strong);
 }
+
+/* ---- Edge peek (2026-09-04) ----------------------------------------
+   Jon: on a large screen, moving the cursor to the left should slide
+   the sidebar open, and moving away should put it back.
+
+   It is a peek, not a reopen. The grid stays collapsed and the panel
+   floats over the content, so passing the cursor near the edge does
+   not reflow the entire page - a register at 1440 would re-lay eight
+   columns every time, which is both visibly slow and nauseating.
+
+   Only where it can work: 1024 and up, and only for a real pointer.
+   `hover: hover and pointer: fine` keeps it away from touch, where
+   there is no such thing as moving away and the panel would open on
+   the first tap near the edge and never close. */
+.app-sidebar-hotzone { display: none; }
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .app-shell.app-shell--sidebar-closed .app-sidebar-hotzone {
+    display: block;
+    position: fixed;
+    left: 0;
+    top: 4rem;
+    bottom: 0;
+    width: 6px;
+    z-index: 24;
+  }
+
+  /* The panel itself, while peeking. display:none in the collapsed
+     rule has to be undone first - a display:none element cannot
+     transition, and it is not in the accessibility tree either. */
+  .app-shell.app-shell--sidebar-closed.app-shell--peek .app-sidebar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    top: 4rem;
+    height: calc(100dvh - 4rem);
+    min-height: 0;
+    width: var(--app-sidebar-width);
+    max-width: 88vw;
+    z-index: 26;
+    border-right: 1px solid var(--border);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    transform: translateX(0);
+    visibility: visible;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Give it somewhere to come from. The closed state is rendered so the
+     transition has two ends; pointer-events off so an invisible panel
+     cannot intercept a click on the page underneath. */
+  .app-shell.app-shell--sidebar-closed .app-sidebar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    top: 4rem;
+    height: calc(100dvh - 4rem);
+    min-height: 0;
+    width: var(--app-sidebar-width);
+    z-index: 26;
+    transform: translateX(-100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform var(--t-base), visibility 0s linear var(--t-base);
+  }
+  .app-shell.app-shell--sidebar-closed.app-shell--peek .app-sidebar {
+    pointer-events: auto;
+    transition: transform var(--t-base), visibility 0s;
+  }
+}
+
+/* A peek that slides is a nicety; a peek that appears is the feature.
+   Reduced motion keeps the behaviour and drops the travel. */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.app-shell--sidebar-closed .app-sidebar { transition: none; }
+}

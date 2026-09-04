@@ -66,8 +66,16 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   off on a phone are not; three group titles that ran to two or three
   lines fit on one; and the excluded-total pill that ended 90 pixels
   past the phone screen no longer overflows. Verified independently.
-- [ ] **P5 Calendar.** Phone view is unlabelled coloured blobs and a
-  six-row toolbar. Needs an agenda list, with the grid as a picker.
+- [x] **P5 Calendar.** The phone toolbar wrapped to six rows because
+  the filter disclosure it was always styled for had never had its
+  markup written. Six rows to four, 330 pixels to 172. Below 600 the
+  grid drops to a picker with one dot per day that has entries, and an
+  agenda underneath lists only the days with something on them, with
+  payee, account, category and amount on each row. Three truncated
+  money values in the period tiles are gone. Author-checked headlessly
+  at 390: 21 day groups, 50 rows, no page errors. Still four rows
+  rather than three - the kebab keeps a row of its own and I did not
+  find why.
 
 ## Reports
 
@@ -99,14 +107,44 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   phone. Both tables stack now and the Restore button never hides.
 - [x] **U6 Excluded accounts spacing.** Ran words together because the
   build's HTML minifier trims whitespace at the edge of a text node.
-- [ ] **U1 Backup and import.** Mostly prose, half-width cards leaving
-  an empty column, a raw file input where the page promises a drop
-  zone.
+- [~] **U1 Backup and import.** Import done: it opens on a drop zone
+  that fills the window, with the prose behind the info button. It was
+  the worst case in the audit - 240 pixels of title and prose, 190 of
+  control, 460 of nothing. Backup is with the utility worker.
 - [ ] **U5 Tools and reports index.** Grids leave an orphan tile on the
   last row.
 - [ ] **U7 Dashboard PDF export.** Skips five widgets at every width,
   because two chart hosts render without the identifier the export
   looks up.
+
+## App chrome (S8, added 2026-09-04)
+
+Jon: every page should look like the budget page, which is the only one
+that reads as an app. His decision: no page header at all. The sidebar
+already says which page you are on, so the visible name goes and only
+the controls stay. The h1 survives as visually-hidden for screen
+readers, and print.css puts it back on paper.
+
+This supersedes decision 3 in the plan, which said every page keeps a
+one-line lead. It does not; the lead moves behind the info button.
+
+- [x] **S8 The shared layer.** `.app-toolbar` is one full-bleed strip
+  under the app header. `.panel` is a card that has stopped floating.
+  `.app-page--flush` bleeds a whole page for a route that is one
+  continuous data surface; `.app-gutter` gives one child its gutter
+  back. `.app-filters` is a collapsible filter row for pages with more
+  controls than a strip can hold, with a count badge so a filter that
+  is on is never hidden silently. Written up in
+  `docs/app-chrome-guide.md`.
+- [x] **Import**, **Accounts**, **Register**, **Recurring**,
+  **Dashboard**, **Cuts**, **Category**. Each drops its masthead and
+  merges its own second row of controls into the one strip. Measured
+  drops in where the first row of real content sits: accounts 480 to
+  365, dashboard 285 to 155, category 290 to 133, recurring about 400
+  to 326.
+- [ ] **The 15 report pages and the reports hub.** With a worker.
+- [ ] **The 20 utility and form pages.** With a worker.
+- [ ] Nobody independent has checked any of this yet.
 
 ## New work
 

@@ -6,17 +6,21 @@ permalink: /app/cuts/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="cutsView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Cuts</h1>
-      <p class="app-page__lead">A cut is a promise to spend less in one category than you used to. Each one is measured against what that category averaged in the three months before it started, so the numbers below are real savings, not wishes.</p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="cutsView()" x-init="init()">
+  {% call appToolbar("Cuts") %}
+    <div class="app-toolbar__actions">
+      <a class="btn btn--ghost" href="/app/budget/">Budget</a>
+      <button class="btn btn--primary" type="button" @click="openAdd()">Plan a cut</button>
+      {% call pageInfo(id="cuts", title="About cuts", label="What a cut is and how it is measured") %}
+        <p>A cut is a promise to spend less in one category than you used to.</p>
+        <p>Each one is measured against what that category averaged in the
+        three months before the cut started, so the numbers on this page are
+        real savings rather than wishes.</p>
+      {% endcall %}
     </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--primary btn--sm" type="button" @click="openAdd()">Plan a cut</button>
-      <a class="btn btn--ghost btn--sm" href="/app/budget/">Budget</a>
-    </div>
-  </header>
+  {% endcall %}
 
   <template x-if="!hasCuts()">
     <section class="hist__card hist__empty">
