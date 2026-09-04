@@ -82,8 +82,14 @@
      Scoped to the page's own h1 so the app's other visually-hidden
      labels stay hidden. */
   .app-toolbar { display: none !important; }
-  .app-page > h1.visually-hidden,
-  .app-page > .app-page__inner > h1.visually-hidden {
+  /* .app-page__h1 by class, not by position. The first version of this
+     matched `.app-page > h1` plus a fallback for `.app-page__inner`, a
+     class that does not exist anywhere in the repo. The category page
+     renders its heading inside an x-if wrapper, so neither selector
+     matched, the heading stayed clipped to 1x1, and print also hides
+     the toolbar that carried the visible name -- so the sheet came out
+     with no name on it at all. */
+  .app-page__h1 {
     position: static !important;
     width: auto;
     height: auto;

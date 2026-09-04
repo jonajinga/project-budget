@@ -164,7 +164,19 @@
 /* Phones: the strip keeps one row. Controls that cannot fit scroll
    sideways rather than stacking into four rows -- the calendar
    toolbar became six rows at 390 and that is the failure being
-   avoided. */
+   avoided.
+
+   The first version of this did not work, and a verifier caught it on
+   the category page: the name rendered THREE PIXELS wide and the
+   breadcrumb at zero. overflow-x only engages once the content is
+   genuinely wider than the box, and nothing here was. The actions
+   cluster is flex-shrink: 0, the left group is min-width: 0, and its
+   children clip their own overflow -- so the group quietly collapsed
+   to nothing and the strip always fitted. It scrolled sideways only
+   in the comment.
+
+   The group is now sized to its content and refuses to shrink, which
+   is what makes the strip overflow and therefore scroll. */
 @media (max-width: 599px) {
   .app-toolbar {
     flex-wrap: nowrap;
@@ -175,7 +187,18 @@
   }
   .app-toolbar::-webkit-scrollbar { display: none; }
   .app-toolbar--flush { margin-bottom: 0; }
-  .app-toolbar__subject { font-size: var(--fs-md); }
+
+  .app-toolbar__group { flex: 0 0 auto; min-width: auto; }
+
+  /* The subject still gets a ceiling. Without one a long category name
+     pushes every control off the row and the strip opens scrolled to a
+     name with nothing beside it. It ellipsises at the ceiling and
+     carries its full text in a tooltip. */
+  .app-toolbar__subject {
+    font-size: var(--fs-md);
+    max-width: 50vw;
+  }
+  .app-toolbar__context { max-width: 40vw; }
 }
 
 /* An empty strip is not a strip. A page with no controls at all

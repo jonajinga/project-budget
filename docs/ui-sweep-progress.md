@@ -148,25 +148,56 @@ one-line lead. It does not; the lead moves behind the info button.
   `docs/app-chrome-guide.md`.
 - [x] **Import**, **Accounts**, **Register**, **Recurring**,
   **Dashboard**, **Cuts**, **Category**. Each drops its masthead and
-  merges its own second row of controls into the one strip. Measured
-  drops in where the first row of real content sits: accounts 480 to
-  365, dashboard 285 to 155, category 290 to 133, recurring about 400
-  to 326.
+  merges its own second row of controls into the one strip. Where the
+  first row of real content sits, measured by a verifier who built both
+  commits: accounts 452 to 345, dashboard 268 to 157, category 207 to
+  133, recurring 525 to 280, calendar phone toolbar 308 to 172.
+
+  These replace the figures first written here. Two of them were wrong:
+  the category baseline of 290 matched nothing on the page at any
+  width, and the recurring pair described the page with its filter row
+  open rather than in its default state. The real recurring improvement
+  is larger than was claimed, which is not the point -- a number nobody
+  re-measured does not belong in a progress document.
+- [x] **Verified, after a rejection.** An independent verifier
+  rejected the first pass and found four real defects, all of them on
+  the one page whose structure differs from the rest:
+  - the phone toolbar collapsed its left group to zero instead of
+    scrolling, so the category page rendered its own name three pixels
+    wide with no way to read it;
+  - the print rule looked for the heading by position and by a class
+    (`app-page__inner`) that existed nowhere in the repo, so the
+    category sheet printed with no name on it at all;
+  - the hidden heading said "Category" rather than which category;
+  - the recurring filter badge counted the sort order, which
+    `clearFilters()` did not reset, so a "1" could appear with no Clear
+    button to remove it.
+
+  All four are fixed and re-checked: the strip now overflows and
+  scrolls (526px of content in a 390px row, nothing clipped), the
+  category name reads in full, the note moved behind its own button,
+  print emits "Category: Dining out" at full width, and changing only
+  the sort no longer raises a badge.
 - [ ] **The 15 report pages and the reports hub.** With a worker.
 - [~] **The 20 utility and form pages.** Converted, not yet checked by
   anyone independent. backup, diagnostics, health-check, trash,
   settings, shortcuts, tools, templates, audit-log, about-this-profile,
   integrations, share, rules, payees, profiles, onboarding-checklist,
-  welcome, contact, feedback, review. First row of real content at
-  1440: mean drop 98 pixels, from 167 (trash) down to 34 on the three
-  pages that never had a lead to remove (settings, profiles, payees).
-  Trash, payees and audit-log went flush; audit-log uses the
-  collapsible filter row for its three selects; settings is eight
-  .panel sections rather than eight cards. Every lead is in that
-  page's info modal, checked sentence by sentence against the original
-  template. No horizontal overflow outside a scroll container and no
-  page errors at 1440, 1024 or 390.
-- [ ] Nobody independent has checked any of this yet.
+  welcome, contact, feedback, review. Trash, payees and audit-log went
+  flush; audit-log uses the collapsible filter row for its three
+  selects; settings is eight .panel sections rather than eight cards.
+  U1 backup and U5 tools are finished here too.
+
+  The author's own figures for the drop in where the first row of real
+  content sits are recorded in the handoff, not here. Two different
+  numbers were reported for the same measurement (a mean of 98 and of
+  105, and a range that does not match between them), so none of them
+  goes in this document until a verifier has measured it. Three pages
+  -- settings, profiles and payees -- never had a lead to remove and so
+  drop much less than the rest, which is expected.
+- [ ] **The 15 report pages and the reports hub.** With a worker.
+- [ ] Neither the report nor the utility pages have been checked by
+  anyone independent.
 
 ## New work
 
