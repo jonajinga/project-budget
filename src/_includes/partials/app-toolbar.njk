@@ -30,7 +30,7 @@
    heading is emitted for screen readers and the empty strip removes
    itself (.app-toolbar:empty). #}
 {% macro appToolbar(title, flush=false) %}
-<h1 class="visually-hidden">{{ title }}</h1>
+<h1 class="visually-hidden app-page__h1">{{ title }}</h1>
 <div class="app-toolbar{% if flush %} app-toolbar--flush{% endif %}">{{ caller() }}</div>
 {% endmacro %}
 
@@ -41,8 +41,13 @@
 
    `title` is the screen-reader heading; `subject` is the visible text
    (pass raw HTML, e.g. an x-text span, so it can be Alpine-bound). #}
+{# The heading carries the SUBJECT, not just the screen name. A
+   verifier found /app/category/ printing a sheet whose heading said
+   "Category" and whose visible name was in the toolbar, which print
+   hides -- so the printout named neither the screen nor the thing. A
+   screen reader had the same problem. #}
 {% macro appToolbarSubject(title, subject, flush=false) %}
-<h1 class="visually-hidden">{{ title }}</h1>
+<h1 class="visually-hidden app-page__h1">{{ title }}: {{ subject | safe }}</h1>
 <div class="app-toolbar{% if flush %} app-toolbar--flush{% endif %}">
   <div class="app-toolbar__group">
     <p class="app-toolbar__subject">{{ subject | safe }}</p>

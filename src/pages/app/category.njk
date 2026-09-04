@@ -15,8 +15,12 @@ eleventyExcludeFromCollections: true
     </section>
   </template>
 
+  {# app-page__inner is what print.css looks for when it needs to find
+     the page heading. This page renders its heading inside an x-if, so
+     the heading is not a direct child of .app-page like everywhere
+     else. #}
   <template x-if="found()">
-    <div>
+    <div class="app-page__inner">
       {# The category name is the subject here, not a screen label: it
          says which thing you are looking at, so it stays visible. The
          breadcrumb to the parent group goes with it. #}
@@ -27,7 +31,16 @@ eleventyExcludeFromCollections: true
             <template x-if="groupHref()"><a class="hist__link" :href="groupHref()" x-text="eyebrow()"></a></template>
             <template x-if="!groupHref()"><span x-text="eyebrow()"></span></template>
           </p>
-          <span class="app-toolbar__context" x-show="note()" x-cloak x-text="note()"></span>
+          {# The note is a sentence, not a control. In the strip it was a
+             451px string in a 390px row, which is what crushed this
+             toolbar to nothing on a phone. It gets its own button, so it
+             is one tap away at every width instead of unreadable at one. #}
+          <button type="button" class="btn btn--icon" x-show="note()" x-cloak
+                  @click="noteOpen = true"
+                  :aria-label="'Note: ' + note()"
+                  :data-tip="note()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H8l-4 4z"/></svg>
+          </button>
         </div>
         <div class="app-toolbar__actions">
           <span class="hist__range" role="group" aria-label="Months shown">
@@ -40,6 +53,17 @@ eleventyExcludeFromCollections: true
           <a class="btn btn--ghost" :href="registerHref()">Register</a>
         </div>
       {% endcall %}
+
+      <div class="modal-backdrop" x-show="noteOpen" x-cloak @keydown.escape.window="noteOpen = false">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cat-note-title" @click.outside="noteOpen = false">
+          <button class="modal__close" type="button" @click="noteOpen = false" aria-label="Close">&times;</button>
+          <h2 class="modal__title" id="cat-note-title">Note</h2>
+          <div class="prose"><p x-text="note()"></p></div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="button" @click="noteOpen = false">Got it</button>
+          </div>
+        </div>
+      </div>
 
       <div class="kpi-strip hist__kpis">
         <div class="kpi" :class="availableClass()">

@@ -569,7 +569,11 @@ function scheduledView() {
       if (this.filterAccountId) n++;
       if (this.filterFrequency) n++;
       if (this.filterKind !== "all") n++;
-      if (this.sortKey && this.sortKey !== "nextDate") n++;
+      /* Sort order is deliberately NOT counted. A verifier found that
+         counting it put a "1" on the badge that hasActiveFilter() did
+         not agree with, so Clear never appeared and there was no way to
+         get rid of it. Sorting is not filtering: it changes the order
+         of the rows, not which rows are there. */
       return n;
     },
     clearFilters() {
