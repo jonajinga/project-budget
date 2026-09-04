@@ -3,68 +3,12 @@
    exception in the app) and small enough that it doesn't dominate. */
 .fab-quick-add { /* container only; modal is portal-style siblings */ }
 
-.fab-quick-add__btn {
-  position: fixed;
-  right: var(--space-md);
-  /* sit above the toast stack (z-index: 50) */
-  z-index: 55;
-  /* default desktop placement: bottom edge with safe gap */
-  bottom: var(--space-md);
-  width: 3rem;
-  height: 3rem;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--fg-on-accent);
-  border: 0;
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
-}
-/* S4 (2026-09-04): the floating button is for phones only. On tablets
-   and desktops it sat over table columns and chart corners; those
-   widths get a regular Add button in the top bar instead (header.njk).
-   The modal, the N shortcut and the open-quick-add event are unchanged. */
-@media (min-width: 600px) {
-  .fab-quick-add__btn { display: none !important; }
-}
-.fab-quick-add__btn:hover {
-  background: var(--accent-hover);
-  box-shadow: var(--shadow-lg);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .fab-quick-add__btn:hover { transform: translateY(-1px); }
-}
-.fab-quick-add__btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-}
-.fab-quick-add__btn:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow-sm);
-}
-
-/* On phones we lift the FAB clear of the iOS home-bar / safe-area
-   on both portrait AND landscape. The `max()` reserves a minimum
-   24px gap even when env(safe-area-inset-bottom) is 0 (PWA / desktop
-   browsers), and on iPhone 14+ landscape the home-bar inset can be
-   ~21px which would otherwise put the FAB right on top of it. */
-@media (max-width: 599px) {
-  .fab-quick-add__btn {
-    right: max(var(--space-sm), env(safe-area-inset-right, 0));
-    bottom: max(var(--space-md), env(safe-area-inset-bottom, 0));
-  }
-}
-
-/* When the budget bulk-actions bar is showing, lift the FAB above
-   it so the two don't overlap on phones (the bar is fixed
-   bottom-stretched on mobile, FAB is bottom-right). CSS :has()
-   detects the visible bar. */
-body:has(.bulk-actions-bar:not([style*="display: none"])) .fab-quick-add__btn {
-  bottom: calc(80px + env(safe-area-inset-bottom, 0));
-}
+/* The floating trigger was removed on 2026-09-04. It had been hidden
+   below 768px by tab-bar.css since the tab bar gained its centre Add
+   slot, and hiding it on wider screens (where it covered table columns
+   and chart corners) left it with no width at which it appeared. The
+   quick-add modal below is unchanged and now opens from the tab bar,
+   the top bar's Add button, or the N shortcut. */
 
 /* ── Quick-add modal ──────────────────────────────────────────────────
    Amount first and large; a three-way mode (outflow / inflow /

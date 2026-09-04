@@ -10,18 +10,9 @@
    phantom income. #}
 <div class="fab-quick-add" x-data="quickAddFab()" x-init="init()"
      @open-quick-add.window="openModal()">
-  <button type="button" class="fab-quick-add__btn"
-          @click="openModal()"
-          x-show="$store.budget.profile"
-          x-cloak
-          data-touch="compact"
-          aria-label="Quick-add transaction"
-          data-tip="Add a transaction. Shortcut: press N anywhere outside a field.">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
-      <line x1="12" y1="5" x2="12" y2="19"/>
-      <line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  </button>
+  {# The floating trigger is gone. Below 768px the tab bar's centre slot
+     dispatches open-quick-add; from 768px up the top bar's Add button
+     does. Both open the modal below, as does the N shortcut. #}
 
   <div class="modal-backdrop" x-show="open" x-cloak @keydown.escape.window="open = false">
     <div class="modal qa" role="dialog" aria-modal="true" aria-labelledby="fab-quick-add-title"

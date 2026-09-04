@@ -110,8 +110,4 @@
   /* The bar is fixed, so the page needs room or its last row sits under it. */
   body.layout-app { padding-bottom: var(--tabbar-space); }
 
-  /* The FAB's trigger is redundant now -- the centre slot dispatches the same
-     event and opens the same modal. The modal itself stays exactly where it
-     is; only this button is hidden. */
-  .fab-quick-add__btn { display: none; }
 }

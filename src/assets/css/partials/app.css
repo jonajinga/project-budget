@@ -322,7 +322,10 @@
    button is hidden. The page info button sits inline after a page
    title and opens the page's explanation in a modal (page-info.njk). */
 .site-header__add { display: none; gap: 4px; margin-right: var(--space-2xs); }
-@media (min-width: 600px) { .site-header__add { display: inline-flex; } }
+/* 768px is where the tab bar stops, and the tab bar's centre slot is the
+   Add button below that width. Matching the breakpoint means exactly one
+   Add control exists at any width. */
+@media (min-width: 768px) { .site-header__add { display: inline-flex; } }
 .page-info { display: inline-block; vertical-align: middle; margin-left: var(--space-2xs); }
 .page-info__btn { width: 1.75rem; height: 1.75rem; min-height: 0; color: var(--fg-muted); }
 .page-info__btn:hover { color: var(--fg); }
