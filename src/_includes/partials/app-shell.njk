@@ -116,15 +116,13 @@
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </span>
                     <span class="acct-group__name" x-text="group.group ? group.group.name : 'Other'"></span>
-                    {# Right-side meta cluster: count pill + group total.
-                       Both are always visible so the user always sees
-                       (a) how many accounts live in this group and
-                       (b) the rolled-up balance for the group, whether
-                       expanded or collapsed. #}
+                    {# The rolled-up balance for the group, visible whether
+                       the group is expanded or collapsed. The count pill
+                       that used to sit beside it is gone (Jon, 2026-09-04):
+                       how many accounts are in a group is answered by
+                       expanding it, and the money is what the sidebar is
+                       for. #}
                     <span class="acct-group__meta" x-show="group.group" x-cloak>
-                      <span class="acct-group__count"
-                            x-text="group.accounts.length"
-                            :data-tip="group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' in this group'"></span>
                       <span class="acct-group__total"
                             :class="acctGroupTotal(group) < 0 ? 'is-negative' : ''"
                             x-text="fmtCompactCents(acctGroupTotal(group))"></span>

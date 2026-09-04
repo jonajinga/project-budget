@@ -1338,11 +1338,11 @@ button.search-result:focus-visible {
    padding + letter-spacing as the outer ACCOUNTS section header
    directly above them. */
 .acct-group__head {
-  /* Two lines: chevron, name (ellipsis) and count on the first, the
-     group total right-aligned on the second. With cents always shown
-     (S1) the total no longer fits beside the name in a 260px sidebar. */
+  /* Two lines: chevron and name (ellipsis) on the first, the group
+     total right-aligned on the second. With cents always shown (S1)
+     the total does not fit beside the name in a 260px sidebar. */
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: auto auto;
   column-gap: var(--space-2xs);
   row-gap: 2px;
@@ -1376,7 +1376,7 @@ button.search-result:focus-visible {
   white-space: nowrap;
 }
 .acct-group__total {
-  grid-column: 2 / 4;
+  grid-column: 2;
   grid-row: 2;
   justify-self: end;
   font-family: var(--font-ui);
@@ -1388,33 +1388,12 @@ button.search-result:focus-visible {
   letter-spacing: 0;
 }
 .acct-group__total.is-negative { color: var(--danger); }
-/* Right-side meta cluster — count pill + group total, both always
-   visible so users see "Daily 3 $4.5k" / "Retirement 0 $0" / etc.
-   without having to expand each group. */
+/* Right-side meta cluster — the group total. The count pill that sat
+   beside it was removed 2026-09-04 at Jon's request. */
 .acct-group__meta {
   /* The wrapper stays for the x-show, but its children lay out on the
      head's own grid. */
   display: contents;
-}
-.acct-group__count {
-  grid-column: 3;
-  grid-row: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.5rem;
-  height: 1.1rem;
-  padding: 0 0.4rem;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
-  color: var(--accent);
-  font-family: var(--font-ui);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  line-height: 1;
-  text-transform: none;
-  letter-spacing: 0;
 }
 /* Indent the BALANCES subsections (groups) one level under the
    section header. Each group's own account list indents one more
