@@ -217,16 +217,25 @@
    longer sits on top of the amount cell's click-to-edit area. */
 .register__table .col-cleared .cleared-toggle::before { inset: -4px -8px; }
 
-/* Above 1250 the card is wide enough (about 918px and up) to give the
-   date, the amount and the two longest text columns their full natural
-   width, so nothing takes an ellipsis that does not have to. Below it
-   the compact set above applies and the long names ellipsize with the
-   full value in the cell's tooltip. */
+/* Above 1250 the card is 918px or wider, which is enough to give the
+   date, the amount and the payee their full natural width, so nothing
+   takes an ellipsis that does not have to. Below it the compact set
+   above applies and the long names ellipsize with the full value in
+   the cell's tooltip. */
 @media (min-width: 1250px) {
   .register__table .col-date     { width: 7rem; }
-  .register__table .col-account  { width: 15%; }
   .register__table .col-payee    { width: 23%; }
   .register__table .col-amount   { width: 7rem; }
+}
+
+/* Memo shows only once the card can give it a usable width. It is the
+   column with no width of its own, so it takes what is left over --
+   which at 1025, where the sidebar is on screen but the page is not yet
+   wide, is 3 pixels. A 3px column with a header on it is worse than no
+   column. .col-p3 in the markup covers 1024 and below; this covers the
+   band above it, up to where memo starts at about 78px and grows. */
+@media (max-width: 1249px) {
+  .register__table .col-memo { display: none; }
 }
 
 @media (max-width: 1249px) {
