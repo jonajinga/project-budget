@@ -81,8 +81,13 @@ test("a store mutation does not resurrect hidden goal bars", async ({ seeded }) 
   await gotoApp(page, "/app/budget/");
   await page.evaluate(() => window.Alpine.store("budget").setMonth("2026-03"));
   await page.waitForTimeout(300);
+  /* :not(.goal-bar--cut) matters. A planned cut renders a tracker bar
+     with the same base class, so once the sample grew two reductions
+     this counted 20 bars against 18 goals and failed on a feature
+     working correctly. The phantom bars this test exists to catch are
+     goal bars on goalless rows, which is what it counts now. */
   const visibleBars = () => page.evaluate(() =>
-    [...document.querySelectorAll(".budget__row .goal-bar")]
+    [...document.querySelectorAll(".budget__row .goal-bar:not(.goal-bar--cut)")]
       .filter((el) => getComputedStyle(el).display !== "none").length
   );
   const goals = await page.evaluate(() => window.Alpine.store("budget").profile.goals.length);
