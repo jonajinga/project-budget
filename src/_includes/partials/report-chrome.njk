@@ -1,0 +1,92 @@
+{# Report page chrome (S8, 2026-09-04).
+
+   The fifteen detail reports were the same page fifteen times: a
+   2.75rem title, a paragraph of prose, a "Save view / All reports"
+   pair, then a second row holding the range picker, then a third row
+   (.report-toolbar) holding the search box, the row count and the
+   export kebab. Three bands of chrome before the first number.
+
+   This macro is all three, merged into the one .app-toolbar strip
+   described in docs/app-chrome-guide.md. It is a macro rather than
+   fifteen hand-edits so the strip cannot drift page to page.
+
+   The page's own filters come through {% call %}; everything else is
+   a parameter, because Nunjucks gives a macro exactly one caller.
+
+     {% from "partials/report-chrome.njk" import reportChrome %}
+     {% call reportChrome(
+          title="Spending by category",
+          id="spending",
+          info="<p>Outflows by category.</p>",
+          infoTitle="About this report",
+          save="Save this range as a view.",
+          slug="spending-by-category",
+          searchId="sp-search",
+          searchPlaceholder="Filter by group or category",
+          count='<span x-text="visibleCount"></span> rows') %}
+       ...the page's range controls...
+     {% endcall %}
+
+   Arguments
+     title     the screen-reader <h1>. The page name, unchanged.
+     id        unique on the page; ids the info modal.
+     info      the old .app-page__lead, raw HTML, shown in the modal.
+               Never delete the words -- they are the only explanation
+               the report has.
+     save      tooltip for the "Save this view" item in the actions
+               kebab. Empty means the page has no saved views and the
+               item is not rendered. It is a menu item rather than a
+               button because Save view + All reports side by side put
+               the actions on a second row at 1024.
+     slug/csv  passed straight to reportExports.
+     searchId  renders the table search box in the strip. Empty means
+               the report has no searchable table.
+     count     raw HTML for the row count that used to sit in
+               .report-toolbar.
+     context   raw HTML for a range label, for a page whose date
+               pickers live in the collapsed filter row and would
+               otherwise leave the reader guessing what window they
+               are looking at.
+     filtersId id of an .app-filters row under the strip; renders the
+               Filters toggle and its count badge. The badge is not
+               optional: a filter that is on and hidden is a reader
+               staring at a short list wondering where the rows went.
+#}
+{% macro reportChrome(title, id, info, infoTitle="", infoLabel="", save="", slug="", csv="",
+                      searchId="", searchPlaceholder="", searchLabel="Filter",
+                      count="", context="", filtersId="") %}
+{% from "partials/report-exports.njk" import reportExports %}
+{% from "partials/page-info.njk" import pageInfo %}
+<h1 class="visually-hidden">{{ title }}</h1>
+<div class="app-toolbar report-chrome">
+  <div class="app-toolbar__group">
+    {{ caller() }}
+    {% if filtersId %}
+    <button type="button" class="btn btn--ghost app-toolbar__filter-toggle"
+            @click="filtersOpen = !filtersOpen"
+            :aria-expanded="filtersOpen.toString()"
+            aria-controls="{{ filtersId }}">
+      Filters
+      <span class="app-toolbar__filter-count" x-show="activeFilterCount()" x-cloak
+            x-text="activeFilterCount()"></span>
+    </button>
+    {% endif %}
+    {% if searchId %}
+    <div class="field report-chrome__search">
+      <label class="visually-hidden" for="{{ searchId }}">{{ searchLabel }}</label>
+      <input class="input" id="{{ searchId }}" type="search" x-model="query"
+             placeholder="{{ searchPlaceholder }}">
+    </div>
+    {% endif %}
+    {% if context %}<span class="app-toolbar__context">{{ context | safe }}</span>{% endif %}
+    {% if count %}<span class="app-toolbar__context report-chrome__count">{{ count | safe }}</span>{% endif %}
+  </div>
+  <div class="app-toolbar__actions">
+    <a class="btn btn--ghost" href="/app/reports/">All reports</a>
+    {{ reportExports(slug, csv, save) }}
+    {% call pageInfo(id=id, title=infoTitle or ("About " + title), label=infoLabel or ("What " + title + " shows")) %}
+      {{ info | safe }}
+    {% endcall %}
+  </div>
+</div>
+{% endmacro %}

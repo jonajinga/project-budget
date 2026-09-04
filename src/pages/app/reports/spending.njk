@@ -5,55 +5,65 @@ description: "Treemap of category activity over a chosen window."
 permalink: /app/reports/spending/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="spendingView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Spending by category</h1>
-      <p class="app-page__lead">Outflows by category over the chosen window. Transfers and uncategorized inflows are excluded.</p>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="spendingView()" x-init="init()">
+  {% call reportChrome(
+       title="Spending by category",
+       id="spending",
+       infoTitle="About spending by category",
+       infoLabel="What the spending report counts",
+       info="<p>Outflows by category over the chosen window. Transfers and uncategorized inflows are excluded.</p>",
+       save="Save this date range + chart type + filter as a recall-able view in /app/templates/.",
+       slug="spending-by-category",
+       searchId="sp-search",
+       searchLabel="Search",
+       searchPlaceholder="Filter by group or category",
+       count='<span x-text="visibleCount"></span> rows',
+       context='<span x-text="windowLabel()"></span>',
+       filtersId="sp-filters") %}
+  {% endcall %}
+
+  {# Two month pickers plus the search box put the actions on a second
+     row at 1024, so the pickers live in the row underneath. The window
+     itself stays visible as the strip's context text, which is the
+     part a reader actually needs at a glance. #}
+  <div class="app-filters" id="sp-filters" x-show="filtersOpen" x-cloak>
+    <div class="field">
+      <label class="field__label" for="from-month">From</label>
+      <input class="input" id="from-month" type="month" x-model="from">
     </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save this date range + chart type + filter as a recall-able view in /app/templates/.">Save view</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
+    <div class="field">
+      <label class="field__label" for="to-month">To</label>
+      <input class="input" id="to-month" type="month" x-model="to">
     </div>
-  </header>
+    <button type="button" class="btn btn--ghost" x-show="hasActiveFilter()" x-cloak
+            @click="clearFilters()">Reset to the last 3 months</button>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi kpi--danger">
+      <span class="kpi__label">Total spent</span>
+      <span class="kpi__value" x-text="fmt(kpis().total)"></span>
+      <span class="kpi__delta" x-text="kpis().months + ' month' + (kpis().months === 1 ? '' : 's')"></span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">Avg per month</span>
+      <span class="kpi__value" x-text="fmt(kpis().monthlyAvg)"></span>
+      <span class="kpi__delta">Across the range</span>
+    </div>
+    <div class="kpi kpi--warn">
+      <span class="kpi__label">Top category</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" :title="kpis().topName || ''" x-text="kpis().topName || '&mdash;'"></span>
+      <span class="kpi__delta" x-text="kpis().topShare === null ? '&mdash;' : (kpis().topShare.toFixed(1) + '% of total')"></span>
+    </div>
+    <div class="kpi kpi--muted">
+      <span class="kpi__label">Categories active</span>
+      <span class="kpi__value" x-text="kpis().count"></span>
+      <span class="kpi__delta">With at least one outflow</span>
+    </div>
+  </div>
 
   <section class="report">
-    <div class="form-row" style="margin-bottom: var(--space-md);">
-      <div class="field">
-        <label class="field__label" for="from-month">From</label>
-        <input class="input" id="from-month" type="month" x-model="from">
-      </div>
-      <div class="field">
-        <label class="field__label" for="to-month">To</label>
-        <input class="input" id="to-month" type="month" x-model="to">
-      </div>
-    </div>
-
-    <div class="kpi-strip">
-      <div class="kpi kpi--danger">
-        <span class="kpi__label">Total spent</span>
-        <span class="kpi__value" x-text="fmt(kpis().total)"></span>
-        <span class="kpi__delta" x-text="kpis().months + ' month' + (kpis().months === 1 ? '' : 's')"></span>
-      </div>
-      <div class="kpi">
-        <span class="kpi__label">Avg per month</span>
-        <span class="kpi__value" x-text="fmt(kpis().monthlyAvg)"></span>
-        <span class="kpi__delta">Across the range</span>
-      </div>
-      <div class="kpi kpi--warn">
-        <span class="kpi__label">Top category</span>
-        <span class="kpi__value" style="font-size: var(--fs-lg);" :title="kpis().topName || ''" x-text="kpis().topName || '—'"></span>
-        <span class="kpi__delta" x-text="kpis().topShare === null ? '—' : (kpis().topShare.toFixed(1) + '% of total')"></span>
-      </div>
-      <div class="kpi kpi--muted">
-        <span class="kpi__label">Categories active</span>
-        <span class="kpi__value" x-text="kpis().count"></span>
-        <span class="kpi__delta">With at least one outflow</span>
-      </div>
-    </div>
-
     <div class="chart-toolbar">
       <span class="chart-toolbar__label">Chart</span>
       <span class="chart-picker" role="group" aria-label="Chart type">
@@ -72,38 +82,29 @@ eleventyExcludeFromCollections: true
          role="img" aria-label="Spending by category chart"
          aria-describedby="data-table-spending"></div>
 
-    <div class="report-toolbar">
-      <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="sp-search">Search</label>
-        <input class="input" id="sp-search" type="search" x-model="query" placeholder="Filter by group or category…">
-      </div>
-      <p class="report-toolbar__count">
-        <span x-text="visibleCount"></span> rows
-      </p>
-      {{ reportExports("spending-by-category") }}
-    </div>
-
-    <table class="table" id="data-table-spending">
-      <thead>
-        <tr>
-          <th class="is-sortable"><button type="button" @click="sortBy('group')">Group <span class="sort-ind" x-text="sortIndicator('group')"></span></button></th>
-          <th class="is-sortable"><button type="button" @click="sortBy('category')">Category <span class="sort-ind" x-text="sortIndicator('category')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('value')">Spent <span class="sort-ind" x-text="sortIndicator('value')"></span></button></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-for="r in rows" :key="r.categoryId">
+    <div class="table-scroll">
+      <table class="table table--stack" id="data-table-spending">
+        <thead>
           <tr>
-            <td x-text="r.group"></td>
-            <td x-text="r.category"></td>
-            <td class="num amount--outflow" x-text="fmt(r.value)"></td>
+            <th class="is-sortable"><button type="button" @click="sortBy('category')">Category <span class="sort-ind" x-text="sortIndicator('category')"></span></button></th>
+            <th class="is-sortable col-p3"><button type="button" @click="sortBy('group')">Group <span class="sort-ind" x-text="sortIndicator('group')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('value')">Spent <span class="sort-ind" x-text="sortIndicator('value')"></span></button></th>
           </tr>
-        </template>
-        <tr x-show="!rows.length" x-cloak>
-          <td colspan="3" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
-        </tr>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <template x-for="r in rows" :key="r.categoryId">
+            <tr>
+              <td x-text="r.category"></td>
+              <td class="col-p3" data-label="Group" x-text="r.group"></td>
+              <td class="num amount--outflow" data-label="Spent" x-text="fmt(r.value)"></td>
+            </tr>
+          </template>
+          <tr x-show="!rows.length" x-cloak>
+            <td colspan="3" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
 
@@ -138,6 +139,26 @@ function spendingView() {
   return {
     from: fromInitial,
     to: toInitial,
+    /* Kept so the filter row can say whether the window has been
+       changed. Comparing against the initial values is the only way to
+       know: "from" is always set, so its presence proves nothing. */
+    defaultFrom: fromInitial,
+    defaultTo: toInitial,
+    filtersOpen: false,
+
+    windowLabel() {
+      var s = this.$store.budget;
+      if (!s || !s.monthLabel) return this.from + " to " + this.to;
+      return s.monthLabel(this.from, true) + " to " + s.monthLabel(this.to, true);
+    },
+    activeFilterCount() {
+      var n = 0;
+      if (this.from !== this.defaultFrom) n++;
+      if (this.to !== this.defaultTo) n++;
+      return n;
+    },
+    hasActiveFilter() { return this.activeFilterCount() > 0; },
+    clearFilters() { this.from = this.defaultFrom; this.to = this.defaultTo; },
 
     chartType: savedChartType,
     chartOptions: [

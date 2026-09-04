@@ -597,3 +597,80 @@
   .app-page .eyebrow + .report-tiles { margin-top: var(--space-2xs); }
   .report-recents:empty { display: none; }
 }
+
+/* ---- Report chrome (S8, 2026-09-04) --------------------------------
+   The fifteen detail reports each opened with three bands: a masthead
+   with a 2.75rem title and a paragraph, then a row holding the range
+   picker, then .report-toolbar holding the search box, the row count
+   and the export kebab. Between 230 and 600 pixels of the window went
+   by before the first number.
+
+   partials/report-chrome.njk folds all three into the one .app-toolbar
+   strip. These rules size the controls that moved into it. Everything
+   here is scoped to .app-toolbar so the same markup still lays out as
+   a form row anywhere else. */
+
+/* The search box shrinks but never disappears: 12rem is enough to
+   read a filter term, and 6rem is the floor before the placeholder is
+   unreadable. Below 600px the strip scrolls sideways instead (see
+   app-chrome.css), so the box keeps its full size and its 16px text --
+   iOS Safari zooms the page on a focused input smaller than that. */
+@media (min-width: 600px) {
+  .app-toolbar .report-chrome__search { flex: 0 1 12rem; min-width: 6rem; }
+  .app-toolbar .report-chrome__month { flex: 0 0 auto; }
+  .app-toolbar .report-chrome__month .input { width: 8.5rem; }
+  /* The chart/range segmented control is 36px tall by default, which
+     is taller than the strip's other controls. */
+  .app-toolbar .chart-picker__btn { min-height: 1.9rem; padding: 3px 9px; }
+  .app-toolbar .chart-picker { padding: 1px; }
+}
+.app-toolbar .report-chrome__month .input { min-width: 0; }
+
+/* Phones. app-chrome.css makes the strip one nowrap row that scrolls
+   sideways rather than stacking into four. Scrolling only works if the
+   children keep their size: with the default flex-shrink the group
+   squeezed until the search input was ZERO pixels wide and the count
+   sat underneath the actions. Nothing in the strip shrinks here; the
+   row scrolls instead. */
+@media (max-width: 599px) {
+  .report-chrome .app-toolbar__group { flex: 0 0 auto; }
+  .report-chrome .report-chrome__search { flex: 0 0 11rem; }
+  .report-chrome .report-chrome__month .input { width: 8.5rem; }
+}
+/* "to" between two month pickers. Muted and small so the pair reads as
+   one control rather than two. */
+.report-chrome__to {
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  flex: 0 0 auto;
+}
+/* The range label and the row count never shrink. They are short and
+   they are the two things in the strip that answer "what am I looking
+   at" -- "Jul 26 to Sep ..." and "47 ro..." are worse than useless.
+   The search box gives up its width first instead, down to 6rem.
+   Scoped to .report-chrome so the register and recurring strips, which
+   size their context differently, are untouched. */
+.report-chrome .app-toolbar__context { flex: 0 0 auto; }
+
+/* A segmented range picker in the strip. Same control as the chart
+   picker -- reused rather than restyled, so a report has one kind of
+   segmented control, not two that differ by four pixels. */
+.report-seg__label {
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  flex: 0 0 auto;
+}
+
+/* ---- Report tables -------------------------------------------------
+   Tables live in a .table-scroll inside .report and stack into cards
+   below 600px (the shared recipe in components.css). The old rule that
+   forced a table wider than its card, so it would scroll rather than
+   squash, must not apply to a stacked one: a display:block table with
+   min-width:max-content blows straight back out through the viewport. */
+@media (max-width: 599px) {
+  .report .table-scroll > .table:not(.table--stack) { min-width: max-content; }
+  /* A stacked table is a column of cards; nothing to scroll sideways. */
+  .report .table-scroll:has(> .table--stack) { overflow-x: visible; }
+  /* Card rows want the panel's own padding, not the table's. */
+  .report .table--stack td { padding: 3px 0; }
+}

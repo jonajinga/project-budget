@@ -13,11 +13,27 @@
 
    Usage (custom handler):
      {{ reportExports("", "exportRowsCSV()") }}
+
+   `saveTip` adds a "Save this view" item at the top. S8, 2026-09-04:
+   Save view used to be a text button in the report masthead. In the
+   one-row toolbar it cost about 95 pixels next to All reports and
+   pushed the actions onto a second row at 1024. It is an infrequent
+   action and this menu is already "do something with this report", so
+   it belongs here. Passing an empty saveTip leaves it out, for the
+   three reports that have no saved views.
 #}
-{% macro reportExports(slug, csvCall) %}
+{% macro reportExports(slug, csvCall, saveTip) %}
 {% from "partials/overflow-menu.njk" import overflow %}
 {% set csv = csvCall if csvCall else "exportCSV('" + slug + "')" %}
-{% call overflow(label="Export this report") %}
+{% call overflow(label="Report actions") %}
+  {% if saveTip %}
+  <li role="none">
+    <button type="button" role="menuitem" class="overflow-menu__item"
+            data-tip="{{ saveTip }}"
+            @click="open = false; saveCurrentView()">Save this view</button>
+  </li>
+  <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+  {% endif %}
   <li role="none">
     <button type="button" role="menuitem" class="overflow-menu__item"
             @click="open = false; {{ csv | safe }}">Export CSV</button>
