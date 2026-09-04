@@ -1,0 +1,264 @@
+/* Accounts page (/app/accounts/) - P4, 2026-09-04.
+
+   The page is ONE table. Groups are <tbody> elements, each opening
+   with a full-width section row. Everything here exists to keep that
+   one table honest at every width:
+
+     - table-layout: fixed + <colgroup>, so column x positions come
+       from the colgroup and not from whichever group happens to hold
+       the longest account name.
+     - the name is the only flexible column; it ellipsises and carries
+       a title attribute. Money and the row menu never shrink.
+     - the header sticks under the site header, which means the card
+       must NOT be a scroll container. See .acct-table-card.
+
+   Registered in CSS_PARTIAL_ORDER in eleventy.config.js after
+   dashboard.css. A partial that is not in that array is not built.
+   PurgeCSS keeps /^acct-/ and /^table/ already, so no safelist
+   change was needed. */
+
+/* .card sets overflow-x: auto. A box with overflow-x: auto and
+   overflow-y: visible computes overflow-y to auto, so the card
+   becomes the nearest scrollport, and a position: sticky header
+   inside it then sticks to a box that never scrolls vertically:
+   the header simply does not move relative to the rows. Hence
+   overflow: visible here. Nothing can spill, because the table is
+   table-layout: fixed at width 100%.
+
+   padding: 0 so the sticky header spans the full card width. With
+   the card's own padding left in place, rows scroll past in the
+   gutter beside the header. The edge gutter is given back to the
+   first and last cells below. */
+.acct-table-card {
+  overflow: visible;
+  padding: 0;
+}
+
+.acct-table {
+  table-layout: fixed;
+  width: 100%;
+}
+/* Type and Balance hold bounded, known content, so they are sized to
+   it and the name column takes whatever is left. Measured with a
+   Range against the sample household at the table's own font:
+   longest type "Tracking liability" 98px, longest balance
+   "-$229,395.76" 87px, longest name "Odyssey loan (Honda Financial)"
+   192px. Cells add 24px of padding. So 8rem / 7.25rem leave the name
+   220px of the 509px this table needs at its narrowest, and the
+   narrowest it ever gets before it stacks (600px viewport) is 536px.
+
+   NOT clamp(8rem, 22%, 11rem), which is what this wanted to be:
+   Chromium does not resolve a percentage inside a math function for
+   a table column width under table-layout: fixed. The declaration is
+   accepted, computes to the clamp expression, and the column falls
+   back to auto - all four columns came out 351px wide. Plain rem,
+   plain %, and clamp() with vw all work; % inside clamp/min/max does
+   not. Verified on both <col> and <th>. */
+.acct-table__col-type { width: 8rem; }
+.acct-table__col-bal  { width: 7.25rem; }
+.acct-table__col-act  { width: 3.5rem; }
+/* Past 1200px there is room to spare, so give the two fixed columns
+   their comfortable width instead of handing every spare pixel to a
+   name column that is already twice what it needs. */
+@media (min-width: 1200px) {
+  .acct-table__col-type { width: 11rem; }
+  .acct-table__col-bal  { width: 9.5rem; }
+}
+
+/* Give the card's padding back to the outer cells so the table can
+   run edge to edge under the sticky header. */
+.acct-table th:first-child,
+.acct-table td:first-child { padding-left: var(--space-md); }
+.acct-table th:last-child,
+.acct-table td:last-child { padding-right: var(--space-md); }
+.acct-table th:last-child,
+.acct-table td.table__actions { padding-left: 0; }
+
+/* The site header is sticky at top: 0 with a 4rem min-height, so a
+   table header at top: 0 would slide underneath it. */
+.acct-table thead th { top: 4rem; }
+.acct-table thead th:first-child { border-top-left-radius: var(--radius); }
+.acct-table thead th:last-child { border-top-right-radius: var(--radius); }
+
+/* Row height is set by the 32px kebab, not by the text. Matching the
+   line box to it centres the name in the row and gives the link a
+   32px target (it was a 16px line box, under the 24px floor the rest
+   of the app holds itself to). */
+.acct-table tbody td { line-height: 32px; }
+
+.acct-table__name { white-space: nowrap; overflow: hidden; }
+/* inline-block, not inline: text-overflow needs a box with a
+   resolvable width to draw the ellipsis in, and an inline box has
+   none. Not flex either - a flex container's children are boxes, not
+   inline content, so the browser clips with no ellipsis at all. */
+.acct-table__name-text {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acct-table__excl { margin-left: var(--space-2xs); vertical-align: middle; }
+.acct-table__type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Money never truncates. */
+.acct-table__bal { white-space: nowrap; }
+
+/* ---- Group section row ---- */
+.acct-table .acct-grouprow > td {
+  background: var(--bg-alt);
+  border-top: 2px solid var(--border);
+  padding-top: var(--space-2xs);
+  padding-bottom: var(--space-2xs);
+}
+.acct-table tbody:first-of-type .acct-grouprow > td { border-top: 0; }
+/* The row-hover tint would otherwise repaint the section band. */
+.acct-table tbody tr.acct-grouprow:hover > td { background: var(--bg-alt); }
+/* Last row of the last group sits on the card's bottom edge. */
+.acct-table tbody:last-of-type tr:last-child > td { border-bottom: 0; }
+
+/* Two rows below 768px: title + kebab, then the pills. Above it,
+   one row. The pills are OUTSIDE the toggle button so they can move
+   to their own line instead of overflowing the card - at 390 the
+   "excl. $65,120.35" pill used to end 130px past the card's right
+   edge. */
+.acct-grouphead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title actions"
+    "meta  meta";
+  align-items: center;
+  gap: var(--space-3xs) var(--space-2xs);
+}
+.acct-grouphead__toggle {
+  grid-area: title;
+  min-width: 0;
+  max-width: 100%;
+}
+.acct-grouphead__meta {
+  grid-area: meta;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  min-width: 0;
+}
+.acct-grouphead__actions { grid-area: actions; justify-self: end; }
+/* Group titles are single line with an ellipsis and a title
+   attribute. Three of them wrapped to two or three lines at 390. */
+.acct-grouphead__title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The pills already carry their own left margin from the shared
+   .group-toggle__count / __total rules, which assumed they sat
+   inside the toggle button. In their own flex row the gap does it. */
+.acct-grouphead__meta > .group-toggle__count,
+.acct-grouphead__meta > .group-toggle__total { margin-left: 0; }
+
+@media (min-width: 768px) {
+  .acct-grouphead {
+    grid-template-columns: minmax(0, auto) max-content minmax(0, 1fr) auto;
+    grid-template-areas: "title meta . actions";
+  }
+}
+
+/* ---- Phone: the same table stacks into cards ---- */
+@media (max-width: 599px) {
+  .acct-table-card { padding: var(--space-2xs); }
+  .acct-table th:first-child,
+  .acct-table td:first-child,
+  .acct-table th:last-child,
+  .acct-table td:last-child { padding-left: 0; padding-right: 0; }
+  /* .table--stack turns every <tr> into a bordered card. A group
+     section row is a heading, not a card. */
+  .acct-table .acct-grouprow {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    padding: 0;
+    margin: var(--space-sm) 0 var(--space-2xs);
+  }
+  .acct-table .acct-grouprow > td,
+  .acct-table tbody tr.acct-grouprow:hover > td {
+    display: block;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  .acct-table tbody:first-of-type .acct-grouprow { margin-top: 0; }
+  /* Two lines per account, the shape the old .acct-cards list had:
+     name and balance on the first, type on the second, kebab down
+     the right. .table--stack on its own gives one line per cell,
+     which read fine but ran the phone page from 3,849px to 4,370px.
+     This is 56px a row and 3,163px for the page.
+
+     The name has the whole first line. It shared it with the balance
+     for one iteration, which left it 184px against the 194px "Maya
+     student loan (Nelnet)" needs at this size - measured, and it
+     came back through the check as a clipped name. It gets 274px
+     now; the old two-column card gave it 144px. */
+  .acct-table .acct-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name name act"
+      "type bal  act";
+    align-items: center;
+    column-gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-xs);
+    min-height: 56px;
+  }
+  .acct-table .acct-row > .acct-table__name { grid-area: name; display: block; padding: 0; }
+  .acct-table .acct-row > .acct-table__type {
+    grid-area: type;
+    display: block;
+    padding: 0;
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    text-overflow: clip;
+  }
+  .acct-table .acct-row > .acct-table__bal {
+    grid-area: bal;
+    display: block;
+    padding: 0;
+    text-align: right;
+    font-weight: 600;
+  }
+  .acct-table .acct-row > .table__actions {
+    grid-area: act;
+    position: static;
+    display: block;
+    width: auto;
+    padding: 0;
+  }
+  /* The stack recipe prints data-label in front of every cell. Here
+     the second line IS the type and the figure on the right IS the
+     balance, so the labels would only cost height. */
+  .acct-table .acct-row td[data-label]::before { content: none; }
+  .acct-table .acct-row td[data-label] > * { margin-left: 0; }
+  .acct-table tbody td { line-height: 1.45; }
+}
+
+/* print.css hides .group-toggle app-wide, on the reasoning that it is
+   a control. On this page the group NAME lives inside that button, so
+   a printed accounts page has always lost its group headings. It
+   mattered less when the pills were inside the button too and went
+   with it; now that they sit outside so they can wrap, a printed
+   group row would be "2 accounts $27,768.99" with no name attached.
+
+   Specificity, not order: print.css is concatenated after this file
+   and its rule carries !important, so an equal-specificity !important
+   here would lose. (0,2,0) beats (0,1,0). */
+@media print {
+  .acct-table .acct-grouphead__toggle { display: inline-flex !important; }
+  .acct-table .acct-grouphead__toggle .group-toggle__chevron { display: none; }
+  .acct-table .acct-grouphead__actions,
+  .acct-table .table__actions { display: none; }
+}

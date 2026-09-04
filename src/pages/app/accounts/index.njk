@@ -122,173 +122,177 @@ eleventyExcludeFromCollections: true
     </div>
   </section>
 
-  <div data-sortable-list data-sortable-kind="acct-group">
-    <template x-for="(group, gIdx) in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
-      <section class="card cat-group"
-               :data-sortable-id="group.group?.id"
-               style="margin-bottom: var(--space-md);">
-        <header style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2xs); margin-bottom: var(--space-sm); flex-wrap: nowrap;">
-          <div class="cluster" style="gap: var(--space-2xs); min-width: 0; flex: 1 1 auto;">
-            <button type="button" class="group-toggle"
-                    @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
-                    :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
-                    :disabled="!group.group">
-              <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
-              <h2 class="card__title" style="margin: 0;" x-text="group.group ? group.group.name : 'Other accounts'"></h2>
-              <span class="group-toggle__count"
-                    x-text="group.accounts.length + (group.accounts.length === 1 ? ' account' : ' accounts')"></span>
-              <span class="group-toggle__total"
-                    :class="groupTotalCents(group) < 0 ? 'amount--outflow' : ''"
-                    x-text="formatCents(groupTotalCents(group))"
-                    :data-tip="'Total balance across ' + group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' in this group.'"></span>
-              {# Excluded-from-net-worth subtotal — only renders when at
-                 least one account in the group has the flag, so groups
-                 without any 529 / escrow / RSU accounts stay clean. #}
-              <span class="group-toggle__total group-toggle__total--excluded"
-                    x-show="groupExcludedCents(group) !== 0" x-cloak
-                    x-text="'excl. ' + formatCents(groupExcludedCents(group))"
-                    :data-tip="'Of the total above, ' + formatCents(groupExcludedCents(group)) + ' belongs to accounts flagged exclude-from-net-worth and is not counted in the dashboard net-worth roll-up.'"></span>
-            </button>
-          </div>
-          {# 5 group-level actions (Add / Move up / Move down / Rename
-             / Remove) collapse into one kebab so the header row never
-             wraps on phones. Same pattern used on the budget page
-             group headers. #}
-          <div x-show="group.group" x-cloak>
-            {% call overflow(label="Group actions") %}
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item"
-                        @click="open = false; openAddForGroup(group.group.id)">+ Add account…</button>
-              </li>
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item"
-                        @click="open = false; PBDialog.prompt({ title: 'Rename account group', label: 'Group name', defaultValue: group.group.name, okLabel: 'Rename' }).then(n => { if (n) $store.budget.renameAccountGroup(group.group.id, n); })">Rename group…</button>
-              </li>
-              <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item"
-                        :disabled="gIdx === 0"
-                        @click="open = false; $store.budget.moveAccountGroup(group.group.id, Math.max(0, gIdx - 1))">Move group up</button>
-              </li>
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item"
-                        :disabled="gIdx >= ($store.budget.profile.accountGroups.length - 1)"
-                        @click="open = false; $store.budget.moveAccountGroup(group.group.id, gIdx + 1)">Move group down</button>
-              </li>
-              <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
-                        @click="open = false; PBDialog.confirm({ title: 'Remove this account group?', message: 'Accounts inside this group will be unassigned but kept. Their balances and transaction history stay intact.', confirmLabel: 'Remove group', danger: true }).then(ok => { if (ok) $store.budget.deleteAccountGroup(group.group.id) })">Remove group</button>
-              </li>
-            {% endcall %}
-          </div>
-        </header>
+  {# One table for every group, not one table per group.
 
-        <table class="table has-card-fallback" x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak>
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Type</th>
-              <th scope="col" class="num">Balance</th>
-              <th scope="col" class="num"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <template x-for="(a, aIdx) in group.accounts" :key="a.id">
-              <tr class="cat-row">
-                <td>
-                  <a :href="'/app/register/?account=' + a.id" x-text="a.name"></a>
-                  <span x-show="a.excludeFromNetWorth" x-cloak class="badge"
-                        style="margin-left: var(--space-2xs);"
-                        data-tip="This account is tracked + visible but its balance is skipped when computing net worth.">excluded</span>
-                </td>
-                <td x-text="$store.budget.ACCOUNT_TYPES.find(t => t.value === a.type)?.label || a.type"></td>
-                <td class="num" :class="$store.budget.accountBalance(a.id) < 0 ? 'amount--outflow' : ''"
-                    x-text="formatCents($store.budget.accountBalance(a.id))"></td>
-                <td class="num" @click.stop>
-                  {# All per-row actions live in the kebab at every
-                     viewport. No inline buttons. #}
-                  {% call overflow(label="Account actions") %}
+     Was: a .card + its own <table> per group. The Name / Type /
+     Balance header was therefore stated once per group, and each
+     table sized its own columns from its own contents, so the Type
+     column started at a different x in every group (measured spread
+     78px at 1440, 46px at 1024).
+
+     Now: a single table. Each group is one <tbody> whose first row
+     is a full-width section row carrying the collapse toggle, the
+     count / total / excluded pills and the group kebab. Column
+     widths are declared once in <colgroup> and the table is
+     table-layout: fixed, so every group lines up by construction
+     and the name column is the only one that flexes.
+
+     Below 600px the same table stacks into cards via .table--stack.
+     That replaces the parallel <ul class="data-cards acct-cards">
+     that used to render every account a second time. Two copies of
+     one row is how the phone view drifted from the table in the
+     first place, and it is why names were clipped there and not
+     here.
+
+     The <div data-sortable-list data-sortable-kind="acct-group">
+     wrapper is gone. SortableJS only starts a drag from a
+     .dnd-handle element (ui/sortable-bind.js sets handle:
+     ".dnd-handle") and this page has never rendered one, so the
+     wrapper bound a Sortable instance that could not be dragged.
+     Group order is changed from the group kebab (Move group up /
+     down), which is what the help modal documents. #}
+  <section class="card acct-table-card"
+           x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
+    <table class="table table--stack table--sticky-head acct-table">
+      <colgroup>
+        <col>
+        <col class="acct-table__col-type">
+        <col class="acct-table__col-bal">
+        <col class="acct-table__col-act">
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Type</th>
+          <th scope="col" class="num">Balance</th>
+          <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <template x-for="(group, gIdx) in $store.budget.accountGroupsView()" :key="group.group ? group.group.id : '__ungrouped'">
+        <tbody class="acct-group">
+          {# Group section row. colspan 4 so it spans the whole table;
+             a colspan cell takes no part in column sizing, so it
+             cannot pull a column out of line. #}
+          <tr class="acct-grouprow">
+            <td class="acct-grouprow__cell" colspan="4">
+              <div class="acct-grouphead">
+                <button type="button" class="group-toggle acct-grouphead__toggle"
+                        @click="group.group && $store.budget.toggleAccountGroupCollapsed(group.group.id)"
+                        :aria-expanded="group.group && !$store.budget.isAcctGroupCollapsed(group.group.id) ? 'true' : 'false'"
+                        :disabled="!group.group">
+                  <span class="group-toggle__chevron" :class="group.group && $store.budget.isAcctGroupCollapsed(group.group.id) ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+                  <h2 class="card__title acct-grouphead__title"
+                      :title="group.group ? group.group.name : 'Other accounts'"
+                      x-text="group.group ? group.group.name : 'Other accounts'"></h2>
+                </button>
+                {# Pills live outside the toggle button so they can wrap
+                   to a second line under the title on a phone instead
+                   of overflowing the card and being clipped. #}
+                <div class="acct-grouphead__meta">
+                  <span class="group-toggle__count"
+                        x-text="group.accounts.length + (group.accounts.length === 1 ? ' account' : ' accounts')"></span>
+                  <span class="group-toggle__total"
+                        :class="groupTotalCents(group) < 0 ? 'amount--outflow' : ''"
+                        x-text="formatCents(groupTotalCents(group))"
+                        :data-tip="'Total balance across ' + group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's') + ' in this group.'"></span>
+                  {# Excluded-from-net-worth subtotal - only renders when at
+                     least one account in the group has the flag, so groups
+                     without any 529 / escrow / RSU accounts stay clean. #}
+                  <span class="group-toggle__total group-toggle__total--excluded"
+                        x-show="groupExcludedCents(group) !== 0" x-cloak
+                        x-text="'excl. ' + formatCents(groupExcludedCents(group))"
+                        :data-tip="'Of the total above, ' + formatCents(groupExcludedCents(group)) + ' belongs to accounts flagged exclude-from-net-worth and is not counted in the dashboard net-worth roll-up.'"></span>
+                </div>
+                {# 5 group-level actions (Add / Move up / Move down /
+                   Rename / Remove) collapse into one kebab. Same
+                   pattern as the budget page group headers. #}
+                <div class="acct-grouphead__actions" x-show="group.group" x-cloak>
+                  {% call overflow(label="Group actions") %}
                     <li role="none">
                       <button type="button" role="menuitem" class="overflow-menu__item"
-                              @click="open = false; openReconcile(a)">Reconcile…</button>
+                              @click="open = false; openAddForGroup(group.group.id)">+ Add account&hellip;</button>
                     </li>
                     <li role="none">
                       <button type="button" role="menuitem" class="overflow-menu__item"
-                              @click="open = false; openEdit(a)">Edit…</button>
+                              @click="open = false; PBDialog.prompt({ title: 'Rename account group', label: 'Group name', defaultValue: group.group.name, okLabel: 'Rename' }).then(n => { if (n) $store.budget.renameAccountGroup(group.group.id, n); })">Rename group&hellip;</button>
+                    </li>
+                    <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                    <li role="none">
+                      <button type="button" role="menuitem" class="overflow-menu__item"
+                              :disabled="gIdx === 0"
+                              @click="open = false; $store.budget.moveAccountGroup(group.group.id, Math.max(0, gIdx - 1))">Move group up</button>
                     </li>
                     <li role="none">
                       <button type="button" role="menuitem" class="overflow-menu__item"
-                              :disabled="aIdx === 0"
-                              @click="open = false; $store.budget.moveAccount(a.id, group.group?.id, Math.max(0, aIdx - 1))">Move up</button>
-                    </li>
-                    <li role="none">
-                      <button type="button" role="menuitem" class="overflow-menu__item"
-                              :disabled="aIdx >= (group.accounts.length - 1)"
-                              @click="open = false; $store.budget.moveAccount(a.id, group.group?.id, aIdx + 1)">Move down</button>
+                              :disabled="gIdx >= ($store.budget.profile.accountGroups.length - 1)"
+                              @click="open = false; $store.budget.moveAccountGroup(group.group.id, gIdx + 1)">Move group down</button>
                     </li>
                     <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
                     <li role="none">
                       <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
-                              @click="open = false; startDelete(a)">Delete account</button>
+                              @click="open = false; PBDialog.confirm({ title: 'Remove this account group?', message: 'Accounts inside this group will be unassigned but kept. Their balances and transaction history stay intact.', confirmLabel: 'Remove group', danger: true }).then(ok => { if (ok) $store.budget.deleteAccountGroup(group.group.id) })">Remove group</button>
                     </li>
                   {% endcall %}
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-
-        {# Mobile account cards — table hides at <600px. Each card: account
-           name (linked to register) + type badge · balance · kebab with
-           Edit / Move up / Move down / Delete. Drag handles are dropped
-           on touch since touch + drag is awkward. #}
-        <ul class="data-cards acct-cards"
-            x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))" x-cloak
-            data-no-tippy>
-          <template x-for="(a, aIdx) in group.accounts" :key="a.id">
-            <li class="data-card">
-              <div class="data-card__primary">
-                <a class="data-card__title" :href="'/app/register/?account=' + a.id" x-text="a.name"></a>
-                <span class="data-card__sub">
-                  <span x-text="$store.budget.ACCOUNT_TYPES.find(t => t.value === a.type)?.label || a.type"></span>
-                  <span x-show="a.excludeFromNetWorth" x-cloak> · excluded from net worth</span>
-                </span>
+                </div>
               </div>
-              <span class="data-card__amount"
-                    :class="$store.budget.accountBalance(a.id) < 0 ? 'amount--outflow' : ''"
-                    x-text="formatCents($store.budget.accountBalance(a.id))"></span>
-              {% call overflow(label="Account actions") %}
-                <li role="none">
-                  <button type="button" role="menuitem" class="overflow-menu__item"
-                          @click="open = false; openReconcile(a)">Reconcile…</button>
-                </li>
-                <li role="none">
-                  <button type="button" role="menuitem" class="overflow-menu__item"
-                          @click="open = false; openEdit(a)">Edit…</button>
-                </li>
-                <li role="none">
-                  <button type="button" role="menuitem" class="overflow-menu__item"
-                          :disabled="aIdx === 0"
-                          @click="open = false; $store.budget.moveAccount(a.id, group.group?.id, Math.max(0, aIdx - 1))">Move up</button>
-                </li>
-                <li role="none">
-                  <button type="button" role="menuitem" class="overflow-menu__item"
-                          :disabled="aIdx >= (group.accounts.length - 1)"
-                          @click="open = false; $store.budget.moveAccount(a.id, group.group?.id, aIdx + 1)">Move down</button>
-                </li>
-                <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-                <li role="none">
-                  <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
-                          @click="open = false; startDelete(a)">Delete account</button>
-                </li>
-              {% endcall %}
-            </li>
+            </td>
+          </tr>
+          <template x-for="(a, aIdx) in group.accounts" :key="a.id">
+            <tr class="acct-row"
+                x-show="!(group.group && $store.budget.isAcctGroupCollapsed(group.group.id))">
+              <td class="acct-table__name">
+                {# The link is inline-block, not inline: text-overflow
+                   needs a box with a resolvable width to put the
+                   ellipsis in, and the title attribute carries the
+                   full name for the ~4% of names the sample cannot
+                   fit. #}
+                <a class="acct-table__name-text"
+                   :href="'/app/register/?account=' + a.id"
+                   :title="a.name"
+                   x-text="a.name"></a>
+                <span x-show="a.excludeFromNetWorth" x-cloak class="badge acct-table__excl"
+                      data-tip="This account is tracked + visible but its balance is skipped when computing net worth.">excluded</span>
+              </td>
+              <td class="acct-table__type" data-label="Type"
+                  x-text="$store.budget.ACCOUNT_TYPES.find(t => t.value === a.type)?.label || a.type"></td>
+              <td class="num acct-table__bal" data-label="Balance"
+                  :class="$store.budget.accountBalance(a.id) < 0 ? 'amount--outflow' : ''"
+                  x-text="formatCents($store.budget.accountBalance(a.id))"></td>
+              <td class="num table__actions" @click.stop>
+                {# All per-row actions live in the kebab at every
+                   viewport. No inline buttons. #}
+                {% call overflow(label="Account actions") %}
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            @click="open = false; openReconcile(a)">Reconcile&hellip;</button>
+                  </li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            @click="open = false; openEdit(a)">Edit&hellip;</button>
+                  </li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            :disabled="aIdx === 0"
+                            @click="open = false; $store.budget.moveAccount(a.id, group.group?.id, Math.max(0, aIdx - 1))">Move up</button>
+                  </li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item"
+                            :disabled="aIdx >= (group.accounts.length - 1)"
+                            @click="open = false; $store.budget.moveAccount(a.id, group.group?.id, aIdx + 1)">Move down</button>
+                  </li>
+                  <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+                  <li role="none">
+                    <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                            @click="open = false; startDelete(a)">Delete account</button>
+                  </li>
+                {% endcall %}
+              </td>
+            </tr>
           </template>
-        </ul>
-      </section>
-    </template>
-  </div>
+        </tbody>
+      </template>
+    </table>
+  </section>
 
   {# Inline disclosure replaces the old "About accounts" modal —
      same content, but no modal-open click for the user, no full
