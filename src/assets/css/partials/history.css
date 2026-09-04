@@ -64,6 +64,4 @@
 .hist__link:hover { text-decoration: underline; }
 .hist__breakdown-bar { display: inline-block; height: 8px; background: var(--accent); opacity: 0.75; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
 
-/* Five tiles on one row when there is room. */
-.hist__kpis { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 /* Phone card stacking now comes from .table--stack in components.css. */

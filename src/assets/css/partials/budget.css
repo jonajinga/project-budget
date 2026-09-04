@@ -4242,13 +4242,17 @@ body.pb-dragging { overflow: visible !important; }
    parses the chart. 4 across on desktop, 2 across on tablet, stacked
    on phone. Each tile is label + big value + tiny delta line. */
 .kpi-strip {
+  /* S3 (2026-09-04): auto-fit on desktop so five tiles share one row
+     when there is room and never leave a lone tile; three-up on
+     tablets so values keep their size; two-up on phones so the strip
+     is not a column of near-empty cards. */
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
 }
-@media (max-width: 1023px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 599px)  { .kpi-strip { grid-template-columns: 1fr; } }
+@media (max-width: 1023px) { .kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 599px)  { .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2xs); } }
 
 .kpi {
   /* Each tile is its own container so the value can fluidly scale
@@ -4276,13 +4280,22 @@ body.pb-dragging { overflow: visible !important; }
   letter-spacing: 0.06em;
   color: var(--fg-muted);
   font-weight: 600;
+  /* Labels never wrap; a long label ends in an ellipsis and the tile
+     carries the full text in its title attribute. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kpi__value {
   /* Scales 1.25rem → 2rem with the tile width. Using UI sans
      (DM Sans) instead of Playfair for numeric scanning — the
      display serif's thin strokes blurred at smaller container
      widths. Tabular nums keep digit columns aligned. */
-  font-size: clamp(1.25rem, 9cqi, 2rem);
+  /* Shrink one step before truncating: the floor is a step below the
+     old 1.25rem so a long payee or category name fits a 3-up tablet
+     tile. Money never truncates in practice because the strip drops a
+     column first. */
+  font-size: clamp(1rem, 8.5cqi, 2rem);
   font-family: var(--font-ui);
   line-height: 1.1;
   font-weight: 700;

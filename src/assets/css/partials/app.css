@@ -59,9 +59,10 @@
      small phones, 2 on bigger phones / tablet portrait, 4 on tablet
      landscape and up. minmax keeps the value from forcing horizontal
      overflow when it's too wide for the available column. */
-  grid-template-columns: 1fr;
+  /* Two-up on phones as well (S3): one tile per row was six screens
+     of near-empty cards on the dashboard. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-@media (min-width: 480px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1024px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 .kpi {
@@ -314,3 +315,17 @@
 .app-doc__prose > * + * { margin-top: var(--space-sm); }
 .app-doc__prose h2 { margin-top: var(--space-lg); }
 .app-doc__prose h3 { margin-top: var(--space-md); }
+
+
+/* ---- S4 (2026-09-04): page chrome ----------------------------------
+   The top-bar Add button shows from 600px up, where the floating
+   button is hidden. The page info button sits inline after a page
+   title and opens the page's explanation in a modal (page-info.njk). */
+.site-header__add { display: none; gap: 4px; margin-right: var(--space-2xs); }
+@media (min-width: 600px) { .site-header__add { display: inline-flex; } }
+.page-info { display: inline-block; vertical-align: middle; margin-left: var(--space-2xs); }
+.page-info__btn { width: 1.75rem; height: 1.75rem; min-height: 0; color: var(--fg-muted); }
+.page-info__btn:hover { color: var(--fg); }
+.page-info__body p { max-width: none; }
+.app-page__title-row { display: flex; align-items: center; gap: var(--space-2xs); min-width: 0; }
+.app-page__title-row .app-page__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

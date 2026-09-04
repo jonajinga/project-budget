@@ -374,7 +374,7 @@ export default function (eleventyConfig) {
             /^sidebar/, /^header/, /^month-/, /^year-/, /^acct-/,
             /^cat-/, /^month-strip/, /^sample-/, /^pool-/,
             /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/,
-            /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/,
+            /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/,
           ],
           greedy: [
             /^data-theme/, /^data-touch/, /^data-tip/,

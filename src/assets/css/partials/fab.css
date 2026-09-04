@@ -23,6 +23,13 @@
   justify-content: center;
   transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
 }
+/* S4 (2026-09-04): the floating button is for phones only. On tablets
+   and desktops it sat over table columns and chart corners; those
+   widths get a regular Add button in the top bar instead (header.njk).
+   The modal, the N shortcut and the open-quick-add event are unchanged. */
+@media (min-width: 600px) {
+  .fab-quick-add__btn { display: none !important; }
+}
 .fab-quick-add__btn:hover {
   background: var(--accent-hover);
   box-shadow: var(--shadow-lg);

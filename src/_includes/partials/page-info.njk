@@ -1,0 +1,40 @@
+{# Page info button + modal (S4, 2026-09-04).
+
+   Every app page keeps a one-line lead under its title. Anything
+   longer moves behind this small round "i" button, which opens a modal
+   with the page's explanation. The pattern comes from the Profiles
+   page.
+
+   Usage, inside an element that has an Alpine scope:
+
+     {% from "partials/page-info.njk" import pageInfo %}
+     {% call pageInfo(id="backup", title="About backups", label="What backups are and where they go") %}
+       <p>...</p>
+     {% endcall %}
+
+   `id` must be unique on the page. The macro owns its own open state
+   so the host page does not need a variable for it. #}
+{% macro pageInfo(id, title, label) %}
+<span class="page-info" x-data="{ open: false }" @keydown.escape.window="open = false">
+  <button class="btn btn--icon page-info__btn" type="button"
+          @click="open = true"
+          aria-haspopup="dialog"
+          :aria-expanded="open.toString()"
+          aria-label="{{ label or ('About ' + title) }}"
+          data-tip="{{ label or ('About ' + title) }}">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+  </button>
+  <div class="modal-backdrop" x-show="open" x-cloak>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="page-info-{{ id }}-title" @click.outside="open = false">
+      <button class="modal__close" type="button" @click="open = false" aria-label="Close">&times;</button>
+      <h2 class="modal__title" id="page-info-{{ id }}-title">{{ title }}</h2>
+      <div class="prose page-info__body">
+        {{ caller() }}
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="button" @click="open = false">Got it</button>
+      </div>
+    </div>
+  </div>
+</span>
+{% endmacro %}
