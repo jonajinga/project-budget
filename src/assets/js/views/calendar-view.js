@@ -32,6 +32,18 @@ function calendarView() {
      a matchMedia check in init(), closed on <600px viewports. */
     filtersOpen: true,
 
+    /* Badge on the phone Filters toggle. Everything the collapsed row
+       hides gets counted, because a filter that is on and out of sight
+       is a user staring at an empty month wondering where it went. The
+       span picker is not a filter and is not counted. */
+    activeFilterCount() {
+      var n = 0;
+      if (this.searchQuery) n++;
+      if (this.filterAccountId) n++;
+      if (this.filterKind !== "all") n++;
+      return n;
+    },
+
     /* Transaction edit modal state — opened by clicking a posted row. */
     txnEditId: null,
     txnForm: { date: "", accountId: "", payeeName: "", amount: "", categoryId: "", memo: "", cleared: false },
@@ -284,6 +296,40 @@ function calendarView() {
         return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
       }
       return String(d.getFullYear());
+    },
+
+    /* ---- Phone agenda (P5) ------------------------------------------
+       At 390px the month grid is unlabelled coloured blobs: no payee,
+       no amount, no legend, seven columns of about 50px. Below 600px
+       the grid becomes a picker and this list is the actual view.
+
+       Only days that have something on them appear. An agenda of empty
+       days is the grid again with more scrolling, and a month of 30
+       headings for 12 entries is worse than the blobs it replaced. */
+    agendaDays() {
+      var cells = this.monthCells();
+      var out = [];
+      for (var i = 0; i < cells.length; i++) {
+        var c = cells[i];
+        if (c.blank || c.otherMonth) continue;
+        if (!((c.posted || []).length + (c.scheduled || []).length)) continue;
+        out.push(c);
+      }
+      return out;
+    },
+
+    /* "Fri 4 Sep" -- weekday first, because the question an agenda
+       answers is which day, not which date. */
+    agendaLabel(iso) {
+      var d = this._parseISO(iso);
+      if (!d || isNaN(d.getTime())) return iso || "";
+      return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
+    },
+
+    /* Net for one day, shown beside its heading so a day can be read
+       without adding its rows up. */
+    agendaNet(cell) {
+      return (cell.totalInflow || 0) + (cell.totalOutflow || 0);
     },
 
     monthLabel(iso) {

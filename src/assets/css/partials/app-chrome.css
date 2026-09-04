@@ -61,7 +61,7 @@
    from growing back out through the negative margin, so it stopped one
    gutter short of the right edge while reaching the left one -- the bar
    looked misaligned rather than full width. */
-.app-page > .app-toolbar { max-width: none; }
+.app-page .app-toolbar { max-width: none; }
 
 /* A page whose body is one big surface (a table, a grid) wants the
    strip to sit directly on top of it with no gap and no double
@@ -198,15 +198,23 @@
 .app-page--flush > * { max-width: none; }
 /* Its own toolbar already bled; bleeding it twice would push it off
    the left edge by a full gutter. */
-.app-page--flush > .app-toolbar { margin-inline: 0; margin-top: 0; }
+.app-page--flush .app-toolbar { margin-inline: 0; margin-top: 0; }
 
 /* Not everything on a flush page wants to touch the window. A table
    gains from the extra width; a strip of tiles just looks like it fell
    off the edge. This gives one child its gutter back. */
-/* Margin, not padding: several of these are cards with their own
-   border, and padding would leave the border itself running to the
-   window edge with the content inset from it. */
-.app-page--flush > .app-gutter { margin: var(--space-sm) var(--container-pad); }
+/* Padding, not margin. A margin here showed the page ground through
+   the gap, and once the canvas is one surface a visible band between
+   two blocks is exactly the seam this layer exists to remove. The
+   block keeps its gutter, sits on the same ground as everything else,
+   and is separated by a hairline rather than a gap. */
+.app-page--flush > .app-gutter {
+  padding: var(--space-sm) var(--container-pad);
+  border-bottom: 1px solid var(--border-soft);
+}
+/* A card inside a gutter block brings its own border, so it does not
+   need the block to draw a second one under it. */
+.app-page--flush > .card.app-gutter { border-bottom-width: 1px; }
 
 /* ---- Surfaces ------------------------------------------------------
    A panel is a card that has stopped floating: same ground, hairline
@@ -385,3 +393,30 @@
 @media (max-width: 599px) {
   .app-filters .field { flex: 1 1 100%; }
 }
+
+
+/* ---- Seamless surfaces (2026-09-04) --------------------------------
+   Jon: no grey gaps, the whole page should look like one thing.
+
+   The canvas is now --bg (see layout.css). Two things followed from
+   that. Panels and cards were --bg-elevated, which on the old grey
+   ground read as "raised" and on a white ground reads as a grey box
+   sitting on white - the same seam, inverted. Inside the app they take
+   the page's own ground and are separated by their hairline border
+   alone, which is how the budget grid already looked.
+
+   The toolbar strip keeps --bg-elevated on purpose: it is chrome, not
+   content, and it wants to read as attached to the app header above it
+   rather than to the data below. */
+.layout-app .app-main .card,
+.layout-app .app-main .panel {
+  background: var(--bg);
+}
+
+/* Tables inside the app: the header row is the only tinted band, and
+   it is what tells you a table has started. */
+.layout-app .app-main .table thead th { background: var(--bg-elevated); }
+
+/* A flush page's blocks meet each other. Without this the last block
+   draws a hairline against nothing at the bottom of the page. */
+.app-page--flush > :last-child { border-bottom: 0; }

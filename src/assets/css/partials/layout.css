@@ -35,10 +35,17 @@
    The sidebar width is driven by --app-sidebar-width so the resize JS
    can write to it without touching layout markup. Default 260px; clamps
    are enforced in JS (180px..480px). */
-.layout-app { background: var(--bg-alt); --app-sidebar-width: 260px; }
+/* The app canvas is one surface (2026-09-04). It used to be --bg-alt,
+   a grey a couple of steps down from the page, so every panel, tile
+   strip and table floated on a visible grey ground and the screen read
+   as a set of loose cards rather than one application. The grey now
+   only appears where it means something: the sidebar, which is chrome,
+   and the toolbar strip. Everything in the main area sits on --bg and
+   is separated by hairlines instead of gaps. */
+.layout-app { background: var(--bg); --app-sidebar-width: 260px; }
 /* Same ground as the app shell; see the note in base.css. The sidebar
    width token is deliberately NOT carried over -- there is no sidebar. */
-.layout-marketing { background: var(--bg-alt); }
+.layout-marketing { background: var(--bg-alt); } /* marketing keeps the tinted ground */
 .app-shell {
   display: grid;
   grid-template-columns: 1fr;

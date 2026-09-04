@@ -1,5 +1,10 @@
 <aside id="app-sidebar" class="app-sidebar" :class="{ 'is-open': sidebarOpen }"
        aria-label="App navigation"
+       {# While peeking, the pointer leaving the panel puts it away and
+          re-entering cancels a close already in flight. Both handlers are
+          harmless when not peeking: peekOpen() checks it is allowed. #}
+       @mouseenter="peekOpen()"
+       @mouseleave="peekClose()"
        @keydown.escape.window="$dispatch('close-sidebar')">
   <button class="app-sidebar__close"
           type="button"
@@ -55,7 +60,7 @@
                       then remembered it closed. Only ever visible before now
                       because the full page reload that followed hid the
                       moment it happened. #}
-                   @click="if (!window.matchMedia('(min-width: 1024px)').matches) $dispatch('close-sidebar')">
+                   @click="if (!window.matchMedia('(min-width: 1024px)').matches) $dispatch('close-sidebar'); else $dispatch('close-peek')">
                   <svg class="app-nav__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                        aria-hidden="true" x-html="item.icon"></svg>

@@ -6,43 +6,17 @@ permalink: /app/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
+{% from "partials/app-toolbar.njk" import appToolbar %}
 {% import "partials/dashboard-widgets.njk" as W %}
 {% import "partials/dashboard-views.njk" as V2 %}
 {% import "partials/dashboard-body.njk" as B %}
-<div class="app-page" x-data="dashboardView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Dashboard</h1>
-      <p class="app-page__lead">
-        <span x-show="$store.budget.profile" x-text="$store.budget.profile?.name"></span>
-        <span x-show="!$store.budget.profile" x-cloak>No active profile.</span>
-      </p>
-    </div>
-  </header>
-
-  {# ---- Empty state ---- #}
-  <div class="empty-state" x-show="!$store.budget.profile" x-cloak>
-    <h2 class="empty-state__title">Create your first profile</h2>
-    <p class="empty-state__body">
-      A profile is a complete budget -- its own accounts, categories, transactions, and goals. Create as many as you need and switch between them whenever you like. Profiles are stored only in this browser.
-    </p>
-    <div class="empty-state__actions">
-      <a class="btn btn--primary" href="/app/profiles/">Create a profile</a>
-      <a class="btn btn--secondary" href="/app/import/">Import a JSON export</a>
-    </div>
-  </div>
-
-  <div x-show="$store.budget.profile" x-cloak>
-
-    {# Inline quick-add removed -- the persistent FAB
-       (src/_includes/partials/fab-quick-add.njk, mounted in
-       src/_includes/layouts/app.njk) is the canonical add path
-       on every app page including the dashboard. #}
-
-
-    {# ---- Dashboard toolbar: which dashboard, and editing it ---- #}
-    <div class="dash-toolbar" x-show="$store.budget.profile" x-cloak>
-      <div class="dash-toolbar__left">
+<div class="app-page app-page--dense" x-data="dashboardView()" x-init="init()">
+  {# The dashboard picker, the widget count and the edit controls were
+     their own row under the masthead. They are this page's controls, so
+     they are the strip. The old lead was the profile name, which the app
+     header already carries at the top left. #}
+  {% call appToolbar("Dashboard") %}
+    <div class="app-toolbar__group" x-show="$store.budget.profile" x-cloak>
         {# A tab strip, not a <select>. Dashboards are places you switch
            between, and a strip shows how many there are and which one you are
            on without opening anything. It scrolls horizontally rather than
@@ -63,9 +37,8 @@ eleventyExcludeFromCollections: true
         </div>
         <span class="dash-toolbar__count"
               x-text="widgets().length + (widgets().length === 1 ? ' widget' : ' widgets')"></span>
-      </div>
-
-      <div class="dash-toolbar__right">
+    </div>
+    <div class="app-toolbar__actions" x-show="$store.budget.profile" x-cloak>
         {# Edit mode is an explicit toggle rather than always-on drag handles.
            A dashboard is read far more often than it is rearranged, and grips
            on every card turn a calm screen into a construction site -- worse,
@@ -129,8 +102,28 @@ eleventyExcludeFromCollections: true
            hit. #}
         <input type="file" accept="application/json,.json" x-ref="importFile" hidden
                @change="importLayout($event)">
-      </div>
     </div>
+  {% endcall %}
+
+  {# ---- Empty state ---- #}
+  <div class="empty-state" x-show="!$store.budget.profile" x-cloak>
+    <h2 class="empty-state__title">Create your first profile</h2>
+    <p class="empty-state__body">
+      A profile is a complete budget -- its own accounts, categories, transactions, and goals. Create as many as you need and switch between them whenever you like. Profiles are stored only in this browser.
+    </p>
+    <div class="empty-state__actions">
+      <a class="btn btn--primary" href="/app/profiles/">Create a profile</a>
+      <a class="btn btn--secondary" href="/app/import/">Import a JSON export</a>
+    </div>
+  </div>
+
+  <div x-show="$store.budget.profile" x-cloak>
+
+    {# Inline quick-add removed -- the persistent FAB
+       (src/_includes/partials/fab-quick-add.njk, mounted in
+       src/_includes/layouts/app.njk) is the canonical add path
+       on every app page including the dashboard. #}
+
 
     {# ---- The grid ----
        Widgets come from the active dashboard's ordered list. The :key is the
