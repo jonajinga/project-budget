@@ -5,17 +5,26 @@ description: "Top merchants and payees ranked by total spend. Surfaces subscript
 permalink: /app/reports/payees/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="payeeLeaderboardView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Payee leaderboard</h1>
-      <p class="app-page__lead">Top merchants ranked by total spend over the chosen window. Useful for spotting subscription creep, recurring purchases, and your largest individual recipients.</p>
-    </div>
-    <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-  </header>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="payeeLeaderboardView()" x-init="init()">
+  {% call reportChrome(
+       title="Payee leaderboard",
+       id="payees",
+       infoTitle="About the payee leaderboard",
+       infoLabel="What the payee leaderboard ranks",
+       info="<p>Top merchants ranked by total spend over the chosen window. Useful for spotting subscription creep, recurring purchases, and your largest individual recipients.</p>",
+       slug="payee-leaderboard",
+       searchId="pl-search",
+       searchPlaceholder="Filter payee name",
+       context='<span x-text="windowLabel()"></span>',
+       count='<span x-text="visibleCount"></span> rows',
+       filtersId="pl-filters") %}
+  {% endcall %}
 
-  <div class="form-row" style="margin-bottom: var(--space-md);">
+  {# Two month pickers and a top-N select will not fit the strip beside
+     the search box at 1024. They live in the row underneath; the window
+     stays on the strip as context so it is never a mystery. #}
+  <div class="app-filters" id="pl-filters" x-show="filtersOpen" x-cloak>
     <div class="field">
       <label class="field__label" for="pl-from">From</label>
       <input class="input" id="pl-from" type="month" x-model="from">
@@ -33,18 +42,20 @@ eleventyExcludeFromCollections: true
         <option :value="100">100</option>
       </select>
     </div>
+    <button type="button" class="btn btn--ghost" x-show="hasActiveFilter()" x-cloak
+            @click="clearFilters()">Reset</button>
   </div>
 
   <div class="kpi-strip">
     <div class="kpi kpi--danger">
       <span class="kpi__label">Total to top payees</span>
       <span class="kpi__value" x-text="fmt(kpis().total)"></span>
-      <span class="kpi__delta" x-text="kpis().count + ' payees · ' + kpis().txns + ' txns'"></span>
+      <span class="kpi__delta" x-text="kpis().count + ' payees, ' + kpis().txns + ' txns'"></span>
     </div>
     <div class="kpi kpi--warn">
-      <span class="kpi__label">#1 payee</span>
-      <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
-      <span class="kpi__delta" x-text="kpis().topShare === null ? '—' : (kpis().topShare.toFixed(1) + '% of top spend')"></span>
+      <span class="kpi__label">Number one payee</span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" :title="kpis().topName || ''" x-text="kpis().topName || '&mdash;'"></span>
+      <span class="kpi__delta" x-text="kpis().topShare === null ? '&mdash;' : (kpis().topShare.toFixed(1) + '% of top spend')"></span>
     </div>
     <div class="kpi">
       <span class="kpi__label">Avg per txn</span>
@@ -53,53 +64,46 @@ eleventyExcludeFromCollections: true
     </div>
     <div class="kpi kpi--muted">
       <span class="kpi__label">Concentration</span>
-      <span class="kpi__value" x-text="kpis().top5Share === null ? '—' : kpis().top5Share.toFixed(0) + '%'"></span>
+      <span class="kpi__value" x-text="kpis().top5Share === null ? '&mdash;' : kpis().top5Share.toFixed(0) + '%'"></span>
       <span class="kpi__delta">Top 5 share of total</span>
     </div>
   </div>
 
   <section class="report">
-    <div class="report-toolbar">
-      <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="pl-search">Filter</label>
-        <input class="input" id="pl-search" type="search" x-model="query" placeholder="Filter payee name…">
-      </div>
-      <p class="report-toolbar__count">
-        <span x-text="visibleCount"></span> rows
-      </p>
-      {{ reportExports("payee-leaderboard") }}
-    </div>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th style="width: 3rem;">#</th>
-          <th class="is-sortable"><button type="button" @click="sortBy('payee')">Payee <span class="sort-ind" x-text="sortIndicator('payee')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('total')">Total spent <span class="sort-ind" x-text="sortIndicator('total')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('count')">Txns <span class="sort-ind" x-text="sortIndicator('count')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('avg')">Avg / txn <span class="sort-ind" x-text="sortIndicator('avg')"></span></button></th>
-          <th class="is-sortable"><button type="button" @click="sortBy('lastDate')">Last used <span class="sort-ind" x-text="sortIndicator('lastDate')"></span></button></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-for="(r, i) in rows" :key="r.payeeId">
+    {# The rank used to be its own first column. On a phone the stacked
+       card would have taken "1" as its title and pushed the payee name
+       into a labelled row, so the rank sits inside the name cell now. #}
+    <div class="table-scroll">
+      <table class="table table--stack">
+        <thead>
           <tr>
-            <td style="color: var(--fg-muted); font-variant-numeric: tabular-nums;" x-text="i + 1"></td>
-            <td>
-              <a :href="'/app/register/?payee=' + r.payeeId" x-text="r.payee"
-                 data-tip="Open the register filtered to this payee."></a>
-            </td>
-            <td class="num amount--outflow" x-text="fmt(r.total)"></td>
-            <td class="num" x-text="r.count"></td>
-            <td class="num" x-text="fmt(r.avg)"></td>
-            <td x-text="r.lastDate"></td>
+            <th class="is-sortable"><button type="button" @click="sortBy('payee')">Payee <span class="sort-ind" x-text="sortIndicator('payee')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('total')">Total spent <span class="sort-ind" x-text="sortIndicator('total')"></span></button></th>
+            <th class="is-sortable num col-p2"><button type="button" @click="sortBy('count')">Txns <span class="sort-ind" x-text="sortIndicator('count')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('avg')">Avg / txn <span class="sort-ind" x-text="sortIndicator('avg')"></span></button></th>
+            <th class="is-sortable col-p3"><button type="button" @click="sortBy('lastDate')">Last used <span class="sort-ind" x-text="sortIndicator('lastDate')"></span></button></th>
           </tr>
-        </template>
-        <tr x-show="!rows.length" x-cloak>
-          <td colspan="6" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No payees in this range.</td>
-        </tr>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <template x-for="(r, i) in rows" :key="r.payeeId">
+            <tr>
+              <td>
+                <span class="report-rank" x-text="i + 1"></span>
+                <a :href="'/app/register/?payee=' + r.payeeId" x-text="r.payee"
+                   data-tip="Open the register filtered to this payee."></a>
+              </td>
+              <td class="num amount--outflow" data-label="Total spent" x-text="fmt(r.total)"></td>
+              <td class="num col-p2" data-label="Txns" x-text="r.count"></td>
+              <td class="num" data-label="Avg / txn" x-text="fmt(r.avg)"></td>
+              <td class="col-p3" data-label="Last used" x-text="r.lastDate"></td>
+            </tr>
+          </template>
+          <tr x-show="!rows.length" x-cloak>
+            <td colspan="5" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No payees in this range.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
 
@@ -116,6 +120,33 @@ function payeeLeaderboardView() {
     from: fromInitial,
     to: toInitial,
     limit: 25,
+
+    /* The window and the top-N live in the collapsed filter row, so the
+       strip needs to be able to say how many of them have been changed.
+       Comparing against the initial values is the only way to know. */
+    defaultFrom: fromInitial,
+    defaultTo: toInitial,
+    defaultLimit: 25,
+    filtersOpen: false,
+
+    windowLabel() {
+      var s = this.$store.budget;
+      if (!s || !s.monthLabel) return this.from + " to " + this.to;
+      return s.monthLabel(this.from, true) + " to " + s.monthLabel(this.to, true);
+    },
+    activeFilterCount() {
+      var n = 0;
+      if (this.from !== this.defaultFrom) n++;
+      if (this.to !== this.defaultTo) n++;
+      if (this.limit !== this.defaultLimit) n++;
+      return n;
+    },
+    hasActiveFilter() { return this.activeFilterCount() > 0; },
+    clearFilters() {
+      this.from = this.defaultFrom;
+      this.to = this.defaultTo;
+      this.limit = this.defaultLimit;
+    },
 
     query: "",
     sortKey: "total",
