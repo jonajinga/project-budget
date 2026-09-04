@@ -30,9 +30,12 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   labels chosen so none collide.
 - [x] **S6 Sidebar totals.** Group totals showed "$27.8k"; they show
   full amounts on their own line.
-- [ ] **S7 Sticky table headers.** `.table--sticky-head` does nothing
-  where the card is an overflow container, which is the register today
-  and any long table later. Needs a measured offset.
+- [x] **S7 Sticky table headers.** Solved while doing the accounts
+  page. A card sets `overflow-x`, which makes it a scrollport, so a
+  header inside it pins to a box that never scrolls vertically and
+  appears not to stick at all. The fix, and the 4rem offset for the
+  site header, are written into the style guide. The accounts header
+  now stays put; the register still needs it applied.
 
 ## Daily pages
 
@@ -55,10 +58,14 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   to 61 pixels each and the page from 11,731 to 3,572. Posting works at
   both sizes with a 44 pixel tap target. Verified independently, and
   the shared tile strip on five other pages is untouched.
-- [~] **P4 Accounts.** Worker reports it finished on branch
-  task/P4-accounts: one table with group section rows, a single sticky
-  header, and a colgroup so columns line up. NOT reviewed, NOT
-  verified, NOT merged. Next up.
+- [x] **P4 Accounts.** The page rendered a separate table per group,
+  so the header was stated seven times and the Type column began at a
+  different place in every group: 78 pixels of spread at desktop, 46 at
+  tablet, now zero. One table, one header, columns from a colgroup. All
+  21 account names carry a tooltip where none did; three that were cut
+  off on a phone are not; three group titles that ran to two or three
+  lines fit on one; and the excluded-total pill that ended 90 pixels
+  past the phone screen no longer overflows. Verified independently.
 - [ ] **P5 Calendar.** Phone view is unlabelled coloured blobs and a
   six-row toolbar. Needs an agenda list, with the grid as a picker.
 
