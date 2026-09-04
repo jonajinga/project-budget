@@ -105,7 +105,9 @@ eleventyExcludeFromCollections: true
     </tbody>
   </table>
 
-  <section class="card prose app-gutter" style="margin-top: var(--space-lg);">
+  {# Prose keeps its 70ch measure but not a card, and no top margin:
+     a gap on a flush page shows the ground through it. #}
+  <section class="prose app-gutter">
     <h2>What's in the log</h2>
     <ul>
       <li><strong>Transactions</strong> — built from <code>profile.transactions</code>. Date and amount are accurate; "who created it" isn't tracked yet.</li>

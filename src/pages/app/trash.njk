@@ -141,7 +141,10 @@ eleventyExcludeFromCollections: true
     </tbody>
   </table>
 
-  <section class="card prose app-gutter">
+  {# Prose keeps its 70ch measure but not a card: a 70ch box with a
+     border on a page that bleeds to the window edge reads as a panel
+     that failed to stretch. #}
+  <section class="prose app-gutter">
     <h2>How retention works</h2>
     <h3>Transactions</h3>
     <ul>
