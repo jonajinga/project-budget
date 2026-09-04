@@ -88,9 +88,18 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
 - [x] **R2 Savings rate chart.** One month at minus seven hundred
   percent flattened the other eleven into a line. The axis fits the
   bulk and names the outlier underneath.
-- [ ] **R3 Report tables and tiles.** Column priorities and phone
-  stacking across all fifteen reports; several still drop their money
-  columns on a phone.
+- [x] **R3 Report tables and tiles.** Every report table now carries
+  the shared recipe: the subject column first (it becomes the phone
+  card's title), secondary columns behind `.col-p3`, `.table--stack`
+  with a `data-label` on every cell, and a `.table-scroll` wrapper.
+  Twelve money cells across four reports sat off the right edge of a
+  390 phone and could only be reached by scrolling the table sideways;
+  that count is zero. Payees lost its rank column and gained the rank
+  inside the payee cell - as a column it became the phone card's title,
+  so the card read "1" in large type with the payee under it. The KPI
+  tiles had the same orphan the hub grid had: four tiles in a
+  three-column grid left the fourth alone between 600 and 1120 pixels.
+  Two-up there instead, same height, no gap.
 - [ ] **R4 Remaining chart quality.** Sankey labels collide, the
   treemap clips its labels, the heatmap has no legend and hides values
   at tablet width, the debt chart uses one colour.
@@ -111,8 +120,16 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   that fills the window, with the prose behind the info button. It was
   the worst case in the audit - 240 pixels of title and prose, 190 of
   control, 460 of nothing. Backup is with the utility worker.
-- [ ] **U5 Tools and reports index.** Grids leave an orphan tile on the
-  last row.
+- [~] **U5 Tools and reports index.** Reports index done. Its groups
+  hold four, five, two, two and one report, and the grid had three hard
+  column counts, so at three columns at least one row always held a
+  lone tile beside two empty tracks. auto-fill alone does not fix it -
+  with those group sizes there is no column count where every last row
+  holds more than one tile, and the one-report group is a lone tile at
+  any count. The tiles are flex items that grow now, so the last row's
+  tiles share what is left; a tile wider than 34rem lays out on one
+  line via a container query so a stretched tile looks deliberate. The
+  tools index is still to do.
 - [ ] **U7 Dashboard PDF export.** Skips five widgets at every width,
   because two chart hosts render without the identifier the export
   looks up.
@@ -142,7 +159,22 @@ one-line lead. It does not; the lead moves behind the info button.
   drops in where the first row of real content sits: accounts 480 to
   365, dashboard 285 to 155, category 290 to 133, recurring about 400
   to 326.
-- [ ] **The 15 report pages and the reports hub.** With a worker.
+- [x] **The 15 report pages and the reports hub.** All sixteen routes.
+  Three bands of chrome became one: the masthead went, the range picker
+  came up into the strip, and `.report-toolbar` - the search box, the
+  row count and the export kebab - came up with it. No page uses
+  `.report-toolbar` any more. `partials/report-chrome.njk` is the one
+  strip for all fifteen detail reports, so it cannot drift page to
+  page. Save view moved into the actions kebab: beside All reports it
+  cost about 95 pixels and put the actions on a second row at 1024.
+  Payees, Cash flow and Year over year use `.app-filters` for their
+  month pickers and keep the window visible as context text.
+  Where the first row of real content sits, 1440 / 1024 / 390:
+  spending 354/391/448 to 157/157/158, payees 456/492/598 to
+  157/157/158, budget-vs-actual 361/398/386 to 157/157/160, the hub
+  308/300/336 to 201/201/192. Every strip is one 44px row at 1440 and
+  1024. No horizontal overflow outside a scroll container at any of the
+  three widths, before or after.
 - [ ] **The 20 utility and form pages.** With a worker.
 - [ ] Nobody independent has checked any of this yet.
 

@@ -651,6 +651,14 @@
     min-height: 0;
     height: 1.9rem;
     padding: 0 9px;
+    /* "12 mo" broke after the space and the second line spilled out of
+       the fixed height, so the strip showed "12" over "mo" in a box
+       that could not grow. A range label is two words and must stay on
+       one line; flex centres it in the shorter box. */
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 .app-toolbar .report-chrome__month .input { min-width: 0; }
@@ -692,6 +700,19 @@
    and the report surface; the strip's own bottom margin would double
    it. */
 .app-page--dense > .kpi-strip { margin-bottom: 0; }
+
+/* R3: the KPI strip's own orphan. Every report shows four tiles, and
+   between about 600 and 1120 pixels there is only room for three, so
+   the fourth sat alone on a row of its own with two empty tracks
+   beside it - the same defect as the hub's tile grid, one level down.
+   Two-up is the same two rows tall and has no gap in it.
+
+   The direct-child combinator is doing real work: the category and
+   cuts pages nest their .kpi-strip inside a section, and their tile
+   counts are not four, so they keep the shared three-up. */
+@media (min-width: 600px) and (max-width: 1120px) {
+  .app-page--dense > .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* A segmented range picker in the strip. Same control as the chart
    picker -- reused rather than restyled, so a report has one kind of
