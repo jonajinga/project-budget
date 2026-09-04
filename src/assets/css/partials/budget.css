@@ -4687,6 +4687,20 @@ body.pb-dragging { overflow: visible !important; }
   .rec-table .col-date   { width: 7rem; }
   .rec-table .col-amount { width: 7rem; }
 }
+/* Print, mirroring the register. A print page box is about 816 CSS px, so
+   without this the printed table would pick up the tablet rules and drop
+   the frequency column. And paper has no tooltip: a name that does not
+   fit has to wrap, because an ellipsis on paper loses the value for good. */
+@media print {
+  .rec-table { table-layout: auto; }
+  .rec-table .col-freq { display: table-cell !important; }
+  .rec-table th,
+  .rec-table td {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}
 
 /* Payee cell hosts two click-targets: payee name (top) + memo
    (bottom). Each is its own click-to-edit area inside the same
