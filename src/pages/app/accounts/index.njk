@@ -6,16 +6,16 @@ permalink: /app/accounts/
 eleventyExcludeFromCollections: true
 ---
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="accountsView()">
-  <header class="app-page__header">
-    <h1 class="app-page__title">Accounts</h1>
-    <div class="cluster">
-      <button class="btn btn--icon" type="button"
-              @click="showHelp = true"
-              aria-label="About accounts"
-              data-tip="How on-budget vs tracking accounts work, plus reorder tips.">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
-      </button>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--flush" x-data="accountsView()">
+  {% call appToolbar("Accounts", flush=true) %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context"
+            x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak
+            x-text="accountCount() + (accountCount() === 1 ? ' account' : ' accounts')"></span>
+    </div>
+    <div class="app-toolbar__actions">
       <button class="btn btn--icon" type="button"
               @click="showGroup = true"
               aria-label="New group"
@@ -38,31 +38,22 @@ eleventyExcludeFromCollections: true
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
+      {% call pageInfo(id="accounts", title="About accounts", label="How on-budget and tracking accounts differ") %}
+        <p>Cash, checking, savings, and credit-card accounts are <strong>on-budget</strong>: every dollar in them needs to be assigned to a category. Investment and loan accounts are <strong>tracking</strong>: they count toward net worth but do not affect Ready to Work.</p>
+        <p><strong>Reorder:</strong> use the Move up / Move down items in each row's kebab menu.</p>
+      {% endcall %}
     </div>
-  </header>
+  {% endcall %}
 
-  <p class="app-page__lead" x-show="!$store.budget.profile" x-cloak>
+  {# Empty states, not a page lead. They are the only copy that appears
+     when there is nothing to show, so they stay in the flow. #}
+  <p class="app-page__lead app-gutter" x-show="!$store.budget.profile" x-cloak>
     Create or switch to a profile before adding accounts.
   </p>
 
-  <p class="app-page__lead" x-show="$store.budget.profile && !$store.budget.profile.accounts.length" x-cloak>
+  <p class="app-page__lead app-gutter" x-show="$store.budget.profile && !$store.budget.profile.accounts.length" x-cloak>
     No accounts yet. Start with your everyday checking account, then add savings, credit cards, and any tracking accounts for investments or loans.
   </p>
-
-  {# Info / help modal — opened by the (i) icon in the header. #}
-  <div class="modal-backdrop" x-show="showHelp" x-cloak @keydown.escape.window="showHelp = false">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="acct-help-title" @click.outside="showHelp = false">
-      <button class="modal__close" type="button" @click="showHelp = false" aria-label="Close">&times;</button>
-      <h2 class="modal__title" id="acct-help-title">About accounts</h2>
-      <div class="prose">
-        <p>Cash, checking, savings, and credit-card accounts are <strong>on-budget</strong>: every dollar in them needs to be assigned to a category. Investment and loan accounts are <strong>tracking</strong>: they count toward net worth but do not affect Ready to Work.</p>
-        <p><strong>Reorder:</strong> use the Move up / Move down items in each row's kebab menu (⋮).</p>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="button" @click="showHelp = false">Got it</button>
-      </div>
-    </div>
-  </div>
 
   {# Stat cards. Live snapshot of every on-budget + tracking balance,
      account count, and total net worth. Reuses .rec-summary chrome so
@@ -71,7 +62,7 @@ eleventyExcludeFromCollections: true
      → working net worth → all-in (net + excluded). The 6col modifier
      fires only when accounts are flagged excluded; otherwise it
      stays a tidy 4-up. #}
-  <section class="rec-summary"
+  <section class="rec-summary app-gutter"
            :class="excludedCount() > 0 ? 'rec-summary--6col' : ''"
            x-show="$store.budget.profile && $store.budget.profile.accounts.length" x-cloak>
     <div class="rec-summary__tile rec-summary__tile--accent" data-tip="Total accounts in this profile (on-budget + tracking + excluded).">
@@ -581,7 +572,6 @@ eleventyExcludeFromCollections: true
 <script>
 function accountsView() {
   return {
-    showHelp: false,
     showAccount: false,
     showGroup: false,
     editId: null,

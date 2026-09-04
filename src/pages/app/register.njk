@@ -7,125 +7,16 @@ eleventyExcludeFromCollections: true
 ---
 {% from "partials/icon-trash.njk" import iconTrash %}
 {% from "partials/overflow-menu.njk" import overflow %}
-<div class="app-page" x-data="registerView()" x-init="init()">
+{% from "partials/app-toolbar.njk" import appToolbar %}
+<div class="app-page app-page--flush" x-data="registerView()" x-init="init()">
 
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">
-        <span x-text="filterAccountId ? ($store.budget.findAccount(filterAccountId)?.name || 'Register') : 'All accounts'"></span>
-      </h1>
-    </div>
-    {# Primary "Add transaction" is covered by the persistent FAB on every
-       app page (src/_includes/layouts/app.njk:62). Header keeps only the
-       account-scoped actions; Transfer / Reconcile / Save view collapse
-       into a single kebab so the row stays one line at 360px. #}
-    {% call overflow(label="Register actions") %}
-      <li role="none">
-        <button type="button" role="menuitem" class="overflow-menu__item"
-                :disabled="!hasAccounts"
-                @click="open = false; showTransfer = true">Transfer between accounts</button>
-      </li>
-      <li role="none" x-show="filterAccountId" x-cloak>
-        <button type="button" role="menuitem" class="overflow-menu__item"
-                @click="open = false; showReconcile = true">Reconcile this account</button>
-      </li>
-      <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-      <li role="none">
-        <button type="button" role="menuitem" class="overflow-menu__item"
-                @click="open = false; saveCurrentView()">Save current view</button>
-      </li>
-    {% endcall %}
-  </header>
-
-  <p class="app-page__lead" x-show="!hasAccounts" x-cloak>
-    Add an account before entering transactions.
-    <a href="/app/accounts/">Go to accounts</a>.
-  </p>
-
-  {# Account stats — six tiles laid out as a single row at desktop.
-     Uncleared is omitted because it equals (Working − Cleared), and
-     "this month" suffixes are dropped because the register view's
-     header already names the month context. Labels stay nowrap. #}
-  <section class="acct-stats" x-show="filterAccountId && hasAccounts" x-cloak
-           role="group" aria-label="Account summary">
-    <article class="acct-stat">
-      <p class="acct-stat__label">Working balance</p>
-      <p class="acct-stat__value"
-         :class="$store.budget.accountBalance(filterAccountId) < 0 ? 'is-negative' : ''"
-         x-text="formatCents($store.budget.accountBalance(filterAccountId))"></p>
-    </article>
-    <article class="acct-stat"
-             :data-tip="'Uncleared: ' + formatCents($store.budget.accountBalance(filterAccountId) - $store.budget.accountClearedBalance(filterAccountId))">
-      <p class="acct-stat__label">Cleared</p>
-      <p class="acct-stat__value"
-         x-text="formatCents($store.budget.accountClearedBalance(filterAccountId))"></p>
-    </article>
-    <article class="acct-stat">
-      <p class="acct-stat__label">Transactions</p>
-      <p class="acct-stat__value" x-text="acctTxnCount()"></p>
-    </article>
-    <article class="acct-stat acct-stat--income">
-      <p class="acct-stat__label">Inflow</p>
-      <p class="acct-stat__value" x-text="formatCents(acctMonthInflow())"></p>
-    </article>
-    <article class="acct-stat acct-stat--expense">
-      <p class="acct-stat__label">Outflow</p>
-      <p class="acct-stat__value" x-text="formatCents(acctMonthOutflow())"></p>
-    </article>
-    <article class="acct-stat acct-stat--spark" x-show="acctSparkline()" x-cloak>
-      <p class="acct-stat__label">30-day trend</p>
-      <template x-if="acctSparkline()">
-        <svg class="acct-spark"
-             :class="'acct-spark--' + acctSparkline().trend"
-             viewBox="0 0 100 30" preserveAspectRatio="none"
-             role="img"
-             :aria-label="'Balance trend: ' + acctSparkline().trend + ', current ' + formatCents(acctSparkline().last)">
-          <path :d="acctSparkline().path" fill="none" stroke="currentColor" stroke-width="1.4" vector-effect="non-scaling-stroke"></path>
-        </svg>
-      </template>
-    </article>
-  </section>
-
-  {# Due scheduled queue #}
-  <section class="card" x-show="hasAccounts && due.length" x-cloak style="border-left: 4px solid var(--warn);">
-    <h2 class="card__title">Recurring transactions due</h2>
-    <p class="card__body" style="margin-bottom: var(--space-sm);">
-      Review each one before it posts. You can skip an occurrence to push the next date forward without recording it.
-    </p>
-    {# `recurring-due` gets a phone layout in register.css: five columns do
-       not fit in 390px, and the generic .table fallback left the Amount
-       column -- the one number that matters on a review screen -- scrolled
-       out of sight behind the edge. #}
-    <table class="table recurring-due">
-      <thead><tr><th>Date</th><th>Account</th><th>Payee</th><th class="num">Amount</th><th class="num">Actions</th></tr></thead>
-      <tbody>
-        <template x-for="s in due" :key="s.id">
-          <tr>
-            <td x-text="s.nextDate"></td>
-            <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
-            <td x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></td>
-            <td class="num" x-text="formatCents(s.template.amount)"></td>
-            <td class="num">
-              <div class="cluster" style="justify-content: flex-end;">
-                <button class="btn btn--primary btn--sm" type="button" @click="postNow(s.id)">Post</button>
-                <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.skipScheduled(s.id); refreshDue();">Skip</button>
-              </div>
-            </td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
-  </section>
-
-  {# Add transaction is handled by the persistent FAB
-     (src/_includes/partials/fab-quick-add.njk, mounted in
-     src/_includes/layouts/app.njk:62 on every app page). The
-     inline add form that used to live here was a duplicate of
-     the FAB modal with worse mobile ergonomics. #}
-
-  {# Register table #}
-  <section class="register" x-show="hasAccounts" x-cloak>
-    <div class="register__toolbar">
+  {# The account combo IS the page title here: it says which account you
+     are looking at and changes it. That is why there is no separate
+     heading - naming the screen twice is what the old masthead did. The
+     filters, the count and the kebab were a second row of chrome below
+     the header; they are one row now. #}
+  {% call appToolbar("Register", flush=true) %}
+    <div class="app-toolbar__group" x-show="hasAccounts" x-cloak>
       <div class="register__filters">
         {# Searchable account filter — type to narrow the dropdown,
            click an option to select, Esc to close. The hidden state
@@ -169,13 +60,122 @@ eleventyExcludeFromCollections: true
                @input.debounce.300ms="updateUrl()"
                placeholder="Search payee or memo">
       </div>
-      <div class="cluster register__toolbar-actions">
-        <p class="register__count">
-          <span x-text="visibleTransactions().length"></span> shown
-        </p>
-      </div>
     </div>
+    <div class="app-toolbar__actions">
+      <p class="app-toolbar__context" x-show="hasAccounts" x-cloak>
+        <span x-text="visibleTransactions().length"></span> shown
+      </p>
+    {# Primary "Add transaction" is covered by the persistent FAB on every
+       app page (src/_includes/layouts/app.njk:62). The strip keeps only the
+       account-scoped actions; Transfer / Reconcile / Save view collapse
+       into a single kebab so the row stays one line at 360px. #}
+    {% call overflow(label="Register actions") %}
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                :disabled="!hasAccounts"
+                @click="open = false; showTransfer = true">Transfer between accounts</button>
+      </li>
+      <li role="none" x-show="filterAccountId" x-cloak>
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                @click="open = false; showReconcile = true">Reconcile this account</button>
+      </li>
+      <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+      <li role="none">
+        <button type="button" role="menuitem" class="overflow-menu__item"
+                @click="open = false; saveCurrentView()">Save current view</button>
+      </li>
+    {% endcall %}
+    </div>
+  {% endcall %}
 
+  <p class="app-page__lead app-gutter" x-show="!hasAccounts" x-cloak>
+    Add an account before entering transactions.
+    <a href="/app/accounts/">Go to accounts</a>.
+  </p>
+
+  {# Account stats — six tiles laid out as a single row at desktop.
+     Uncleared is omitted because it equals (Working − Cleared), and
+     "this month" suffixes are dropped because the register view's
+     header already names the month context. Labels stay nowrap. #}
+  <section class="acct-stats app-gutter" x-show="filterAccountId && hasAccounts" x-cloak
+           role="group" aria-label="Account summary">
+    <article class="acct-stat">
+      <p class="acct-stat__label">Working balance</p>
+      <p class="acct-stat__value"
+         :class="$store.budget.accountBalance(filterAccountId) < 0 ? 'is-negative' : ''"
+         x-text="formatCents($store.budget.accountBalance(filterAccountId))"></p>
+    </article>
+    <article class="acct-stat"
+             :data-tip="'Uncleared: ' + formatCents($store.budget.accountBalance(filterAccountId) - $store.budget.accountClearedBalance(filterAccountId))">
+      <p class="acct-stat__label">Cleared</p>
+      <p class="acct-stat__value"
+         x-text="formatCents($store.budget.accountClearedBalance(filterAccountId))"></p>
+    </article>
+    <article class="acct-stat">
+      <p class="acct-stat__label">Transactions</p>
+      <p class="acct-stat__value" x-text="acctTxnCount()"></p>
+    </article>
+    <article class="acct-stat acct-stat--income">
+      <p class="acct-stat__label">Inflow</p>
+      <p class="acct-stat__value" x-text="formatCents(acctMonthInflow())"></p>
+    </article>
+    <article class="acct-stat acct-stat--expense">
+      <p class="acct-stat__label">Outflow</p>
+      <p class="acct-stat__value" x-text="formatCents(acctMonthOutflow())"></p>
+    </article>
+    <article class="acct-stat acct-stat--spark" x-show="acctSparkline()" x-cloak>
+      <p class="acct-stat__label">30-day trend</p>
+      <template x-if="acctSparkline()">
+        <svg class="acct-spark"
+             :class="'acct-spark--' + acctSparkline().trend"
+             viewBox="0 0 100 30" preserveAspectRatio="none"
+             role="img"
+             :aria-label="'Balance trend: ' + acctSparkline().trend + ', current ' + formatCents(acctSparkline().last)">
+          <path :d="acctSparkline().path" fill="none" stroke="currentColor" stroke-width="1.4" vector-effect="non-scaling-stroke"></path>
+        </svg>
+      </template>
+    </article>
+  </section>
+
+  {# Due scheduled queue #}
+  <section class="card app-gutter" x-show="hasAccounts && due.length" x-cloak style="border-left: 4px solid var(--warn);">
+    <h2 class="card__title">Recurring transactions due</h2>
+    <p class="card__body" style="margin-bottom: var(--space-sm);">
+      Review each one before it posts. You can skip an occurrence to push the next date forward without recording it.
+    </p>
+    {# `recurring-due` gets a phone layout in register.css: five columns do
+       not fit in 390px, and the generic .table fallback left the Amount
+       column -- the one number that matters on a review screen -- scrolled
+       out of sight behind the edge. #}
+    <table class="table recurring-due">
+      <thead><tr><th>Date</th><th>Account</th><th>Payee</th><th class="num">Amount</th><th class="num">Actions</th></tr></thead>
+      <tbody>
+        <template x-for="s in due" :key="s.id">
+          <tr>
+            <td x-text="s.nextDate"></td>
+            <td x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></td>
+            <td x-text="$store.budget.payeeName(s.template.payeeId) || s.template.payeeName || '—'"></td>
+            <td class="num" x-text="formatCents(s.template.amount)"></td>
+            <td class="num">
+              <div class="cluster" style="justify-content: flex-end;">
+                <button class="btn btn--primary btn--sm" type="button" @click="postNow(s.id)">Post</button>
+                <button class="btn btn--ghost btn--sm" type="button" @click="$store.budget.skipScheduled(s.id); refreshDue();">Skip</button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  {# Add transaction is handled by the persistent FAB
+     (src/_includes/partials/fab-quick-add.njk, mounted in
+     src/_includes/layouts/app.njk:62 on every app page). The
+     inline add form that used to live here was a duplicate of
+     the FAB modal with worse mobile ergonomics. #}
+
+  {# Register table #}
+  <section class="register" x-show="hasAccounts" x-cloak>
     <table class="register__table" x-show="!isMobile" x-cloak data-no-tippy>
       <thead>
         <tr>

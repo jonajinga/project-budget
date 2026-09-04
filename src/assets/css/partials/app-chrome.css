@@ -95,6 +95,22 @@
   flex-shrink: 0;
 }
 
+/* Controls in the strip are toolbar-sized. The app's default input is
+   built for a form: 2.6rem tall with 16px text, the 16px being
+   deliberate because iOS Safari zooms the page when a focused input is
+   smaller. Three of those make the strip taller than the app header
+   itself. Shrink them from 600px up only, so a phone -- the only place
+   that zoom happens -- keeps the full-size control. */
+@media (min-width: 600px) {
+  .app-toolbar .input,
+  .app-toolbar .select,
+  .app-toolbar .btn {
+    min-height: 2rem;
+    padding-block: 0.2rem;
+    font-size: var(--fs-sm);
+  }
+}
+
 /* Context text -- a count, a range, the account a register is
    filtered to. Never a sentence: anything that reads as prose belongs
    behind the info button. */
@@ -172,6 +188,14 @@
 /* Its own toolbar already bled; bleeding it twice would push it off
    the left edge by a full gutter. */
 .app-page--flush > .app-toolbar { margin-inline: 0; margin-top: 0; }
+
+/* Not everything on a flush page wants to touch the window. A table
+   gains from the extra width; a strip of tiles just looks like it fell
+   off the edge. This gives one child its gutter back. */
+/* Margin, not padding: several of these are cards with their own
+   border, and padding would leave the border itself running to the
+   window edge with the content inset from it. */
+.app-page--flush > .app-gutter { margin: var(--space-sm) var(--container-pad); }
 
 /* ---- Surfaces ------------------------------------------------------
    A panel is a card that has stopped floating: same ground, hairline
