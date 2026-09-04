@@ -2,6 +2,13 @@
 
 import { colors } from "./theme-colors.js";
 
+/* Card and cell labels are read as money, so they carry thousands
+   separators (S1, Jon 2026-09-04). Whole dollars only: these sit in
+   tight chart furniture where cents would not fit. */
+function money(cents) {
+  return "$" + Math.round((cents || 0) / 100).toLocaleString("en-US");
+}
+
 export function render(el, series) {
   if (!el || !window.d3) return;
   var d3 = window.d3;
@@ -31,7 +38,7 @@ export function render(el, series) {
 
     var sub = document.createElement("p");
     sub.className = "small-multiple__sub";
-    sub.textContent = "Total $" + (s.total / 100).toFixed(0);
+    sub.textContent = "Total " + money(s.total);
     card.appendChild(sub);
 
     var svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");

@@ -52,6 +52,10 @@ const VENDOR_FOR_ROUTE = {
   "/app/reports/spending/": ["/assets/js/vendor/d3.min.js"],
   "/app/reports/heatmap/": ["/assets/js/vendor/d3.min.js"],
   "/app/reports/sankey/": ["/assets/js/vendor/d3.min.js", "/assets/js/vendor/d3-sankey.min.js"],
+  /* Trends and assignment history also draw with d3; without it their
+     chart modules returned silently and the pages showed an empty box. */
+  "/app/reports/trends/": ["/assets/js/vendor/d3.min.js"],
+  "/app/reports/assignment-history/": ["/assets/js/vendor/d3.min.js"],
 };
 
 const CHART_ROUTES = /^\/app\/(reports\/|$)/;

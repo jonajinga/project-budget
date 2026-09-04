@@ -58,12 +58,13 @@ function cutsView() {
       return cents / annual;
     },
 
-    /* Charts */
-    cumulativeChart() {
+    /* Chart specs. The page mounts these with PBMini.into($el, spec),
+       which measures the holder and draws at that width, so labels are
+       never stretched and never collide. */
+    cumulativeSpec() {
       var tl = this.timeline();
-      if (!tl.length) return window.PBMini.lines({ series: [], labels: [] });
       var self = this;
-      return window.PBMini.lines({
+      return Object.assign({ kind: "lines" }, {
         labels: tl.map(function (r) { return self.monthLabel(r.month, true); }),
         series: [
           { values: tl.map(function (r) { return r.cumPlanned; }), cls: "is-muted" },
@@ -72,20 +73,20 @@ function cutsView() {
         height: 200, aria: "Cumulative saved versus planned",
       });
     },
-    monthlyChart() {
+    monthlySpec() {
       var tl = this.timeline();
       var self = this;
-      return window.PBMini.bars({
+      return Object.assign({ kind: "bars" }, {
         values: tl.map(function (r) { return Math.max(0, r.saved); }),
         line: tl.map(function (r) { return r.planned; }),
         labels: tl.map(function (r) { return self.monthLabel(r.month, true); }),
         highlight: tl.length - 1, height: 180, aria: "Saved per month versus planned",
       });
     },
-    cutChart(c) {
+    cutSpec(c) {
       var rows = c.series.rows.slice(-this.range);
       var self = this;
-      return window.PBMini.bars({
+      return Object.assign({ kind: "bars" }, {
         values: rows.map(function (r) { return r.actual; }),
         line: rows.map(function (r) { return r.target > 0 ? r.baseline - r.target : r.baseline; }),
         labels: rows.map(function (r) { return self.monthLabel(r.month, true); }),

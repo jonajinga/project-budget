@@ -84,11 +84,12 @@ function categoryView() {
       return a < 0 ? "kpi--danger" : (a > 0 ? "kpi--ok" : "kpi--muted");
     },
 
-    /* Charts */
-    flowChart() {
+    /* Chart specs; mounted with PBMini.into so they draw at the
+       holder's measured width. */
+    flowSpec() {
       var rows = this.series();
       var self = this, key = this.flowKey();
-      return window.PBMini.bars({
+      return Object.assign({ kind: "bars" }, {
         values: rows.map(function (r) { return r[key]; }),
         line: rows.map(function (r) { return r.assigned; }),
         labels: rows.map(function (r) { return self.monthLabel(r.month, true); }),
@@ -97,10 +98,10 @@ function categoryView() {
         valueClass: function (v, i) { return !self.isIncome() && rows[i].available < 0 ? "is-over" : ""; },
       });
     },
-    availableChart() {
+    availableSpec() {
       var rows = this.series();
       var self = this;
-      return window.PBMini.lines({
+      return Object.assign({ kind: "lines" }, {
         labels: rows.map(function (r) { return self.monthLabel(r.month, true); }),
         series: [{ values: rows.map(function (r) { return r.available; }), cls: "is-accent", area: true }],
         height: 160, aria: "Available at the end of each month",
@@ -145,12 +146,12 @@ function categoryView() {
       if (!c) return "";
       return c.mode === "percent" ? (c.value / 100) + "% less than before" : this.fmt(c.value) + " less each month";
     },
-    cutChart() {
+    cutChartSpec() {
       var s = this.cutSeries();
-      if (!s) return "";
+      if (!s) return null;
       var rows = s.rows.slice(-this.range);
       var self = this;
-      return window.PBMini.bars({
+      return Object.assign({ kind: "bars" }, {
         values: rows.map(function (r) { return r.saved > 0 ? r.saved : 0; }),
         line: rows.map(function (r) { return r.target; }),
         labels: rows.map(function (r) { return self.monthLabel(r.month, true); }),

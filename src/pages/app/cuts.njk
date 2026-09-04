@@ -67,7 +67,7 @@ eleventyExcludeFromCollections: true
               <button type="button" :class="range === 0 ? 'is-active' : ''" @click="range = 0">All</button>
             </span>
           </div>
-          <div x-html="cumulativeChart()"></div>
+          <div x-effect="window.PBMini && window.PBMini.into($el, cumulativeSpec())"></div>
           <div class="hist__legend"><span class="is-ok">Actually saved, running total</span><span class="is-muted">What the plan promised</span></div>
         </section>
         <section class="hist__card">
@@ -75,7 +75,7 @@ eleventyExcludeFromCollections: true
             <h2 class="hist__card-title">Month by month</h2>
             <span class="hist__card-meta">Bars are what you saved, the line is the plan</span>
           </div>
-          <div x-html="monthlyChart()"></div>
+          <div x-effect="window.PBMini && window.PBMini.into($el, monthlySpec())"></div>
           <div class="hist__legend"><span>Saved that month</span><span class="is-line">Planned</span></div>
         </section>
       </div>
@@ -147,7 +147,7 @@ eleventyExcludeFromCollections: true
               <h2 class="hist__card-title"><a class="hist__link" :href="categoryHref(c)" x-text="c.name"></a></h2>
               <span class="hist__card-meta" x-text="cutLabel(c) + ' since ' + monthLabel(c.cut.startMonth)"></span>
             </div>
-            <div x-html="cutChart(c)"></div>
+            <div x-effect="window.PBMini && window.PBMini.into($el, cutSpec(c))"></div>
             <div class="hist__legend"><span>Spent (red when over the target)</span><span class="is-line">Allowed after the cut</span></div>
             <dl style="margin: var(--space-xs) 0 0;">
               <div class="hist__stat"><dt>Best month</dt><dd x-text="c.series.rows.length ? fmt(Math.max.apply(null, c.series.rows.map(r => r.saved))) + ' saved' : '-'"></dd></div>

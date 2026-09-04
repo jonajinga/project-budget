@@ -102,7 +102,7 @@
      paint — saves the weight on every reports page initial load. #}
   {# D3: needed for the spending treemap + heatmap + sankey reports.
      Sankey additionally needs the d3-sankey plugin (~6 KB). #}
-  {% if page.url == "/app/reports/spending/" or page.url == "/app/reports/heatmap/" or page.url == "/app/reports/sankey/" %}
+  {% if page.url == "/app/reports/spending/" or page.url == "/app/reports/heatmap/" or page.url == "/app/reports/sankey/" or page.url == "/app/reports/trends/" or page.url == "/app/reports/assignment-history/" %}
     <script src="/assets/js/vendor/d3.min.js" defer></script>
   {% endif %}
   {% if page.url == "/app/reports/sankey/" %}

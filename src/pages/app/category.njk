@@ -71,7 +71,7 @@ eleventyExcludeFromCollections: true
             <h2 class="hist__card-title" x-text="flowWord() + ' each month'"></h2>
             <span class="hist__card-meta" x-text="'Total ' + fmt(stats().total) + ', assigned ' + fmt(stats().assignedTotal)"></span>
           </div>
-          <div x-html="flowChart()"></div>
+          <div x-effect="window.PBMini && window.PBMini.into($el, flowSpec())"></div>
           <div class="hist__legend"><span x-text="flowWord() + (isIncome() ? '' : ' (red when the month ended overspent)')"></span><span class="is-line">Assigned</span></div>
         </section>
 
@@ -79,7 +79,7 @@ eleventyExcludeFromCollections: true
           <div class="hist__card-head">
             <h2 class="hist__card-title">Available at month end</h2>
           </div>
-          <div x-html="availableChart()"></div>
+          <div x-effect="window.PBMini && window.PBMini.into($el, availableSpec())"></div>
         </section>
 
         <section class="hist__card">
@@ -123,7 +123,7 @@ eleventyExcludeFromCollections: true
               <a class="hist__link" :href="cutsHref()">All cuts</a>
             </div>
             <p class="hist__card-meta" style="margin: 0 0 var(--space-2xs);" x-text="cutLabel() + ', since ' + monthLabel(cut().startMonth) + (cut().goalLabel ? ', toward ' + cut().goalLabel : '')"></p>
-            <div x-html="cutChart()"></div>
+            <div x-effect="window.PBMini && cutChartSpec() && window.PBMini.into($el, cutChartSpec())"></div>
             <div class="hist__legend"><span>Saved that month</span><span class="is-line">Target</span></div>
             <dl style="margin: var(--space-xs) 0 0;">
               <div class="hist__stat"><dt>Was spending</dt><dd x-text="fmt(cutSeries().baseline) + ' a month'"></dd></div>

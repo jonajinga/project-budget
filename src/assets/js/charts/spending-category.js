@@ -10,6 +10,13 @@ function readType() {
   return (window.pbReadChartType && window.pbReadChartType("spending", "treemap")) || "treemap";
 }
 
+/* Card and cell labels are read as money, so they carry thousands
+   separators (S1, Jon 2026-09-04). Whole dollars only: these sit in
+   tight chart furniture where cents would not fit. */
+function money(cents) {
+  return "$" + Math.round((cents || 0) / 100).toLocaleString("en-US");
+}
+
 export function render(el, data) {
   if (!el) return;
   if (!data || !data.length) { el.innerHTML = "<p style=\"padding: var(--space-md); color: var(--fg-muted);\">No spending in this range.</p>"; return; }
@@ -85,7 +92,7 @@ function renderTreemap(el, data) {
       sel.append("tspan").text(d.data.category);
       sel.append("tspan")
         .attr("x", 6).attr("dy", 14).attr("font-weight", 400).attr("font-size", 11)
-        .text("$" + (d.data.value / 100).toFixed(0));
+        .text(money(d.data.value));
     });
 }
 
