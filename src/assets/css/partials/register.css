@@ -806,3 +806,19 @@
      block, they draw lines through the middle of it. */
   .recurring-due td { border: 0; padding: 0; }
 }
+
+/* Between 600 and 1024 there is width for Post and Skip to sit beside
+   the entry rather than on a line of their own, which is the whole of
+   the third row. Two lines instead of three: about 60px a row against
+   the 85px the wrapped five-column table produced. */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .recurring-due tr {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "payee payee   amount  action"
+      "date  account account action";
+    align-items: center;
+    column-gap: var(--space-sm);
+  }
+  .recurring-due td:nth-child(5) { padding-top: 0; text-align: right; }
+}
