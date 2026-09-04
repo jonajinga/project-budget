@@ -5,18 +5,21 @@ description: "Tell me what's working, what's broken, and what you wish the app d
 permalink: /app/feedback/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="feedbackForm()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Feedback</p>
-      <h1 class="app-page__title">Tell me how it's going</h1>
-      <p class="app-page__lead" style="margin-top: var(--space-2xs);">
-        Fast questions take 30 seconds. Pick a sentiment, drop a sentence about what's working or not, and you're done. Every message is read personally — no tracking, no marketing follow-up.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="feedbackForm()">
+  {% call appToolbar("Feedback") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context">About 30 seconds</span>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/contact/"
-       data-tip="Use the longer contact form for bug reports, support questions, or partnership inquiries.">Use contact form instead</a>
-  </header>
+    <div class="app-toolbar__actions">
+      <a class="btn btn--ghost btn--sm" href="/app/contact/"
+         data-tip="Use the longer contact form for bug reports, support questions, or partnership inquiries.">Use contact form instead</a>
+      {% call pageInfo(id="feedback", title="About this form", label="What happens to what you send") %}
+        <p>Fast questions take 30 seconds. Pick a sentiment, drop a sentence about what's working or not, and you're done. Every message is read personally - no tracking, no marketing follow-up.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <div class="contact-page__grid">
     <aside class="contact-page__bio">

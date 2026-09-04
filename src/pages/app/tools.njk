@@ -5,16 +5,16 @@ description: "Every utility page in one place — onboarding, backup, health che
 permalink: /app/tools/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Tools</p>
-      <h1 class="app-page__title">Tools</h1>
-      <p class="app-page__lead">
-        Every utility page in one place. The core workflows (Budget, Register, Calendar, Reports) live in the sidebar; the rarer-but-still-useful pages live here.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense">
+  {% call appToolbar("Tools") %}
+    <div class="app-toolbar__actions">
+      {% call pageInfo(id="tools", title="About Tools", label="What lives here and what lives in the sidebar") %}
+        <p>Every utility page in one place. The core workflows (Budget, Register, Calendar, Reports) live in the sidebar; the rarer-but-still-useful pages live here.</p>
+      {% endcall %}
     </div>
-  </header>
+  {% endcall %}
 
   <section class="tools-grid">
     {# Setup #}
@@ -94,8 +94,25 @@ eleventyExcludeFromCollections: true
 </div>
 
 <style>
-  .tools-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); }
-  @media (max-width: 1023px) { .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  /* U5. Sixteen tiles. A hard-coded three columns left the sixteenth
+     alone on its own row at every desktop width.
+
+     auto-fill lets the column count follow the space instead of being
+     stated once. The floor of one quarter of the row caps it at four,
+     which is what stops a very wide window picking five - the other
+     count that cannot come out even, since 16 divides by 1, 2 and 4
+     and not by 3 or 5. */
+  .tools-grid {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fill, minmax(max(15rem, calc((100% - 3 * var(--space-md)) / 4)), 1fr));
+  }
+  /* Between roughly 900 and 1380 the row has space for three tracks
+     and not four. Two columns there rather than a stranded sixteenth
+     tile. */
+  @media (min-width: 600px) and (max-width: 1379px) {
+    .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   @media (max-width: 599px)  { .tools-grid { grid-template-columns: 1fr; } }
   .tools-card { display: block; padding: var(--space-md); background: var(--bg-elevated); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-input); color: var(--fg); text-decoration: none; transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast); }
   .tools-card:hover { background: var(--bg-alt); border-color: var(--accent); transform: translateY(-1px); }

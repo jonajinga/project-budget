@@ -5,78 +5,75 @@ description: "Download a JSON snapshot of every profile in this browser. The fas
 permalink: /app/backup/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="backupView()" x-init="refresh()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Backup</p>
-      <h1 class="app-page__title">Back up your profiles</h1>
-      <p class="app-page__lead">
-        Everything you've entered lives in this browser's localStorage. If the device dies, the cache gets wiped, or you switch browsers, the only way back is a JSON file you downloaded earlier. Take one every week.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+{# U1. The page was five stacked cards, three of them pure prose. A
+   paragraph in a full-width card stops at the global 70ch measure, so
+   two thirds of the page was text and the right third of every prose
+   card was empty. The prose is in the info modal now and the page is
+   one surface: the two things you can actually download, and how long
+   it has been since you last did. #}
+<div class="app-page app-page--dense app-page--fill" x-data="backupView()" x-init="refresh()">
+  {% call appToolbar("Backup") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context">Last backup: <span x-text="lastBackupLabel()"></span></span>
     </div>
-    <button class="btn btn--primary" type="button" @click="backupAll()" :disabled="!hasProfiles">Download backup now</button>
-  </header>
+    <div class="app-toolbar__actions">
+      {% call pageInfo(id="backup", title="About backups", label="What a backup contains and where it goes") %}
+        <p>Everything you've entered lives in this browser's localStorage. If the device dies, the cache gets wiped, or you switch browsers, the only way back is a JSON file you downloaded earlier. Take one every week.</p>
+        <h3>What gets backed up</h3>
+        <ul>
+          <li>Every profile in this browser (not just the active one)</li>
+          <li>All accounts, categories, transactions, payees, goals, recurring templates, snapshots</li>
+          <li>Per-profile settings: theme picks, group collapse state, table sort preferences</li>
+        </ul>
+        <p>The file is plain JSON. Open it in any text editor, store it in Dropbox / iCloud / Google Drive, attach it to an email to yourself - all of these are valid backup strategies.</p>
+        <h3>Restore</h3>
+        <p>If you need to bring a backup back into the app, use <a href="/app/import/">/app/import/</a>. Drop the file in, pick "Import as new" (keeps your current data) or "Replace this profile", and you're back where you were.</p>
+        <h3>Backup hygiene</h3>
+        <ul>
+          <li><strong>Weekly cadence</strong> - set a calendar reminder.</li>
+          <li><strong>Multiple destinations</strong> - local disk + a cloud folder is the minimum.</li>
+          <li><strong>Test restores quarterly</strong> - open one of your backups in a fresh browser to confirm it actually loads.</li>
+          <li><strong>Encrypt at rest</strong> if the backup folder isn't already encrypted (Cryptomator / OS-native FDE / VeraCrypt all work).</li>
+        </ul>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
-  <section class="card" :class="reminderClass()" style="border-left-width: 4px;">
-    <h2 class="card__title" style="margin-top: 0;">Last backup</h2>
-    <p style="font-size: var(--fs-lg); margin: 0;" x-text="lastBackupLabel()"></p>
-    <p style="color: var(--fg-muted); margin: var(--space-2xs) 0 0;" x-text="recommendation()"></p>
-  </section>
-
-  {# Primary action card — two clear paths (all-profile bundle vs
-     active profile only). Both buttons set lastBackupAt so the
-     "last backup" pill above stays accurate. #}
-  <section class="card" style="margin-top: var(--space-md);">
-    <h2 class="card__title" style="margin-top: 0;">Take a backup</h2>
-    <p style="color: var(--fg-muted); margin: 0 0 var(--space-md);">
-      Both options download a plain JSON file. Save it somewhere you trust — a cloud folder, an external drive, or both.
-    </p>
-    <div class="backup-actions">
-      <div class="backup-action">
-        <h3 class="backup-action__title">Every profile in this browser</h3>
-        <p class="backup-action__body">Recommended — one bundle with all profiles, all transactions, and all settings. Restore one or all from <a href="/app/import/">/app/import/</a>.</p>
-        <button class="btn btn--primary" type="button"
-                @click="backupAll()" :disabled="!hasProfiles"
-                data-tip="Bundles every profile in this browser into a single JSON file."
-                x-text="hasProfiles ? ('Download bundle (' + profileCount + ' profile' + (profileCount === 1 ? '' : 's') + ')') : 'No profiles to back up'"></button>
-      </div>
-      <div class="backup-action">
-        <h3 class="backup-action__title">Active profile only</h3>
-        <p class="backup-action__body">A smaller file containing just the currently-open profile. Useful when you want to share or move one budget without exposing the others.</p>
-        <button class="btn btn--secondary" type="button"
-                @click="backupActive()" :disabled="!hasActiveProfile"
-                data-tip="Downloads only the profile currently open in the sidebar.">
-          <span x-text="hasActiveProfile ? ('Download ' + activeName) : 'No active profile'"></span>
-        </button>
+  <div class="panel backup-panel app-grow" :class="reminderClass()">
+    <div class="panel__head">
+      <h2 class="panel__title">Take a backup</h2>
+      <div class="panel__actions">
+        <span class="backup-panel__msg" x-show="lastDownloadMsg" x-cloak x-text="lastDownloadMsg"></span>
       </div>
     </div>
-    <p x-show="lastDownloadMsg" x-cloak style="margin: var(--space-sm) 0 0; color: var(--ok); font-size: var(--fs-sm);" x-text="lastDownloadMsg"></p>
-  </section>
+    <div class="panel__body backup-panel__body">
+      <p class="backup-panel__rec" x-text="recommendation()"></p>
 
-  <section class="card prose" style="margin-top: var(--space-md);">
-    <h2>What gets backed up</h2>
-    <ul>
-      <li>Every profile in this browser (not just the active one)</li>
-      <li>All accounts, categories, transactions, payees, goals, recurring templates, snapshots</li>
-      <li>Per-profile settings: theme picks, group collapse state, table sort preferences</li>
-    </ul>
-    <p>The file is plain JSON. Open it in any text editor, store it in Dropbox / iCloud / Google Drive, attach it to an email to yourself — all of these are valid backup strategies.</p>
-  </section>
+      <div class="backup-actions">
+        <div class="backup-action">
+          <h3 class="backup-action__title">Every profile in this browser</h3>
+          <p class="backup-action__body">Recommended. One bundle with all profiles, all transactions, and all settings. Restore one or all from <a href="/app/import/">/app/import/</a>.</p>
+          <button class="btn btn--primary" type="button"
+                  @click="backupAll()" :disabled="!hasProfiles"
+                  data-tip="Bundles every profile in this browser into a single JSON file."
+                  x-text="hasProfiles ? ('Download bundle (' + profileCount + ' profile' + (profileCount === 1 ? '' : 's') + ')') : 'No profiles to back up'"></button>
+        </div>
+        <div class="backup-action">
+          <h3 class="backup-action__title">Active profile only</h3>
+          <p class="backup-action__body">A smaller file containing just the currently-open profile. Useful when you want to share or move one budget without exposing the others.</p>
+          <button class="btn btn--secondary" type="button"
+                  @click="backupActive()" :disabled="!hasActiveProfile"
+                  data-tip="Downloads only the profile currently open in the sidebar.">
+            <span x-text="hasActiveProfile ? ('Download ' + activeName) : 'No active profile'"></span>
+          </button>
+        </div>
+      </div>
 
-  <section class="card prose" style="margin-top: var(--space-md);">
-    <h2>Restore</h2>
-    <p>If you need to bring a backup back into the app, use <a href="/app/import/">/app/import/</a>. Drop the file in, pick "Import as new" (keeps your current data) or "Replace this profile", and you're back where you were.</p>
-  </section>
-
-  <section class="card prose" style="margin-top: var(--space-md);">
-    <h2>Backup hygiene</h2>
-    <ul>
-      <li><strong>Weekly cadence</strong> — set a calendar reminder.</li>
-      <li><strong>Multiple destinations</strong> — local disk + a cloud folder is the minimum.</li>
-      <li><strong>Test restores quarterly</strong> — open one of your backups in a fresh browser to confirm it actually loads.</li>
-      <li><strong>Encrypt at rest</strong> if the backup folder isn't already encrypted (Cryptomator / OS-native FDE / VeraCrypt all work).</li>
-    </ul>
-  </section>
+      <p class="backup-panel__note">Both options download a plain JSON file. Save it somewhere you trust: a cloud folder, an external drive, or both.</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -142,11 +139,13 @@ function backupView() {
       if (d < 30) return "It's been over a week — refresh your backup.";
       return "It's been over a month. Take a fresh backup before you make more changes.";
     },
+    /* Rail colour on the one panel. Renamed off card-- when the page
+       stopped being a stack of cards. */
     reminderClass() {
       var d = this.daysSince();
-      if (!isFinite(d) || d >= 30) return "card--danger-rail";
-      if (d >= 7) return "card--warn-rail";
-      return "card--ok-rail";
+      if (!isFinite(d) || d >= 30) return "backup-panel--danger";
+      if (d >= 7) return "backup-panel--warn";
+      return "backup-panel--ok";
     },
     backupAll() {
       this.$store.budget.exportAllProfilesJSON();
@@ -170,12 +169,22 @@ function backupView() {
 </script>
 
 <style>
-  .card--ok-rail     { border-left: 4px solid var(--ok) !important; }
-  .card--warn-rail   { border-left: 4px solid var(--warn) !important; }
-  .card--danger-rail { border-left: 4px solid var(--danger) !important; }
+  /* One surface, with a rail whose colour says how overdue you are. */
+  .backup-panel { display: flex; flex-direction: column; border-left: 4px solid var(--border); }
+  .backup-panel--ok     { border-left-color: var(--ok); }
+  .backup-panel--warn   { border-left-color: var(--warn); }
+  .backup-panel--danger { border-left-color: var(--danger); }
+  .backup-panel__body { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--space-md); }
+  /* The global p { max-width: 70ch } is what left the old prose cards
+     two thirds full. These two lines belong to the panel, so they get
+     the panel's width. */
+  .backup-panel__rec { margin: 0; max-width: none; font-size: var(--fs-lg); }
+  .backup-panel__note { margin: 0; max-width: none; color: var(--fg-muted); font-size: var(--fs-sm); }
+  .backup-panel__msg { color: var(--ok); font-size: var(--fs-sm); }
   .backup-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
   @media (max-width: 899px) { .backup-actions { grid-template-columns: 1fr; } }
-  .backup-action { padding: var(--space-md); background: var(--bg-alt); border: 1px solid var(--border-soft); border-radius: var(--radius-input); }
+  .backup-action { display: flex; flex-direction: column; padding: var(--space-md); background: var(--bg-alt); border: 1px solid var(--border-soft); border-radius: var(--radius-input); }
+  .backup-action .btn { margin-top: auto; align-self: flex-start; }
   .backup-action__title { margin: 0 0 var(--space-2xs); font-family: var(--font-display); font-size: var(--fs-lg); }
-  .backup-action__body { margin: 0 0 var(--space-sm); color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.5; }
+  .backup-action__body { margin: 0 0 var(--space-sm); max-width: none; color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.5; }
 </style>

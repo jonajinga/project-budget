@@ -5,18 +5,21 @@ description: "Loved the app? Write a short public review. Reviews you opt to pub
 permalink: /app/review/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="reviewForm()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Review</p>
-      <h1 class="app-page__title">Write a short review</h1>
-      <p class="app-page__lead" style="margin-top: var(--space-2xs);">
-        If Project Budget helps you stay on top of your money, a few sentences mean a lot. Reviews you mark publishable appear on the site with attribution — you control whether your name + city show.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="reviewForm()">
+  {% call appToolbar("Write a review") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context">You choose what gets published</span>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/feedback/"
-       data-tip="Use the feedback form for private notes — bug reports, suggestions, what's not working.">Private feedback instead</a>
-  </header>
+    <div class="app-toolbar__actions">
+      <a class="btn btn--ghost btn--sm" href="/app/feedback/"
+         data-tip="Use the feedback form for private notes - bug reports, suggestions, what's not working.">Private feedback instead</a>
+      {% call pageInfo(id="review", title="About reviews", label="Where a review appears and what you control") %}
+        <p>If Project Budget helps you stay on top of your money, a few sentences mean a lot. Reviews you mark publishable appear on the site with attribution - you control whether your name + city show.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <div class="contact-page__grid">
     <aside class="contact-page__bio">

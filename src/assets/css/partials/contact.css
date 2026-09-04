@@ -35,6 +35,12 @@
   .contact-page__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); }
 }
 
+/* S8. In the app the grid gets the whole working area, and on a 2000px
+   window that made the message textarea 940 pixels wide. The chrome
+   around a form can be app-wide; the form itself still wants a reading
+   measure. */
+.app-page > .contact-page__grid { max-width: 72rem; }
+
 .contact-page__bio {
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
