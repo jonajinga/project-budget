@@ -710,6 +710,7 @@
    The direct-child combinator is doing real work: the category and
    cuts pages nest their .kpi-strip inside a section, and their tile
    counts are not four, so they keep the shared three-up. */
+/* breakpoint-contract: allow -- 1120: above this a four-tile strip fits one row; below, two-up has no gap */
 @media (min-width: 600px) and (max-width: 1120px) {
   .app-page--dense > .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
