@@ -236,6 +236,15 @@
     padding-right: var(--space-2xs);
   }
 }
+
+/* Print. A page box is about 816 CSS pixels, so without this the
+   printed register would pick up the tablet rules: memo dropped by
+   .col-p3 and the columns squeezed to a screen width the paper does
+   not have. Paper gets the content-sized table it had before. */
+@media print {
+  .register__table { table-layout: auto; }
+  .register__table .col-memo { display: table-cell !important; }
+}
 .register__table th {
   font-weight: 600;
   color: var(--fg-muted);
