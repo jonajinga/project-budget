@@ -377,7 +377,13 @@ export default function (eleventyConfig) {
             /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/,
           ],
           greedy: [
-            /^data-theme/, /^data-touch/, /^data-tip/,
+            /* An attribute that only ever appears Alpine-bound is written
+               ":data-widget-kind" in the templates, and the extractor reads
+               the colon as part of the token, so the bare attribute name is
+               never found and every rule using it is dropped from the built
+               CSS with no warning. Any new [data-*] selector whose attribute
+               is set with a binding needs a line here. */
+            /^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/,
             /^aria-/, /^tippy/, /^popper/, /^sortable/,
           ],
           deep: [/dialog/, /sortable/, /tippy/, /popper/],
@@ -422,8 +428,9 @@ export default function (eleventyConfig) {
             /^rec-/, /^cat-row/, /^cat-group/, /^acct-group/,
             /^budget__/, /^cal-/, /^register__/,
             /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/, /^acct-cards/,
+            /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/, /^dash-/,
           ],
-          greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^aria-/],
+          greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/, /^aria-/],
           deep: [/dialog/, /sortable/, /tippy/, /popper/],
         };
         let perPageBefore = 0, perPageAfter = 0, pagesInlined = 0;
