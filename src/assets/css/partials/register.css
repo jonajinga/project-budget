@@ -99,14 +99,12 @@
   outline-offset: 1px;
 }
 .cell-amount-edit .cell-input { flex: 1 1 auto; min-width: 0; }
-/* Only enforce min-width on desktop where horizontal scrolling
-   makes sense; on mobile the card view renders instead (see the
-   isMobile check in register.njk). The previous unconditional
-   720px min-width forced horizontal scroll on every viewport
-   under 768px regardless of whether the card view was showing. */
-@media (min-width: 768px) {
-  .register__table { min-width: 720px; }
-}
+/* No min-width. A 720px floor plus content-sized columns is what made
+   the table 1150px wide inside a 1108px card at 1440 (Actions clipped to
+   "ACTI") and 1150px inside a 695px card at 1024 (Amount, Cleared and
+   Actions off the right edge entirely). The table is now table-layout:
+   fixed at width 100%, so it is exactly as wide as its card at every
+   width and the columns share out what there is. */
 .register__filters .select {
   min-width: 0;
   flex: 1 1 auto;
@@ -146,6 +144,10 @@
 
 .register__table {
   width: 100%;
+  /* Fixed layout is what keeps the table inside its card. With auto
+     layout the columns size to their content and the table ran 1150px
+     wide whatever the card could give it. */
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-size: var(--fs-sm);
@@ -168,13 +170,72 @@
   text-overflow: ellipsis;
 }
 
-/* Payee and memo are the two that genuinely run long, so they get the
-   space and take the ellipsis. max-width on a table cell needs a width to
-   resolve against, which is what these percentages provide. */
-.register__table td:nth-child(4),
-.register__table th:nth-child(4) { max-width: 22ch; }
-.register__table td:nth-child(6),
-.register__table th:nth-child(6) { max-width: 24ch; }
+/* Column widths. table-layout: fixed takes them from the header row, so
+   they are set on the <th> classes; the matching class on each <td> is
+   only there for .col-p3 (Memo hides at tablet) and for alignment.
+
+   nth-child() cannot be used here: every cell in a body row is rendered
+   by an Alpine <template x-if> that stays in the DOM beside it, so the
+   row's children alternate template, td, template, td... The two
+   max-width rules that used to live here (td:nth-child(4) and (6))
+   therefore never matched anything.
+
+   Percentages for the four text columns, rem for the five that hold a
+   fixed-size thing (a checkbox, a date, a money string, a 24px toggle,
+   a 32px kebab). Payee and memo take the ellipsis; the full value is in
+   each cell's data-tip. */
+.register__table .col-select   { width: 2.25rem; }
+.register__table .col-date     { width: 6.25rem; }
+.register__table .col-account  { width: 14%; }
+.register__table .col-payee    { width: 22%; }
+.register__table .col-category { width: 17%; }
+/* Memo is deliberately the one column with no width: in a fixed layout
+   the columns that name a width are served first and whatever is left
+   goes to the ones that do not. That makes memo the shock absorber, so
+   the eight columns that matter keep their room at every card width and
+   the table never grows past its card. At 1024 and below memo is gone
+   entirely (.col-p3 in the markup). */
+.register__table .col-amount   { width: 6.5rem; }
+.register__table .col-cleared  { width: 2.5rem; }
+.register__table .col-actions  { width: 2.75rem; }
+
+/* The columns whose contents are a fixed-size control get the narrow
+   padding, or the control does not fit the column and the cell's own
+   overflow: hidden clips it. The cleared column takes no padding at
+   all: the toggle is 24px and the whitespace around it in the markup
+   is another 7, which was enough to overflow a 36px cell. */
+.register__table .col-select,
+.register__table .col-actions {
+  padding-left: var(--space-3xs);
+  padding-right: var(--space-3xs);
+}
+.register__table .col-cleared { padding-left: 0; padding-right: 0; }
+/* The toggle's 44px hit overlay (.cleared-toggle::before, inset -13px)
+   is wider than this column, so it spilled into the neighbouring cells
+   and was counted as cell overflow. Sized to the cell instead: 40x32 is
+   still comfortably over the 24x24 target minimum, and the overlay no
+   longer sits on top of the amount cell's click-to-edit area. */
+.register__table .col-cleared .cleared-toggle::before { inset: -4px -8px; }
+
+/* Above 1250 the card is wide enough (about 918px and up) to give the
+   date, the amount and the two longest text columns their full natural
+   width, so nothing takes an ellipsis that does not have to. Below it
+   the compact set above applies and the long names ellipsize with the
+   full value in the cell's tooltip. */
+@media (min-width: 1250px) {
+  .register__table .col-date     { width: 7rem; }
+  .register__table .col-account  { width: 15%; }
+  .register__table .col-payee    { width: 23%; }
+  .register__table .col-amount   { width: 7rem; }
+}
+
+@media (max-width: 1249px) {
+  .register__table th,
+  .register__table td {
+    padding-left: var(--space-2xs);
+    padding-right: var(--space-2xs);
+  }
+}
 .register__table th {
   font-weight: 600;
   color: var(--fg-muted);
@@ -209,7 +270,7 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.register__table .col-cleared { width: 36px; text-align: center; }
+.register__table .col-cleared { text-align: center; }
 .register__row--reconciled td { color: var(--fg-muted); }
 .register__row--reconciled td:not(.col-cleared)::before {
   content: "";
@@ -371,40 +432,69 @@
 .register__card {
   border-bottom: 1px solid var(--border-soft);
 }
-.register__card.is-reconciled .register__card-summary { background: rgba(31, 95, 73, 0.04); }
+.register__card.is-reconciled .register__card-row { background: rgba(31, 95, 73, 0.04); }
 .register__card.is-editing { background: var(--accent-soft); }
 
+/* ---- Phone row: two lines, about 56px ----------------------------
+   Line one is the leading checkbox, the date, the payee and the
+   amount. Line two is account and category, with memo and cleared as
+   small marks. It used to be four stacked bands - checkbox on a line
+   of its own, then date/payee/amount, then a meta line - which came
+   to 104px a row and put roughly five transactions on a screen.
+
+   The heights: 20px for line one, 16px for line two, 2px between and
+   8px of padding top and bottom, so the natural height is ~54 and the
+   min-height rounds it to 56. */
+.register__card-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 56px;
+  padding: var(--space-2xs) var(--space-xs);
+}
 .register__card-summary {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  grid-template-areas:
-    "date  payee  amount"
-    "meta  meta   meta";
-  gap: var(--space-3xs) var(--space-sm);
-  align-items: baseline;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
   background: transparent;
   border: 0;
-  padding: var(--space-sm);
+  padding: 0;
   text-align: left;
   color: inherit;
   font: inherit;
   cursor: pointer;
-  min-height: 56px;
 }
-.register__card-summary:hover { background: var(--bg-alt); }
+.register__card-row:hover { background: var(--bg-alt); }
 .register__card-summary:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
+}
+
+.register__card-l1 {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  line-height: 1.35;
+}
+.register__card-l2 {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--fg-muted);
 }
 .register__card-date {
-  grid-area: date;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .register__card-payee {
-  grid-area: payee;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -412,20 +502,39 @@
   min-width: 0;
 }
 .register__card-amount {
-  grid-area: amount;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.register__card-meta {
-  grid-area: meta;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2xs) var(--space-sm);
-  font-size: var(--fs-sm);
-  color: var(--fg-muted);
+.register__card-account,
+.register__card-category {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
-.register__card-cleared-flag { color: var(--accent); }
+.register__card-account  { flex: 0 1 auto; }
+.register__card-category { flex: 1 1 auto; }
+.register__card-sep      { flex: 0 0 auto; }
+/* Memo and cleared are marks, not columns: an "M" chip and a tick,
+   pushed to the right end of line two. */
+.register__card-marks {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.register__card-mark {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 1.1;
+  padding: 0 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  color: var(--fg-subtle);
+}
+.register__card-mark--cleared { color: var(--ok); border-color: var(--ok); }
 
 .register__card-details,
 .register__card-edit {
@@ -471,15 +580,19 @@
   background: color-mix(in oklab, var(--accent) 12%, transparent) !important;
 }
 .register__card { position: relative; }
+/* Leading checkbox: its own column at the left of the row, centred
+   against both lines. The old rule padded it into a band of its own
+   above the date. */
 .register__card-select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2xs) var(--space-sm) 0;
+  flex: 0 0 auto;
+  padding: 0;
   cursor: pointer;
 }
 .register__card-select .register__bulk-check {
-  width: 1.25rem; height: 1.25rem;
+  width: 1.15rem; height: 1.15rem;
 }
 .register__card.is-selected {
   background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
@@ -627,17 +740,22 @@
 .acct-spark--down { color: var(--danger); }
 .acct-spark--flat { color: var(--text-soft); }
 
-/* ── "Recurring transactions due" on a phone ──────────────────────────
+/* ── "Recurring transactions due" on a phone and a tablet ──────────
    Five columns (Date, Account, Payee, Amount, Actions) do not fit in
    390px. The generic .table fallback makes it scroll sideways inside its
    own container, which put Amount -- the number the whole panel exists to
    show you -- off the right edge, cut mid-figure.
 
+   The same layout now runs up to 1024 inclusive. At 1024 the sidebar
+   costs the page 266px, the banner card is ~695px, and the five-column
+   table wrapped every cell in it: the date broke across two lines,
+   account and payee wrapped, and Post/Skip stacked, giving 85px rows.
+
    Rebuilt as rows rather than a grid: Payee and Amount on the headline,
    Date and Account beneath it, Actions on their own line. Same markup and
    the same table semantics for a screen reader; only the visual layout
    changes, so `scope` and the header row still do their job. */
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .recurring-due,
   .recurring-due tbody,
   .recurring-due tr,

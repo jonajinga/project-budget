@@ -405,7 +405,10 @@ function registerView() {
       return this._txnByIdCache.get(t.transferTxnId) || t;
     },
 
-    formatCents(c) { return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
+    /* Delegates to the one store formatter (store.js formatCents) so a
+       change to how money is written lands here too. Same output as the
+       local copy this replaced: cents always, thousands separators. */
+    formatCents(c) { return this.$store.budget.formatCents(c); },
 
     /* "May 15" big + "2026" muted on one line. Keeps the column narrow
        and easy to scan, while exposing the full ISO via the row's
