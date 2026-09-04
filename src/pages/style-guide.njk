@@ -237,7 +237,12 @@ function rta(profile, month) {
 <ul>
   <li><strong>Column priority.</strong> Add <code>.col-p3</code> to a header and its cells to hide that column at 1024px and below, <code>.col-p2</code> to hide it below 600px. Money and action columns never carry a priority class.</li>
   <li><strong>Scroll.</strong> Wrap a wide table in <code>.table-scroll</code>. Add <code>.table-scroll--sticky-first</code> to pin the name column while the numbers scroll.</li>
-  <li><strong>Sticky header.</strong> Add <code>.table--sticky-head</code> on tables over about fifteen rows.</li>
+  <li><strong>Sticky header.</strong> Add <code>.table--sticky-head</code> on tables over about fifteen rows.
+    It only works if nothing between the header and the viewport scrolls, and <code>.card</code> sets
+    <code>overflow-x: auto</code>, which makes the card itself a scrollport: the header then pins to a box that
+    never scrolls vertically and appears not to stick at all. A table inside a card needs
+    <code>overflow: visible</code> on that card, which is safe once the table is <code>table-layout: fixed</code>.
+    Offset the header by the site header too: <code>top: 4rem</code>, not <code>0</code>.</li>
   <li><strong>Stack on phones.</strong> Add <code>.table--stack</code> and give each cell <code>data-label="Column"</code>. The first cell becomes the card title; a cell with <code>.table__actions</code> holds the kebab menu in the corner.</li>
 </ul>
 <div class="table-scroll table-scroll--sticky-first">

@@ -245,3 +245,20 @@
   .acct-table .acct-row td[data-label] > * { margin-left: 0; }
   .acct-table tbody td { line-height: 1.45; }
 }
+
+/* print.css hides .group-toggle app-wide, on the reasoning that it is
+   a control. On this page the group NAME lives inside that button, so
+   a printed accounts page has always lost its group headings. It
+   mattered less when the pills were inside the button too and went
+   with it; now that they sit outside so they can wrap, a printed
+   group row would be "2 accounts $27,768.99" with no name attached.
+
+   Specificity, not order: print.css is concatenated after this file
+   and its rule carries !important, so an equal-specificity !important
+   here would lose. (0,2,0) beats (0,1,0). */
+@media print {
+  .acct-table .acct-grouphead__toggle { display: inline-flex !important; }
+  .acct-table .acct-grouphead__toggle .group-toggle__chevron { display: none; }
+  .acct-table .acct-grouphead__actions,
+  .acct-table .table__actions { display: none; }
+}
