@@ -188,15 +188,23 @@ eleventyExcludeFromCollections: true
                    data-tip="Select / deselect every transaction currently shown.">
           </th>
           <th scope="col" class="col-date" data-tip="Date the transaction occurred.">Date</th>
-          <th scope="col" data-tip="Account the entry belongs to.">Account</th>
+          <th scope="col" class="col-account" data-tip="Account the entry belongs to.">Account</th>
           <th scope="col" class="col-payee" data-tip="Payee or transfer description.">Payee</th>
-          <th scope="col" data-tip="Category assigned to this entry. Splits show a 'split (N)' badge.">Category</th>
-          <th scope="col" data-tip="Short note. Optional.">Memo</th>
-          <th scope="col" class="num" data-tip="Negative = outflow (red). Positive = inflow (green).">Amount</th>
+          <th scope="col" class="col-category" data-tip="Category assigned to this entry. Splits show a 'split (N)' badge.">Category</th>
+          {# Memo is the register's lowest-value column, so it carries the
+             shared .col-p3 priority class and is the first to go when the
+             card gets narrow. Amount, cleared and Actions never carry one. #}
+          <th scope="col" class="col-memo col-p3" data-tip="Short note. Optional.">Memo</th>
+          <th scope="col" class="col-amount num" data-tip="Negative = outflow (red). Positive = inflow (green).">Amount</th>
           <th scope="col" class="col-cleared" data-tip="Cleared = posted at your bank. Reconciled (R) means it's locked from edits.">
             <span aria-label="Cleared">C</span>
           </th>
-          <th scope="col" class="num" data-tip="Edit, split, delete, or unlock the row.">Actions</th>
+          {# The word "Actions" needs ~62px of type; the column only needs
+             room for one kebab. Showing the word forced the column wider
+             than the card and clipped it to "ACTI" at 1440. #}
+          <th scope="col" class="col-actions num" data-tip="Edit, split, delete, or unlock the row.">
+            <span class="visually-hidden">Actions</span>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -242,7 +250,7 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="cell--edit"
+              <td class="col-account cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
                   :data-tip="$store.budget.findAccount(t.accountId)?.name || ''"
                   :data-cell="t.id + ':accountId'"
@@ -294,7 +302,7 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="cell--edit"
+              <td class="col-category cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId || t.splits }"
                   :data-tip="$store.budget.categoryName(t.categoryId) || ''"
                   :data-cell="t.id + ':categoryId'"
@@ -327,7 +335,7 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="cell--edit"
+              <td class="col-memo col-p3 cell--edit"
                   :class="{ 'is-locked': t.reconciled || t.transferTxnId }"
                   :data-tip="t.memo || ''"
                   :data-cell="t.id + ':memo'"
@@ -351,7 +359,7 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="num cell--edit cell--amount"
+              <td class="col-amount num cell--edit cell--amount"
                   :class="[t.amount < 0 ? 'amount--outflow' : 'amount--inflow', (t.reconciled || t.transferTxnId) ? 'is-locked' : '']"
                   :data-tip="(t.amount < 0 ? 'Outflow ' : 'Inflow ') + formatCents(Math.abs(t.amount))"
                   :data-cell="t.id + ':amount'"
@@ -403,7 +411,7 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId !== t.id">
-              <td class="num" @click.stop>
+              <td class="col-actions num" @click.stop>
                 <div class="cluster" style="justify-content: flex-end; flex-wrap: nowrap; gap: var(--space-3xs);">
                   {# Edit / Split / Unlock / Recurring / Delete collapse
                      into a kebab so the row stops carrying 4-5 icons
@@ -439,10 +447,10 @@ eleventyExcludeFromCollections: true
 
             {# Edit mode #}
             <template x-if="editingId === t.id">
-              <td><input class="input" type="date" x-model="edit.date" aria-label="Date" @keydown.escape="cancelEdit()"></td>
+              <td class="col-date"><input class="input" type="date" x-model="edit.date" aria-label="Date" @keydown.escape="cancelEdit()"></td>
             </template>
             <template x-if="editingId === t.id">
-              <td>
+              <td class="col-account">
                 <select class="select" x-model="edit.accountId" aria-label="Account">
                   <template x-for="a in openAccounts" :key="a.id">
                     <option :value="a.id" x-text="a.name"></option>
@@ -451,10 +459,10 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId === t.id">
-              <td><input class="input" type="text" x-model="edit.payeeName" aria-label="Payee"></td>
+              <td class="col-payee"><input class="input" type="text" x-model="edit.payeeName" aria-label="Payee"></td>
             </template>
             <template x-if="editingId === t.id">
-              <td>
+              <td class="col-category">
                 <select class="select" x-model="edit.categoryId" aria-label="Category">
                   <option value="">(uncategorized)</option>
                   <template x-for="c in selectableCategoriesForType(edit.type)" :key="c.id">
@@ -464,10 +472,10 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId === t.id">
-              <td><input class="input" type="text" x-model="edit.memo" aria-label="Memo"></td>
+              <td class="col-memo col-p3"><input class="input" type="text" x-model="edit.memo" aria-label="Memo"></td>
             </template>
             <template x-if="editingId === t.id">
-              <td class="num">
+              <td class="col-amount num">
                 {# Stack the Outflow/Inflow toggle ABOVE the amount
                    input so the column stays narrow but the sign
                    indicator is always visible. The amount field is
@@ -507,10 +515,20 @@ eleventyExcludeFromCollections: true
               </td>
             </template>
             <template x-if="editingId === t.id">
-              <td class="num">
-                <div class="cluster register__edit-actions">
-                  <button class="btn btn--primary btn--sm" type="button" @click="saveEdit()">Save</button>
-                  <button class="btn btn--ghost btn--sm" type="button" @click="cancelEdit()">Cancel</button>
+              {# Save and Cancel as stacked icon buttons. The Actions column
+                 is 44px wide - it holds one kebab - and the words did not
+                 fit it, so they spilled across the cleared column and out
+                 of the card. Both keep an aria-label and a tooltip. #}
+              <td class="col-actions num">
+                <div class="register__edit-actions">
+                  <button class="btn btn--icon register__edit-save" type="button"
+                          @click="saveEdit()" aria-label="Save changes" data-tip="Save changes">
+                    <span aria-hidden="true">&#10003;</span>
+                  </button>
+                  <button class="btn btn--icon register__edit-cancel" type="button"
+                          @click="cancelEdit()" aria-label="Cancel editing" data-tip="Cancel editing">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
                 </div>
               </td>
             </template>
@@ -546,42 +564,53 @@ eleventyExcludeFromCollections: true
       <template x-for="t in pagedTransactions()" :key="t.id">
         <li class="register__card"
             :class="{ 'is-expanded': expandedTxnId === t.id, 'is-reconciled': t.reconciled, 'is-editing': editingId === t.id, 'is-selected': isTxnSelected(t.id) }">
-          {# Persistent select checkbox on mobile cards — sits inline
-             before the tap-to-expand summary so it doesn't fight for
-             the tap. The Select-mode toggle was dropped; the checkbox
-             is always visible and tapping it opens the bulk bar. #}
-          <label class="register__card-select">
-            <input type="checkbox" class="register__bulk-check"
-                   :checked="isTxnSelected(t.id)"
-                   @change="toggleTxnSelected(t.id)"
-                   :disabled="t.reconciled"
-                   :aria-label="'Select ' + ($store.budget.payeeName(t.payeeId) || 'transaction')">
-          </label>
-          {# Compact summary — tap to expand. Becomes a heading button so it
-             is keyboard reachable; the inner card form (when expanded) is
-             still tab-navigable normally. #}
-          <button type="button" class="register__card-summary"
-                  x-show="editingId !== t.id"
-                  @click="expandedTxnId = (expandedTxnId === t.id ? null : t.id)"
-                  :aria-expanded="(expandedTxnId === t.id).toString()">
-            <span class="register__card-date" x-text="t.date"></span>
-            <span class="register__card-payee"
-                  x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '(no payee)')"></span>
-            <span class="register__card-amount"
-                  :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="formatCents(t.amount)"></span>
-            <span class="register__card-meta">
-              <span x-show="!t.splits" x-cloak x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? 'Transfer' : 'Uncategorized')"></span>
-              <span x-show="t.splits" x-cloak class="badge">split (<span x-text="t.splits?.length"></span>)</span>
-              <span x-show="t.cleared" x-cloak class="register__card-cleared-flag" aria-label="Cleared">&#10003; cleared</span>
-            </span>
-          </button>
+          {# Two lines, about 56px tall. Line one is the leading checkbox,
+             date, payee and amount; line two is account and category with
+             memo and cleared shown as small marks. The checkbox used to sit
+             on a line of its own above the date, which is most of why these
+             cards ran 104px. Tapping the row still opens the action panel. #}
+          <div class="register__card-row" x-show="editingId !== t.id">
+            <label class="register__card-select">
+              <input type="checkbox" class="register__bulk-check"
+                     :checked="isTxnSelected(t.id)"
+                     @change="toggleTxnSelected(t.id)"
+                     :disabled="t.reconciled"
+                     :aria-label="'Select ' + ($store.budget.payeeName(t.payeeId) || 'transaction')">
+            </label>
+            <button type="button" class="register__card-summary"
+                    @click="expandedTxnId = (expandedTxnId === t.id ? null : t.id)"
+                    :aria-expanded="(expandedTxnId === t.id).toString()">
+              <span class="register__card-l1">
+                <span class="register__card-date" x-text="t.date"></span>
+                <span class="register__card-payee"
+                      x-text="t.transferTxnId ? ('Transfer ' + ($store.budget.findAccount(otherSide(t).accountId)?.name || '')) : ($store.budget.payeeName(t.payeeId) || '(no payee)')"></span>
+                <span class="register__card-amount"
+                      :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                      x-text="formatCents(t.amount)"></span>
+              </span>
+              <span class="register__card-l2">
+                <span class="register__card-account"
+                      x-text="$store.budget.findAccount(t.accountId)?.name || '&#8212;'"></span>
+                <span class="register__card-sep" aria-hidden="true">&#183;</span>
+                <span class="register__card-category" x-show="!t.splits" x-cloak
+                      x-text="$store.budget.categoryName(t.categoryId) || (t.transferTxnId ? 'Transfer' : 'Uncategorized')"></span>
+                <span class="register__card-category" x-show="t.splits" x-cloak>split (<span x-text="t.splits?.length"></span>)</span>
+                <span class="register__card-marks">
+                  <span class="register__card-mark" x-show="t.memo" x-cloak
+                        :aria-label="'Memo: ' + (t.memo || '')" :title="t.memo || ''">M</span>
+                  <span class="register__card-mark register__card-mark--cleared"
+                        x-show="t.cleared" x-cloak aria-label="Cleared" title="Cleared">&#10003;</span>
+                </span>
+              </span>
+            </button>
+          </div>
 
           {# Expanded details — appear only when this card is the active one
              and not in edit mode. #}
           <div class="register__card-details" x-show="expandedTxnId === t.id && editingId !== t.id" x-cloak>
             <dl class="register__card-dl">
-              <div><dt>Account</dt><dd x-text="$store.budget.findAccount(t.accountId)?.name || '—'"></dd></div>
+              {# Account moved to line two of the row itself; only the memo
+                 needs the full-text panel, since the row shows it as a mark. #}
               <div x-show="t.memo" x-cloak><dt>Memo</dt><dd x-text="t.memo"></dd></div>
             </dl>
             <div class="cluster" style="flex-wrap: wrap;">

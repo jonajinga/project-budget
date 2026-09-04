@@ -492,8 +492,10 @@
    the kebab and sits in the top-right corner. Money cells keep .num.
    When a table stacks, the plain-table phone fallback (display:block
    scroll) must not also apply, so the stack rule wins by specificity. */
-/* 1024px counts as tablet: it is iPad landscape, the width the sweep
-   measures, and the width where six-column tables started scrolling. */
+/* 1024 inclusive, not 1023. It is iPad landscape, and it is where the
+   sidebar first takes its 266px out of the page, so 1024 is the
+   narrowest a page card ever gets: the one width this rule exists for.
+   Reached independently by two agents on the same day. */
 @media (max-width: 1024px) { .col-p3 { display: none !important; } }
 @media (max-width: 599px)  { .col-p2 { display: none !important; } }
 
