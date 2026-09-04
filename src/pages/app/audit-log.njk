@@ -81,7 +81,12 @@ eleventyExcludeFromCollections: true
     No events in this window.
   </p>
 
-  <table class="table" x-show="events().length" x-cloak>
+  {# table--stack, because this table has nowhere to scroll. It is a
+     direct child of the flush page rather than a card, and .app-main
+     is overflow-x: clip, so at 390 the Detail column pushed Amount to
+     x=802 and it was simply unreachable - no scrollbar, no gesture.
+     Below 600 each row becomes a card instead. #}
+  <table class="table table--stack" x-show="events().length" x-cloak>
     <thead>
       <tr>
         <th>When</th>
@@ -94,11 +99,11 @@ eleventyExcludeFromCollections: true
       <template x-for="(e, i) in events()" :key="i">
         <tr>
           <td style="white-space: nowrap;" x-text="e.date"></td>
-          <td>
+          <td data-label="Event">
             <span class="audit-badge" :class="'audit-badge--' + e.kind" x-text="e.label"></span>
           </td>
-          <td x-text="e.detail"></td>
-          <td class="num" :class="e.amount < 0 ? 'amount--outflow' : (e.amount > 0 ? 'amount--inflow' : '')"
+          <td data-label="Detail" x-text="e.detail"></td>
+          <td class="num" data-label="Amount" :class="e.amount < 0 ? 'amount--outflow' : (e.amount > 0 ? 'amount--inflow' : '')"
               x-text="e.amount != null ? formatCents(e.amount) : ''"></td>
         </tr>
       </template>
