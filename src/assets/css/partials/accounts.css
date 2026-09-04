@@ -193,11 +193,55 @@
     font-weight: inherit;
   }
   .acct-table tbody:first-of-type .acct-grouprow { margin-top: 0; }
-  /* The name is the card title: it gets the full width of the card
-     less the corner kebab, which is what stopped "Odyssey loan
-     (Honda Financial)" fitting in the old two-column phone card. */
-  .acct-table .acct-table__name { padding-right: 40px; }
-  .acct-table .acct-table__name-text { font-size: var(--fs-md); }
-  .acct-table__type { text-overflow: clip; }
+  /* Two lines per account, the shape the old .acct-cards list had:
+     name and balance on the first, type on the second, kebab down
+     the right. .table--stack on its own gives one line per cell,
+     which read fine but ran the phone page from 3,849px to 4,370px.
+     This is 56px a row and 3,163px for the page.
+
+     The name has the whole first line. It shared it with the balance
+     for one iteration, which left it 184px against the 194px "Maya
+     student loan (Nelnet)" needs at this size - measured, and it
+     came back through the check as a clipped name. It gets 274px
+     now; the old two-column card gave it 144px. */
+  .acct-table .acct-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name name act"
+      "type bal  act";
+    align-items: center;
+    column-gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-xs);
+    min-height: 56px;
+  }
+  .acct-table .acct-row > .acct-table__name { grid-area: name; display: block; padding: 0; }
+  .acct-table .acct-row > .acct-table__type {
+    grid-area: type;
+    display: block;
+    padding: 0;
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    text-overflow: clip;
+  }
+  .acct-table .acct-row > .acct-table__bal {
+    grid-area: bal;
+    display: block;
+    padding: 0;
+    text-align: right;
+    font-weight: 600;
+  }
+  .acct-table .acct-row > .table__actions {
+    grid-area: act;
+    position: static;
+    display: block;
+    width: auto;
+    padding: 0;
+  }
+  /* The stack recipe prints data-label in front of every cell. Here
+     the second line IS the type and the figure on the right IS the
+     balance, so the labels would only cost height. */
+  .acct-table .acct-row td[data-label]::before { content: none; }
+  .acct-table .acct-row td[data-label] > * { margin-left: 0; }
   .acct-table tbody td { line-height: 1.45; }
 }
