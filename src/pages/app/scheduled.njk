@@ -44,7 +44,10 @@ eleventyExcludeFromCollections: true
      to filter to outflows, Active templates / Net monthly to clear
      filters back to the full set. Active filter gets a ring so the
      user can see which tile is driving the visible list. #}
-  <section class="rec-summary" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
+  {# --tight is page-scoped on purpose. .rec-summary is shared with the
+     accounts, payees, trash, dashboard, health-check and about-this-profile
+     pages, and the phone shape of those is not this task's to change. #}
+  <section class="rec-summary rec-summary--tight" x-show="$store.budget.profile && $store.budget.profile.scheduled.length" x-cloak>
     <button type="button" class="rec-summary__tile rec-summary__tile--accent"
             :class="filterKind === 'all' ? 'is-active' : ''"
             :aria-pressed="(filterKind === 'all').toString()"
@@ -84,10 +87,11 @@ eleventyExcludeFromCollections: true
   <section class="card">
     <div class="rec-toolbar">
       <div class="rec-toolbar__search field">
-        <label class="visually-hidden" for="rec-search">Search recurring</label>
+        <label class="visually-hidden" for="rec-search">Search recurring by payee, memo, account or category</label>
         <input class="input" id="rec-search" type="search"
                x-model="searchQuery"
-               placeholder="Search payee, memo, account, category…">
+               data-tip="Searches payee, memo, account and category."
+               placeholder="Search recurring…">
       </div>
       <div class="rec-toolbar__filters">
         <div class="field">
@@ -131,71 +135,103 @@ eleventyExcludeFromCollections: true
       </p>
     </div>
 
-    {# ---- Mobile card list (<600px). Mirrors the register's
-       responsive pattern: table on desktop, stacked cards on phones.
-       Same data, different layout — never both visible. #}
+    {# ---- Phone rows (<600px) -------------------------------------
+       Two lines, about 56px each. Line one is the next date, the payee
+       and the amount; line two is the account and the category, with the
+       frequency and a memo mark as small right-aligned chips.
+
+       What was here before: a card per template with a four-row
+       definition list that reprinted FREQUENCY / ACCOUNT / CATEGORY /
+       MEMO as a label beside every value. Thirty-seven of those came to
+       about 400px each and 11,700px of page. The labels are the thing
+       that has to go -- the same four words, thirty-seven times, tell a
+       reader nothing the column position does not.
+
+       Post stays a real button on the row rather than moving into the
+       kebab: posting is the one thing this page exists to do, and two
+       taps for it on a phone is a worse page than a 32px wider row. #}
     <ul class="rec-cards" x-show="$store.budget.profile && filtered().length" x-cloak
         aria-label="Recurring transactions">
       <template x-for="s in filtered()" :key="'card-' + s.id">
-        <li class="rec-card" :id="'card-edit-' + s.id">
-          <header class="rec-card__head">
-            <p class="rec-card__date" x-text="formatNextDate(s.nextDate)"></p>
-            <p class="rec-card__amount"
-               :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-               x-text="formatCents(s.template.amount)"></p>
-          </header>
-          <p class="rec-card__payee" x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '—'"></p>
-          <dl class="rec-card__meta">
-            <div><dt>Frequency</dt><dd x-text="$store.budget.frequencyLabel(s)"></dd></div>
-            <div><dt>Account</dt><dd x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></dd></div>
-            <div><dt>Category</dt>
-              <dd x-text="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"
-                  :style="$store.budget.categoryName(s.template.categoryId) ? '' : 'color: var(--fg-muted); font-style: italic;'"></dd>
-            </div>
-            <div x-show="s.template.memo" x-cloak><dt>Memo</dt><dd x-text="s.template.memo"></dd></div>
-          </dl>
-          {# Post now stays inline as the primary action; the rest
-             (Edit / Skip / Pause / Remove) collapse into a kebab. #}
-          <div class="rec-card__actions">
-            <button class="btn btn--primary btn--sm rec-post" type="button"
-                    @click="postNow(s.id)"
-                    x-show="!s.paused" x-cloak
-                    data-tip="Post now and advance the next date.">Post now</button>
-            {% call overflow(label="Recurring template actions") %}
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item"
-                        @click="open = false; openEdit(s)">Edit…</button>
-              </li>
-              <li role="none" x-show="!s.paused">
-                <button type="button" role="menuitem" class="overflow-menu__item"
-                        @click="open = false; $store.budget.skipScheduled(s.id)">Skip next occurrence</button>
-              </li>
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item"
-                        @click="open = false; $store.budget.setSchedulePaused(s.id, !s.paused)"
-                        x-text="s.paused ? 'Resume' : 'Pause indefinitely'"></button>
-              </li>
-              <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
-              <li role="none">
-                <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
-                        @click="open = false; PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })">Remove template</button>
-              </li>
-            {% endcall %}
-          </div>
+        <li class="rec-card" :id="'card-edit-' + s.id" :class="s.paused ? 'is-paused' : ''">
+          <button type="button" class="rec-card__summary"
+                  @click="openEdit(s)"
+                  :aria-label="'Edit ' + (s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || 'recurring template')">
+            <span class="rec-card__l1">
+              <span class="rec-card__date" x-text="formatNextDate(s.nextDate)"></span>
+              <span class="rec-card__payee"
+                    :title="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || ''"
+                    x-text="s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '&#8212;'"></span>
+              <span class="rec-card__amount"
+                    :class="s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="formatCents(s.template.amount)"></span>
+            </span>
+            <span class="rec-card__l2">
+              <span class="rec-card__account"
+                    :title="$store.budget.findAccount(s.template.accountId)?.name || ''"
+                    x-text="$store.budget.findAccount(s.template.accountId)?.name || '&#8212;'"></span>
+              <span class="rec-card__sep" aria-hidden="true">&#183;</span>
+              <span class="rec-card__category"
+                    :title="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"
+                    :class="$store.budget.categoryName(s.template.categoryId) ? '' : 'is-uncategorized'"
+                    x-text="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"></span>
+              <span class="rec-card__marks">
+                <span class="rec-card__mark" x-show="s.template.memo" x-cloak
+                      :title="'Memo: ' + (s.template.memo || '')"
+                      :aria-label="'Memo: ' + (s.template.memo || '')">M</span>
+                <span class="rec-card__mark rec-card__mark--freq"
+                      :title="'Frequency: ' + $store.budget.frequencyLabel(s)"
+                      x-text="$store.budget.frequencyLabel(s)"></span>
+                <span class="rec-card__mark rec-card__mark--paused" x-show="s.paused" x-cloak
+                      title="Paused">Paused</span>
+              </span>
+            </span>
+          </button>
+          <button class="btn btn--primary btn--sm rec-post" type="button"
+                  @click="postNow(s.id)"
+                  x-show="!s.paused" x-cloak
+                  :aria-label="'Post ' + (s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || 'template') + ' now'"
+                  data-tip="Post now and advance the next date.">Post</button>
+          {% call overflow(label="Recurring template actions") %}
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item"
+                      @click="open = false; openEdit(s)">Edit&#8230;</button>
+            </li>
+            <li role="none" x-show="!s.paused">
+              <button type="button" role="menuitem" class="overflow-menu__item"
+                      @click="open = false; $store.budget.skipScheduled(s.id)">Skip next occurrence</button>
+            </li>
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item"
+                      @click="open = false; $store.budget.setSchedulePaused(s.id, !s.paused)"
+                      x-text="s.paused ? 'Resume' : 'Pause indefinitely'"></button>
+            </li>
+            <li role="none" class="overflow-menu__sep" aria-hidden="true"></li>
+            <li role="none">
+              <button type="button" role="menuitem" class="overflow-menu__item overflow-menu__item--danger"
+                      @click="open = false; PBDialog.confirm({ title: 'Remove this recurring template?', message: 'The template stops queuing future occurrences. Posted transactions it already generated stay in the register.', confirmLabel: 'Remove template', danger: true }).then(ok => { if (ok) $store.budget.removeSchedule(s.id) })">Remove template</button>
+            </li>
+          {% endcall %}
         </li>
       </template>
     </ul>
 
     <table class="table rec-table" x-show="$store.budget.profile && filtered().length" x-cloak>
+      {# table-layout is fixed and the widths live on these header
+         classes, so the header row is what sizes every column. Frequency
+         carries .col-p3: at 1024 and below the card is only about 695px
+         and something has to go, and frequency is the one field Jon's
+         phone row also drops. Amount and Actions never carry a priority
+         class -- they are the last thing a reader gives up. #}
       <thead>
         <tr>
-          <th scope="col" style="white-space: nowrap;">Next date</th>
-          <th scope="col">Frequency</th>
-          <th scope="col">Account</th>
-          <th scope="col">Payee</th>
-          <th scope="col">Category</th>
-          <th scope="col" class="num">Amount</th>
-          <th scope="col" class="num" style="width: 1%; white-space: nowrap;">Actions</th>
+          <th scope="col" class="col-date">Next date</th>
+          <th scope="col" class="col-freq col-p3">Frequency</th>
+          <th scope="col" class="col-account">Account</th>
+          <th scope="col" class="col-payee">Payee</th>
+          <th scope="col" class="col-category">Category</th>
+          <th scope="col" class="col-amount num">Amount</th>
+          <th scope="col" class="col-actions num">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -205,15 +241,16 @@ eleventyExcludeFromCollections: true
                pattern as the register inline editor: single sign-flip
                chip on amount; @click.stop on cells with kebab/action
                buttons so the row-click handler doesn't fire. #}
-            <td class="cell--edit" style="white-space: nowrap;"
+            {# The Paused badge used to sit here beside the date. In a
+               fixed-layout column wide enough for one date and nothing
+               else it pushed the date under an ellipsis, so it now sits
+               in the Actions cell, in the slot Post vacates when a
+               template is paused. #}
+            <td class="col-date cell--edit"
                 :class="{ 'is-locked': s.paused }"
                 @click.stop="startCellEdit(s, 'nextDate', s.nextDate)">
               <template x-if="!isEditingCell(s, 'nextDate')">
-                <span>
-                  <span x-text="formatNextDate(s.nextDate)"></span>
-                  <span x-show="s.paused" x-cloak class="badge badge--paused"
-                        data-tip="Paused — won't queue until resumed.">Paused</span>
-                </span>
+                <span x-text="formatNextDate(s.nextDate)"></span>
               </template>
               <template x-if="isEditingCell(s, 'nextDate')">
                 <input type="date" class="input cell-input"
@@ -224,8 +261,9 @@ eleventyExcludeFromCollections: true
                        @keydown.escape.prevent="cancelCellEdit()">
               </template>
             </td>
-            <td class="cell--edit"
+            <td class="col-freq col-p3 cell--edit"
                 :class="{ 'is-locked': s.paused }"
+                :data-tip="$store.budget.frequencyLabel(s)"
                 @click.stop="startCellEdit(s, 'frequency', s.frequency || 'monthly')">
               <template x-if="!isEditingCell(s, 'frequency')">
                 <span x-text="$store.budget.frequencyLabel(s)"></span>
@@ -243,8 +281,9 @@ eleventyExcludeFromCollections: true
                 </select>
               </template>
             </td>
-            <td class="cell--edit"
+            <td class="col-account cell--edit"
                 :class="{ 'is-locked': s.paused }"
+                :data-tip="$store.budget.findAccount(s.template.accountId)?.name || ''"
                 @click.stop="startCellEdit(s, 'accountId', s.template.accountId)">
               <template x-if="!isEditingCell(s, 'accountId')">
                 <span x-text="$store.budget.findAccount(s.template.accountId)?.name || '—'"></span>
@@ -266,8 +305,9 @@ eleventyExcludeFromCollections: true
                edits the payee; the memo line below it edits the
                memo. Each has its own click handler so clicking memo
                doesn't accidentally focus the payee input. #}
-            <td class="cell--edit rec-payee-cell"
-                :class="{ 'is-locked': s.paused }">
+            <td class="col-payee cell--edit rec-payee-cell"
+                :class="{ 'is-locked': s.paused }"
+                :data-tip="(s.template.payeeName || $store.budget.payeeName(s.template.payeeId) || '') + (s.template.memo ? ' - ' + s.template.memo : '')">
               <template x-if="!isEditingCell(s, 'payeeName') && !isEditingCell(s, 'memo')">
                 <span class="rec-payee-stack">
                   <button type="button" class="rec-payee-stack__name cell--edit"
@@ -276,8 +316,8 @@ eleventyExcludeFromCollections: true
                   </button>
                   <button type="button" class="rec-payee-stack__memo cell--edit"
                           :class="!s.template.memo ? 'is-placeholder' : ''"
-                          @click.stop="startCellEdit(s, 'memo', s.template.memo || '')"
-                          x-text="s.template.memo || '+ Add memo'"></button>
+                          @click.stop="startCellEdit(s, 'memo', s.template.memo || '')"><span
+                          x-text="s.template.memo || '+ Add memo'"></span></button>
                 </span>
               </template>
               <template x-if="isEditingCell(s, 'payeeName')">
@@ -300,8 +340,9 @@ eleventyExcludeFromCollections: true
                        @keydown.escape.prevent="cancelCellEdit()">
               </template>
             </td>
-            <td class="cell--edit"
+            <td class="col-category cell--edit"
                 :class="{ 'is-locked': s.paused }"
+                :data-tip="$store.budget.categoryName(s.template.categoryId) || 'Uncategorized'"
                 :style="$store.budget.categoryName(s.template.categoryId) ? '' : 'color: var(--fg-muted); font-style: italic;'"
                 @click.stop="startCellEdit(s, 'categoryId', s.template.categoryId || '')">
               <template x-if="!isEditingCell(s, 'categoryId')">
@@ -321,7 +362,7 @@ eleventyExcludeFromCollections: true
                 </select>
               </template>
             </td>
-            <td class="num cell--edit cell--amount"
+            <td class="col-amount num cell--edit cell--amount"
                 :class="[s.template.amount < 0 ? 'amount--outflow' : 'amount--inflow', s.paused ? 'is-locked' : '']"
                 @click.stop="startCellEdit(s, 'amount', (Math.abs(s.template.amount || 0) / 100).toFixed(2))">
               <template x-if="!isEditingCell(s, 'amount')">
@@ -347,12 +388,14 @@ eleventyExcludeFromCollections: true
                 </span>
               </template>
             </td>
-            <td class="num" @click.stop>
-              <div class="cluster" style="justify-content: flex-end; flex-wrap: nowrap; gap: var(--space-3xs);">
+            <td class="col-actions num" @click.stop>
+              <div class="rec-table__actions">
                 <button class="btn btn--primary btn--sm rec-post" type="button"
                         @click="postNow(s.id)"
                         x-show="!s.paused" x-cloak
                         data-tip="Post this occurrence as a real transaction now and advance the next date.">Post</button>
+                <span x-show="s.paused" x-cloak class="badge badge--paused rec-paused-chip"
+                      data-tip="Paused — won't queue until resumed.">Paused</span>
                 {% call overflow(label="Recurring template actions") %}
                   <li role="none">
                     <button type="button" role="menuitem" class="overflow-menu__item"

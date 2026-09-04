@@ -4340,6 +4340,43 @@ body.pb-dragging { overflow: visible !important; }
 @media (max-width: 1023px) { .rec-summary { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 599px)  { .rec-summary { grid-template-columns: 1fr; } }
 
+/* --tight: the recurring page's four tiles, two per row on a phone
+   instead of four stacked full-width ones. Measured at 390 the stacked
+   strip was 430px and the first template did not appear until 958px down
+   the page. Two-up with the label and value on one baseline brings the
+   strip to about 150px.
+
+   Scoped to a modifier rather than changed on .rec-summary itself
+   because that class is also the accounts, payees, trash, dashboard,
+   health-check and about-this-profile strip. Two-up on phones is the
+   direction the plan sets for every KPI strip (decision 7), but that is
+   the shared-layer task's change to make, not this one's. */
+@media (max-width: 599px) {
+  .rec-summary--tight {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2xs);
+    margin-bottom: var(--space-sm);
+  }
+  .rec-summary--tight .rec-summary__tile {
+    min-width: 0;
+    padding: var(--space-2xs) var(--space-xs);
+    gap: 0;
+  }
+  .rec-summary--tight .rec-summary__label {
+    font-size: var(--fs-2xs);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rec-summary--tight .rec-summary__value {
+    font-size: var(--fs-lg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 /* 6-tile variant — accounts page when at least one account is
    flagged exclude-from-net-worth: Accounts / On budget / Tracking /
    Excluded / Net worth / Net + excluded. */
@@ -4421,90 +4458,146 @@ body.pb-dragging { overflow: visible !important; }
 }
 
 /* ---- Recurring-table responsive swap ----
-   Mirror the register's pattern: a 7-column .rec-table on tablet+
-   gets swapped for a stack of .rec-cards below 600px so phone users
-   don't horizontally scroll. Both lists render the same source data;
-   only one is visible at a time. */
+   Mirror the register's pattern: the .rec-table on tablet+ gets swapped
+   for a stack of .rec-cards below 600px so phone users don't
+   horizontally scroll. Both lists render the same source data; only one
+   is visible at a time. */
 .rec-cards {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
 }
+
+/* ---- Phone row: two lines, about 56px ----------------------------
+   Line one is date, payee and amount; line two is account and category
+   with the frequency and a memo mark as chips on the right.
+
+   What this replaced: a bordered card holding a <dl> that printed
+   FREQUENCY / ACCOUNT / CATEGORY / MEMO as a label beside every value.
+   Measured at 390 the tallest was 277px, thirty-seven of them came to an
+   11,700px page, and four of those words were the same four words on
+   every row.
+
+   The heights: 20px for line one, 16px for line two, 2px between and 8px
+   of padding top and bottom, so the natural height is about 54 and the
+   min-height rounds it to 56. */
 .rec-card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-strong);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-input);
-  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 56px;
+  padding: var(--space-2xs) var(--space-xs);
+  border-bottom: 1px solid var(--border-soft);
+}
+.rec-card:hover { background: var(--bg-alt); }
+.rec-card.is-paused .rec-card__summary { opacity: 0.6; }
+.rec-card__summary {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2xs);
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
-.rec-card__head {
+.rec-card__summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.rec-card__l1 {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  line-height: 1.35;
+}
+.rec-card__l2 {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-sm);
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--fg-muted);
 }
 .rec-card__date {
   margin: 0;
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: var(--fs-xs);
   color: var(--fg-muted);
-}
-.rec-card__amount {
-  margin: 0;
-  font-family: var(--font-ui);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-lg);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 .rec-card__payee {
   margin: 0;
-  font-family: var(--font-headline);
-  font-size: var(--fs-md);
   font-weight: 600;
-  line-height: 1.25;
-}
-.rec-card__meta {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px var(--space-sm);
-  margin: var(--space-2xs) 0 0;
   font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
-.rec-card__meta div { display: contents; }
-.rec-card__meta dt {
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
+.rec-card__amount {
+  margin: 0;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--fg-muted);
-  align-self: center;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.rec-card__meta dd { margin: 0; color: var(--fg); }
-.rec-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2xs);
-  margin-top: var(--space-2xs);
-  padding-top: var(--space-2xs);
-  border-top: 1px solid var(--border-soft);
+.rec-card__account,
+.rec-card__category {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
-.rec-card__actions .btn { min-height: 44px; }
+.rec-card__account  { flex: 0 1 auto; }
+.rec-card__category { flex: 1 1 auto; }
+.rec-card__category.is-uncategorized { color: var(--fg-subtle); font-style: italic; }
+.rec-card__sep      { flex: 0 0 auto; }
+/* Frequency and memo are marks, not columns. Frequency is not in Jon's
+   two-line spec, but it is what makes a recurring template recurring, and
+   as a chip it costs no height -- it does not reprint a label, which is
+   the thing the old layout got wrong. */
+.rec-card__marks {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.rec-card__mark {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 1.1;
+  padding: 0 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  color: var(--fg-subtle);
+  white-space: nowrap;
+}
+.rec-card__mark--freq   { font-weight: 600; text-transform: none; }
+.rec-card__mark--paused { color: var(--danger); border-color: var(--danger); }
+/* Post keeps its own tap target on the row. Two taps to post -- open the
+   kebab, then choose -- is the wrong trade on the one page whose whole
+   job is posting. 44px is the touch-target floor. */
+.rec-cards .rec-post {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0.2rem 0.6rem;
+}
+.rec-cards .overflow-menu { flex: 0 0 auto; }
 
-/* Show/hide swap. Cards only render on phones; table only on
-   tablet+. The x-show="..." attributes keep both in the DOM but
-   visibility-toggled — we layer display:none on top so the hidden
-   variant doesn't reserve layout space. */
+/* Show/hide swap. Rows only render on phones; the table only on
+   tablet+. The x-show attributes keep both in the DOM but
+   visibility-toggled, so display: none goes on top of that or the
+   hidden variant still reserves layout space. */
 .rec-table { display: none; }
 .rec-cards { display: flex; }
 @media (min-width: 600px) {
@@ -4518,12 +4611,75 @@ body.pb-dragging { overflow: visible !important; }
 .rec-table td {
   padding: 0.4rem 0.65rem;
   vertical-align: middle;
+  /* One line per row. The account column used to wrap "Chase Freedom
+     Visa" onto three lines at 1024 and take the row to 91px with it.
+     Long values ellipsize; the full text is on the cell's data-tip. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .rec-table th {
   font-size: var(--fs-xs);
   letter-spacing: 0.04em;
 }
 .rec-table tbody tr:hover td { background: var(--bg-alt); }
+
+/* ---- Column widths -----------------------------------------------
+   The table is table-layout: fixed at width 100%, so it is exactly as
+   wide as its card at every viewport. With the old auto layout it sized
+   itself to its content: 785px inside a 695px card at 1024, which put
+   the amount 9px past the card's right edge, the Post button at x=1060
+   and the kebab at x=1096 -- both outside a 1024px viewport, inside an
+   overflow-x container with no visible scrollbar. A recurring
+   transaction could not be posted from a tablet.
+
+   Fixed layout takes the widths from the header row, so they are set on
+   the <th> classes; the same class on each <td> is there for .col-p3 and
+   for the padding overrides.
+
+   nth-child() is not usable: every body cell is rendered by an Alpine
+   <template x-if> that stays in the DOM beside it, so a row's children
+   alternate template, td, template, td.
+
+   Payee is deliberately the one column with no width. In a fixed layout
+   the columns that name a width are served first and the rest of the
+   card goes to the ones that do not, so payee is the shock absorber and
+   the six columns that matter keep their room at every card width. */
+.rec-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.rec-table .col-date     { width: 6.5rem; }
+.rec-table .col-freq     { width: 7.5rem; }
+.rec-table .col-account  { width: 15%; }
+.rec-table .col-category { width: 15%; }
+.rec-table .col-amount   { width: 6.5rem; }
+/* Post (48) + gap (4) + kebab (32) = 84, and a paused row swaps Post for
+   a "Paused" chip of about the same width. 6.25rem leaves 92px of
+   content after the narrowed padding. */
+.rec-table .col-actions  {
+  width: 6.25rem;
+  padding-left: var(--space-3xs);
+  padding-right: var(--space-3xs);
+}
+.rec-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: var(--space-3xs);
+}
+.rec-paused-chip {
+  padding: 0.1rem 0.3rem;
+  font-size: var(--fs-2xs);
+  white-space: nowrap;
+}
+/* Above 1250 the card is 918px or wider, so the date and the amount can
+   have their natural width and nothing ellipsizes that does not have to. */
+@media (min-width: 1250px) {
+  .rec-table .col-date   { width: 7rem; }
+  .rec-table .col-amount { width: 7rem; }
+}
 
 /* Payee cell hosts two click-targets: payee name (top) + memo
    (bottom). Each is its own click-to-edit area inside the same
@@ -4534,6 +4690,11 @@ body.pb-dragging { overflow: visible !important; }
   flex-direction: column;
   gap: 1px;
   align-items: flex-start;
+  /* The cell is now a fixed width, so the stack has to stay inside it.
+     Without max-width the two buttons size to their content and push
+     the cell's own overflow: hidden into clipping mid-glyph. */
+  max-width: 100%;
+  min-width: 0;
 }
 .rec-payee-stack__name,
 .rec-payee-stack__memo {
@@ -4549,6 +4710,19 @@ body.pb-dragging { overflow: visible !important; }
   cursor: text;
 }
 .rec-payee-stack__name strong { font-weight: 700; }
+/* A flex button cannot ellipsize its own text, so both lines put the
+   text in a child element and the ellipsis goes there. The memo's span
+   is why the template wraps its x-text in one. */
+.rec-payee-stack__name,
+.rec-payee-stack__memo { max-width: 100%; min-width: 0; }
+.rec-payee-stack__name > strong,
+.rec-payee-stack__memo > span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .rec-payee-stack__name {
   /* Same 24x24 floor as the memo line beneath it -- these are the inline
      edit targets in the recurring table, and they shrank with the type. */
@@ -4643,6 +4817,20 @@ body.pb-dragging { overflow: visible !important; }
   align-items: flex-end;
 }
 .rec-toolbar__filters .field { min-width: 140px; }
+/* On a phone the four filters were four full-width rows, about 190px of
+   chrome between the search box and the first template. Two-up halves
+   that; the selects still clear the 44px touch target. */
+@media (max-width: 599px) {
+  .rec-toolbar { gap: var(--space-2xs); margin-bottom: var(--space-2xs); padding-bottom: var(--space-2xs); }
+  .rec-toolbar__filters {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2xs);
+  }
+  .rec-toolbar__filters .field { min-width: 0; }
+  .rec-toolbar__filters .select { width: 100%; min-width: 0; }
+}
 .rec-toolbar__count {
   flex-basis: 100%;
   margin: 0;
