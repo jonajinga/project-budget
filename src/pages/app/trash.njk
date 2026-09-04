@@ -48,14 +48,19 @@ eleventyExcludeFromCollections: true
     Trash is empty. Anything you delete from the register lands here for 30 days before it's purged automatically.
   </p>
 
-  <table class="table" x-show="items.length" x-cloak>
+  <table class="table table--stack" x-show="items.length" x-cloak>
     <thead>
       <tr>
-        <th>Deleted</th>
-        <th>Date</th>
+        {# Payee leads, because it is what a person recognises. Deleted,
+           account and category give way before the amount and the
+           Restore button, which are the whole point of the page: on a
+           phone this table used to end after "Account", so nothing
+           could be restored. #}
         <th>Payee</th>
-        <th>Account</th>
-        <th>Category</th>
+        <th class="col-p2">Deleted</th>
+        <th class="col-p2">Date</th>
+        <th class="col-p3">Account</th>
+        <th class="col-p3">Category</th>
         <th class="num">Amount</th>
         <th class="num">Action</th>
       </tr>
@@ -63,18 +68,19 @@ eleventyExcludeFromCollections: true
     <tbody>
       <template x-for="item in items" :key="item.id">
         <tr>
-          <td x-text="formatRelative(item.deletedAt)"></td>
-          <td x-text="item.date"></td>
           <td>
             <span x-text="$store.budget.payeeName(item.payeeId) || (item.payeeName || '—')"></span>
             <span x-show="item.transferTxnId" x-cloak class="badge"
                   style="margin-left: var(--space-2xs);"
                   data-tip="Restoring will bring the paired transfer leg back too.">transfer</span>
+            <span class="trash__sub" x-text="item.date + ' · ' + ($store.budget.findAccount(item.accountId)?.name || '—')"></span>
           </td>
-          <td x-text="$store.budget.findAccount(item.accountId)?.name || '—'"></td>
-          <td x-text="$store.budget.categoryName(item.categoryId) || 'Uncategorized'"></td>
-          <td class="num" :class="item.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(item.amount)"></td>
-          <td class="num">
+          <td class="col-p2" data-label="Deleted" x-text="formatRelative(item.deletedAt)"></td>
+          <td class="col-p2" data-label="Date" x-text="item.date"></td>
+          <td class="col-p3" data-label="Account" x-text="$store.budget.findAccount(item.accountId)?.name || '—'"></td>
+          <td class="col-p3" data-label="Category" x-text="$store.budget.categoryName(item.categoryId) || 'Uncategorized'"></td>
+          <td class="num" data-label="Amount" :class="item.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="formatCents(item.amount)"></td>
+          <td class="num table__actions">
             <div class="cluster" style="justify-content: flex-end;">
               <button class="btn btn--primary btn--sm" type="button" @click="restore(item.id)">Restore</button>
               {% call overflow(label="Trash item actions") %}
@@ -96,13 +102,13 @@ eleventyExcludeFromCollections: true
     No profiles in trash. Deleting a profile from <a href="/app/profiles/">/app/profiles/</a> moves it here for 7 days.
   </p>
 
-  <table class="table" x-show="trashedProfiles().length" x-cloak>
+  <table class="table table--stack" x-show="trashedProfiles().length" x-cloak>
     <thead>
       <tr>
         <th scope="col">Name</th>
-        <th scope="col" class="num">Accounts</th>
-        <th scope="col" class="num">Transactions</th>
-        <th scope="col">Deleted</th>
+        <th scope="col" class="num col-p3">Accounts</th>
+        <th scope="col" class="num col-p3">Transactions</th>
+        <th scope="col" class="col-p2">Deleted</th>
         <th scope="col" class="num">Days left</th>
         <th scope="col" class="num">Actions</th>
       </tr>
@@ -111,11 +117,11 @@ eleventyExcludeFromCollections: true
       <template x-for="t in trashedProfiles()" :key="t.id">
         <tr>
           <td x-text="t.name"></td>
-          <td class="num" x-text="t.accounts"></td>
-          <td class="num" x-text="t.transactions"></td>
-          <td x-text="t.deletedAt ? new Date(t.deletedAt).toLocaleString() : ''"></td>
-          <td class="num" x-text="t.daysLeft"></td>
-          <td class="num">
+          <td class="num col-p3" data-label="Accounts" x-text="t.accounts"></td>
+          <td class="num col-p3" data-label="Transactions" x-text="t.transactions"></td>
+          <td class="col-p2" data-label="Deleted" x-text="t.deletedAt ? new Date(t.deletedAt).toLocaleString() : ''"></td>
+          <td class="num" data-label="Days left" x-text="t.daysLeft"></td>
+          <td class="num table__actions">
             <div class="cluster" style="justify-content: flex-end;">
               <button class="btn btn--primary btn--sm" type="button"
                       @click="$store.budget.restoreTrashedProfile(t.id)"
@@ -275,3 +281,8 @@ function trashView() {
   };
 }
 </script>
+
+<style>
+  .trash__sub { display: none; }
+  @media (max-width: 599px) { .trash__sub { display: block; color: var(--fg-muted); font-size: var(--fs-xs); } }
+</style>

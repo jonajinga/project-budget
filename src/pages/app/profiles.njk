@@ -112,7 +112,7 @@ eleventyExcludeFromCollections: true
       No profiles yet. Create your first profile above.
     </p>
 
-    <table class="table" x-show="$store.budget.profiles.length" x-cloak>
+    <table class="table table--stack" x-show="$store.budget.profiles.length" x-cloak>
       <thead>
         <tr>
           <th>Name</th>
@@ -127,8 +127,8 @@ eleventyExcludeFromCollections: true
               <strong x-text="p.name"></strong>
               <span x-show="p.id === $store.budget.active" class="badge" style="margin-left: var(--space-2xs);">active</span>
             </td>
-            <td x-text="p.lastOpenedAt ? new Date(p.lastOpenedAt).toLocaleString() : '—'"></td>
-            <td class="num" @click.stop>
+            <td data-label="Last opened" x-text="p.lastOpenedAt ? new Date(p.lastOpenedAt).toLocaleString() : '—'"></td>
+            <td class="num table__actions" @click.stop>
               <div class="cluster" style="justify-content: flex-end;">
                 <button class="btn btn--primary btn--sm" type="button"
                         @click="$store.budget.switchTo(p.id)"
