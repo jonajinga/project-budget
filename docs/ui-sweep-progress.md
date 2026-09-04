@@ -155,28 +155,61 @@ one-line lead. It does not; the lead moves behind the info button.
   `docs/app-chrome-guide.md`.
 - [x] **Import**, **Accounts**, **Register**, **Recurring**,
   **Dashboard**, **Cuts**, **Category**. Each drops its masthead and
-  merges its own second row of controls into the one strip. Measured
-  drops in where the first row of real content sits: accounts 480 to
-  365, dashboard 285 to 155, category 290 to 133, recurring about 400
-  to 326.
-- [x] **The 15 report pages and the reports hub.** All sixteen routes.
-  Three bands of chrome became one: the masthead went, the range picker
-  came up into the strip, and `.report-toolbar` - the search box, the
-  row count and the export kebab - came up with it. No page uses
-  `.report-toolbar` any more. `partials/report-chrome.njk` is the one
-  strip for all fifteen detail reports, so it cannot drift page to
-  page. Save view moved into the actions kebab: beside All reports it
-  cost about 95 pixels and put the actions on a second row at 1024.
-  Payees, Cash flow and Year over year use `.app-filters` for their
-  month pickers and keep the window visible as context text.
-  Where the first row of real content sits, 1440 / 1024 / 390:
-  spending 354/391/448 to 157/157/158, payees 456/492/598 to
-  157/157/158, budget-vs-actual 361/398/386 to 157/157/160, the hub
-  308/300/336 to 201/201/192. Every strip is one 44px row at 1440 and
-  1024. No horizontal overflow outside a scroll container at any of the
-  three widths, before or after.
+  merges its own second row of controls into the one strip. Where the
+  first row of real content sits, measured by a verifier who built both
+  commits: accounts 452 to 345, dashboard 268 to 157, category 207 to
+  133, recurring 525 to 280, calendar phone toolbar 308 to 172.
+
+  These replace the figures first written here. Two of them were wrong:
+  the category baseline of 290 matched nothing on the page at any
+  width, and the recurring pair described the page with its filter row
+  open rather than in its default state. The real recurring improvement
+  is larger than was claimed, which is not the point -- a number nobody
+  re-measured does not belong in a progress document.
+- [x] **Verified, after a rejection.** An independent verifier
+  rejected the first pass and found four real defects, all of them on
+  the one page whose structure differs from the rest:
+  - the phone toolbar collapsed its left group to zero instead of
+    scrolling, so the category page rendered its own name three pixels
+    wide with no way to read it;
+  - the print rule looked for the heading by position and by a class
+    (`app-page__inner`) that existed nowhere in the repo, so the
+    category sheet printed with no name on it at all;
+  - the hidden heading said "Category" rather than which category;
+  - the recurring filter badge counted the sort order, which
+    `clearFilters()` did not reset, so a "1" could appear with no Clear
+    button to remove it.
+
+  All four are fixed and re-checked: the strip now overflows and
+  scrolls (526px of content in a 390px row, nothing clipped), the
+  category name reads in full, the note moved behind its own button,
+  print emits "Category: Dining out" at full width, and changing only
+  the sort no longer raises a badge.
+- [ ] **The 15 report pages and the reports hub.** With a worker.
+- [~] **The 15 report pages and the reports hub.** Converted, not yet
+  checked by anyone independent. Three bands of chrome became one: the
+  masthead went, the range picker came up into the strip, and
+  `.report-toolbar` - the search box, the row count and the export
+  kebab - came up with it. No page uses `.report-toolbar` any more.
+  `partials/report-chrome.njk` is the one strip for all fifteen detail
+  reports, so it cannot drift page to page. Save view moved into the
+  actions kebab: beside All reports it cost about 95 pixels and put the
+  actions on a second row at 1024. Payees, Cash flow and Year over year
+  use `.app-filters` for their month pickers.
+
+  The author's figures are in the handoff, not here, until a verifier
+  has measured them.
+
+  One instruction was not followed literally, with a reason worth
+  keeping: U5 said to use auto-fill on the hub grid so no row holds a
+  lone tile, and auto-fill cannot do that. The hub's groups hold 4, 5,
+  2, 2 and 1 report, so there is no column count at which every group's
+  last row has more than one tile, and the single-report group is a
+  lone tile at any width. It uses flex-wrap with growing tiles instead,
+  so a last row shares the space rather than sitting at a third width
+  beside empty tracks.
 - [ ] **The 20 utility and form pages.** With a worker.
-- [ ] Nobody independent has checked any of this yet.
+- [ ] The report and utility pages have not been checked by anyone.
 
 ## New work
 

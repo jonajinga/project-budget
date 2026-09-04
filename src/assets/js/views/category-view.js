@@ -4,6 +4,7 @@ function categoryView() {
     kind: "category",
     id: null,
     range: 12,
+    noteOpen: false,   // the category note, opened from the toolbar
     txnLimit: 12,
 
     init() {
