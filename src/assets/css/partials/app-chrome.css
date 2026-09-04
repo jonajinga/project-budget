@@ -72,8 +72,12 @@
    also sets its own top margin (the contact grid's --space-lg, a card
    converted from the old masthead layout) doubles it, which puts the
    first row of content 32 pixels lower than every other converted
-   page. The strip owns that space. */
-.app-page > .app-toolbar + * { margin-top: 0; }
+   page. The strip owns that space.
+
+   .app-filters is excluded on purpose: it pulls itself UP by the same
+   --space-md to sit flush under the strip, and zeroing that margin
+   would drop the filter row into the middle of the page. */
+.app-page > .app-toolbar + *:not(.app-filters) { margin-top: 0; }
 
 /* Controls that belong together. The first group sits left, and
    .app-toolbar__actions pushes everything after it to the right
