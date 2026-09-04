@@ -107,12 +107,22 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   phone. Both tables stack now and the Restore button never hides.
 - [x] **U6 Excluded accounts spacing.** Ran words together because the
   build's HTML minifier trims whitespace at the edge of a text node.
-- [~] **U1 Backup and import.** Import done: it opens on a drop zone
-  that fills the window, with the prose behind the info button. It was
-  the worst case in the audit - 240 pixels of title and prose, 190 of
-  control, 460 of nothing. Backup is with the utility worker.
-- [ ] **U5 Tools and reports index.** Grids leave an orphan tile on the
-  last row.
+- [x] **U1 Backup and import.** Import opens on a drop zone that fills
+  the window, with the prose behind the info button. It was the worst
+  case in the audit - 240 pixels of title and prose, 190 of control,
+  460 of nothing. Backup was the same shape: five stacked cards, three
+  of them pure prose, and a paragraph in a full-width card stops at the
+  global 70ch measure so the right third of each was empty. It is one
+  panel now - the two things you can download and a rail whose colour
+  says how overdue you are - with all of the prose behind the info
+  button. First row of content 277 to 157 at 1440.
+- [~] **U5 Tools and reports index.** Tools done. Sixteen tiles in a
+  hard-coded three-column grid stranded the sixteenth on its own row at
+  every desktop width. auto-fill picks the count now, floored at a
+  quarter of the row so it never reaches five, with a two-column band
+  from 600 to 1379 where three would otherwise fit. Swept 360 to 2000
+  pixels: no row holds a lone tile at any width. The reports index is
+  with the reports worker.
 - [ ] **U7 Dashboard PDF export.** Skips five widgets at every width,
   because two chart hosts render without the identifier the export
   looks up.
@@ -143,7 +153,19 @@ one-line lead. It does not; the lead moves behind the info button.
   365, dashboard 285 to 155, category 290 to 133, recurring about 400
   to 326.
 - [ ] **The 15 report pages and the reports hub.** With a worker.
-- [ ] **The 20 utility and form pages.** With a worker.
+- [~] **The 20 utility and form pages.** Converted, not yet checked by
+  anyone independent. backup, diagnostics, health-check, trash,
+  settings, shortcuts, tools, templates, audit-log, about-this-profile,
+  integrations, share, rules, payees, profiles, onboarding-checklist,
+  welcome, contact, feedback, review. First row of real content at
+  1440: mean drop 98 pixels, from 167 (trash) down to 34 on the three
+  pages that never had a lead to remove (settings, profiles, payees).
+  Trash, payees and audit-log went flush; audit-log uses the
+  collapsible filter row for its three selects; settings is eight
+  .panel sections rather than eight cards. Every lead is in that
+  page's info modal, checked sentence by sentence against the original
+  template. No horizontal overflow outside a scroll container and no
+  page errors at 1440, 1024 or 390.
 - [ ] Nobody independent has checked any of this yet.
 
 ## New work
