@@ -3,7 +3,7 @@
    chart modules turn into SVG. They're easy to test under node and easy
    to reuse in print fallbacks. */
 
-import { activity, assigned, prevMonth, nextMonth, thisMonth, monthEnd, totalInflowToBudget } from "./budget.js";
+import { activity, assigned, prevMonth, nextMonth, thisMonth, monthEnd, totalInflowToBudget, buildMonthIndex, buildBudgetTable, tableCategoryRow } from "./budget.js";
 import { runningBalance, netWorth, findAccount } from "./accounts.js";
 import { findGoalForCategory, needed as goalNeeded } from "./goals.js";
 
@@ -270,11 +270,22 @@ export function projection(profile, count) {
     return net;
   });
 
-  /* Goal funding requirement per month: sum of needed() per category. */
+  /* Goal funding requirement per month: sum of needed() per category.
+
+     needed() falls back to categoryRow(), which walks a category's whole
+     carry chain from its first month. Called once per goal per projected
+     month that was 26 goals x 12 months of full walks over every
+     transaction, and the page took about sixteen seconds to appear with
+     the sample household. Build the carry table once and hand each call
+     the row it would have computed. Months past the last month with data
+     resolve to a carried-forward row with nothing assigned or spent,
+     which is what an unplanned future month is. */
+  var projIndex = buildMonthIndex(profile);
+  var projTable = buildBudgetTable(profile, months[months.length - 1], projIndex);
   var goalNeeds = months.slice(1).map(function (m) {
     var sum = 0;
     profile.goals.forEach(function (g) {
-      sum += goalNeeded(profile, g, m);
+      sum += goalNeeded(profile, g, m, tableCategoryRow(projTable, g.categoryId, m));
     });
     return sum;
   });
