@@ -652,6 +652,11 @@
    size their context differently, are untouched. */
 .report-chrome .app-toolbar__context { flex: 0 0 auto; }
 
+/* .app-page--dense already puts a gap between the strip, the KPI tiles
+   and the report surface; the strip's own bottom margin would double
+   it. */
+.app-page--dense > .kpi-strip { margin-bottom: 0; }
+
 /* A segmented range picker in the strip. Same control as the chart
    picker -- reused rather than restyled, so a report has one kind of
    segmented control, not two that differ by four pixels. */

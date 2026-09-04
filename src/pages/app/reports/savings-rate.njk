@@ -5,44 +5,41 @@ description: "Monthly and trailing savings rate. The single most important wealt
 permalink: /app/reports/savings-rate/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="savingsRateView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Savings rate</h1>
-      <p class="app-page__lead">Income minus expense, divided by income. A 20% rate is solid; 30%+ is excellent. Negative means you spent more than you earned that month.</p>
-    </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save this range + chart type + filter as a recall-able view in /app/templates/.">Save view</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
-  </header>
-
-  <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
-    <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
-    <template x-for="r in ranges" :key="r.value">
-      <button type="button" class="btn btn--sm"
-              :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
-              @click="rangeMonths = r.value"
-              x-text="r.label"></button>
-    </template>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="savingsRateView()" x-init="init()">
+  {% call reportChrome(
+       title="Savings rate",
+       id="savings-rate",
+       infoTitle="About the savings rate",
+       infoLabel="How the savings rate is worked out",
+       info="<p>Income minus expense, divided by income. A 20% rate is solid; 30%+ is excellent. Negative means you spent more than you earned that month.</p><p>Drag across the chart to filter the table to a date range.</p>",
+       save="Save this range + chart type + filter as a recall-able view in /app/templates/.",
+       slug="savings-rate",
+       searchId="sr-search",
+       searchPlaceholder="Filter by month",
+       count='<span x-text="visibleCount"></span> rows') %}
+    <span class="chart-picker" role="group" aria-label="Range">
+      <template x-for="r in ranges" :key="r.value">
+        <button type="button" class="chart-picker__btn"
+                :class="rangeMonths === r.value ? 'is-active' : ''"
+                :aria-pressed="(rangeMonths === r.value).toString()"
+                @click="rangeMonths = r.value"
+                x-text="r.label"></button>
+      </template>
+    </span>
     <template x-if="brushFrom !== null">
       <span class="brush-indicator">
-        Brushed: <strong x-text="brushFrom + ' → ' + brushTo"></strong>
-        <button type="button" class="btn btn--ghost btn--sm" @click="clearBrush()"
+        <strong x-text="brushFrom + ' &rarr; ' + brushTo"></strong>
+        <button type="button" class="btn btn--ghost" @click="clearBrush()"
                 data-tip="Clear the chart selection.">Clear</button>
       </span>
     </template>
-    <span x-show="brushFrom === null" x-cloak style="color: var(--fg-subtle); font-size: var(--fs-xs); margin-left: var(--space-sm);">
-      Drag across the chart to filter to a date range.
-    </span>
-  </div>
+  {% endcall %}
 
   <div class="kpi-strip">
     <div class="kpi" :class="kpis().rate === null ? 'kpi--muted' : (kpis().rate >= 0.2 ? 'kpi--ok' : (kpis().rate >= 0 ? 'kpi--warn' : 'kpi--danger'))">
       <span class="kpi__label">Range savings rate</span>
-      <span class="kpi__value" x-text="kpis().rate === null ? '—' : (kpis().rate * 100).toFixed(1) + '%'"></span>
+      <span class="kpi__value" x-text="kpis().rate === null ? '&mdash;' : (kpis().rate * 100).toFixed(1) + '%'"></span>
       <span class="kpi__delta" x-text="'Trailing ' + rangeMonths + ' mo'"></span>
     </div>
     <div class="kpi kpi--ok">
@@ -54,7 +51,7 @@ eleventyExcludeFromCollections: true
     <div class="kpi" :class="kpis().bestRate === null ? 'kpi--muted' : 'kpi--ok'">
       <span class="kpi__label">Best month</span>
       <span class="kpi__value" style="font-size: var(--fs-lg);"
-            x-text="kpis().bestMonth ? ($store.budget.monthLabel(kpis().bestMonth, true) + ' · ' + (kpis().bestRate * 100).toFixed(0) + '%') : '—'"></span>
+            x-text="kpis().bestMonth ? ($store.budget.monthLabel(kpis().bestMonth, true) + ' &middot; ' + (kpis().bestRate * 100).toFixed(0) + '%') : '&mdash;'"></span>
       <span class="kpi__delta">Highest savings rate</span>
     </div>
     <div class="kpi" :class="kpis().negCount > 0 ? 'kpi--danger' : 'kpi--ok'">
@@ -83,48 +80,39 @@ eleventyExcludeFromCollections: true
          role="img" aria-label="Savings rate chart"
          aria-describedby="data-table-sr"></div>
 
-    <div class="report-toolbar">
-      <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="sr-search">Filter</label>
-        <input class="input" id="sr-search" type="search" x-model="query" placeholder="Filter by month…">
-      </div>
-      <p class="report-toolbar__count">
-        <span x-text="visibleCount"></span> rows
-      </p>
-      {{ reportExports("savings-rate") }}
-    </div>
-
-    <table class="table" id="data-table-sr">
-      <thead>
-        <tr>
-          <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('income')">Income <span class="sort-ind" x-text="sortIndicator('income')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('expense')">Expense <span class="sort-ind" x-text="sortIndicator('expense')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('savings')">Saved <span class="sort-ind" x-text="sortIndicator('savings')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('rate')">Rate <span class="sort-ind" x-text="sortIndicator('rate')"></span></button></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-for="r in rows" :key="r.month">
+    <div class="table-scroll">
+      <table class="table table--stack" id="data-table-sr">
+        <thead>
           <tr>
-            <td>
-              <a class="report-month-link"
-                 :href="'/app/calendar/?m=' + r.month + '&v=month'"
-                 x-text="$store.budget.monthLabel(r.month)"
-                 data-tip="Open this month in the calendar."></a>
-            </td>
-            <td class="num amount--inflow" x-text="fmt(r.income)"></td>
-            <td class="num amount--outflow" x-text="fmt(r.expense)"></td>
-            <td class="num" :class="r.savings < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(r.savings)"></td>
-            <td class="num" :class="r.rate === null ? '' : (r.rate < 0 ? 'amount--outflow' : '')"
-                x-text="r.rate === null ? '—' : (r.rate * 100).toFixed(1) + '%'"></td>
+            <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('income')">Income <span class="sort-ind" x-text="sortIndicator('income')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('expense')">Expense <span class="sort-ind" x-text="sortIndicator('expense')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('savings')">Saved <span class="sort-ind" x-text="sortIndicator('savings')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('rate')">Rate <span class="sort-ind" x-text="sortIndicator('rate')"></span></button></th>
           </tr>
-        </template>
-        <tr x-show="!rows.length" x-cloak>
-          <td colspan="5" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No data in this range.</td>
-        </tr>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <template x-for="r in rows" :key="r.month">
+            <tr>
+              <td>
+                <a class="report-month-link"
+                   :href="'/app/calendar/?m=' + r.month + '&v=month'"
+                   x-text="$store.budget.monthLabel(r.month)"
+                   data-tip="Open this month in the calendar."></a>
+              </td>
+              <td class="num amount--inflow" data-label="Income" x-text="fmt(r.income)"></td>
+              <td class="num amount--outflow" data-label="Expense" x-text="fmt(r.expense)"></td>
+              <td class="num" data-label="Saved" :class="r.savings < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(r.savings)"></td>
+              <td class="num" data-label="Rate" :class="r.rate === null ? '' : (r.rate < 0 ? 'amount--outflow' : '')"
+                  x-text="r.rate === null ? '&mdash;' : (r.rate * 100).toFixed(1) + '%'"></td>
+            </tr>
+          </template>
+          <tr x-show="!rows.length" x-cloak>
+            <td colspan="5" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No data in this range.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
 
