@@ -140,20 +140,41 @@
         <h2>Account balances</h2>
         <a href="/app/accounts/">Manage accounts &rsaquo;</a>
       </div>
+      {# One header per group, not the group name stamped on every sibling
+         tile -- "COLLEGE SAVINGS (529)" was printed four times over four
+         adjacent tiles, and on a narrow tile it wrapped to two lines, so a
+         label nobody needed repeated was also the tallest thing in the card.
+
+         The name is its own element inside the flex row on purpose. A flex
+         container cannot ellipsise its children: text-overflow applies to a
+         block container's own inline content, so .dash-acct__name being
+         inline-flex meant the browser hard-clipped mid-glyph ("Home value
+         (Zestimat") instead of drawing the ellipsis the CSS asked for. #}
       <ul class="dash-accts" data-no-tippy>
-        <template x-for="a in allAccountsForGrid()" :key="a.id">
-          <li class="dash-acct">
-            <a class="dash-acct__link" :href="'/app/register/?account=' + a.id">
-              <span class="dash-acct__group" x-text="a.groupName || 'Other'"></span>
-              <span class="dash-acct__name">
-                <span x-text="a.name"></span>
-                <span class="dash-acct__flag" x-show="a.excludeFromNetWorth" x-cloak
-                      data-tip="Excluded from net worth.">E</span>
-              </span>
-              <span class="dash-acct__balance"
-                    :class="a.balance < 0 ? 'is-negative' : ''"
-                    x-text="fmt(a.balance)"></span>
-            </a>
+        <template x-for="g in accountGroupsForGrid()" :key="g.name">
+          <li class="dash-acct-group">
+            <div class="dash-acct-group__head">
+              <span class="dash-acct-group__name" :title="g.name" x-text="g.name"></span>
+              <span class="dash-acct-group__total"
+                    :class="g.total < 0 ? 'is-negative' : ''"
+                    x-text="fmt(g.total)"></span>
+            </div>
+            <ul class="dash-acct-group__list">
+              <template x-for="a in g.accounts" :key="a.id">
+                <li class="dash-acct">
+                  <a class="dash-acct__link" :href="'/app/register/?account=' + a.id">
+                    <span class="dash-acct__name" :title="a.name">
+                      <span class="dash-acct__name-text" x-text="a.name"></span>
+                      <span class="dash-acct__flag" x-show="a.excludeFromNetWorth" x-cloak
+                            data-tip="Excluded from net worth.">E</span>
+                    </span>
+                    <span class="dash-acct__balance"
+                          :class="a.balance < 0 ? 'is-negative' : ''"
+                          x-text="fmt(a.balance)"></span>
+                  </a>
+                </li>
+              </template>
+            </ul>
           </li>
         </template>
       </ul>
@@ -222,7 +243,7 @@
 {% endmacro %}
 
 {% macro w_income_expense() %}
-      <section class="card">
+      <section class="card dash-chartcard">
         <div class="dashboard__card-head">
           <h2>Income vs expense</h2>
           <a href="/app/reports/income-expense/">Full report &rsaquo;</a>
@@ -253,7 +274,7 @@
 {% endmacro %}
 
 {% macro w_cashflow_30() %}
-      <section class="card">
+      <section class="card dash-chartcard">
         <div class="dashboard__card-head">
           <h2>30-day cashflow</h2>
           <a href="/app/reports/projection/">Full projection &rsaquo;</a>
@@ -271,10 +292,17 @@
         <p x-show="!upcoming14().items.length" x-cloak style="color: var(--fg-muted); margin: 0;">No scheduled items in the next two weeks.</p>
         <ul class="dash-bill-list" x-show="upcoming14().items.length" x-cloak>
           <template x-for="(b, i) in upcoming14().items.slice(0, 8)" :key="i">
+            {# The middle cell is a named, min-width:0 block. It used to be a
+               bare <span>, and .dash-bill__payee was an inline box -- overflow
+               and text-overflow do nothing on a non-replaced inline box, so a
+               long payee simply ran on and painted straight over the amount
+               ("Buckeye Precision Manufacturing" across "$3,850.00" at 1024). #}
             <li class="dash-bill">
               <span class="dash-bill__date" x-text="shortDate(b.date)"></span>
-              <span>
-                <span class="dash-bill__payee" x-text="b.payeeName || $store.budget.payeeName(b.payeeId) || '—'"></span>
+              <span class="dash-bill__main">
+                <span class="dash-bill__payee"
+                      :title="b.payeeName || $store.budget.payeeName(b.payeeId) || ''"
+                      x-text="b.payeeName || $store.budget.payeeName(b.payeeId) || '—'"></span>
                 <span class="dash-bill__meta" x-text="($store.budget.findAccount(b.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(b.categoryId) || 'Uncategorized')"></span>
               </span>
               <span class="dash-bill__amount" :class="b.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(b.amount)"></span>
@@ -329,8 +357,10 @@
           <template x-for="t in recentTransactions()" :key="t.id">
             <li class="dash-recent__row">
               <span class="dash-recent__date" x-text="shortDate(t.date)"></span>
-              <span>
-                <span class="dash-recent__payee" x-text="$store.budget.payeeName(t.payeeId) || '—'"></span>
+              <span class="dash-recent__main">
+                <span class="dash-recent__payee"
+                      :title="$store.budget.payeeName(t.payeeId) || ''"
+                      x-text="$store.budget.payeeName(t.payeeId) || '—'"></span>
                 <span class="dash-recent__meta" x-text="($store.budget.findAccount(t.accountId)?.name || '—') + ' · ' + ($store.budget.categoryName(t.categoryId) || 'Uncategorized')"></span>
               </span>
               <span class="dash-recent__amount" :class="t.amount < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(t.amount)"></span>
@@ -359,13 +389,18 @@
       </section>
 {% endmacro %}
 
+{# Three small buttons floating at the top of a card several hundred pixels
+   tall. The card now sizes to its content (see .dash-actions in dashboard.css)
+   and the buttons fill the width they are given rather than huddling in the
+   top-left corner of the space. #}
 {% macro w_quick_actions() %}
-    <section class="card">
+    <section class="card dash-actions">
       <h2 class="card__title">Quick actions</h2>
-      <div class="cluster">
-        <a class="btn btn--primary btn--sm" href="/app/budget/">Open budget</a>
-        <a class="btn btn--secondary btn--sm" href="/app/register/">Enter transactions</a>
-        <a class="btn btn--ghost btn--sm" href="/app/settings/">Settings</a>
+      <div class="dash-actions__grid">
+        <a class="btn btn--primary" href="/app/budget/">Open budget</a>
+        <a class="btn btn--secondary" href="/app/register/">Enter transactions</a>
+        <a class="btn btn--secondary" href="/app/scheduled/">Recurring</a>
+        <a class="btn btn--ghost" href="/app/settings/">Settings</a>
       </div>
     </section>
 {% endmacro %}
