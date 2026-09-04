@@ -7,6 +7,14 @@ import { ageOfMoney, projectedAgeOfMoney } from "../src/assets/js/domain/insight
 
 function tiny() {
   const p = newProfile("aom");
+  /* An on-budget account the fixture's transactions can belong to.
+     The domain code counts only dollars in on-budget accounts - a
+     401(k) balance is not spendable - and it builds that set from
+     profile.accounts. newProfile() creates none, so transactions
+     pointing at an account that does not exist were filtered out and
+     every figure came back 0 or null. The fixtures said "a1" all
+     along; nothing ever created it. */
+  p.accounts.push({ id: "a1", name: "Checking", type: "checking", onBudget: true });
   const txn = (date, amount, over) => p.transactions.push(Object.assign(
     { id: "t" + p.transactions.length, date, amount, accountId: "a1", categoryId: null, transferTxnId: null }, over));
   return { p, txn };
@@ -46,8 +54,20 @@ describe("ageOfMoney", () => {
     /* ...then 10 spends in June: only these count, and by June the
        remaining January dollars are ~150+ days old. */
     for (let i = 1; i <= 10; i++) txn("2025-06-1" + (i - 1), -1000, { categoryId: "c1" });
+    /* Exact, not "> 140". Every one of these outflows draws on the same
+       January inflow, so the last 4 and the last 10 are both about 160
+       days old and a loose bound could not tell them apart: changing
+       the window from 10 to 4 left this test green, which means it was
+       testing the window in its name only.
+
+       The ten June outflows are equal amounts dated the 10th to the
+       19th, so their dollars are 160 to 169 days old and the
+       amount-weighted mean is 164.5, which the function rounds to 165.
+       The February spends are ~30 days old and would drag it far below
+       that if the window let them in, so this one number pins the
+       window at both ends. */
     const age = ageOfMoney(p, "2025-06-19");
-    expect(age).toBeGreaterThan(140);
+    expect(age).toBe(165);
   });
 });
 

@@ -7,6 +7,15 @@ import { goalsSlice } from "../src/assets/js/store/slices/goals.js";
 
 function build() {
   var h = makeHost([accountsSlice, categoriesSlice, budgetSlice]);
+  /* An on-budget account the fixture's transactions can belong to.
+     The domain code counts only dollars in on-budget accounts - a
+     401(k) balance is not spendable - and it builds that set from
+     profile.accounts. newProfile() creates none, so transactions
+     pointing at an account that does not exist were filtered out and
+     every figure came back 0 or null. The fixtures said "a1" all
+     along; nothing ever created it. */
+  h.profile.accounts.push({ id: "a1", name: "Checking", type: "checking", onBudget: true });
+  h.profile.accounts.push({ id: "acct-x", name: "Second", type: "checking", onBudget: true });
   h.addCategoryGroup("Food");
   var groupId = h.profile.categoryGroups[0].id;
   var groceries = h.addCategory({ name: "Groceries", groupId: groupId });

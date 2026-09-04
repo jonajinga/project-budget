@@ -65,6 +65,13 @@ describe("differential: index vs legacy scans over the whole sample", () => {
   /* Also months with no data at all: before, and equal to through. */
   const queryMonths = ["2024-01", ...months];
 
+  /* 20s, not the 5s default. These two walk every month against every
+     category twice - once through the index, once through the legacy
+     scan the index replaced - over the whole sample profile and its
+     4,724 transactions. Being slow is the point: the legacy path is
+     what the index exists to avoid. They took 7.7s and 6.8s and were
+     failing on time alone; given room they agree exactly, which is
+     what they are for. */
   it("categoryRow matches for every month x category", () => {
     const bad = [];
     for (const m of queryMonths) {
@@ -77,7 +84,7 @@ describe("differential: index vs legacy scans over the whole sample", () => {
       }
     }
     expect(bad).toEqual([]);
-  });
+  }, 20000);
 
   it("readyToAssign matches for every month", () => {
     const bad = [];
@@ -87,7 +94,7 @@ describe("differential: index vs legacy scans over the whole sample", () => {
       if (a !== b) bad.push(`${m}: table=${a} legacy=${b}`);
     }
     expect(bad).toEqual([]);
-  });
+  }, 20000);
 
   it("indexed activity matches for every month x category", () => {
     const index = buildMonthIndex(profile);
