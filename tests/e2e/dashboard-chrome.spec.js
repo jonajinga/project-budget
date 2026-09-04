@@ -38,7 +38,12 @@ test("create, rename, reset and delete all work without a native dialog", async 
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
 
-  const menu = () => page.locator(".dash-toolbar .overflow-menu__trigger").first();
+  /* The dashboard kebab moved into the shared .app-toolbar strip when
+     the page lost its masthead: the picker, the widget count and the
+     edit controls were a second row of chrome under the heading and
+     are now the only row. The menu and everything it does are
+     unchanged; only its container is. */
+  const menu = () => page.locator(".app-toolbar .overflow-menu__trigger").first();
 
   /* Create */
   await menu().click();

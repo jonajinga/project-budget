@@ -233,7 +233,10 @@ function auditLogView() {
 
 <style>
   .audit-badge { display: inline-block; padding: 2px 8px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: var(--radius-input); background: var(--bg-alt); color: var(--fg-muted); }
-  .audit-badge--txn   { background: color-mix(in oklab, var(--accent) 12%, var(--bg)); color: var(--accent); }
+  /* --accent-text, not --accent: the accent on this 12%-tinted ground
+     is 4.43:1, just under the 4.5 normal text needs, and this badge
+     repeats once per row - 92 contrast failures on one page. */
+  .audit-badge--txn   { background: color-mix(in oklab, var(--accent) 12%, var(--bg)); color: var(--accent-text); }
   .audit-badge--sched { background: color-mix(in oklab, var(--warn) 14%, var(--bg)); color: var(--warn); }
   .audit-badge--snap  { background: color-mix(in oklab, var(--ok) 12%, var(--bg)); color: var(--ok); }
 </style>

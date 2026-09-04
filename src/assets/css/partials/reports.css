@@ -426,7 +426,9 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--accent);
+  /* 4.45:1 on --bg-alt as --accent. The border stays the full accent:
+     a 1px edge is a non-text element and only needs 3:1. */
+  color: var(--accent-text);
   background: var(--bg-alt);
   border: 1px solid var(--accent);
   padding: 2px 6px;

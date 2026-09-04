@@ -79,7 +79,13 @@
 
   .cal__cell { min-height: 0; }
   .cal__cell-inner { min-height: 0; padding: 0; }
-  .cal__day-btn { padding: var(--space-3xs) 0; }
+  /* 2rem floor, not "as small as it will go". Shrinking the cells to
+     their content took the day buttons under the 24x24 minimum a touch
+     target needs, and added 43 target-size violations to the
+     accessibility ratchet - on a grid whose whole remaining job is to
+     be tapped. 32px still reads as a picker: six rows come to about
+     192px against the 690 the old grid used. */
+  .cal__day-btn { padding: var(--space-3xs) 0; min-height: 2rem; }
   .cal__day-num { font-size: var(--fs-sm); }
 
   /* One dot for "this day has something", drawn under the number.

@@ -3163,8 +3163,12 @@ body.pb-dragging { overflow: visible !important; }
 }
 .cal__cell--blank { background: var(--bg-alt); }
 /* Days from the previous/next month shown as dim context. */
-.cal__cell--other-month .cal__day-num { color: var(--fg-subtle); font-weight: 500; }
-.cal__cell--other-month .cal__cell-inner { opacity: 0.55; }
+/* Dim, but still readable. --fg-subtle at 0.55 opacity resolved to
+   #999da2 on #f6f8fa, which is 2.56:1 -- these are real dates a person
+   may want to read, not decoration. The opacity does the dimming and
+   the number keeps enough weight to clear 4.5:1. */
+.cal__cell--other-month .cal__day-num { color: var(--fg); font-weight: 500; }
+.cal__cell--other-month .cal__cell-inner { opacity: 0.75; }
 .cal__cell--other-month:hover .cal__cell-inner { opacity: 1; }
 .cal__cell-inner {
   display: flex;

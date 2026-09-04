@@ -581,7 +581,10 @@
   font-weight: 600;
   border-radius: 999px;
   background: var(--accent-soft);
-  color: var(--accent);
+  /* --accent on --accent-soft measures 4.25:1, under the 4.5 normal
+     text needs. The warn and danger variants below already had this
+     dealt with; the default accent one did not. */
+  color: var(--accent-text);
 }
 /* Bumped tint alpha 0.12 → 0.20 so the badge is identifiable as a
    pill (≥3:1 against bg-elevated per WCAG 1.4.11) and the warn text

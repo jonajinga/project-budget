@@ -928,9 +928,11 @@ button.search-result:focus-visible {
 .app-nav__link[aria-current="page"] .app-nav__icon { color: var(--accent); }
 .app-nav__label { min-width: 0; }
 .app-nav__link:hover { background: var(--bg-alt); }
+/* The active row is accent-on-accent-soft, which measured 4.26:1 --
+   the lowest in the app, on the one element that says where you are. */
 .app-nav__link[aria-current="page"] {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .app-sidebar__footer {

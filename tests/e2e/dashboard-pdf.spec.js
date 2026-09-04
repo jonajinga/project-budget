@@ -29,7 +29,9 @@ test("exporting produces a real PDF file and never opens the print dialog", asyn
 
   const downloadPromise = page.waitForEvent("download", { timeout: 60000 });
 
-  await page.locator(".dash-toolbar .overflow-menu__trigger").first().click();
+  /* Kebab now lives in the shared .app-toolbar strip -- see the note
+     in dashboard-chrome.spec.js. */
+  await page.locator(".app-toolbar .overflow-menu__trigger").first().click();
   await page.getByRole("menuitem", { name: /Export as PDF/ }).click();
 
   const download = await downloadPromise;

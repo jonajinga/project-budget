@@ -169,6 +169,18 @@
   --border-soft:  rgba(31, 35, 40, 0.08);
   --border-strong:rgba(31, 35, 40, 0.42);
   --accent:       #0969da;
+  /* Accent used as TEXT on a tinted surface, not as a fill.
+     --accent (#0969da) is 4.43:1 on the audit-log badge, 4.26:1 on the
+     sidebar's active row and 4.45:1 on the dashboard insight chip -
+     all just under the 4.5 that normal text needs, which is 314
+     colour-contrast nodes across the app and the reason the
+     accessibility ratchet is red. This is the same blue taken down far
+     enough to clear every one of those grounds with headroom (worst
+     case 5.6:1) while still reading as the brand colour.
+     Every other theme sets it to its own --accent: those accents are
+     light-on-dark, where the problem does not arise, and darkening
+     them would make it worse. */
+  --accent-text:  #0757b8;
   --accent-hover: #0a3069;
   --accent-soft:  rgba(9, 105, 218, 0.10);
   --link:         #0969da;
@@ -232,6 +244,7 @@
   --border-soft:  rgba(201, 209, 217, 0.10);
   --border-strong:rgba(201, 209, 217, 0.50);
   --accent:       #58a6ff;
+  --accent-text:  var(--accent);
   --accent-hover: #1f6feb;
   --accent-soft:  rgba(88, 166, 255, 0.18);
   --link:         #58a6ff;
@@ -288,6 +301,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(253, 246, 227, 0.10);
   --border-strong:rgba(253, 246, 227, 0.45);
   --accent:       #cb4b16;
+  --accent-text:  var(--accent);
   --accent-hover: #b03a08;
   --accent-soft:  rgba(203, 75, 22, 0.18);
   --link:         #268bd2;
@@ -311,6 +325,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(7, 54, 66, 0.10);
   --border-strong:rgba(7, 54, 66, 0.45);
   --accent:       #b03a08;
+  --accent-text:  var(--accent);
   --accent-hover: #7c2a04;
   --accent-soft:  rgba(176, 58, 8, 0.12);
   --link:         #1d6da4;
@@ -334,6 +349,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(248, 248, 242, 0.10);
   --border-strong:rgba(248, 248, 242, 0.50);
   --accent:       #ff79c6;
+  --accent-text:  var(--accent);
   --accent-hover: #cc4d97;
   --accent-soft:  rgba(255, 121, 198, 0.18);
   --link:         #8be9fd;
@@ -357,6 +373,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(236, 239, 244, 0.10);
   --border-strong:rgba(236, 239, 244, 0.50);
   --accent:       #88c0d0;
+  --accent-text:  var(--accent);
   --accent-hover: #5e81ac;
   --accent-soft:  rgba(136, 192, 208, 0.18);
   --link:         #81a1c1;
@@ -380,6 +397,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(251, 241, 199, 0.10);
   --border-strong:rgba(251, 241, 199, 0.50);
   --accent:       #fe8019;
+  --accent-text:  var(--accent);
   --accent-hover: #d65d0e;
   --accent-soft:  rgba(254, 128, 25, 0.18);
   --link:         #83a598;
@@ -403,6 +421,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(221, 226, 234, 0.10);
   --border-strong:rgba(221, 226, 234, 0.50);
   --accent:       #e06c75;
+  --accent-text:  var(--accent);
   --accent-hover: #be5046;
   --accent-soft:  rgba(224, 108, 117, 0.18);
   --link:         #61afef;
@@ -426,6 +445,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(192, 202, 245, 0.10);
   --border-strong:rgba(192, 202, 245, 0.50);
   --accent:       #bb9af7;
+  --accent-text:  var(--accent);
   --accent-hover: #7c66ad;
   --accent-soft:  rgba(187, 154, 247, 0.18);
   --link:         #7aa2f7;
@@ -449,6 +469,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(205, 214, 244, 0.10);
   --border-strong:rgba(205, 214, 244, 0.50);
   --accent:       #f5c2e7;
+  --accent-text:  var(--accent);
   --accent-hover: #c98ec0;
   --accent-soft:  rgba(245, 194, 231, 0.18);
   --link:         #89b4fa;
@@ -472,6 +493,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(224, 222, 244, 0.10);
   --border-strong:rgba(224, 222, 244, 0.50);
   --accent:       #ebbcba;
+  --accent-text:  var(--accent);
   --accent-hover: #b88e8d;
   --accent-soft:  rgba(235, 188, 186, 0.18);
   --link:         #9ccfd8;
@@ -501,6 +523,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(26, 26, 26, 0.08);
   --border-strong: rgba(26, 26, 26, 0.42);
   --accent:       #c0392b;
+  --accent-text:  var(--accent);
   --accent-hover: #9e2d22;
   --accent-soft:  rgba(192, 57, 43, 0.10);
   --link:         #2c5f8a;
@@ -526,6 +549,7 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border-soft:  rgba(232, 227, 214, 0.12);
   --border-strong: rgba(232, 227, 214, 0.58);
   --accent:       #e05a4b;
+  --accent-text:  var(--accent);
   --accent-hover: #c0392b;
   --accent-soft:  rgba(224, 90, 75, 0.16);
   --link:         #6fa9d9;
