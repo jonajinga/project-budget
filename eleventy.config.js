@@ -27,6 +27,9 @@ const CSS_PARTIAL_ORDER = [
   "register.css",
   "budget.css",
   "budget-inspector.css",
+  /* calendar-agenda.css after budget.css, where the rest of the .cal-*
+     rules live, so the phone agenda wins on equal specificity. */
+  "calendar-agenda.css",
   "budget-cuts.css",
   "history.css",
   "changelog.css",
@@ -399,7 +402,7 @@ export default function (eleventyConfig) {
                never found and every rule using it is dropped from the built
                CSS with no warning. Any new [data-*] selector whose attribute
                is set with a binding needs a line here. */
-            /^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/,
+            /^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/, /^data-collapsed/,
             /^aria-/, /^tippy/, /^popper/, /^sortable/,
           ],
           deep: [/dialog/, /sortable/, /tippy/, /popper/],
@@ -447,7 +450,7 @@ export default function (eleventyConfig) {
             /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/, /^dash-/, /^cl-/,
             /^app-toolbar/, /^app-page/, /^panel/,
           ],
-          greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/, /^aria-/],
+          greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/, /^data-collapsed/, /^aria-/],
           deep: [/dialog/, /sortable/, /tippy/, /popper/],
         };
         let perPageBefore = 0, perPageAfter = 0, pagesInlined = 0;
