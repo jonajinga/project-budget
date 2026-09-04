@@ -57,8 +57,6 @@
   .chart-toolbar,
   .chart-picker,
   .month-strip,
-  .cal-toolbar,
-  .cal-toolbar__filters-toggle,
   .rec-toolbar,
   .rec-summary__tile[role="button"],
   [data-touch],
@@ -77,22 +75,26 @@
   .app-page__lead { color: #333; font-size: 10pt; }
 
   /* App chrome (S8): on screen the page name is hidden and the sidebar
-     says where you are. Paper has no sidebar, so the heading comes back
-     -- and the strip of controls, which is unusable on paper, goes.
-     Scoped to the page's own h1 so the app's other visually-hidden
-     labels stay hidden. */
-  .app-toolbar { display: none !important; }
-  /* The collapsible filter row is the same chrome one level down. It
-     is a row of month pickers and selects, which is nothing on paper. */
-  .app-filters { display: none !important; }
-  /* .app-page__h1 by class, not by position. The first version of this
-     matched `.app-page > h1` plus a fallback for `.app-page__inner`, a
-     class that does not exist anywhere in the repo. The category page
-     renders its heading inside an x-if wrapper, so neither selector
-     matched, the heading stayed clipped to 1x1, and print also hides
-     the toolbar that carried the visible name -- so the sheet came out
-     with no name on it at all. */
-  .app-page__h1 {
+     says where you are. Paper has no sidebar, so the heading comes back.
+
+     This rule has now failed twice, both times the same way: it named
+     the heading too precisely and something legitimate did not match.
+     First it matched by position (`.app-page > h1`) plus a fallback for
+     a class that existed nowhere, and missed the category page, whose
+     heading sits inside an x-if wrapper. Then it matched by class, the
+     class was added to two of the THREE macros that emit a page
+     heading, and fourteen report pages printed with no name on them.
+     That is this codebase's signature failure -- a helper wired into
+     some of its call sites -- and this rule kept walking into it.
+
+     So it matches BOTH ways now: the explicit class, and any
+     visually-hidden h1 inside a page. A new page that forgets the class
+     still prints its name; a page that carries it still works if the
+     markup moves. The only way to lose the heading now is to emit no
+     h1 at all, which is an accessibility failure the audit already
+     catches. */
+  .app-page__h1,
+  .app-page h1.visually-hidden {
     position: static !important;
     width: auto;
     height: auto;
@@ -101,6 +103,63 @@
     clip: auto;
     font-size: 16pt;
   }
+
+  /* The strip loses its CONTROLS, not its text. Hiding the whole strip
+     cost year-over-year the one thing its sheet needed: which two
+     periods were compared, which lives in the strip's context label.
+     Buttons, inputs, selects and menus are meaningless on paper; a
+     subject and a context line are the page telling you what it is. */
+  .app-toolbar {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0 0 8pt;
+    display: flex;
+  }
+  .app-toolbar .btn,
+  .app-toolbar .input,
+  .app-toolbar .select,
+  .app-toolbar .field,
+  .app-toolbar .overflow-menu,
+  .app-toolbar__actions,
+  .app-toolbar__sep,
+  .app-toolbar__filter-toggle { display: none !important; }
+  .app-toolbar__subject { font-size: 13pt; font-weight: 700; }
+  .app-toolbar__context { font-size: 10pt; color: #333; }
+
+  /* The calendar names itself in its own toolbar rather than through
+     the shared macro. That toolbar used to be hidden wholesale, which
+     took the month name with it and left a printed sheet that was a
+     grid of numbers with no indication of which month. Setting the
+     title back to display:block did not work either: its parent was
+     display:none, and a hidden parent hides its children whatever they
+     ask for. So the toolbar stays and loses its controls instead --
+     the same treatment .app-toolbar gets above. */
+  .cal-toolbar {
+    display: block;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0 0 8pt;
+  }
+  .cal-toolbar__views,
+  .cal-toolbar__step,
+  .cal-toolbar__span-buttons,
+  .cal-toolbar__search,
+  .cal-toolbar__filter-icon,
+  .cal-toolbar__count,
+  .cal-toolbar__actions,
+  .cal-toolbar__filters-toggle,
+  .cal-toolbar__row--filters { display: none !important; }
+  .cal-toolbar__title {
+    display: block !important;
+    font-size: 16pt;
+    margin: 0;
+  }
+
+  /* The collapsible filter row is a row of month pickers and selects,
+     which is nothing on paper. */
+  .app-filters { display: none !important; }
 
   /* Always show URLs alongside links */
   a { color: #000; text-decoration: none; }
