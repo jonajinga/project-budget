@@ -168,7 +168,7 @@ eleventyExcludeFromCollections: true
               <td x-text="r.payee"></td>
               <td x-text="r.category || ''"></td>
               <td class="num" :class="r.amount < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="((r.amount || 0) / 100).toFixed(2)"></td>
+                  x-text="$store.budget.formatCents(r.amount)"></td>
               <td><span class="badge" :class="r.duplicate ? 'badge--warn' : ''"
                         x-text="r.duplicate ? 'duplicate' : 'new'"></span></td>
             </tr>

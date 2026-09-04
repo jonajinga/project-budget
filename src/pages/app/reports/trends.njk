@@ -91,7 +91,7 @@ eleventyExcludeFromCollections: true
                    x-text="row.month"
                    data-tip="Open this month in the calendar."></a>
               </td>
-              <td class="num amount--outflow" x-text="'$' + (row.value / 100).toFixed(2)"></td>
+              <td class="num amount--outflow" x-text="fmt(row.value)"></td>
             </tr>
           </template>
           <tr x-show="!flatRows().length" x-cloak>
@@ -178,7 +178,7 @@ function trendsView() {
 
     /* ---- Formatting ---- */
     fmt(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
 
     _syncUrl() {

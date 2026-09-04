@@ -75,9 +75,9 @@ eleventyExcludeFromCollections: true
           <tr :class="r.status === 'over' ? 'bva-row--over' : (r.status === 'unbudgeted' ? 'bva-row--unbudgeted' : '')">
             <td x-text="r.category"></td>
             <td style="color: var(--fg-muted);" x-text="r.group"></td>
-            <td class="num" x-text="'$' + (r.assigned / 100).toFixed(2)"></td>
-            <td class="num amount--outflow" x-text="'$' + (r.spent / 100).toFixed(2)"></td>
-            <td class="num" :class="r.remaining < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.remaining / 100).toFixed(2)"></td>
+            <td class="num" x-text="fmt(r.assigned)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.spent)"></td>
+            <td class="num" :class="r.remaining < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(r.remaining)"></td>
             <td class="num">
               <div class="bva-bar"
                    :style="'--pct:' + Math.min(100, r.pct) + '%; --pct-actual:' + r.pct">
@@ -199,7 +199,7 @@ function budgetVsActualView() {
       var store = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
       if (store && store.currentMonth) this.month = store.currentMonth;
     },
-    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
     kpis() {
       var rows = this.$store.budget.reportBudgetVsActual(this.month) || [];
       var assigned = rows.reduce(function (s, r) { return s + r.assigned; }, 0);

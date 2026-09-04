@@ -111,7 +111,7 @@ eleventyExcludeFromCollections: true
                  x-text="r.month"
                  data-tip="Open this month in the calendar."></a>
             </td>
-            <td class="num" :class="r.value < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.value / 100).toFixed(2)"></td>
+            <td class="num" :class="r.value < 0 ? 'amount--outflow' : ''" x-text="fmt(r.value)"></td>
           </tr>
         </template>
         <tr x-show="!rows.length" x-cloak>
@@ -312,7 +312,7 @@ function netWorthView() {
       };
       poll();
     },
-    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
     kpis() {
       var rows = this.$store.budget.reportNetWorth(null, this.rangeMonths) || [];
       if (this.brushFrom !== null && this.brushTo !== null) {

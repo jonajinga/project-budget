@@ -112,7 +112,7 @@ function healthCheckView() {
         severity: orphanTxns.length ? "danger" : "ok",
         count: orphanTxns.length,
         findings: orphanTxns.slice(0, 10).map(function (t) {
-          return { label: t.date + " · " + (t.amount/100).toFixed(2) + " · " + (t.memo || "(no memo)"), href: "/app/register/" };
+          return { label: t.date + " · " + Alpine.store("budget").formatCents(t.amount) + " · " + (t.memo || "(no memo)"), href: "/app/register/" };
         }),
         fix: orphanTxns.length ? { label: "Open register", href: "/app/register/" } : null,
       });
@@ -129,7 +129,7 @@ function healthCheckView() {
         severity: orphanCatTxns.length ? "warn" : "ok",
         count: orphanCatTxns.length,
         findings: orphanCatTxns.slice(0, 10).map(function (t) {
-          return { label: t.date + " · " + (t.amount/100).toFixed(2), href: "/app/register/" };
+          return { label: t.date + " · " + Alpine.store("budget").formatCents(t.amount), href: "/app/register/" };
         }),
         fix: orphanCatTxns.length ? { label: "Open register", href: "/app/register/" } : null,
       });
@@ -226,7 +226,7 @@ function healthCheckView() {
         severity: future.length ? "warn" : "ok",
         count: future.length,
         findings: future.slice(0, 10).map(function (t) {
-          return { label: t.date + " · " + (t.amount/100).toFixed(2), href: "/app/register/" };
+          return { label: t.date + " · " + Alpine.store("budget").formatCents(t.amount), href: "/app/register/" };
         }),
         fix: future.length ? { label: "Open register", href: "/app/register/" } : null,
       });

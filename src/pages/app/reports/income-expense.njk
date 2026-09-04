@@ -114,9 +114,9 @@ eleventyExcludeFromCollections: true
                  x-text="r.month"
                  data-tip="Open this month in the calendar."></a>
             </td>
-            <td class="num amount--inflow" x-text="'$' + (r.income / 100).toFixed(2)"></td>
-            <td class="num amount--outflow" x-text="'$' + (r.expense / 100).toFixed(2)"></td>
-            <td class="num" :class="r.net < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.net / 100).toFixed(2)"></td>
+            <td class="num amount--inflow" x-text="fmt(r.income)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.expense)"></td>
+            <td class="num" :class="r.net < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(r.net)"></td>
           </tr>
         </template>
         <tr x-show="!rows.length" x-cloak>
@@ -356,7 +356,7 @@ function incomeExpenseView() {
       };
       poll();
     },
-    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
     rangeLabel() { return "Trailing " + this.rangeMonths + " mo"; },
     kpis() {
       var rows = this.$store.budget.reportIncomeVsExpense(null, this.rangeMonths) || [];

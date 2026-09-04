@@ -127,9 +127,9 @@ eleventyExcludeFromCollections: true
                  x-text="r.month"
                  data-tip="Open this month in the calendar."></a>
             </td>
-            <td class="num" :class="r.low < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.low / 100).toFixed(2)"></td>
-            <td class="num" :class="r.expected < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.expected / 100).toFixed(2)"></td>
-            <td class="num" :class="r.high < 0 ? 'amount--outflow' : ''" x-text="'$' + (r.high / 100).toFixed(2)"></td>
+            <td class="num" :class="r.low < 0 ? 'amount--outflow' : ''" x-text="fmt(r.low)"></td>
+            <td class="num" :class="r.expected < 0 ? 'amount--outflow' : ''" x-text="fmt(r.expected)"></td>
+            <td class="num" :class="r.high < 0 ? 'amount--outflow' : ''" x-text="fmt(r.high)"></td>
           </tr>
         </template>
         <tr x-show="!rows.length" x-cloak>
@@ -230,7 +230,7 @@ function projectionView() {
     },
     print() { window.print(); },
     fmt(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
     /* KPI computations — reads the raw (unsorted, unfiltered) source
        so the start/end + lowest-month numbers don't shift when the

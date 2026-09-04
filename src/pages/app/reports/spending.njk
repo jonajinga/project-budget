@@ -96,7 +96,7 @@ eleventyExcludeFromCollections: true
           <tr>
             <td x-text="r.group"></td>
             <td x-text="r.category"></td>
-            <td class="num amount--outflow" x-text="'$' + (r.value / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.value)"></td>
           </tr>
         </template>
         <tr x-show="!rows.length" x-cloak>
@@ -236,7 +236,7 @@ function spendingView() {
       setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
     },
 
-    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
     kpis() {
       var data = this.$store.budget.reportSpending(this.from, this.to) || [];
       var total = data.reduce(function (s, r) { return s + r.value; }, 0);

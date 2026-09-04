@@ -98,7 +98,7 @@ function shareView() {
     init() { this.render(); },
 
     formatCents(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
     letter(i) {
       return "Category " + String.fromCharCode(65 + i);

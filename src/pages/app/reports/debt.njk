@@ -64,8 +64,8 @@ eleventyExcludeFromCollections: true
           <tr>
             <td x-text="r.account"></td>
             <td x-text="r.type === 'credit' ? 'Credit card' : 'Tracking liability'"></td>
-            <td class="num amount--outflow" x-text="'$' + (r.balance / 100).toFixed(2)"></td>
-            <td class="num" x-text="'$' + (r.avgPayment / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.balance)"></td>
+            <td class="num" x-text="fmt(r.avgPayment)"></td>
             <td class="num" x-text="r.monthsToPayoff ? (r.monthsToPayoff + ' months') : 'No recent payments'"></td>
           </tr>
         </template>
@@ -88,6 +88,7 @@ function debtView() {
   window.__pbChartType.debt = savedChartType;
 
   return {
+    fmt(c) { return this.$store.budget.formatCents(c); },
     chartType: savedChartType,
     chartOptions: [
       { value: "bar",   label: "Bar" },

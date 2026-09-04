@@ -332,20 +332,8 @@ function appNav(sections, currentUrl) {
        rounding rather than Number.toFixed which can banker's-round
        in edge cases. */
     fmtCompactCents(c) {
-      var n = (c || 0) / 100;
-      var sign = n < 0 ? "-" : "";
-      var abs = Math.abs(n);
-      if (abs >= 1000000) {
-        var m = abs / 1000000;
-        var mShown = m >= 100 ? Math.round(m) : (Math.round(m * 10) / 10);
-        return sign + "$" + mShown + "M";
-      }
-      if (abs >= 1000) {
-        var k = abs / 1000;
-        var kShown = k >= 100 ? Math.round(k) : (Math.round(k * 10) / 10);
-        return sign + "$" + kShown + "k";
-      }
-      return sign + "$" + Math.round(abs);
+      /* Cents always (Jon, 2026-09-04). The old "$1.2k" form is gone. */
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
   };
 }

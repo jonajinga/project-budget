@@ -329,20 +329,8 @@ function calendarView() {
        0 decimals once it hits 100 so big readings ($754k, $1.2M)
        don't imply false precision. Math.round = half-up. */
     fmtCompact(cents) {
-      var n = (cents || 0) / 100;
-      var sign = n < 0 ? "-" : "";
-      var abs = Math.abs(n);
-      var out;
-      if (abs >= 1000000) {
-        var m = abs / 1000000;
-        out = (m >= 100 ? Math.round(m) : (Math.round(m * 10) / 10)) + "M";
-      } else if (abs >= 1000) {
-        var k = abs / 1000;
-        out = (k >= 100 ? Math.round(k) : (Math.round(k * 10) / 10)) + "k";
-      } else {
-        out = Math.round(abs).toString();
-      }
-      return sign + "$" + out;
+      /* Cents always (Jon, 2026-09-04). The old "$1.2k" form is gone. */
+      return ((cents || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
     /* Builds the In / Out / Net summary segment used by both the
        month and week cell tooltips. */

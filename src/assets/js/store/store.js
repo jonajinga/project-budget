@@ -137,6 +137,15 @@ export function createStore() {
     frequencyLabel: frequencyLabel,
     occurrencesIn: occurrencesIn,
 
+    /* The one money formatter for the whole app: cents always, thousands
+       separators, sign before the symbol ("-$1,234.56"). Chart axis
+       ticks are the only place whole dollars are allowed, and those are
+       formatted inside charts/chartjs.js. Page-level fmt() helpers
+       delegate here so a change lands everywhere at once. */
+    formatCents(c) {
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    },
+
     /* Active budget month — what the budget UI is currently viewing. */
     currentMonth: thisMonth(),
 

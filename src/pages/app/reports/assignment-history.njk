@@ -91,10 +91,10 @@ eleventyExcludeFromCollections: true
                    x-text="row.month"
                    data-tip="Open this month in the calendar."></a>
               </td>
-              <td class="num amount--inflow" x-text="'$' + (row.assigned / 100).toFixed(2)"></td>
-              <td class="num amount--outflow" x-text="'$' + (row.spent / 100).toFixed(2)"></td>
+              <td class="num amount--inflow" x-text="fmt(row.assigned)"></td>
+              <td class="num amount--outflow" x-text="fmt(row.spent)"></td>
               <td class="num" :class="row.delta < 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="'$' + (row.delta / 100).toFixed(2)"></td>
+                  x-text="fmt(row.delta)"></td>
             </tr>
           </template>
           <tr x-show="!flatRows().length" x-cloak>
@@ -171,7 +171,7 @@ function assignmentHistoryView() {
     },
 
     fmt(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
 
     init() {

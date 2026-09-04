@@ -133,9 +133,9 @@ export function render(el, data) {
       /* Cell label — only when the cell is wide enough AND the value
          is large enough to be worth reading. */
       if (cellW >= 56 && v > 0 && v / maxCents > 0.05) {
-        var displayText = v >= 100000
-          ? "$" + Math.round(v / 100000) + "k"
-          : "$" + Math.round(v / 100);
+        var displayText = cellW >= 96
+          ? "$" + (v / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : "$" + Math.round(v / 100).toLocaleString("en-US");
         svg.append("text")
           .attr("x", labelW + i * cellW + cellW / 2)
           .attr("y", y + cellH / 2 + 4)
@@ -158,6 +158,6 @@ export function render(el, data) {
       .attr("font-family", "var(--font-ui, system-ui, sans-serif)")
       .attr("font-size", 11)
       .attr("font-weight", "700")
-      .text("$" + Math.round((cat.total || 0) / 100).toLocaleString("en-US"));
+      .text("$" + ((cat.total || 0) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   });
 }

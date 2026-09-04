@@ -82,7 +82,7 @@ eleventyExcludeFromCollections: true
             <tr>
               <td x-text="l.source"></td>
               <td x-text="l.target"></td>
-              <td class="num" x-text="'$' + l.value.toFixed(2)"></td>
+              <td class="num" x-text="'$' + Number(l.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })"></td>
             </tr>
           </template>
           <tr x-show="!tableRows().length" x-cloak>
@@ -191,7 +191,7 @@ function sankeyView() {
     },
 
     fmt(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
 
     /* URL state sync — write preset OR explicit from/to back to the
@@ -260,7 +260,7 @@ function sankeyView() {
         window.pbExportCSV("cash-flow-sankey", this.tableRows(), [
           { key: "source", label: "Source" },
           { key: "target", label: "Destination" },
-          { key: "value",  label: "Amount", format: function (v) { return "$" + Number(v).toFixed(2); } },
+          { key: "value",  label: "Amount", format: function (v) { return "$" + Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } },
         ]);
       }
     },
@@ -281,7 +281,7 @@ function sankeyView() {
         columns: [
           { key: "source", label: "Source" },
           { key: "target", label: "Destination" },
-          { key: "value",  label: "Amount", format: function (v) { return "$" + Number(v).toFixed(2); } },
+          { key: "value",  label: "Amount", format: function (v) { return "$" + Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } },
         ],
         rows: this.tableRows(),
       });

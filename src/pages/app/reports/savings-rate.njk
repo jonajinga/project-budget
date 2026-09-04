@@ -113,9 +113,9 @@ eleventyExcludeFromCollections: true
                  x-text="r.month"
                  data-tip="Open this month in the calendar."></a>
             </td>
-            <td class="num amount--inflow" x-text="'$' + (r.income / 100).toFixed(2)"></td>
-            <td class="num amount--outflow" x-text="'$' + (r.expense / 100).toFixed(2)"></td>
-            <td class="num" :class="r.savings < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="'$' + (r.savings / 100).toFixed(2)"></td>
+            <td class="num amount--inflow" x-text="fmt(r.income)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.expense)"></td>
+            <td class="num" :class="r.savings < 0 ? 'amount--outflow' : 'amount--inflow'" x-text="fmt(r.savings)"></td>
             <td class="num" :class="r.rate === null ? '' : (r.rate < 0 ? 'amount--outflow' : '')"
                 x-text="r.rate === null ? '—' : (r.rate * 100).toFixed(1) + '%'"></td>
           </tr>
@@ -320,7 +320,7 @@ function savingsRateView() {
       };
       poll();
     },
-    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
     kpis() {
       var rows = this.$store.budget.reportSavingsRate(null, this.rangeMonths) || [];
       if (this.brushFrom !== null && this.brushTo !== null) {

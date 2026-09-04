@@ -89,9 +89,9 @@ eleventyExcludeFromCollections: true
               <a :href="'/app/register/?payee=' + r.payeeId" x-text="r.payee"
                  data-tip="Open the register filtered to this payee."></a>
             </td>
-            <td class="num amount--outflow" x-text="'$' + (r.total / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.total)"></td>
             <td class="num" x-text="r.count"></td>
-            <td class="num" x-text="'$' + (r.avg / 100).toFixed(2)"></td>
+            <td class="num" x-text="fmt(r.avg)"></td>
             <td x-text="r.lastDate"></td>
           </tr>
         </template>
@@ -210,7 +210,7 @@ function payeeLeaderboardView() {
         this.from = fbd.getFullYear() + "-" + String(fbd.getMonth() + 1).padStart(2, "0");
       }
     },
-    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }); },
+    fmt(c) { return (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }); },
     kpis() {
       var data = this.$store.budget.reportPayeeLeaderboard(this.from, this.to, this.limit) || [];
       var total = data.reduce(function (s, r) { return s + r.total; }, 0);

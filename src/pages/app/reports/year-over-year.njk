@@ -97,10 +97,10 @@ eleventyExcludeFromCollections: true
           <template x-for="(r, i) in tableRows()" :key="r._key + ':' + i">
             <tr>
               <td x-text="r._label"></td>
-              <td class="num" x-text="'$' + (r.current / 100).toFixed(2)"></td>
-              <td class="num" x-text="'$' + (r.prior / 100).toFixed(2)"></td>
+              <td class="num" x-text="fmt(r.current)"></td>
+              <td class="num" x-text="fmt(r.prior)"></td>
               <td class="num" :class="r.delta >= 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="(r.delta >= 0 ? '+' : '') + '$' + (r.delta / 100).toFixed(2)"></td>
+                  x-text="(r.delta >= 0 ? '+' : '') + fmt(r.delta)"></td>
             </tr>
           </template>
           <tr x-show="!tableRows().length" x-cloak>
@@ -204,7 +204,7 @@ function yoyView() {
     },
 
     fmt(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
 
     /* URL state sync — write view + nested current/prior ranges back

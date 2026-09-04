@@ -89,8 +89,8 @@ eleventyExcludeFromCollections: true
                     :class="r.cadence === 'Yearly' ? 'badge--warn' : (r.cadence === 'Weekly' ? 'badge--danger' : '')"
                     x-text="r.cadence"></span>
             </td>
-            <td class="num amount--outflow" x-text="'$' + (r.typicalAmount / 100).toFixed(2)"></td>
-            <td class="num amount--outflow" x-text="'$' + (r.annualCost / 100).toFixed(2)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.typicalAmount)"></td>
+            <td class="num amount--outflow" x-text="fmt(r.annualCost)"></td>
             <td class="num" x-text="r.occurrences"></td>
             <td x-text="r.lastCharge"></td>
             <td x-text="$store.budget.findAccount(r.lastChargeAccountId)?.name || '—'"></td>
@@ -170,7 +170,7 @@ function subscriptionsView() {
     },
 
     fmt(c) {
-      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
 
     /* URL state sync — write lookbackMonths + query back to the

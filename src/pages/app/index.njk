@@ -1267,7 +1267,7 @@ function dashboardView() {
     /* ---- Formatting helpers ---- */
     fmt(c) {
       return ((c || 0) / 100).toLocaleString("en-US", {
-        style: "currency", currency: "USD", maximumFractionDigits: 0,
+        style: "currency", currency: "USD",
       });
     },
     /* Compact form for sub-labels -- "$1.2k" / "$4.5M". */
@@ -1277,18 +1277,8 @@ function dashboardView() {
        magnitudes ($1.2k, $57.5k). Math.round = half-up standard
        rounding. */
     fmtCompact(c) {
-      var n = (c || 0) / 100;
-      var sign = n < 0 ? "-" : "";
-      var abs = Math.abs(n);
-      if (abs >= 1000000) {
-        var m = abs / 1000000;
-        return sign + "$" + (m >= 100 ? Math.round(m) : (Math.round(m * 10) / 10)) + "M";
-      }
-      if (abs >= 1000) {
-        var k = abs / 1000;
-        return sign + "$" + (k >= 100 ? Math.round(k) : (Math.round(k * 10) / 10)) + "k";
-      }
-      return sign + "$" + Math.round(abs);
+      /* Cents always (Jon, 2026-09-04). The old "$1.2k" form is gone. */
+      return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
     shortDate(iso) {
       if (!iso) return "";
