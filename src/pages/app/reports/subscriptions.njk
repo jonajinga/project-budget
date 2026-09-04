@@ -33,7 +33,7 @@ eleventyExcludeFromCollections: true
     </div>
     <div class="kpi kpi--muted">
       <span class="kpi__label">Biggest line item</span>
-      <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" :title="kpis().topName || ''" x-text="kpis().topName || '—'"></span>
       <span class="kpi__delta" x-text="kpis().topAnnual ? (fmt(kpis().topAnnual) + ' / yr') : ''"></span>
     </div>
     <div class="kpi kpi--muted">

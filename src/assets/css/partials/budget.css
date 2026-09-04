@@ -4280,11 +4280,26 @@ body.pb-dragging { overflow: visible !important; }
   letter-spacing: 0.06em;
   color: var(--fg-muted);
   font-weight: 600;
-  /* Labels never wrap; a long label ends in an ellipsis and the tile
-     carries the full text in its title attribute. */
+  /* One line from 600px up, where a tile is wide enough for a label
+     like "Assigned this month". */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Two-up phone tiles are about 170px wide, where "Share of last-month
+   spend" cannot fit on one line at any readable size. Wrapping to two
+   lines loses nothing and keeps the row heights even, which one-line
+   truncation did not. */
+@media (max-width: 599px) {
+  .kpi__label {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.25;
+    min-height: 2.5em;
+  }
 }
 .kpi__value {
   /* Scales 1.25rem → 2rem with the tile width. Using UI sans

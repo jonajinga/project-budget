@@ -90,7 +90,7 @@ eleventyExcludeFromCollections: true
             <thead>
               <tr>
                 <th>Category</th>
-                <th>Cut</th>
+                <th class="col-p3">Cut</th>
                 <th>Before, then allowed</th>
                 <th>This month</th>
                 <th>Kept</th>
@@ -106,7 +106,7 @@ eleventyExcludeFromCollections: true
                     <a class="hist__link" :href="categoryHref(c)" x-text="c.name"></a>
                     <div class="hist__card-meta" x-text="c.groupName + ', since ' + monthLabel(c.cut.startMonth, true)"></div>
                   </td>
-                  <td data-label="Cut" x-text="cutLabel(c)"></td>
+                  <td class="col-p3" data-label="Cut" x-text="cutLabel(c)"></td>
                   <td data-label="Before, then allowed">
                     <div x-text="fmt(c.series.baseline) + ' to ' + fmt(Math.max(0, c.series.baseline - c.series.target))"></div>
                     <div class="hist__card-meta" x-text="'saves ' + fmt(c.series.target) + ' a month'"></div>

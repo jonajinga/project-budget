@@ -142,17 +142,17 @@ eleventyExcludeFromCollections: true
               <span class="hist__card-meta" x-text="'Share of ' + flowWord().toLowerCase() + ' over ' + range + ' months'"></span>
             </div>
             <div class="hist__table-wrap">
-              <table class="hist__table">
-                <thead><tr><th>Category</th><th style="text-align:left;">Share</th><th>Average</th><th>This month</th><th>Assigned</th><th>Available</th></tr></thead>
+              <table class="hist__table table table--stack">
+                <thead><tr><th>Category</th><th class="col-p2" style="text-align:left;">Share</th><th>Average</th><th>This month</th><th>Assigned</th><th>Available</th></tr></thead>
                 <tbody>
                   <template x-for="r in breakdown()" :key="r.id">
                     <tr>
                       <td><a class="hist__link" :href="memberHref(r.id)" x-text="r.name"></a> <span class="hist__card-meta" x-show="r.hidden">hidden</span></td>
-                      <td style="text-align:left;"><span class="hist__breakdown-bar" :style="'width:' + Math.round(r.share / maxShare() * 120) + 'px'"></span><span x-text="r.share + '%'"></span></td>
-                      <td x-text="fmt(r.avg)"></td>
-                      <td x-text="fmt(r.now)"></td>
-                      <td x-text="fmt(r.assigned)"></td>
-                      <td :style="r.available < 0 ? 'color: var(--danger);' : ''" x-text="fmt(r.available)"></td>
+                      <td class="col-p2" style="text-align:left;"><span class="hist__breakdown-bar" :style="'width:' + Math.round(r.share / maxShare() * 120) + 'px'"></span><span x-text="r.share + '%'"></span></td>
+                      <td data-label="Average" x-text="fmt(r.avg)"></td>
+                      <td data-label="This month" x-text="fmt(r.now)"></td>
+                      <td data-label="Assigned" x-text="fmt(r.assigned)"></td>
+                      <td data-label="Available" :style="r.available < 0 ? 'color: var(--danger);' : ''" x-text="fmt(r.available)"></td>
                     </tr>
                   </template>
                 </tbody>
@@ -164,27 +164,35 @@ eleventyExcludeFromCollections: true
         <section class="hist__card">
           <div class="hist__card-head"><h2 class="hist__card-title">Where it goes</h2><span class="hist__card-meta">Top payees in this window</span></div>
           <template x-if="!topPayees().length"><p class="mini-chart__empty">No transactions in this window.</p></template>
-          <table class="hist__table" x-show="topPayees().length">
-            <tbody>
-              <template x-for="p in topPayees()" :key="p.name">
-                <tr><td x-text="p.name"></td><td style="text-align:left; width: 40%;"><span class="hist__breakdown-bar" :style="'width:' + Math.round(p.share) + '%'"></span></td><td x-text="p.share + '%'"></td><td x-text="fmt(p.total)"></td></tr>
-              </template>
-            </tbody>
-          </table>
+          <div class="hist__table-wrap" x-show="topPayees().length">
+            <table class="hist__table table table--stack">
+              <thead><tr><th>Payee</th><th class="col-p2">Share</th><th>Percent</th><th>Total</th></tr></thead>
+              <tbody>
+                <template x-for="p in topPayees()" :key="p.name">
+                  <tr>
+                    <td x-text="p.name"></td>
+                    <td class="col-p2" style="text-align:left; width: 40%;"><span class="hist__breakdown-bar" :style="'width:' + Math.round(p.share) + '%'"></span></td>
+                    <td data-label="Percent" x-text="p.share + '%'"></td>
+                    <td data-label="Total" x-text="fmt(p.total)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section class="hist__card">
           <div class="hist__card-head"><h2 class="hist__card-title">Month by month</h2></div>
           <div class="hist__table-wrap" style="max-height: 360px; overflow-y: auto;">
-            <table class="hist__table">
+            <table class="hist__table table table--stack">
               <thead><tr><th>Month</th><th>Assigned</th><th x-text="flowWord()"></th><th>Available</th></tr></thead>
               <tbody>
                 <template x-for="r in series().slice().reverse()" :key="r.month">
                   <tr :class="r.month === $store.budget.currentMonth ? 'is-current' : ''">
                     <td x-text="monthLabel(r.month)"></td>
-                    <td x-text="fmt(r.assigned)"></td>
-                    <td x-text="fmt(r[flowKey()])"></td>
-                    <td :style="r.available < 0 ? 'color: var(--danger);' : ''" x-text="fmt(r.available)"></td>
+                    <td data-label="Assigned" x-text="fmt(r.assigned)"></td>
+                    <td :data-label="flowWord()" x-text="fmt(r[flowKey()])"></td>
+                    <td data-label="Available" :style="r.available < 0 ? 'color: var(--danger);' : ''" x-text="fmt(r.available)"></td>
                   </tr>
                 </template>
               </tbody>
@@ -200,16 +208,19 @@ eleventyExcludeFromCollections: true
           <template x-if="!transactions().length"><p class="mini-chart__empty">Nothing recorded here yet.</p></template>
           <div class="hist__table-wrap" x-show="transactions().length">
             <table class="hist__table">
-              <thead><tr><th>Date</th><th style="text-align:left;">Payee</th><th style="text-align:left;">Account</th><th style="text-align:left;" x-show="kind === 'group'">Category</th><th style="text-align:left;">Memo</th><th>Amount</th></tr></thead>
+              <thead><tr><th style="text-align:left;">Payee</th><th class="col-p2">Date</th><th class="col-p2" style="text-align:left;">Account</th><th class="col-p3" style="text-align:left;" x-show="kind === 'group'">Category</th><th class="col-p3" style="text-align:left;">Memo</th><th>Amount</th></tr></thead>
               <tbody>
                 <template x-for="t in recentTransactions()" :key="t.id">
                   <tr>
-                    <td x-text="t.date"></td>
-                    <td style="text-align:left;" x-text="t.payee || '-'"></td>
-                    <td style="text-align:left;" x-text="accountName(t.accountId)"></td>
-                    <td style="text-align:left;" x-show="kind === 'group'" x-text="catName(t.categoryId)"></td>
-                    <td style="text-align:left; white-space: normal;" x-text="t.memo"></td>
-                    <td :style="t.amount < 0 ? '' : 'color: var(--ok);'" x-text="fmt(t.amount)"></td>
+                    <td style="text-align:left;">
+                      <span x-text="t.payee || '-'"></span>
+                      <span class="hist__card-meta" x-text="t.date"></span>
+                    </td>
+                    <td class="col-p2" data-label="Date" x-text="t.date"></td>
+                    <td class="col-p2" data-label="Account" style="text-align:left;" x-text="accountName(t.accountId)"></td>
+                    <td class="col-p3" data-label="Category" style="text-align:left;" x-show="kind === 'group'" x-text="catName(t.categoryId)"></td>
+                    <td class="col-p3" data-label="Memo" style="text-align:left; white-space: normal;" x-text="t.memo"></td>
+                    <td data-label="Amount" :style="t.amount < 0 ? '' : 'color: var(--ok);'" x-text="fmt(t.amount)"></td>
                   </tr>
                 </template>
               </tbody>

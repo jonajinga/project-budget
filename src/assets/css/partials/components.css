@@ -475,7 +475,7 @@
    classes and attributes; nothing here changes a table that does not.
 
    Column priority. Mark a <th> and its <td>s with .col-p3 to hide the
-   column below 1024px, .col-p2 to hide it below 600px. Money and
+   column at 1024px and below, .col-p2 to hide it below 600px. Money and
    action columns never carry a priority class: they are the last
    thing a reader gives up, so they are the last thing to hide.
 
@@ -492,7 +492,9 @@
    the kebab and sits in the top-right corner. Money cells keep .num.
    When a table stacks, the plain-table phone fallback (display:block
    scroll) must not also apply, so the stack rule wins by specificity. */
-@media (max-width: 1023px) { .col-p3 { display: none !important; } }
+/* 1024px counts as tablet: it is iPad landscape, the width the sweep
+   measures, and the width where six-column tables started scrolling. */
+@media (max-width: 1024px) { .col-p3 { display: none !important; } }
 @media (max-width: 599px)  { .col-p2 { display: none !important; } }
 
 .table-scroll--sticky-first th:first-child,

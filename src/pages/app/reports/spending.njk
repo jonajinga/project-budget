@@ -44,7 +44,7 @@ eleventyExcludeFromCollections: true
       </div>
       <div class="kpi kpi--warn">
         <span class="kpi__label">Top category</span>
-        <span class="kpi__value" style="font-size: var(--fs-lg);" x-text="kpis().topName || '—'"></span>
+        <span class="kpi__value" style="font-size: var(--fs-lg);" :title="kpis().topName || ''" x-text="kpis().topName || '—'"></span>
         <span class="kpi__delta" x-text="kpis().topShare === null ? '—' : (kpis().topShare.toFixed(1) + '% of total')"></span>
       </div>
       <div class="kpi kpi--muted">

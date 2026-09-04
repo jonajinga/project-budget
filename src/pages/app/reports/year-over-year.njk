@@ -41,6 +41,7 @@ eleventyExcludeFromCollections: true
     <div class="kpi kpi--muted">
       <span class="kpi__label">Biggest swing</span>
       <span class="kpi__value" style="font-size: var(--fs-lg);"
+            :title="data.deltas.biggestSwing ? data.deltas.biggestSwing.category : ''"
             x-text="data.deltas.biggestSwing ? data.deltas.biggestSwing.category : '—'"></span>
       <span class="kpi__delta"
             x-text="data.deltas.biggestSwing ? ((data.deltas.biggestSwing.delta >= 0 ? '+' : '') + fmt(data.deltas.biggestSwing.delta)) : ''"></span>
