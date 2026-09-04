@@ -5,7 +5,8 @@ description: "Everything one category or group has done, month by month."
 permalink: /app/category/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="categoryView()" x-init="init()">
+{% from "partials/app-toolbar.njk" import appToolbarSubject %}
+<div class="app-page app-page--dense" x-data="categoryView()" x-init="init()">
   <template x-if="!$store.budget.loading && !found()">
     <section class="hist__card hist__empty">
       <h2>That category is not in this budget</h2>
@@ -16,26 +17,29 @@ eleventyExcludeFromCollections: true
 
   <template x-if="found()">
     <div>
-      <header class="app-page__header">
-        <div>
-          <p class="hist__card-meta" style="margin: 0 0 2px;">
+      {# The category name is the subject here, not a screen label: it
+         says which thing you are looking at, so it stays visible. The
+         breadcrumb to the parent group goes with it. #}
+      {% call appToolbarSubject("Category", '<span x-text="title()"></span>') %}
+        <div class="app-toolbar__group">
+          <span class="app-toolbar__sep" aria-hidden="true"></span>
+          <p class="hist__card-meta app-toolbar__context" style="margin: 0;">
             <template x-if="groupHref()"><a class="hist__link" :href="groupHref()" x-text="eyebrow()"></a></template>
             <template x-if="!groupHref()"><span x-text="eyebrow()"></span></template>
           </p>
-          <h1 class="app-page__title" x-text="title()"></h1>
-          <p class="app-page__lead" x-show="note()" x-text="note()"></p>
+          <span class="app-toolbar__context" x-show="note()" x-cloak x-text="note()"></span>
         </div>
-        <div class="cluster" style="gap: var(--space-2xs);">
+        <div class="app-toolbar__actions">
           <span class="hist__range" role="group" aria-label="Months shown">
             <button type="button" :class="range === 6 ? 'is-active' : ''" @click="setRange(6)">6m</button>
             <button type="button" :class="range === 12 ? 'is-active' : ''" @click="setRange(12)">1y</button>
             <button type="button" :class="range === 24 ? 'is-active' : ''" @click="setRange(24)">2y</button>
             <button type="button" :class="range === 60 ? 'is-active' : ''" @click="setRange(60)">5y</button>
           </span>
-          <a class="btn btn--ghost btn--sm" :href="budgetHref()">Budget</a>
-          <a class="btn btn--ghost btn--sm" :href="registerHref()">Register</a>
+          <a class="btn btn--ghost" :href="budgetHref()">Budget</a>
+          <a class="btn btn--ghost" :href="registerHref()">Register</a>
         </div>
-      </header>
+      {% endcall %}
 
       <div class="kpi-strip hist__kpis">
         <div class="kpi" :class="availableClass()">

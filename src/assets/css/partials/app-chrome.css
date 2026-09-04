@@ -61,7 +61,7 @@
    from growing back out through the negative margin, so it stopped one
    gutter short of the right edge while reaching the left one -- the bar
    looked misaligned rather than full width. */
-.app-page > .app-toolbar { max-width: none; }
+.app-page .app-toolbar { max-width: none; }
 
 /* A page whose body is one big surface (a table, a grid) wants the
    strip to sit directly on top of it with no gap and no double
@@ -187,7 +187,7 @@
 .app-page--flush > * { max-width: none; }
 /* Its own toolbar already bled; bleeding it twice would push it off
    the left edge by a full gutter. */
-.app-page--flush > .app-toolbar { margin-inline: 0; margin-top: 0; }
+.app-page--flush .app-toolbar { margin-inline: 0; margin-top: 0; }
 
 /* Not everything on a flush page wants to touch the window. A table
    gains from the extra width; a strip of tiles just looks like it fell
