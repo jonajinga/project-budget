@@ -5,16 +5,21 @@ description: "Project Budget doesn't connect to your bank. Here's why, and how t
 permalink: /app/integrations/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Integrations</p>
-      <h1 class="app-page__title">No bank connections — on purpose</h1>
-      <p class="app-page__lead">
-        Project Budget runs entirely in your browser. There is no server, no aggregator, and no third-party data pipe. That makes it private by default — and it means there's no "Connect bank" button. Here's how to keep your transactions current without one.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense">
+  {% call appToolbar("Integrations") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context">No bank connections, on purpose</span>
     </div>
-  </header>
+    <div class="app-toolbar__actions">
+      <a class="btn btn--ghost btn--sm" href="/app/import/">Open import</a>
+      {% call pageInfo(id="integrations", title="Why there is no Connect bank button", label="Why there is no Connect bank button") %}
+        <p>Project Budget runs entirely in your browser. There is no server, no aggregator, and no third-party data pipe. That makes it private by default - and it means there is no "Connect bank" button.</p>
+        <p>The sections on this page cover why that choice was made, and how to keep your transactions current without one.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <section class="card prose">
     <h2>Why no bank API?</h2>

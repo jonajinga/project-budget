@@ -5,14 +5,19 @@ description: "Read-only snapshot of the active profile — when it was created, 
 permalink: /app/about-this-profile/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="aboutProfileView()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Profile health</p>
-      <h1 class="app-page__title">About this profile</h1>
-      <p class="app-page__lead">A read-only snapshot of the active profile. Everything here lives in your browser's localStorage; nothing is sent anywhere.</p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="aboutProfileView()">
+  {% call appToolbar("About this profile") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-show="$store.budget.profile" x-cloak x-text="$store.budget.profile?.name"></span>
     </div>
-  </header>
+    <div class="app-toolbar__actions">
+      {% call pageInfo(id="about-profile", title="About this page", label="What this page shows and where the data lives") %}
+        <p>A read-only snapshot of the active profile. Everything here lives in your browser's localStorage; nothing is sent anywhere.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <p x-show="!$store.budget.profile" x-cloak style="color: var(--fg-muted);">No active profile.</p>
 

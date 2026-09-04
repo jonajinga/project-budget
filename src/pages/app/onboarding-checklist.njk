@@ -5,17 +5,21 @@ description: "Five quick milestones to go from empty to a fully-working budget. 
 permalink: /app/onboarding-checklist/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="onboardingChecklist()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Onboarding</p>
-      <h1 class="app-page__title">Onboarding checklist</h1>
-      <p class="app-page__lead">
-        Five milestones that get you from "empty profile" to "I trust this with my real numbers." Each step auto-completes as you do it — no buttons to tick.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="onboardingChecklist()">
+  {% call appToolbar("Onboarding checklist") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context"
+            x-text="completedCount() + ' of ' + steps.length + ' complete'"></span>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/welcome/">Start the guided wizard</a>
-  </header>
+    <div class="app-toolbar__actions">
+      <a class="btn btn--ghost btn--sm" href="/app/welcome/">Start the guided wizard</a>
+      {% call pageInfo(id="onboarding", title="About the checklist", label="How the checklist completes itself") %}
+        <p>Five milestones that get you from "empty profile" to "I trust this with my real numbers." Each step auto-completes as you do it - no buttons to tick.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <div class="onboarding-progress">
     <div class="onboarding-progress__bar">

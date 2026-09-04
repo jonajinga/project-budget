@@ -5,17 +5,20 @@ description: "Three-step guided setup — create a profile, add your first accou
 permalink: /app/welcome/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page" x-data="welcomeWizard()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Welcome</p>
-      <h1 class="app-page__title">Three steps to a working budget</h1>
-      <p class="app-page__lead">
-        We'll create a profile, drop in your everyday accounts, and seed a category list you can edit later. The whole thing is local — nothing leaves your browser.
-      </p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense" x-data="welcomeWizard()" x-init="init()">
+  {% call appToolbar("Welcome") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context" x-text="'Step ' + step + ' of 3'"></span>
     </div>
-    <a class="btn btn--ghost btn--sm" href="/app/" data-tip="Skip the wizard and go straight to the dashboard.">Skip for now</a>
-  </header>
+    <div class="app-toolbar__actions">
+      <a class="btn btn--ghost btn--sm" href="/app/" data-tip="Skip the wizard and go straight to the dashboard.">Skip for now</a>
+      {% call pageInfo(id="welcome", title="About this wizard", label="What the three steps do") %}
+        <p>Three steps to a working budget. We'll create a profile, drop in your everyday accounts, and seed a category list you can edit later. The whole thing is local - nothing leaves your browser.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   {# Shown only with no profile yet. This is the screen that replaces the
      old silent auto-load of the sample household. #}

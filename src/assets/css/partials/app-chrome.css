@@ -68,6 +68,13 @@
    border. */
 .app-toolbar--flush { margin-bottom: 0; }
 
+/* The strip already carries the gap under itself. A first block that
+   also sets its own top margin (the contact grid's --space-lg, a card
+   converted from the old masthead layout) doubles it, which puts the
+   first row of content 32 pixels lower than every other converted
+   page. The strip owns that space. */
+.app-page > .app-toolbar + * { margin-top: 0; }
+
 /* Controls that belong together. The first group sits left, and
    .app-toolbar__actions pushes everything after it to the right
    edge. */

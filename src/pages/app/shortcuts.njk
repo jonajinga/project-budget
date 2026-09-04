@@ -5,14 +5,19 @@ description: "Every keyboard shortcut in Project Budget — global, navigation, 
 permalink: /app/shortcuts/
 eleventyExcludeFromCollections: true
 ---
-<div class="app-page">
-  <header class="app-page__header">
-    <div>
-      <p class="eyebrow">Keyboard</p>
-      <h1 class="app-page__title">Keyboard shortcuts</h1>
-      <p class="app-page__lead">Every shortcut the app responds to. When in doubt, press <kbd>?</kbd> to open the command palette — most actions are searchable there.</p>
+{% from "partials/app-toolbar.njk" import appToolbar %}
+{% from "partials/page-info.njk" import pageInfo %}
+<div class="app-page app-page--dense">
+  {% call appToolbar("Keyboard shortcuts") %}
+    <div class="app-toolbar__group">
+      <span class="app-toolbar__context">Press ? anywhere for the command palette</span>
     </div>
-  </header>
+    <div class="app-toolbar__actions">
+      {% call pageInfo(id="shortcuts", title="About these shortcuts", label="Where these shortcuts work") %}
+        <p>Every shortcut the app responds to. When in doubt, press <kbd>?</kbd> to open the command palette - most actions are searchable there.</p>
+      {% endcall %}
+    </div>
+  {% endcall %}
 
   <section class="card">
     <h2 class="card__title">Global</h2>
