@@ -88,9 +88,18 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
 - [x] **R2 Savings rate chart.** One month at minus seven hundred
   percent flattened the other eleven into a line. The axis fits the
   bulk and names the outlier underneath.
-- [ ] **R3 Report tables and tiles.** Column priorities and phone
-  stacking across all fifteen reports; several still drop their money
-  columns on a phone.
+- [x] **R3 Report tables and tiles.** Every report table now carries
+  the shared recipe: the subject column first (it becomes the phone
+  card's title), secondary columns behind `.col-p3`, `.table--stack`
+  with a `data-label` on every cell, and a `.table-scroll` wrapper.
+  Twelve money cells across four reports sat off the right edge of a
+  390 phone and could only be reached by scrolling the table sideways;
+  that count is zero. Payees lost its rank column and gained the rank
+  inside the payee cell - as a column it became the phone card's title,
+  so the card read "1" in large type with the payee under it. The KPI
+  tiles had the same orphan the hub grid had: four tiles in a
+  three-column grid left the fourth alone between 600 and 1120 pixels.
+  Two-up there instead, same height, no gap.
 - [ ] **R4 Remaining chart quality.** Sankey labels collide, the
   treemap clips its labels, the heatmap has no legend and hides values
   at tablet width, the debt chart uses one colour.
@@ -107,22 +116,31 @@ Legend: [x] done and checked  ·  [~] in progress  ·  [ ] not started
   phone. Both tables stack now and the Restore button never hides.
 - [x] **U6 Excluded accounts spacing.** Ran words together because the
   build's HTML minifier trims whitespace at the edge of a text node.
-- [x] **U1 Backup and import.** Import opens on a drop zone that fills
-  the window, with the prose behind the info button. It was the worst
-  case in the audit - 240 pixels of title and prose, 190 of control,
-  460 of nothing. Backup was the same shape: five stacked cards, three
-  of them pure prose, and a paragraph in a full-width card stops at the
-  global 70ch measure so the right third of each was empty. It is one
-  panel now - the two things you can download and a rail whose colour
-  says how overdue you are - with all of the prose behind the info
-  button. First row of content 277 to 157 at 1440.
-- [~] **U5 Tools and reports index.** Tools done. Sixteen tiles in a
-  hard-coded three-column grid stranded the sixteenth on its own row at
-  every desktop width. auto-fill picks the count now, floored at a
-  quarter of the row so it never reaches five, with a two-column band
-  from 600 to 1379 where three would otherwise fit. Swept 360 to 2000
-  pixels: no row holds a lone tile at any width. The reports index is
-  with the reports worker.
+- [x] **U1 Backup and import.** Both done. Import opens on a drop zone
+  that fills the window. It was the worst case in the audit - 240
+  pixels of title and prose, 190 of control, 460 of nothing. Backup was
+  the same shape: five stacked cards, three of them pure prose, and a
+  paragraph in a full-width card stops at the global 70ch measure, so
+  the right third of each was empty - that is the "empty column" the
+  plan describes. Backup is one panel now: the two things you can
+  download and a rail whose colour says how overdue you are, with the
+  prose behind the info button.
+- [x] **U5 Tools and reports index.** Both done, by different workers,
+  and they needed different answers.
+
+  Tools had sixteen tiles in a hard-coded three-column grid, which
+  stranded the sixteenth on its own row at every desktop width.
+  auto-fill picks the count now, floored at a quarter of the row so it
+  never reaches five, with a two-column band from 600 to 1379 where
+  three would otherwise fit. Swept 360 to 2000: no lone tile.
+
+  The reports index could not be fixed the same way, and the worker
+  said so rather than doing as it was told. Its groups hold four, five,
+  two, two and one report, so there is no column count at which every
+  group's last row holds more than one tile, and the one-report group
+  is a lone tile at any count. auto-fill cannot solve that. The tiles
+  grow to share the last row instead, with a container query so a
+  stretched tile lays out on one line and looks deliberate.
 - [ ] **U7 Dashboard PDF export.** Skips five widgets at every width,
   because two chart hosts render without the identifier the export
   looks up.
@@ -179,25 +197,37 @@ one-line lead. It does not; the lead moves behind the info button.
   print emits "Category: Dining out" at full width, and changing only
   the sort no longer raises a badge.
 - [ ] **The 15 report pages and the reports hub.** With a worker.
-- [~] **The 20 utility and form pages.** Converted, not yet checked by
+- [~] **The 20 utility and form pages.** Converted, not checked by
   anyone independent. backup, diagnostics, health-check, trash,
   settings, shortcuts, tools, templates, audit-log, about-this-profile,
   integrations, share, rules, payees, profiles, onboarding-checklist,
   welcome, contact, feedback, review. Trash, payees and audit-log went
   flush; audit-log uses the collapsible filter row for its three
   selects; settings is eight .panel sections rather than eight cards.
-  U1 backup and U5 tools are finished here too.
 
-  The author's own figures for the drop in where the first row of real
-  content sits are recorded in the handoff, not here. Two different
-  numbers were reported for the same measurement (a mean of 98 and of
-  105, and a range that does not match between them), so none of them
-  goes in this document until a verifier has measured it. Three pages
-  -- settings, profiles and payees -- never had a lead to remove and so
-  drop much less than the rest, which is expected.
-- [ ] **The 15 report pages and the reports hub.** With a worker.
-- [ ] Neither the report nor the utility pages have been checked by
-  anyone independent.
+  Two defects were found in shared CSS on the way, so they affected the
+  pages converted on main as well: .app-toolbar__group sized itself
+  from its own max-content and then shrank its children into it, and a
+  first block under the strip added its own top margin on top of the
+  strip's. Both fixed here.
+- [~] **The 15 report pages and the reports hub.** Converted, not
+  checked by anyone independent. Three bands of chrome became one: the
+  masthead went, the range picker came up into the strip, and
+  `.report-toolbar` - the search box, the row count and the export
+  kebab - came up with it. No page uses `.report-toolbar` any more.
+  `partials/report-chrome.njk` is the one strip for all fifteen detail
+  reports, so it cannot drift page to page. Save view moved into the
+  actions kebab: beside All reports it cost about 95 pixels and put the
+  actions on a second row at 1024. Payees, Cash flow and Year over year
+  use `.app-filters` for their month pickers.
+- [ ] **Neither set has been independently checked.** Both workers'
+  own figures for how far the first row of content moved are in their
+  handoffs rather than here, deliberately: the utility worker reported
+  two different means for the same measurement, and the main-branch
+  pages had two fabricated numbers corrected earlier today. Nothing
+  goes in this document until someone who did not write it has
+  measured it. Verification of both branches was in flight when Jon
+  asked for everything to be merged; it is unfinished.
 
 ## New work
 

@@ -5,19 +5,22 @@ description: "Balances and payoff projections for every credit and liability acc
 permalink: /app/reports/debt/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="debtView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Debt overview</h1>
-      <p class="app-page__lead">Balances on every credit card and tracking liability. Payoff months estimate based on the average payment over the last three months.</p>
-    </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save this chart type + filter + sort as a recall-able view in /app/templates/.">Save view</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
-  </header>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="debtView()" x-init="init()">
+  {% call reportChrome(
+       title="Debt overview",
+       id="debt",
+       infoTitle="About the debt overview",
+       infoLabel="How the payoff estimate is worked out",
+       info="<p>Balances on every credit card and tracking liability. Payoff months estimate based on the average payment over the last three months.</p>",
+       save="Save this chart type + filter + sort as a recall-able view in /app/templates/.",
+       slug="",
+       csv="exportRowsCSV()",
+       searchId="debt-search",
+       searchLabel="Search",
+       searchPlaceholder="Filter by account",
+       count='<span x-text="visibleCount"></span> rows') %}
+  {% endcall %}
 
   <section class="report">
     <div class="chart-toolbar">
@@ -38,42 +41,33 @@ eleventyExcludeFromCollections: true
          role="img" aria-label="Debt overview chart"
          aria-describedby="data-table-debt"></div>
 
-    <div class="report-toolbar">
-      <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="debt-search">Search</label>
-        <input class="input" id="debt-search" type="search" x-model="query" placeholder="Filter by account…">
-      </div>
-      <p class="report-toolbar__count">
-        <span x-text="visibleCount"></span> rows
-      </p>
-      {{ reportExports("", "exportRowsCSV()") }}
-    </div>
-
-    <table class="table" id="data-table-debt">
-      <thead>
-        <tr>
-          <th class="is-sortable"><button type="button" @click="sortBy('account')">Account <span class="sort-ind" x-text="sortIndicator('account')"></span></button></th>
-          <th class="is-sortable"><button type="button" @click="sortBy('type')">Type <span class="sort-ind" x-text="sortIndicator('type')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('balance')">Balance <span class="sort-ind" x-text="sortIndicator('balance')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('avgPayment')">Avg payment (3 mo) <span class="sort-ind" x-text="sortIndicator('avgPayment')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('monthsToPayoff')">Payoff <span class="sort-ind" x-text="sortIndicator('monthsToPayoff')"></span></button></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-for="r in rows" :key="r.accountId">
+    <div class="table-scroll">
+      <table class="table table--stack" id="data-table-debt">
+        <thead>
           <tr>
-            <td x-text="r.account"></td>
-            <td x-text="r.type === 'credit' ? 'Credit card' : 'Tracking liability'"></td>
-            <td class="num amount--outflow" x-text="fmt(r.balance)"></td>
-            <td class="num" x-text="fmt(r.avgPayment)"></td>
-            <td class="num" x-text="r.monthsToPayoff ? (r.monthsToPayoff + ' months') : 'No recent payments'"></td>
+            <th class="is-sortable"><button type="button" @click="sortBy('account')">Account <span class="sort-ind" x-text="sortIndicator('account')"></span></button></th>
+            <th class="is-sortable col-p3"><button type="button" @click="sortBy('type')">Type <span class="sort-ind" x-text="sortIndicator('type')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('balance')">Balance <span class="sort-ind" x-text="sortIndicator('balance')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('avgPayment')">Avg payment (3 mo) <span class="sort-ind" x-text="sortIndicator('avgPayment')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('monthsToPayoff')">Payoff <span class="sort-ind" x-text="sortIndicator('monthsToPayoff')"></span></button></th>
           </tr>
-        </template>
-        <tr x-show="!rows.length" x-cloak>
-          <td colspan="5" style="color: var(--fg-muted); text-align: center; padding: var(--space-lg);">No debt accounts.</td>
-        </tr>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <template x-for="r in rows" :key="r.accountId">
+            <tr>
+              <td x-text="r.account"></td>
+              <td class="col-p3" data-label="Type" x-text="r.type === 'credit' ? 'Credit card' : 'Tracking liability'"></td>
+              <td class="num amount--outflow" data-label="Balance" x-text="fmt(r.balance)"></td>
+              <td class="num" data-label="Avg payment" x-text="fmt(r.avgPayment)"></td>
+              <td class="num" data-label="Payoff" x-text="r.monthsToPayoff ? (r.monthsToPayoff + ' months') : 'No recent payments'"></td>
+            </tr>
+          </template>
+          <tr x-show="!rows.length" x-cloak>
+            <td colspan="5" style="color: var(--fg-muted); text-align: center; padding: var(--space-lg);">No debt accounts.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
 

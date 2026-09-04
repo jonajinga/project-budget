@@ -1,5 +1,9 @@
 .report {
-  background: var(--bg-elevated);
+  /* One surface (2026-09-04): the app canvas is --bg, so a panel that
+     fills itself with --bg-elevated reads as a grey box sitting on
+     white. The hairline border is what says "this block is a thing";
+     the fill was only ever doing that job on the old grey ground. */
+  background: var(--bg);
   border: 1px solid var(--border-soft);
   padding: var(--space-md);
   /* Tables and SVG charts inside should never push the page wider than
@@ -21,7 +25,10 @@
 .chart {
   width: 100%;
   min-height: 280px;
-  background: var(--bg-alt);
+  /* Same ground as the report it sits in. A tinted plate behind a
+     chart put a second grey rectangle inside a block that already has
+     its own edge. */
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -46,13 +53,29 @@
 .chart .axis text { fill: var(--fg-muted); }
 .chart .legend { fill: var(--fg-muted); }
 
+/* U5 (2026-09-04): the hub's tile grid left an orphan.
+   It was three hard column counts - one, two at 768, three at 1180 -
+   and the report groups hold four, five, two, two and one report. At
+   three columns the four-report group ran 3 + 1 and the five-report
+   group ran 3 + 2, so at least one row on the page always held a lone
+   tile with two empty column tracks beside it.
+
+   auto-fill on its own does not fix that. It makes the column count
+   follow the width, but with groups of 4, 5, 2, 2 and 1 there is no
+   column count where every last row holds more than one tile - and the
+   single-report group is a lone tile at any count.
+
+   So the tiles wrap as flex items that grow. The last row's tiles share
+   whatever is left rather than sitting at one-third width beside a gap,
+   which is the thing that read as broken. 17rem is the width below
+   which the title and its one-line description stop fitting. */
 .report-tiles {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-md);
-  grid-template-columns: 1fr;
 }
-@media (min-width: 768px) { .report-tiles { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 1180px) { .report-tiles { grid-template-columns: repeat(3, 1fr); } }
+.report-tiles > .report,
+.report-tiles > .report--link { flex: 1 1 17rem; min-width: 0; }
 
 .report--link { text-decoration: none; color: inherit; transition: border-color var(--t-fast), background var(--t-fast); }
 .report--link:hover { border-color: var(--accent); background: var(--bg-alt); }
@@ -67,7 +90,7 @@
 @media (min-width: 1280px) { .small-multiples { grid-template-columns: repeat(4, 1fr); } }
 
 .small-multiple {
-  background: var(--bg-alt);
+  background: var(--bg);
   border: 1px solid var(--border-soft);
   padding: var(--space-sm);
 }
@@ -278,26 +301,22 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+/* Same treatment for the recents strip. Five recents in a fixed
+   two-column grid at tablet width ran 2 + 2 + 1, so the newest-but-one
+   report sat alone on its own row. */
 .report-recents {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2xs);
 }
-@media (min-width: 600px) {
-  .report-recents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (min-width: 1024px) {
-  .report-recents { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-sm); }
-}
-@media (min-width: 1280px) {
-  .report-recents { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-}
+.report-recents > .report-recent { flex: 1 1 11rem; min-width: 0; }
+@media (min-width: 1024px) { .report-recents { gap: var(--space-sm); } }
 .report-recent {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
   padding: 10px 12px;
-  background: var(--bg-elevated);
+  background: var(--bg);
   border: 1px solid var(--border-soft);
   border-left: 3px solid var(--accent);
   color: var(--fg);
@@ -460,7 +479,7 @@
 .whatif {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
-  background: color-mix(in oklab, var(--accent) 4%, var(--bg-elevated));
+  background: color-mix(in oklab, var(--accent) 4%, var(--bg));
   padding: var(--space-2xs) var(--space-sm);
   margin: 0 0 var(--space-md);
 }
@@ -596,4 +615,160 @@
      nothing between the intro and the first report. */
   .app-page .eyebrow + .report-tiles { margin-top: var(--space-2xs); }
   .report-recents:empty { display: none; }
+}
+
+/* ---- Report chrome (S8, 2026-09-04) --------------------------------
+   The fifteen detail reports each opened with three bands: a masthead
+   with a 2.75rem title and a paragraph, then a row holding the range
+   picker, then .report-toolbar holding the search box, the row count
+   and the export kebab. Between 230 and 600 pixels of the window went
+   by before the first number.
+
+   partials/report-chrome.njk folds all three into the one .app-toolbar
+   strip. These rules size the controls that moved into it. Everything
+   here is scoped to .app-toolbar so the same markup still lays out as
+   a form row anywhere else. */
+
+/* The search box shrinks but never disappears: 12rem is enough to
+   read a filter term, and 6rem is the floor before the placeholder is
+   unreadable. Below 600px the strip scrolls sideways instead (see
+   app-chrome.css), so the box keeps its full size and its 16px text --
+   iOS Safari zooms the page on a focused input smaller than that. */
+@media (min-width: 600px) {
+  .app-toolbar .report-chrome__search { flex: 0 1 12rem; min-width: 6rem; }
+  .app-toolbar .report-chrome__month { flex: 0 0 auto; }
+  .app-toolbar .report-chrome__month .input { width: 8.5rem; }
+  /* The chart/range segmented control. Its buttons are 36px by their
+     own rule and 44px by the global touch floor in base.css, and
+     min-height alone did not bring them down: a flex item that has
+     been stretched keeps the stretched height whatever its own
+     min-height says. An explicit height on the button plus
+     align-items on the picker is what actually shrinks it. Measured:
+     44px tall before, 30px after, which is what keeps the strip one
+     44px row instead of 57. */
+  .app-toolbar .chart-picker { padding: 1px; align-items: center; }
+  .app-toolbar .chart-picker__btn {
+    min-height: 0;
+    height: 1.9rem;
+    padding: 0 9px;
+    /* "12 mo" broke after the space and the second line spilled out of
+       the fixed height, so the strip showed "12" over "mo" in a box
+       that could not grow. A range label is two words and must stay on
+       one line; flex centres it in the shorter box. */
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+.app-toolbar .report-chrome__month .input { min-width: 0; }
+
+/* Phones. app-chrome.css makes the strip one nowrap row that scrolls
+   sideways rather than stacking into four. Scrolling only works if the
+   children keep their size: with the default flex-shrink the group
+   squeezed until the search input was ZERO pixels wide and the count
+   sat underneath the actions. Nothing in the strip shrinks here; the
+   row scrolls instead. */
+@media (max-width: 599px) {
+  .report-chrome .app-toolbar__group { flex: 0 0 auto; }
+  .report-chrome .report-chrome__search { flex: 0 0 11rem; }
+  .report-chrome .report-chrome__month .input { width: 8.5rem; }
+}
+/* "to" between two month pickers. Muted and small so the pair reads as
+   one control rather than two. */
+.report-chrome__to {
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  flex: 0 0 auto;
+}
+/* The range label and the row count never shrink. They are short and
+   they are the two things in the strip that answer "what am I looking
+   at" -- "Jul 26 to Sep ..." and "47 ro..." are worse than useless.
+   The search box gives up its width first instead, down to 6rem.
+   Scoped to .report-chrome so the register and recurring strips, which
+   size their context differently, are untouched. */
+.report-chrome .app-toolbar__context { flex: 0 0 auto; }
+
+/* KPI tiles take the page's own ground too. budget.css gives .kpi a
+   --bg-elevated fill, which was right when the canvas was grey; on the
+   one-surface canvas it is a row of grey boxes on white. Scoped the
+   way main scoped .card and .panel, so the marketing pages and the
+   style guide keep the raised look. */
+.layout-app .app-main .kpi { background: var(--bg); }
+
+/* .app-page--dense already puts a gap between the strip, the KPI tiles
+   and the report surface; the strip's own bottom margin would double
+   it. */
+.app-page--dense > .kpi-strip { margin-bottom: 0; }
+
+/* R3: the KPI strip's own orphan. Every report shows four tiles, and
+   between about 600 and 1120 pixels there is only room for three, so
+   the fourth sat alone on a row of its own with two empty tracks
+   beside it - the same defect as the hub's tile grid, one level down.
+   Two-up is the same two rows tall and has no gap in it.
+
+   The direct-child combinator is doing real work: the category and
+   cuts pages nest their .kpi-strip inside a section, and their tile
+   counts are not four, so they keep the shared three-up. */
+@media (min-width: 600px) and (max-width: 1120px) {
+  .app-page--dense > .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* A segmented range picker in the strip. Same control as the chart
+   picker -- reused rather than restyled, so a report has one kind of
+   segmented control, not two that differ by four pixels. */
+.report-seg__label {
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  flex: 0 0 auto;
+}
+
+/* ---- Report tables -------------------------------------------------
+   Tables live in a .table-scroll inside .report and stack into cards
+   below 600px (the shared recipe in components.css). The old rule that
+   forced a table wider than its card, so it would scroll rather than
+   squash, must not apply to a stacked one: a display:block table with
+   min-width:max-content blows straight back out through the viewport. */
+@media (max-width: 599px) {
+  .report .table-scroll > .table:not(.table--stack) { min-width: max-content; }
+  /* A stacked table is a column of cards; nothing to scroll sideways. */
+  .report .table-scroll:has(> .table--stack) { overflow-x: visible; }
+  /* Card rows want the panel's own padding, not the table's. */
+  .report .table--stack td { padding: 3px 0; }
+}
+
+/* Rank inside the payee cell rather than in a column of its own. As a
+   column it became the phone card's title, so the card said "1" in
+   large type with the payee underneath as a labelled row. */
+.report-rank {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  margin-right: var(--space-2xs);
+  font-size: var(--fs-sm);
+}
+
+/* A tile that has stretched to fill the last row of its group is much
+   wider than tall, and stacking an icon, a title and one line of prose
+   down the left of 1100 pixels looks like a mistake. A container query
+   turns a wide tile into a single line: icon, name, description. The
+   query is on the tile, not the viewport, because what matters is how
+   wide this tile ended up, which depends on how many siblings shared
+   its row. .kpi already uses container-type for the same reason. */
+.report-tiles > .report { container-type: inline-size; }
+@container (min-width: 34rem) {
+  .report-tiles .report__link {
+    display: grid;
+    grid-template-columns: auto minmax(9rem, 14rem) 1fr;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Room on the right for the pin button and the NEW tag, both of
+       which are absolutely positioned in the tile's corners. */
+    padding-right: calc(var(--space-md) + 2.5rem);
+  }
+  .report-tiles .report__icon { margin-bottom: 0; }
+  .report-tiles .report__title { margin-bottom: 0; }
+  .report-tiles .report__lead { margin-bottom: 0; }
+  /* On one line the tag has a whole empty row under it to sit in;
+     put it beside the pin instead. */
+  .report-tiles .report__tag { bottom: auto; top: 8px; right: 34px; }
 }

@@ -1,25 +1,35 @@
 ---
 layout: layouts/app.njk
 title: "Subscription audit"
-description: "Auto-detected recurring charges — payee, cadence, annual cost, and a one-click path to pause or cancel."
+description: "Auto-detected recurring charges - payee, cadence, annual cost, and a one-click path to pause or cancel."
 permalink: /app/reports/subscriptions/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="subscriptionsView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Subscription audit</h1>
-      <p class="app-page__lead">Walks the last 12 months of transactions looking for cadence patterns — same payee, roughly the same amount, charged on a regular interval. Each detected subscription shows its typical amount, cadence, and projected annual cost.</p>
-    </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save this lookback + filter as a recall-able view in /app/templates/.">Save view</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
-  </header>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="subscriptionsView()" x-init="init()">
+  {% call reportChrome(
+       title="Subscription audit",
+       id="subscriptions",
+       infoTitle="About the subscription audit",
+       infoLabel="How a recurring charge is detected",
+       info="<p>Walks the last 12 months of transactions looking for cadence patterns - same payee, roughly the same amount, charged on a regular interval. Each detected subscription shows its typical amount, cadence, and projected annual cost.</p><p>A charge has to clear three tests to count:</p><ul><li><strong>At least 3 charges</strong> from the same payee in the lookback window.</li><li><strong>Amount stability</strong> - max minus min within 25% of the median; that rules out variable bills such as utilities and restaurants.</li><li><strong>Cadence match</strong> - the median interval between charges lands inside a tight band: weekly (6-8d), biweekly (13-15d), monthly (27-33d), quarterly (88-95d) or yearly (360-370d).</li></ul><p>Anything that does not match all three is skipped, which is the guard against false positives.</p>",
+       save="Save this lookback + filter as a recall-able view in /app/templates/.",
+       slug="",
+       csv="exportRowsCSV()",
+       searchId="subs-search",
+       searchPlaceholder="Filter by payee",
+       count='<span x-text="filteredRows().length"></span> of <span x-text="rows.length"></span>') %}
+    <span class="chart-picker" role="group" aria-label="Lookback">
+      <template x-for="r in lookbacks" :key="r.value">
+        <button type="button" class="chart-picker__btn"
+                :class="lookbackMonths === r.value ? 'is-active' : ''"
+                :aria-pressed="(lookbackMonths === r.value).toString()"
+                @click="lookbackMonths = r.value"
+                x-text="r.label"></button>
+      </template>
+    </span>
+  {% endcall %}
 
-  {# ---- KPI strip ---- #}
   <div class="kpi-strip">
     <div class="kpi kpi--accent">
       <span class="kpi__label">Subscriptions detected</span>
@@ -33,87 +43,57 @@ eleventyExcludeFromCollections: true
     </div>
     <div class="kpi kpi--muted">
       <span class="kpi__label">Biggest line item</span>
-      <span class="kpi__value" style="font-size: var(--fs-lg);" :title="kpis().topName || ''" x-text="kpis().topName || '—'"></span>
+      <span class="kpi__value" style="font-size: var(--fs-lg);" :title="kpis().topName || ''" x-text="kpis().topName || '&mdash;'"></span>
       <span class="kpi__delta" x-text="kpis().topAnnual ? (fmt(kpis().topAnnual) + ' / yr') : ''"></span>
     </div>
     <div class="kpi kpi--muted">
       <span class="kpi__label">Share of last-month spend</span>
-      <span class="kpi__value" x-text="kpis().shareLastMonth === null ? '—' : (kpis().shareLastMonth.toFixed(1) + '%')"></span>
+      <span class="kpi__value" x-text="kpis().shareLastMonth === null ? '&mdash;' : (kpis().shareLastMonth.toFixed(1) + '%')"></span>
       <span class="kpi__delta">Of all non-transfer outflow</span>
     </div>
   </div>
 
   <section class="report">
-    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Lookback:</span>
-      <template x-for="r in lookbacks" :key="r.value">
-        <button type="button" class="btn btn--sm"
-                :class="lookbackMonths === r.value ? 'btn--primary' : 'btn--ghost'"
-                @click="lookbackMonths = r.value"
-                x-text="r.label"></button>
-      </template>
-    </div>
-
-    <div class="report-toolbar">
-      <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="subs-search">Filter</label>
-        <input class="input" id="subs-search" type="search" x-model="query" placeholder="Filter by payee…">
-      </div>
-      <p class="report-toolbar__count">
-        <span x-text="filteredRows().length"></span> shown of
-        <span x-text="rows.length"></span>
-      </p>
-      {{ reportExports("", "exportRowsCSV()") }}
-    </div>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Payee</th>
-          <th>Cadence</th>
-          <th class="num">Typical amount</th>
-          <th class="num">Annual cost</th>
-          <th class="num">Occurrences</th>
-          <th>Last charge</th>
-          <th>Last account</th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-for="r in filteredRows()" :key="r.payeeId">
+    <div class="table-scroll">
+      <table class="table table--stack">
+        <thead>
           <tr>
-            <td>
-              <strong x-text="r.payee"></strong>
-            </td>
-            <td>
-              <span class="badge"
-                    :class="r.cadence === 'Yearly' ? 'badge--warn' : (r.cadence === 'Weekly' ? 'badge--danger' : '')"
-                    x-text="r.cadence"></span>
-            </td>
-            <td class="num amount--outflow" x-text="fmt(r.typicalAmount)"></td>
-            <td class="num amount--outflow" x-text="fmt(r.annualCost)"></td>
-            <td class="num" x-text="r.occurrences"></td>
-            <td x-text="r.lastCharge"></td>
-            <td x-text="$store.budget.findAccount(r.lastChargeAccountId)?.name || '—'"></td>
+            <th>Payee</th>
+            <th>Cadence</th>
+            <th class="num">Typical amount</th>
+            <th class="num">Annual cost</th>
+            <th class="num col-p3">Occurrences</th>
+            <th>Last charge</th>
+            <th class="col-p3">Last account</th>
           </tr>
-        </template>
-        <tr x-show="!filteredRows().length" x-cloak>
-          <td colspan="7" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">
-            <span x-show="!rows.length">No recurring charges detected in the lookback window. Subscriptions need at least 3 same-payee charges with ≤25% amount variance to register.</span>
-            <span x-show="rows.length">No matches for that filter.</span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="card prose" style="margin-top: var(--space-lg);">
-    <h2>How detection works</h2>
-    <ul>
-      <li><strong>At least 3 charges</strong> from the same payee in the lookback window.</li>
-      <li><strong>Amount stability</strong> — max-minus-min within 25% of the median; rules out variable bills (utilities, restaurants).</li>
-      <li><strong>Cadence match</strong> — median interval between consecutive charges lands inside a tight band: weekly (6-8d), biweekly (13-15d), monthly (27-33d), quarterly (88-95d), or yearly (360-370d).</li>
-      <li>Anything that doesn't match these is skipped (false-positive guard).</li>
-    </ul>
+        </thead>
+        <tbody>
+          <template x-for="r in filteredRows()" :key="r.payeeId">
+            <tr>
+              <td>
+                <strong x-text="r.payee"></strong>
+              </td>
+              <td data-label="Cadence">
+                <span class="badge"
+                      :class="r.cadence === 'Yearly' ? 'badge--warn' : (r.cadence === 'Weekly' ? 'badge--danger' : '')"
+                      x-text="r.cadence"></span>
+              </td>
+              <td class="num amount--outflow" data-label="Typical" x-text="fmt(r.typicalAmount)"></td>
+              <td class="num amount--outflow" data-label="Annual" x-text="fmt(r.annualCost)"></td>
+              <td class="num col-p3" data-label="Occurrences" x-text="r.occurrences"></td>
+              <td data-label="Last charge" x-text="r.lastCharge"></td>
+              <td class="col-p3" data-label="Last account" x-text="$store.budget.findAccount(r.lastChargeAccountId)?.name || '&mdash;'"></td>
+            </tr>
+          </template>
+          <tr x-show="!filteredRows().length" x-cloak>
+            <td colspan="7" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">
+              <span x-show="!rows.length">No recurring charges detected in the lookback window. Subscriptions need at least 3 same-payee charges with 25% or less amount variance to register.</span>
+              <span x-show="rows.length">No matches for that filter.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
 

@@ -1,25 +1,42 @@
 ---
 layout: layouts/app.njk
 title: "Category heatmap"
-description: "Spending intensity by category and month at a glance — spot seasonal patterns and unexpected spikes."
+description: "Spending intensity by category and month at a glance - spot seasonal patterns and unexpected spikes."
 permalink: /app/reports/heatmap/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="heatmapView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Category heatmap</h1>
-      <p class="app-page__lead">Each row is a category, each column a month. Cells get darker the more you spent — spot seasonal patterns (heating bills, holiday gifts) and one-off spikes (an unexpected vet visit) without digging through the register.</p>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="heatmapView()" x-init="init()">
+  {% call reportChrome(
+       title="Category heatmap",
+       id="heatmap",
+       infoTitle="About the category heatmap",
+       infoLabel="How to read the heatmap",
+       info="<p>Each row is a category, each column a month. Cells get darker the more you spent - spot seasonal patterns (heating bills, holiday gifts) and one-off spikes (an unexpected vet visit) without digging through the register.</p>",
+       save="Save this range + top N as a recall-able view in /app/templates/.",
+       slug="",
+       csv="exportRowsCSV()",
+       count='<span x-text="data.categories.length"></span> categories, <span x-text="data.months.length"></span> months') %}
+    <span class="chart-picker" role="group" aria-label="Range">
+      <template x-for="r in ranges" :key="r.value">
+        <button type="button" class="chart-picker__btn"
+                :class="rangeMonths === r.value ? 'is-active' : ''"
+                :aria-pressed="(rangeMonths === r.value).toString()"
+                @click="rangeMonths = r.value"
+                x-text="r.label"></button>
+      </template>
+    </span>
+    <div class="field">
+      <label class="visually-hidden" for="hm-topn">How many categories</label>
+      <select class="select" id="hm-topn" x-model.number="topN"
+              data-tip="How many categories to show, by total spend.">
+        <template x-for="opt in topNOptions" :key="opt">
+          <option :value="opt" x-text="'Top ' + opt"></option>
+        </template>
+      </select>
     </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save this range + top-N as a recall-able view in /app/templates/.">Save view</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
-  </header>
+  {% endcall %}
 
-  {# ---- KPI strip ---- #}
   <div class="kpi-strip">
     <div class="kpi kpi--accent">
       <span class="kpi__label">Categories shown</span>
@@ -44,36 +61,11 @@ eleventyExcludeFromCollections: true
   </div>
 
   <section class="report">
-    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs);">
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Range:</span>
-      <template x-for="r in ranges" :key="r.value">
-        <button type="button" class="btn btn--sm"
-                :class="rangeMonths === r.value ? 'btn--primary' : 'btn--ghost'"
-                @click="rangeMonths = r.value"
-                x-text="r.label"></button>
-      </template>
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin: 0 var(--space-2xs) 0 var(--space-md);">Top N:</span>
-      <template x-for="opt in topNOptions" :key="opt">
-        <button type="button" class="btn btn--sm"
-                :class="topN === opt ? 'btn--primary' : 'btn--ghost'"
-                @click="topN = opt"
-                x-text="opt"></button>
-      </template>
-    </div>
-
     {# No aria-describedby here: this is the one chart report with no data
        table to point at, and the old reference resolved to nothing. Give it
        a real table alongside the other reports rather than a dangling id. #}
     <div class="chart" id="chart-heatmap" style="min-height: 360px; overflow-x: auto;"
          role="img" aria-label="Category heatmap"></div>
-
-    <div class="report-toolbar" style="margin-top: var(--space-md);">
-      <p class="report-toolbar__count">
-        <span x-text="data.categories.length"></span> categories ·
-        <span x-text="data.months.length"></span> months
-      </p>
-      {{ reportExports("", "exportRowsCSV()") }}
-    </div>
   </section>
 </div>
 

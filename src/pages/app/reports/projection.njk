@@ -5,23 +5,32 @@ description: "Forward 3, 6, and 12 month projection from on-budget balance + rec
 permalink: /app/reports/projection/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="projectionView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Cashflow projection</h1>
-      <p class="app-page__lead">
-        Starts from the current sum of on-budget account balances. Each future month subtracts net scheduled outflows and goal funding requirements. The shaded band shows the low estimate (after goal funding) and the high estimate (scheduled only).
-      </p>
-    </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save this horizon + filter as a recall-able view in /app/templates/.">Save view</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
-  </header>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="projectionView()" x-init="init()">
+  {% call reportChrome(
+       title="Cashflow projection",
+       id="projection",
+       infoTitle="About the cashflow projection",
+       infoLabel="How the projection is built",
+       info="<p>Starts from the current sum of on-budget account balances. Each future month subtracts net scheduled outflows and goal funding requirements.</p><p>The shaded band shows the low estimate (after goal funding) and the high estimate (scheduled only).</p>",
+       save="Save this horizon + filter as a recall-able view in /app/templates/.",
+       slug="",
+       csv="exportRowsCSV()",
+       searchId="proj-search",
+       searchLabel="Search",
+       searchPlaceholder="Filter by month",
+       count='<span x-text="visibleCount"></span> rows') %}
+    <span class="chart-picker" role="group" aria-label="Horizon">
+      <template x-for="r in ranges" :key="r.value">
+        <button type="button" class="chart-picker__btn"
+                :class="horizon === r.value ? 'is-active' : ''"
+                :aria-pressed="(horizon === r.value).toString()"
+                @click="horizon = r.value"
+                x-text="r.label"></button>
+      </template>
+    </span>
+  {% endcall %}
 
-  {# ---- KPI strip ---- #}
   <div class="kpi-strip">
     <div class="kpi" :class="kpis().endExpected < kpis().startBalance ? 'kpi--danger' : 'kpi--ok'">
       <span class="kpi__label">Projected end balance</span>
@@ -52,17 +61,9 @@ eleventyExcludeFromCollections: true
   </div>
 
   <section class="report">
-    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs); flex-wrap: wrap;">
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Horizon:</span>
-      <template x-for="r in ranges" :key="r.value">
-        <button type="button" class="btn btn--sm"
-                :class="horizon === r.value ? 'btn--primary' : 'btn--ghost'"
-                @click="horizon = r.value"
-                x-text="r.label"></button>
-      </template>
-    </div>
-
-    {# ---- What-if scenario controls ---- #}
+    {# The what-if sliders stay in the body. They are not a filter on
+       what the page shows; they change the numbers, and a control that
+       rewrites the chart should be next to the chart. #}
     <fieldset class="whatif">
       <legend class="whatif__legend">What-if</legend>
       <div class="whatif__row">
@@ -86,7 +87,7 @@ eleventyExcludeFromCollections: true
                 data-tip="Reset both sliders to 0%.">Reset</button>
       </div>
       <p class="whatif__hint" x-show="whatIfIncomePct !== 0 || whatIfExpensePct !== 0" x-cloak>
-        Showing a hypothetical projection — income scaled by
+        Showing a hypothetical projection - income scaled by
         <strong x-text="(whatIfIncomePct >= 0 ? '+' : '') + whatIfIncomePct + '%'"></strong>,
         expenses scaled by
         <strong x-text="(whatIfExpensePct >= 0 ? '+' : '') + whatIfExpensePct + '%'"></strong>.
@@ -98,45 +99,36 @@ eleventyExcludeFromCollections: true
          role="img" aria-label="Cashflow projection chart"
          aria-describedby="data-table-proj"></div>
 
-    <div class="report-toolbar">
-      <div class="field report-toolbar__search">
-        <label class="visually-hidden" for="proj-search">Search</label>
-        <input class="input" id="proj-search" type="search" x-model="query" placeholder="Filter by month…">
-      </div>
-      <p class="report-toolbar__count">
-        <span x-text="visibleCount"></span> rows
-      </p>
-      {{ reportExports("", "exportRowsCSV()") }}
-    </div>
-
-    <table class="table" id="data-table-proj">
-      <thead>
-        <tr>
-          <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('low')">Low <span class="sort-ind" x-text="sortIndicator('low')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('expected')">Expected <span class="sort-ind" x-text="sortIndicator('expected')"></span></button></th>
-          <th class="is-sortable num"><button type="button" @click="sortBy('high')">High <span class="sort-ind" x-text="sortIndicator('high')"></span></button></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template x-for="r in rows" :key="r.month">
+    <div class="table-scroll">
+      <table class="table table--stack" id="data-table-proj">
+        <thead>
           <tr>
-            <td>
-              <a class="report-month-link"
-                 :href="'/app/calendar/?m=' + r.month + '&v=month'"
-                 x-text="$store.budget.monthLabel(r.month)"
-                 data-tip="Open this month in the calendar."></a>
-            </td>
-            <td class="num" :class="r.low < 0 ? 'amount--outflow' : ''" x-text="fmt(r.low)"></td>
-            <td class="num" :class="r.expected < 0 ? 'amount--outflow' : ''" x-text="fmt(r.expected)"></td>
-            <td class="num" :class="r.high < 0 ? 'amount--outflow' : ''" x-text="fmt(r.high)"></td>
+            <th class="is-sortable"><button type="button" @click="sortBy('month')">Month <span class="sort-ind" x-text="sortIndicator('month')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('low')">Low <span class="sort-ind" x-text="sortIndicator('low')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('expected')">Expected <span class="sort-ind" x-text="sortIndicator('expected')"></span></button></th>
+            <th class="is-sortable num"><button type="button" @click="sortBy('high')">High <span class="sort-ind" x-text="sortIndicator('high')"></span></button></th>
           </tr>
-        </template>
-        <tr x-show="!rows.length" x-cloak>
-          <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
-        </tr>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <template x-for="r in rows" :key="r.month">
+            <tr>
+              <td>
+                <a class="report-month-link"
+                   :href="'/app/calendar/?m=' + r.month + '&v=month'"
+                   x-text="$store.budget.monthLabel(r.month)"
+                   data-tip="Open this month in the calendar."></a>
+              </td>
+              <td class="num" data-label="Low" :class="r.low < 0 ? 'amount--outflow' : ''" x-text="fmt(r.low)"></td>
+              <td class="num" data-label="Expected" :class="r.expected < 0 ? 'amount--outflow' : ''" x-text="fmt(r.expected)"></td>
+              <td class="num" data-label="High" :class="r.high < 0 ? 'amount--outflow' : ''" x-text="fmt(r.high)"></td>
+            </tr>
+          </template>
+          <tr x-show="!rows.length" x-cloak>
+            <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No rows match the filter.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
 

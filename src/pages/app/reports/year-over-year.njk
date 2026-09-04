@@ -1,67 +1,79 @@
 ---
 layout: layouts/app.njk
 title: "Year over year"
-description: "Compare any two date ranges — income, expense, savings rate, and category-level swings."
+description: "Compare any two date ranges - income, expense, savings rate, and category-level swings."
 permalink: /app/reports/year-over-year/
 eleventyExcludeFromCollections: true
 ---
-{% from "partials/report-exports.njk" import reportExports %}
-<div class="app-page" x-data="yoyView()" x-init="init()">
-  <header class="app-page__header">
-    <div>
-      <h1 class="app-page__title">Year over year</h1>
-      <p class="app-page__lead">Pick two periods to compare. Defaults to the last 12 months vs the 12 months before that. Switch between by-month, by-category, and by-payee views to find the swings.</p>
-    </div>
-    <div class="cluster" style="gap: var(--space-2xs);">
-      <button class="btn btn--ghost btn--sm" type="button" @click="saveCurrentView()"
-              data-tip="Save this view + current/prior ranges as a recall-able view in /app/templates/.">Save view</button>
-      <a class="btn btn--ghost btn--sm" href="/app/reports/">All reports</a>
-    </div>
-  </header>
+{% from "partials/report-chrome.njk" import reportChrome %}
+<div class="app-page app-page--dense" x-data="yoyView()" x-init="init()">
+  {% call reportChrome(
+       title="Year over year",
+       id="year-over-year",
+       infoTitle="About year over year",
+       infoLabel="What the two periods compare",
+       info="<p>Pick two periods to compare. Defaults to the last 12 months vs the 12 months before that.</p><p>Switch between by-month, by-category and by-payee views to find the swings.</p>",
+       save="Save this view + current/prior ranges as a recall-able view in /app/templates/.",
+       slug="",
+       csv="exportRowsCSV()",
+       context='<span x-text="windowLabel()"></span>',
+       count='<span x-text="tableRows().length"></span> rows',
+       filtersId="yoy-filters") %}
+  {% endcall %}
 
-  {# ---- KPI strip — current vs prior deltas ---- #}
+  {# Four month pickers and a reset button are far more than a strip can
+     hold, so they open on request. The pair of windows stays on the
+     strip as context text. #}
+  <div class="app-filters" id="yoy-filters" x-show="filtersOpen" x-cloak>
+    <div class="field">
+      <label class="field__label" for="yoy-cur-from">Current from</label>
+      <input class="input" id="yoy-cur-from" type="month" x-model="current.from">
+    </div>
+    <div class="field">
+      <label class="field__label" for="yoy-cur-to">Current to</label>
+      <input class="input" id="yoy-cur-to" type="month" x-model="current.to">
+    </div>
+    <div class="field">
+      <label class="field__label" for="yoy-pri-from">Prior from</label>
+      <input class="input" id="yoy-pri-from" type="month" x-model="prior.from">
+    </div>
+    <div class="field">
+      <label class="field__label" for="yoy-pri-to">Prior to</label>
+      <input class="input" id="yoy-pri-to" type="month" x-model="prior.to">
+    </div>
+    <button type="button" class="btn btn--ghost" x-show="hasActiveFilter()" x-cloak
+            @click="resetRanges()">Back to last 12 vs prior 12</button>
+  </div>
+
   <div class="kpi-strip">
     <div class="kpi" :class="data.deltas.income >= 0 ? 'kpi--ok' : 'kpi--danger'">
-      <span class="kpi__label">Income Δ</span>
+      <span class="kpi__label">Income change</span>
       <span class="kpi__value" :class="data.deltas.income >= 0 ? 'amount--inflow' : 'amount--outflow'"
             x-text="(data.deltas.income >= 0 ? '+' : '') + fmt(data.deltas.income)"></span>
       <span class="kpi__delta" x-text="'Current ' + fmt(data.current.totalIncome) + ' vs prior ' + fmt(data.prior.totalIncome)"></span>
     </div>
     <div class="kpi" :class="data.deltas.expense <= 0 ? 'kpi--ok' : 'kpi--danger'">
-      <span class="kpi__label">Expense Δ</span>
+      <span class="kpi__label">Expense change</span>
       <span class="kpi__value" :class="data.deltas.expense > 0 ? 'amount--outflow' : 'amount--inflow'"
             x-text="(data.deltas.expense >= 0 ? '+' : '') + fmt(data.deltas.expense)"></span>
       <span class="kpi__delta" x-text="'Current ' + fmt(data.current.totalExpense) + ' vs prior ' + fmt(data.prior.totalExpense)"></span>
     </div>
     <div class="kpi" :class="data.deltas.savingsRate === null || data.deltas.savingsRate >= 0 ? 'kpi--ok' : 'kpi--danger'">
-      <span class="kpi__label">Savings rate Δ</span>
-      <span class="kpi__value" x-text="data.deltas.savingsRate === null ? '—' : ((data.deltas.savingsRate >= 0 ? '+' : '') + (data.deltas.savingsRate * 100).toFixed(1) + ' pp')"></span>
+      <span class="kpi__label">Savings rate change</span>
+      <span class="kpi__value" x-text="data.deltas.savingsRate === null ? '&mdash;' : ((data.deltas.savingsRate >= 0 ? '+' : '') + (data.deltas.savingsRate * 100).toFixed(1) + ' pp')"></span>
       <span class="kpi__delta" x-text="ratesLabel()"></span>
     </div>
     <div class="kpi kpi--muted">
       <span class="kpi__label">Biggest swing</span>
       <span class="kpi__value" style="font-size: var(--fs-lg);"
             :title="data.deltas.biggestSwing ? data.deltas.biggestSwing.category : ''"
-            x-text="data.deltas.biggestSwing ? data.deltas.biggestSwing.category : '—'"></span>
+            x-text="data.deltas.biggestSwing ? data.deltas.biggestSwing.category : '&mdash;'"></span>
       <span class="kpi__delta"
             x-text="data.deltas.biggestSwing ? ((data.deltas.biggestSwing.delta >= 0 ? '+' : '') + fmt(data.deltas.biggestSwing.delta)) : ''"></span>
     </div>
   </div>
 
   <section class="report">
-    {# ---- Range pickers + view tabs ---- #}
-    <div class="cluster" style="margin-bottom: var(--space-md); gap: var(--space-2xs); align-items: flex-end; flex-wrap: wrap;">
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-right: var(--space-2xs);">Current:</span>
-      <input class="input" type="month" x-model="current.from" style="max-width: 9rem;">
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm);">to</span>
-      <input class="input" type="month" x-model="current.to"   style="max-width: 9rem;">
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm); margin-left: var(--space-md);">Prior:</span>
-      <input class="input" type="month" x-model="prior.from"   style="max-width: 9rem;">
-      <span style="color: var(--fg-muted); font-size: var(--fs-sm);">to</span>
-      <input class="input" type="month" x-model="prior.to"     style="max-width: 9rem;">
-      <button class="btn btn--ghost btn--sm" type="button" @click="resetRanges()">Reset (last 12 vs prior 12)</button>
-    </div>
-
     <div class="chart-toolbar">
       <span class="chart-toolbar__label">View</span>
       <span class="chart-picker" role="group" aria-label="View">
@@ -80,43 +92,37 @@ eleventyExcludeFromCollections: true
          role="img" aria-label="Year-over-year comparison chart"
          aria-describedby="data-table-yoy"></div>
 
-    {# ---- Table view — driven by selected view ---- #}
     <details class="report__details" style="margin-top: var(--space-md);">
       <summary style="cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); user-select: none;">
         View as table
       </summary>
-      <table class="table" id="data-table-yoy" style="margin-top: var(--space-sm);">
-        <thead>
-          <tr>
-            <th x-text="firstColLabel()"></th>
-            <th class="num">Current</th>
-            <th class="num">Prior</th>
-            <th class="num">Delta</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="(r, i) in tableRows()" :key="r._key + ':' + i">
+      <div class="table-scroll">
+        <table class="table table--stack" id="data-table-yoy" style="margin-top: var(--space-sm);">
+          <thead>
             <tr>
-              <td x-text="r._label"></td>
-              <td class="num" x-text="fmt(r.current)"></td>
-              <td class="num" x-text="fmt(r.prior)"></td>
-              <td class="num" :class="r.delta >= 0 ? 'amount--outflow' : 'amount--inflow'"
-                  x-text="(r.delta >= 0 ? '+' : '') + fmt(r.delta)"></td>
+              <th x-text="firstColLabel()"></th>
+              <th class="num">Current</th>
+              <th class="num">Prior</th>
+              <th class="num">Delta</th>
             </tr>
-          </template>
-          <tr x-show="!tableRows().length" x-cloak>
-            <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No data.</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <template x-for="(r, i) in tableRows()" :key="r._key + ':' + i">
+              <tr>
+                <td x-text="r._label"></td>
+                <td class="num" data-label="Current" x-text="fmt(r.current)"></td>
+                <td class="num" data-label="Prior" x-text="fmt(r.prior)"></td>
+                <td class="num" data-label="Delta" :class="r.delta >= 0 ? 'amount--outflow' : 'amount--inflow'"
+                    x-text="(r.delta >= 0 ? '+' : '') + fmt(r.delta)"></td>
+              </tr>
+            </template>
+            <tr x-show="!tableRows().length" x-cloak>
+              <td colspan="4" style="text-align: center; color: var(--fg-muted); padding: var(--space-md);">No data.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </details>
-
-    <div class="report-toolbar" style="margin-top: var(--space-md);">
-      <p class="report-toolbar__count">
-        <span x-text="tableRows().length"></span> rows
-      </p>
-      {{ reportExports("", "exportRowsCSV()") }}
-    </div>
   </section>
 </div>
 
@@ -147,6 +153,31 @@ function yoyView() {
     current: { from: "", to: "" },
     prior:   { from: "", to: "" },
 
+    /* The four month pickers live in the collapsed filter row. The
+       badge counts a period as changed when it is not the default
+       last-12-vs-prior-12 pair, so a hand-picked comparison is never
+       hidden without saying so. */
+    filtersOpen: false,
+    defaults: { current: { from: "", to: "" }, prior: { from: "", to: "" } },
+
+    windowLabel() {
+      var s = this.$store.budget;
+      if (!this.current.from || !this.prior.from) return "";
+      var f = function (m) { return (s && s.monthLabel) ? s.monthLabel(m, true) : m; };
+      return f(this.current.from) + "-" + f(this.current.to) + " vs " + f(this.prior.from) + "-" + f(this.prior.to);
+    },
+    activeFilterCount() {
+      var d = this.defaults;
+      if (!d.current.from) return 0;
+      var n = 0;
+      if (this.current.from !== d.current.from) n++;
+      if (this.current.to !== d.current.to) n++;
+      if (this.prior.from !== d.prior.from) n++;
+      if (this.prior.to !== d.prior.to) n++;
+      return n;
+    },
+    hasActiveFilter() { return this.activeFilterCount() > 0; },
+
     resetRanges() {
       var s = window.Alpine && window.Alpine.store && window.Alpine.store("budget");
       var anchor = (s && s.currentMonth) || new Date().toISOString().slice(0, 7);
@@ -154,6 +185,12 @@ function yoyView() {
       this.current.from = back(anchor, 11);
       this.prior.to   = back(anchor, 12);
       this.prior.from = back(anchor, 23);
+      /* Remember what "default" means, so the filter badge can tell a
+         hand-picked comparison from the one the page opened with. */
+      this.defaults = {
+        current: { from: this.current.from, to: this.current.to },
+        prior:   { from: this.prior.from,   to: this.prior.to },
+      };
     },
 
     setView(v) {

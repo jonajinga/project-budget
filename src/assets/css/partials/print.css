@@ -82,6 +82,9 @@
      Scoped to the page's own h1 so the app's other visually-hidden
      labels stay hidden. */
   .app-toolbar { display: none !important; }
+  /* The collapsible filter row is the same chrome one level down. It
+     is a row of month pickers and selects, which is nothing on paper. */
+  .app-filters { display: none !important; }
   /* .app-page__h1 by class, not by position. The first version of this
      matched `.app-page > h1` plus a fallback for `.app-page__inner`, a
      class that does not exist anywhere in the repo. The category page
