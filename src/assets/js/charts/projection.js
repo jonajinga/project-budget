@@ -3,6 +3,16 @@
 import { upsert, fmtCents, fmtCentsPrecise } from "./chartjs.js";
 import { colors } from "./theme-colors.js";
 
+/* "2025-10" on an axis reads as a number, not a month, and a bare "10"
+   is ambiguous across a window that spans two years. */
+function axisMonth(m) {
+  var s = String(m || "");
+  if (!/^\d{4}-\d{2}/.test(s)) return s;
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var p = s.slice(0, 7).split("-");
+  return months[Number(p[1]) - 1] + " " + p[0].slice(2);
+}
+
 export function render(el, data) {
   if (!el || !window.Chart) return;
   if (!data || !data.length) {
@@ -66,7 +76,7 @@ export function render(el, data) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { callback: function (i) { return String(this.getLabelForValue(i)).slice(5); } },
+          ticks: { callback: function (i) { return axisMonth(this.getLabelForValue(i)); } },
         },
         y: {
           grid: { color: c["border"] },

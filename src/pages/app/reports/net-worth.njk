@@ -108,7 +108,7 @@ eleventyExcludeFromCollections: true
             <td>
               <a class="report-month-link"
                  :href="'/app/calendar/?m=' + r.month + '&v=month'"
-                 x-text="r.month"
+                 x-text="$store.budget.monthLabel(r.month)"
                  data-tip="Open this month in the calendar."></a>
             </td>
             <td class="num" :class="r.value < 0 ? 'amount--outflow' : ''" x-text="fmt(r.value)"></td>

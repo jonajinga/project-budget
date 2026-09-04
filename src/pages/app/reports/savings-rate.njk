@@ -54,7 +54,7 @@ eleventyExcludeFromCollections: true
     <div class="kpi" :class="kpis().bestRate === null ? 'kpi--muted' : 'kpi--ok'">
       <span class="kpi__label">Best month</span>
       <span class="kpi__value" style="font-size: var(--fs-lg);"
-            x-text="kpis().bestMonth ? (kpis().bestMonth + ' · ' + (kpis().bestRate * 100).toFixed(0) + '%') : '—'"></span>
+            x-text="kpis().bestMonth ? ($store.budget.monthLabel(kpis().bestMonth, true) + ' · ' + (kpis().bestRate * 100).toFixed(0) + '%') : '—'"></span>
       <span class="kpi__delta">Highest savings rate</span>
     </div>
     <div class="kpi" :class="kpis().negCount > 0 ? 'kpi--danger' : 'kpi--ok'">
@@ -110,7 +110,7 @@ eleventyExcludeFromCollections: true
             <td>
               <a class="report-month-link"
                  :href="'/app/calendar/?m=' + r.month + '&v=month'"
-                 x-text="r.month"
+                 x-text="$store.budget.monthLabel(r.month)"
                  data-tip="Open this month in the calendar."></a>
             </td>
             <td class="num amount--inflow" x-text="fmt(r.income)"></td>
@@ -466,7 +466,20 @@ function savingsRateView() {
             ticks: { callback: function (v) { return v + "%"; } },
             grid: { color: borderSoft },
           },
-          x: { grid: { display: false } },
+          x: {
+            grid: { display: false },
+            /* The labels stay the raw month keys, because the brush and
+               the tooltip look up by them; only the tick text changes. */
+            ticks: {
+              callback: function (i) {
+                var v = String(this.getLabelForValue(i));
+                if (!/^\d{4}-\d{2}/.test(v)) return v;
+                var names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                var p = v.slice(0, 7).split("-");
+                return names[Number(p[1]) - 1] + " " + p[0].slice(2);
+              },
+            },
+          },
         },
       },
     });

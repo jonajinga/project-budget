@@ -146,6 +146,18 @@ export function createStore() {
       return ((c || 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
     },
 
+    /* "2025-10" reads as a serial number, not a month. Reports showed
+       the raw string in tables, tiles and chart axes. short gives
+       "Oct 25" for tight spaces; the default is "October 2025". */
+    monthLabel(m, short) {
+      if (!m || !/^\d{4}-\d{2}/.test(m)) return m || "";
+      var p = m.slice(0, 7).split("-").map(Number);
+      var d = new Date(p[0], p[1] - 1, 1);
+      return d.toLocaleDateString("en-US", short
+        ? { month: "short", year: "2-digit" }
+        : { month: "long", year: "numeric" });
+    },
+
     /* Active budget month — what the budget UI is currently viewing. */
     currentMonth: thisMonth(),
 

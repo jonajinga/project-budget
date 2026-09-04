@@ -21,6 +21,16 @@ function readView() {
   return (window.__pbChartType && window.__pbChartType.yoy) || "byMonth";
 }
 
+/* "2025-10" on an axis reads as a number, not a month, and a bare "10"
+   is ambiguous across a window that spans two years. */
+function axisMonth(m) {
+  var s = String(m || "");
+  if (!/^\d{4}-\d{2}/.test(s)) return s;
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var p = s.slice(0, 7).split("-");
+  return months[Number(p[1]) - 1] + " " + p[0].slice(2);
+}
+
 export function render(el, data) {
   if (!el || !window.Chart) return;
   if (!data || !data.paired) {
@@ -74,7 +84,7 @@ export function render(el, data) {
      income/expense vs prior income/expense for each chronological
      month index (1..12). Income above the axis, expense below. */
   var labels = data.paired.map(function (p) {
-    return p.currentMonth ? p.currentMonth.slice(5) : ("M" + p.index);
+    return p.currentMonth ? axisMonth(p.currentMonth) : ("M" + p.index);
   });
   var datasets = [
     { label: "Current income",   data: data.paired.map(function (p) { return p.currentIncome; }),   backgroundColor: c["chart-1"] || currentColor, stack: "current", borderRadius: 0 },

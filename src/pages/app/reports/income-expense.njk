@@ -61,7 +61,7 @@ eleventyExcludeFromCollections: true
     <div class="kpi kpi--muted">
       <span class="kpi__label">Best / worst month</span>
       <span class="kpi__value" style="font-size: var(--fs-lg);"
-            x-text="kpis().bestMonth ? (kpis().bestMonth + ' / ' + (kpis().worstMonth || '—')) : '—'"></span>
+            x-text="kpis().bestMonth ? ($store.budget.monthLabel(kpis().bestMonth, true) + ' / ' + (kpis().worstMonth ? $store.budget.monthLabel(kpis().worstMonth, true) : '—')) : '—'"></span>
       <span class="kpi__delta">Ranked by net cash flow</span>
     </div>
   </div>
@@ -111,7 +111,7 @@ eleventyExcludeFromCollections: true
             <td>
               <a class="report-month-link"
                  :href="'/app/calendar/?m=' + r.month + '&v=month'"
-                 x-text="r.month"
+                 x-text="$store.budget.monthLabel(r.month)"
                  data-tip="Open this month in the calendar."></a>
             </td>
             <td class="num amount--inflow" x-text="fmt(r.income)"></td>
