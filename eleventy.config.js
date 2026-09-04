@@ -25,6 +25,7 @@ const CSS_PARTIAL_ORDER = [
   "budget-inspector.css",
   "budget-cuts.css",
   "history.css",
+  "changelog.css",
   "reports.css",
   "docs.css",
   "forms.css",
@@ -89,6 +90,12 @@ export default function (eleventyConfig) {
   // ---- Filters -----------------------------------------------------------
   eleventyConfig.addFilter("readableDate", (d) =>
     DateTime.fromJSDate(d || new Date(), { zone: "utc" }).toFormat("LLLL d, yyyy")
+  );
+
+  /* readableDate above takes a JS Date. Data files that carry plain ISO
+     strings (the changelog) use this one instead. */
+  eleventyConfig.addFilter("readableISO", (s) =>
+    DateTime.fromISO(String(s), { zone: "utc" }).toFormat("LLLL d, yyyy")
   );
 
   eleventyConfig.addFilter("htmlDateString", (d) =>
@@ -374,7 +381,7 @@ export default function (eleventyConfig) {
             /^sidebar/, /^header/, /^month-/, /^year-/, /^acct-/,
             /^cat-/, /^month-strip/, /^sample-/, /^pool-/,
             /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/,
-            /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/,
+            /^hist__/, /^mini-chart/, /^cuts__/, /^cl-/, /^table/, /^col-p/, /^page-info/,
           ],
           greedy: [
             /* An attribute that only ever appears Alpine-bound is written
@@ -428,7 +435,7 @@ export default function (eleventyConfig) {
             /^rec-/, /^cat-row/, /^cat-group/, /^acct-group/,
             /^budget__/, /^cal-/, /^register__/,
             /^overflow-menu/, /^payee-cards/, /^data-cards/, /^acct-cards/, /^budget-stat/, /^cell-/, /^rec-payee/, /^rec-post/, /^acct-cards/,
-            /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/, /^dash-/,
+            /^hist__/, /^mini-chart/, /^cuts__/, /^table/, /^col-p/, /^page-info/, /^dash-/, /^cl-/,
           ],
           greedy: [/^data-theme/, /^data-touch/, /^data-tip/, /^data-widget/, /^aria-/],
           deep: [/dialog/, /sortable/, /tippy/, /popper/],

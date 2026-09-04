@@ -1,0 +1,51 @@
+---
+layout: layouts/doc-page.njk
+title: "What's new"
+subtitle: "Every change to Project Budget, written for the people who use it. No jargon, no version numbers to decode — just what is different and why."
+description: "Changelog for Project Budget — what changed in each release, in plain language."
+permalink: /changelog/
+---
+<p>
+  Newest first. Each entry says what you will notice; the line underneath says why it happened. If something here does not match what you see, your browser may be holding an older copy of the app — reload the page once and it will catch up.
+</p>
+
+{% for release in changelog %}
+<section class="cl-release" id="release-{{ release.version }}">
+  <header class="cl-release__head">
+    <div>
+      <h2 class="cl-release__title" id="{{ release.version }}">{{ release.title }}</h2>
+      <p class="cl-release__meta">
+        <time datetime="{{ release.date }}">{{ release.date | readableISO }}</time>
+        <span class="cl-release__version">Version {{ release.version }}</span>
+      </p>
+    </div>
+  </header>
+
+  <p class="cl-release__summary">{{ release.summary }}</p>
+
+  <ul class="cl-list">
+    {% for entry in release.entries %}
+    <li class="cl-item">
+      <span class="cl-tag cl-tag--{{ entry.kind }}">{{ entry.kind }}</span>
+      <div class="cl-item__body">
+        <p class="cl-item__title">{{ entry.title }}</p>
+        {% if entry.detail %}<p class="cl-item__detail">{{ entry.detail }}</p>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
+
+<h2>What the labels mean</h2>
+<ul>
+  <li><strong>Fixed</strong> — something was behaving wrongly and now behaves correctly.</li>
+  <li><strong>Added</strong> — something new you can now do.</li>
+  <li><strong>Improved</strong> — something that already worked, made faster, clearer or easier.</li>
+  <li><strong>Changed</strong> — something works differently than it used to, deliberately.</li>
+</ul>
+
+<h2>Where your data sits in all this</h2>
+<p>
+  Project Budget runs entirely in your browser and your budget never leaves it. None of the changes listed here touch your data or send it anywhere, and none of them require you to do anything. If a change ever needs a decision from you, it will say so in its own entry.
+</p>

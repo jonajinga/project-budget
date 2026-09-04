@@ -93,6 +93,8 @@ export default {
       items: [
         { label: "Tools index", url: "/app/tools/",
           icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
+        { label: "What's new", url: "/changelog/",
+          icon: '<path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9"/>' },
         { label: "Keyboard shortcuts", url: "/app/shortcuts/",
           icon: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>' },
         { label: "Diagnostics", url: "/app/diagnostics/",
@@ -141,6 +143,7 @@ export default {
      Budget" section without duplicates. The footer renders nav.main +
      nav.footer (the union) in one row. */
   footer: [
+    { label: "What's new", url: "/changelog/" },
     { label: "About", url: "/about/" },
     { label: "Accessibility", url: "/accessibility/" },
     { label: "Style guide", url: "/style-guide/" },

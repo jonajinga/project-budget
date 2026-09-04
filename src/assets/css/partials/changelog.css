@@ -1,0 +1,65 @@
+/* The public changelog at /changelog/. Reads as a document, not a
+   dashboard: one column, generous spacing, and a coloured tag that tells
+   you at a glance whether an entry is a fix, an addition, an
+   improvement or a deliberate change. */
+
+.cl-release {
+  padding-top: var(--space-lg);
+  margin-top: var(--space-lg);
+  border-top: 1px solid var(--border-soft);
+}
+.cl-release:first-of-type { border-top: 0; margin-top: var(--space-md); padding-top: 0; }
+
+.cl-release__head { margin-bottom: var(--space-2xs); }
+.cl-release__title { margin: 0; font-family: var(--font-display); }
+.cl-release__meta {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: baseline;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+}
+.cl-release__version { font-variant-numeric: tabular-nums; }
+.cl-release__summary { margin: var(--space-xs) 0 var(--space-md); max-width: 70ch; }
+
+.cl-list { list-style: none; padding: 0; margin: 0; }
+.cl-item {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: var(--space-sm);
+  align-items: start;
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--border-soft);
+}
+.cl-item:first-child { border-top: 0; }
+.cl-item__body { min-width: 0; }
+.cl-item__title { margin: 0; font-weight: 600; }
+.cl-item__detail { margin: 4px 0 0; color: var(--fg-muted); max-width: 68ch; }
+
+/* The tag is the only colour on the page, so it has to carry meaning on
+   its own: never colour alone, the word is always there too. */
+.cl-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  white-space: nowrap;
+  justify-self: start;
+  border: 1px solid transparent;
+}
+.cl-tag--fixed    { color: var(--ok);     background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.cl-tag--added    { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.cl-tag--improved { color: var(--fg);     background: var(--bg-alt); border-color: var(--border-soft); }
+.cl-tag--changed  { color: var(--warn, #8a5a00); background: color-mix(in srgb, var(--warn, #8a5a00) 14%, transparent); }
+
+@media (max-width: 599px) {
+  /* The tag moves above the text rather than shrinking a 92px column
+     into something unreadable. */
+  .cl-item { grid-template-columns: 1fr; gap: 4px; }
+}
